@@ -1,6 +1,6 @@
-# Arc
+# Connector Kit
 
-Arc is a modular React development kit for building modern Solana applications. 
+A framework agnostic wallet connection and state management development kit for Solana applications.
 
 ## 🚀 Quick Start
 
@@ -13,8 +13,8 @@ Arc is a modular React development kit for building modern Solana applications.
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/your-username/arc.git
-   cd arc
+   git clone https://github.com/your-username/connector-kit.git
+   cd connector-kit
    ```
 
 2. **Install dependencies**
@@ -26,11 +26,11 @@ Arc is a modular React development kit for building modern Solana applications.
 
 This monorepo contains several packages:
 
-- **@arc/solana** - React hooks for Solana development
-- **@arc/connector-kit** - Wallet connector and context
-- **@arc/providers** - Provider templates and configurations
-- **@arc/jupiter** - Jupiter DEX integration
-- **@arc/ui-primitives** - Primitive UI components
+- **@connectorkit/sdk** - Core React hooks and utilities for Solana development
+- **@connectorkit/connector** - Wallet connector components and context management
+- **@connectorkit/providers** - Provider templates and configurations
+- **@connectorkit/jupiter** - Jupiter DEX integration
+- **@connectorkit/ui-primitives** - Headless UI component primitives
 
 ## 🛠️ Development
 
@@ -62,7 +62,7 @@ pnpm release          # Build and publish packages
 
 2. **Work on a specific package**
    ```bash
-   cd packages/solana
+   cd packages/sdk
    pnpm dev    # Start development mode
    pnpm test   # Run tests
    ```
@@ -75,27 +75,34 @@ pnpm release          # Build and publish packages
 ## 🏗️ Project Structure
 
 ```
-arc/
+connector-kit/
 ├── apps/
-│   └── docs/              # Documentation site with examples
+│   └── docs/              # Documentation site with enhanced navigation
 ├── packages/
-│   ├── solana/            # Core Solana React hooks
-│   ├── connector-kit/     # Wallet connection components
-│   ├── providers/         # Provider configurations
+│   ├── sdk/               # Core React hooks and Solana utilities
+│   ├── connector/         # Wallet connection components and theming
+│   ├── providers/         # Provider configurations and templates
 │   ├── jupiter/           # Jupiter DEX integration
-│   └── ui-primitives/     # Base UI components
-├── examples/              # Example applications
-└── tools/                 # Development tools and configs
+│   └── ui-primitives/     # Headless UI component library
+└── examples/              # Example applications and demos
 ```
 
-## 📚 Documentation
+## 📚 Enhanced Documentation
 
-The documentation site includes:
+The documentation site features a modern, collapsible sidebar navigation system with:
 
-- **Interactive examples** for all hooks
-- **API documentation** with TypeScript definitions
+- **Collapsible sections** - Click chevron icons to expand/collapse documentation sections
+- **Smart defaults** - Most sections open by default, architecture sections collapsed for cleaner initial view
+- **Active page highlighting** - Current section automatically stays expanded
+- **Responsive design** - Works seamlessly across desktop and mobile devices
+
+### Documentation Features
+
+- **Interactive examples** for all hooks and components
+- **TypeScript definitions** with complete API documentation
 - **Copy-paste code samples** for quick implementation
 - **Live demos** of wallet connections and transactions
+- **Architecture guides** for understanding the system design
 
 Visit the [documentation](./apps/docs) for detailed guides and examples.
 
@@ -106,9 +113,31 @@ Visit the [documentation](./apps/docs) for detailed guides and examples.
 pnpm test
 
 # Run tests for specific package
-cd packages/solana
+cd packages/sdk
 pnpm test
 
 # Run tests in watch mode
 pnpm test --watch
 ```
+
+## ✨ Recent Improvements
+
+### Documentation Experience
+- **Collapsible sidebar navigation** with smooth animations
+- **Intelligent section management** - relevant sections stay expanded
+- **Clean, modern interface** with improved visual hierarchy
+- **Enhanced accessibility** with proper ARIA labels and keyboard navigation
+
+### Developer Experience
+- **Framework agnostic design** - works with React, Vue, Angular, and vanilla JavaScript
+- **TypeScript-first** - comprehensive type definitions for better DX
+- **Modular architecture** - use only what you need
+- **Extensible theming system** - customize appearance to match your brand
+
+## 🚀 Contributing
+
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details on how to get started.
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
