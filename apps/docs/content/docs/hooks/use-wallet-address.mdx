@@ -11,7 +11,7 @@ The `useWalletAddress` hook provides access to the current wallet's address in b
 
 ### Direct Import
 ```tsx
-import { useWalletAddress } from '@connectorkit/solana'
+import { useWalletAddress } from '@connectorkit/hooks'
 
 function WalletInfo() {
   const { address, addressParsed, connected, connecting } = useWalletAddress()
@@ -79,7 +79,7 @@ This hook takes no parameters.
 ## Example
 
 ```tsx
-import { useWalletAddress } from '@connectorkit/solana'
+import { useWalletAddress } from '@connectorkit/hooks'
 
 function WalletDisplay() {
   const { address, addressParsed, connected, connecting } = useWalletAddress()

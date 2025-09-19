@@ -2,7 +2,7 @@
   "pages": [
     "index",
     "connector-kit",
-    "solana",
+    "hooks",
     "providers"
   ]
 }

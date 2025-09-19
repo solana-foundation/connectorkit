@@ -19,7 +19,7 @@ Try the `useSwap` hook in action:
 
 ### Direct Import
 ```tsx
-import { useSwap } from '@connectorkit/solana'
+import { useSwap } from '@connectorkit/hooks'
 
 function SwapInterface() {
   const {
@@ -234,8 +234,8 @@ export function useSwap(options: UseSwapOptions = {}): UseSwapReturn {
 ## Example
 
 ```tsx
-import { useSwap } from '@connectorkit/solana'
-import { useWalletAddress } from '@connectorkit/solana'
+import { useSwap } from '@connectorkit/hooks'
+import { useWalletAddress } from '@connectorkit/hooks'
 import { useState } from 'react'
 
 function TokenSwapInterface() {

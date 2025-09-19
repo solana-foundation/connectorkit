@@ -11,7 +11,7 @@ The `useCluster` hook provides information about the current Solana cluster (net
 
 ### Direct Import
 ```tsx
-import { useCluster } from '@connectorkit/solana'
+import { useCluster } from '@connectorkit/hooks'
 
 function MyComponent() {
   const { 
@@ -190,7 +190,7 @@ export function useExplorerUrls() {
 
 ### Basic Network Information
 ```tsx
-import { useCluster } from '@connectorkit/solana'
+import { useCluster } from '@connectorkit/hooks'
 
 function NetworkInfo() {
   const { 
@@ -218,7 +218,7 @@ function NetworkInfo() {
 
 ### Explorer Links
 ```tsx
-import { useCluster } from '@connectorkit/solana'
+import { useCluster } from '@connectorkit/hooks'
 
 function ExplorerLinks({ address, signature }: { 
   address?: string
@@ -254,7 +254,7 @@ function ExplorerLinks({ address, signature }: {
 
 ### Network-specific Features
 ```tsx
-import { useCluster, useAirdrop } from '@connectorkit/solana'
+import { useCluster, useAirdrop } from '@connectorkit/hooks'
 
 function NetworkFeatures() {
   const { canAirdrop, getFaucetUrl, name } = useCluster()
@@ -301,7 +301,7 @@ function NetworkFeatures() {
 
 ### RPC Alternatives
 ```tsx
-import { useCluster } from '@connectorkit/solana'
+import { useCluster } from '@connectorkit/hooks'
 
 function RpcOptions() {
   const { rpcUrl, getAlternativeRpcs, isOfficialRpc } = useCluster()
@@ -326,7 +326,7 @@ function RpcOptions() {
 
 ### Conditional Rendering by Network
 ```tsx
-import { useCluster } from '@connectorkit/solana'
+import { useCluster } from '@connectorkit/hooks'
 
 function NetworkConditionalContent() {
   const { isMainnet, isDevnet, cluster } = useCluster()
@@ -362,7 +362,7 @@ function NetworkConditionalContent() {
 
 ### Using Helper Hooks
 ```tsx
-import { useCanAirdrop, useExplorerUrls } from '@connectorkit/solana'
+import { useCanAirdrop, useExplorerUrls } from '@connectorkit/hooks'
 
 function HelperHooksExample() {
   const canAirdrop = useCanAirdrop()
@@ -379,7 +379,7 @@ function HelperHooksExample() {
 
 ### Network Switcher UI
 ```tsx
-import { useCluster } from '@connectorkit/solana'
+import { useCluster } from '@connectorkit/hooks'
 
 function NetworkSwitcher() {
   const { cluster, name, getAlternativeRpcs } = useCluster()

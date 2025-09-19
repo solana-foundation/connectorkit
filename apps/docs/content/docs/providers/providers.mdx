@@ -33,7 +33,7 @@ Providers integrate seamlessly with Arc's hooks system:
 
 ```tsx
 import { createJupiter } from '@arc/jupiter'
-import { useSwap } from '@connectorkit/solana'
+import { useSwap } from '@connectorkit/hooks'
 
 function MySwapComponent() {
   const provider = createJupiter({ slippageBps: 50 })
@@ -118,7 +118,8 @@ The following providers are planned for future releases:
 Import all providers from a single package:
 
 ```tsx
-import { createJupiter, createProviders } from '@arc/providers'
+import { createJupiter } from '@connectorkit/jupiter'
+import { createProvider } from '@connectorkit/hooks'
 
 // Create multiple providers at once
 const providers = createProviders({
@@ -172,7 +173,7 @@ function MultiProviderSwap() {
 Build your own provider following the `SwapProvider` interface:
 
 ```tsx
-import type { SwapProvider, SwapParams, SwapQuote, SwapBuild } from '@connectorkit/solana'
+import type { SwapProvider, SwapParams, SwapQuote, SwapBuild } from '@connectorkit/hooks'
 
 export interface CustomConfig {
   apiUrl?: string
@@ -237,7 +238,7 @@ export function createCustomProvider(config: CustomConfig = {}): SwapProvider {
 
 ## Provider Template
 
-See the [provider template](https://github.com/your-org/arc/blob/main/packages/providers/src/templates/provider-template.md) for a complete step-by-step guide to adding new providers to the `@arc/providers` package.
+See the [provider template](https://github.com/your-org/arc/blob/main/packages/providers/src/templates/provider-template.md) for a complete step-by-step guide to adding new providers to the `@connectorkit/providers` package.
 
 ## Installation
 
@@ -246,7 +247,7 @@ See the [provider template](https://github.com/your-org/arc/blob/main/packages/p
 npm install @arc/jupiter
 
 # Or install the providers package for centralized access
-npm install @arc/providers
+npm install @connectorkit/providers
 ```
 
 ## Provider Interface

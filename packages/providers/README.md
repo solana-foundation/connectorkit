@@ -1,4 +1,4 @@
-# @arc/providers
+# @connectorkit/providers
 
 Centralized provider exports for the Arc ecosystem. This package allows you to import all providers from a single location:
 

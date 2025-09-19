@@ -2,8 +2,8 @@
 
 import { QueryClient } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
-import { createProvider, ArcProvider } from '@connectorkit/solana'
-import { createJupiter } from '@arc/providers'
+import { createProvider, ArcProvider } from '@connectorkit/hooks'
+import { createJupiter } from '@connectorkit/jupiter'
 import { 
   AppProvider, 
   getDefaultConfig, 

@@ -11,7 +11,7 @@ Jupiter is Solana's premier DEX aggregator that finds the best routes across mul
 
 ```tsx
 import { createJupiter } from '@arc/jupiter'
-import { useSwap } from '@connectorkit/solana'
+import { useSwap } from '@connectorkit/hooks'
 
 function JupiterSwap() {
   const provider = createJupiter({
@@ -254,7 +254,7 @@ The provider automatically manages cache size and cleanup:
 
 ```tsx
 import { createJupiter } from '@arc/jupiter'
-import { useSwap } from '@connectorkit/solana'
+import { useSwap } from '@connectorkit/hooks'
 
 function SwapInterface() {
   const provider = createJupiter({ slippageBps: 50 })

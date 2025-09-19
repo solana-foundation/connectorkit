@@ -8,3 +8,4 @@ import { ConnectButton } from '@connectorkit/connector-kit'
 export function ConnectButtonWrapper() {
   return <ConnectButton />
 }
+

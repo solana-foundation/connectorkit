@@ -19,13 +19,13 @@
     "lint": "echo skip"
   },
   "peerDependencies": {
-    "@connectorkit/solana": "*"
+    "@connectorkit/hooks": "*"
   },
   "dependencies": {
     "@connectorkit/jupiter": "workspace:*"
   },
   "devDependencies": {
-    "@connectorkit/solana": "workspace:*",
+    "@connectorkit/hooks": "workspace:*",
     "tsup": "^8.5.0",
     "typescript": "^5.3.3"
   },

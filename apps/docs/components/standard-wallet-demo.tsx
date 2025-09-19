@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { AnimatePresence, motion } from "motion/react"
-import { useBalance, useAirdrop, useCluster, useWalletAddress } from '@connectorkit/solana'
+import { useBalance, useAirdrop, useCluster, useWalletAddress } from '@connectorkit/hooks'
 import { useConnector } from '@connectorkit/connector-kit'
 import { Button } from './ui/button'
 

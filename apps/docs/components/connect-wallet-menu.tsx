@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState } from 'react'
 import { ChevronDown, LogOut, Plus, Wallet as WalletIcon } from 'lucide-react'
-import { useArcClient } from '@connectorkit/solana'
+import { useArcClient } from '@connectorkit/hooks'
 import { Button } from './ui/button'
 import {
 	DropdownMenu,

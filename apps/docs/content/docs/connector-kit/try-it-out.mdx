@@ -45,7 +45,7 @@ Complete control over UI and behavior:
 
 ```tsx
 import { useConnector } from '@connectorkit/connector-kit'
-import { useWalletAddress, useBalance } from '@connectorkit/solana'
+import { useWalletAddress, useBalance } from '@connectorkit/hooks'
 
 function CustomWalletConnect() {
   const { wallets, select, disconnect } = useConnector()
@@ -107,4 +107,4 @@ function TransactionSigner() {
 ## Next Steps
 
 - [Getting Started](/docs/connector-kit/introduction) - Full implementation guide
-- [@connectorkit/solana](/docs/solana) - For transaction building and blockchain operations
+- [@connectorkit/hooks](/docs/solana) - For transaction building and blockchain operations

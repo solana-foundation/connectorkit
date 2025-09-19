@@ -11,7 +11,7 @@ The `useAirdrop` hook provides an easy way to request SOL airdrops on developmen
 
 ### Direct Import
 ```tsx
-import { useAirdrop } from '@connectorkit/solana'
+import { useAirdrop } from '@connectorkit/hooks'
 
 function MyComponent() {
   const { 
@@ -307,7 +307,7 @@ export function useAirdrop(
 
 ### Basic Usage
 ```tsx
-import { useAirdrop } from '@connectorkit/solana'
+import { useAirdrop } from '@connectorkit/hooks'
 
 function AirdropButton() {
   const { requestAirdrop, isLoading, error, data } = useAirdrop()
@@ -338,7 +338,7 @@ function AirdropButton() {
 
 ### With Form Inputs
 ```tsx
-import { useAirdrop } from '@connectorkit/solana'
+import { useAirdrop } from '@connectorkit/hooks'
 
 function AirdropForm() {
   const { 
@@ -403,8 +403,8 @@ function AirdropForm() {
 
 ### Connected Wallet Airdrop
 ```tsx
-import { useAirdrop } from '@connectorkit/solana'
-import { useWallet } from '@connectorkit/solana'
+import { useAirdrop } from '@connectorkit/hooks'
+import { useWallet } from '@connectorkit/hooks'
 
 function WalletAirdrop() {
   const { address, connected } = useWallet()
@@ -438,8 +438,8 @@ function WalletAirdrop() {
 
 ### With Network Check
 ```tsx
-import { useAirdrop } from '@connectorkit/solana'
-import { useCluster } from '@connectorkit/solana'
+import { useAirdrop } from '@connectorkit/hooks'
+import { useCluster } from '@connectorkit/hooks'
 
 function SmartAirdrop() {
   const { cluster, canAirdrop } = useCluster()
@@ -475,7 +475,7 @@ function SmartAirdrop() {
 
 ### Multiple Airdrops
 ```tsx
-import { useAirdrop } from '@connectorkit/solana'
+import { useAirdrop } from '@connectorkit/hooks'
 
 function BatchAirdrop() {
   const { requestAirdrop, isLoading } = useAirdrop()

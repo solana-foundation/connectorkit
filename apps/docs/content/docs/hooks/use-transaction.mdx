@@ -19,7 +19,7 @@ Try the `useTransaction` hook in action:
 
 ### Direct Import
 ```tsx
-import { useTransaction } from '@connectorkit/solana'
+import { useTransaction } from '@connectorkit/hooks'
 
 function MyComponent() {
   const { sendTransaction, isLoading, error } = useTransaction()
@@ -503,7 +503,7 @@ export function useTransaction(options: UseTransactionOptions = {}): UseTransact
 ## Example
 
 ```tsx
-import { useTransaction } from '@connectorkit/solana'
+import { useTransaction } from '@connectorkit/hooks'
 import { getTransferSolInstruction } from '@solana-program/system'
 
 function TransferSOL() {

@@ -1,5 +1,5 @@
 {
-  "name": "@connectorkit/solana",
+  "name": "@connectorkit/hooks",
   "version": "0.0.0",
   "description": "React hooks for Solana development - MVP with essential hooks only",
   "main": "./dist/index.js",

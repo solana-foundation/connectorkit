@@ -11,7 +11,7 @@ The `useBalance` hook fetches and monitors SOL balance for a given address. It p
 
 ### Direct Import
 ```tsx
-import { useBalance } from '@connectorkit/solana'
+import { useBalance } from '@connectorkit/hooks'
 
 function MyComponent() {
   const { balance, balanceSOL, formattedBalance, isLoading } = useBalance()
@@ -241,7 +241,7 @@ export function useBalance(options: UseBalanceOptions = {}): UseBalanceReturn {
 ## Example
 
 ```tsx
-import { useBalance } from '@connectorkit/solana'
+import { useBalance } from '@connectorkit/hooks'
 
 function WalletBalance() {
   const { balance, balanceSOL, formattedBalance, isLoading, error } = useBalance({

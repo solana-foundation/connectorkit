@@ -1,4 +1,4 @@
-import type { SwapProvider, SwapParams, SwapQuote, SwapBuild } from '@connectorkit/solana'
+import type { SwapProvider, SwapParams, SwapQuote, SwapBuild } from '@connectorkit/hooks'
 
 export interface JupiterQuoteResponse {
   outAmount: string

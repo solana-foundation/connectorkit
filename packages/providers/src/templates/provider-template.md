@@ -1,6 +1,6 @@
 # Provider Template
 
-This template shows how to add a new provider to the `@arc/providers` package.
+This template shows how to add a new provider to the `@connectorkit/providers` package.
 
 ## Steps to add a new provider (e.g., Kamino):
 
@@ -69,7 +69,7 @@ export function createKamino(config: KaminoConfig = {}): SwapProvider {
 }
 ```
 
-### 4. Add to @arc/providers dependencies
+### 4. Add to @connectorkit/providers dependencies
 Update `packages/providers/package.json`:
 ```json
 {
