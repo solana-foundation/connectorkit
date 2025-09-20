@@ -1,6 +1,7 @@
 import { getWallets } from '@wallet-standard/app'
 
 import type { Wallet } from '@wallet-standard/base'
+import type { SolanaCluster } from '@wallet-ui/core'
 
 // Modal routes for navigation within the connector modal
 export const modalRoutes = {
@@ -77,6 +78,12 @@ export interface ConnectorConfig {
 		getItem: (k: string) => string | null
 		setItem: (k: string, v: string) => void
 		removeItem: (k: string) => void
+	}
+	
+	/** Enhanced cluster configuration using wallet-ui */
+	cluster?: {
+		clusters?: SolanaCluster[]
+		persistSelection?: boolean
 	}
 }
 

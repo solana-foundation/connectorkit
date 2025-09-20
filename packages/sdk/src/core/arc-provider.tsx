@@ -7,11 +7,14 @@ import { useConnectorClient } from '@connectorkit/connector'
 import type { ArcWebClientConfig } from './arc-web-client'
 import type { SolanaConfig } from '../config/create-config'
 import type { QueryClient } from '@tanstack/react-query'
+import { EnhancedClusterProvider, type EnhancedClusterConfig } from '../context/enhanced-cluster-provider'
 
 export type ArcProviderProps = {
   children: ReactNode
   config: ArcWebClientConfig | SolanaConfig
   queryClient?: QueryClient
+  /** Enhanced cluster configuration using wallet-ui */
+  enhancedCluster?: EnhancedClusterConfig
 }
 
 /**
@@ -21,9 +24,30 @@ export type ArcProviderProps = {
  * performant state management logic. The hooks exported from this file
  * are now compatibility wrappers around the new useArcClient hook.
  */
-export function ArcProvider({ children, config, queryClient }: ArcProviderProps) {
+export function ArcProvider({ children, config, queryClient, enhancedCluster }: ArcProviderProps) {
   const connector = useConnectorClient()
   const merged: ArcWebClientConfig = { ...config, connector } as ArcWebClientConfig
+  
+  // If enhanced cluster config provided, wrap with wallet-ui provider
+  if (enhancedCluster) {
+    // Merge Arc config into enhanced cluster config (wallet-ui is source of truth)
+    const enhancedConfig = {
+      ...enhancedCluster,
+      // Inherit Arc network settings if not explicitly set
+      network: enhancedCluster.network || merged.network || 'mainnet',
+      rpcUrl: enhancedCluster.rpcUrl || merged.rpcUrl
+    }
+    
+    return (
+      <EnhancedClusterProvider config={enhancedConfig}>
+        <ArcClientProvider config={merged} queryClient={queryClient}>
+          {children}
+        </ArcClientProvider>
+      </EnhancedClusterProvider>
+    )
+  }
+  
+  // Otherwise, use standard Arc provider (backward compatible)
   return (
     <ArcClientProvider config={merged} queryClient={queryClient}>
       {children}

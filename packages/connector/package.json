@@ -36,6 +36,7 @@
     "@solana-mobile/wallet-standard-mobile": "^0.3.0",
     "@wallet-standard/app": "^1.0.0",
     "@wallet-standard/base": "^1.0.0",
+    "@wallet-ui/core": "^1.1.1",
     "motion": "^12.23.12"
   },
   "devDependencies": {

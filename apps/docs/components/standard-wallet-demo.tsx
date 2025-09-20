@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { AnimatePresence, motion } from "motion/react"
-import { useBalance, useAirdrop, useCluster, useWalletAddress } from '@connectorkit/sdk'
+import { useBalance, useAirdrop, useCluster, useWalletAddress, WalletUiClusterDropdown } from '@connectorkit/sdk'
 import { useConnector } from '@connectorkit/connector'
 import { Button } from './ui/button'
 
@@ -50,6 +50,9 @@ export function StandardWalletDemo() {
     isDevnet,
     isMainnet,
     canAirdrop,
+    canSwitch,
+    setCluster,
+    clusters
   } = useCluster()
 
   // Utility functions
@@ -127,7 +130,18 @@ export function StandardWalletDemo() {
 
   return (
     <div className="space-y-6">
-
+      
+      {/* Cluster Switcher - only shows if multiple clusters available */}
+      {canSwitch && (
+        <div className="flex justify-center">
+          <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-medium text-gray-700">Network:</span>
+              <WalletUiClusterDropdown />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Main Animation Container */}
       <div 

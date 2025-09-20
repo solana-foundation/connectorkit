@@ -30,4 +30,7 @@ export {
   TabsList,
   TabsTab,
   TabsPanel
-} from './tabs-alpha'; 
+} from './tabs-alpha';
+
+// Enhanced cluster switcher component
+export { EnhancedClusterSwitcher } from './enhanced-cluster-switcher'; 

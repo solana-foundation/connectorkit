@@ -9,7 +9,8 @@ import {
   WalletStandardKitSigner,
   type StandardWalletInfo,
 } from '../hooks/use-standard-wallets'
-import type { ConnectorClient, ConnectorState } from '@connectorkit/connector'
+import { type ConnectorState, ConnectorClient } from '@connectorkit/connector'
+import type { SolanaCluster } from '@wallet-ui/core'
 
 // Connector is the single source of truth; no Arc-managed persistence
 
@@ -33,6 +34,15 @@ export interface ArcWebClientConfig {
   transport?: Transport
   /** Optional shared connector instance to unify wallet state with external providers */
   connector?: ConnectorClient | null
+  
+  /** Enhanced cluster configuration using wallet-ui */
+  cluster?: {
+    rpcUrl?: string
+    network?: 'mainnet' | 'devnet' | 'testnet'
+    clusters?: SolanaCluster[]
+    allowSwitching?: boolean
+    persistSelection?: boolean
+  }
 }
 
 /**

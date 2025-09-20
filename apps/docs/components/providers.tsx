@@ -66,7 +66,15 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <AppProvider connectorConfig={connectorConfig} mobile={mobile}>
-      <ArcProvider config={arcConfig} queryClient={queryClient}>
+      <ArcProvider 
+        config={arcConfig} 
+        queryClient={queryClient}
+        enhancedCluster={{
+          network: arcConfig.network, // Explicitly pass mainnet
+          allowSwitching: true,
+          persistSelection: true
+        }}
+      >
         {children as any}
       </ArcProvider>
     </AppProvider>
