@@ -1,5 +1,5 @@
 // Cluster detection and utilities following @solana/kit patterns
-export type Cluster = 'mainnet-beta' | 'devnet' | 'testnet' | 'localnet' | 'custom'
+export type Cluster = 'mainnet-beta' | 'mainnet' | 'devnet' | 'testnet' | 'localnet' | 'custom'
 
 export interface ClusterInfo {
   cluster: Cluster

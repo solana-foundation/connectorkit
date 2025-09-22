@@ -1,0 +1,32 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+
+# Generated files
+*.d.ts.map
+*.js.map
+
+# Lock files
+pnpm-lock.yaml
+yarn.lock
+package-lock.json
+
+# Logs
+*.log
+
+# IDE
+.vscode/
+.idea/
+
+# Misc
+.DS_Store
+*.tsbuildinfo
+
+# Docs build
+apps/docs/.next/
+apps/docs/out/

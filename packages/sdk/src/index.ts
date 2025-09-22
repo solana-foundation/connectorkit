@@ -28,6 +28,23 @@ export type { UseAirdropReturn } from './hooks/use-airdrop'
 export { useCluster } from './hooks/use-cluster'
 export type { UseClusterReturn } from './hooks/use-cluster'
 
+// Enhanced wallet-ui integration
+export { 
+  EnhancedClusterProvider,
+  useEnhancedCluster,
+  createSolanaDevnet,
+  createSolanaMainnet,
+  createSolanaTestnet
+} from './context/enhanced-cluster-provider'
+export type { EnhancedClusterConfig } from './context/enhanced-cluster-provider'
+
+// Re-export wallet-ui essentials
+export { 
+  WalletUiClusterDropdown,
+  useWalletUiCluster,
+  type SolanaCluster
+} from '@wallet-ui/react'
+
 export { useWalletAddress } from './hooks/use-wallet-address'
 export type { UseWalletAddressReturn } from './hooks/use-wallet-address'
 
