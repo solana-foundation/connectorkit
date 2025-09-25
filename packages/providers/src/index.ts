@@ -9,7 +9,15 @@ export {
   getJupiterTokens 
 } from '@connector-kit/jupiter'
 
+// Future providers will be added here:
+// export { createKamino, type KaminoConfig } from '@connectorkit/kamino'
+// export { createRaydium, type RaydiumConfig } from '@connectorkit/raydium'
+// export { createOrcaWhirlpools, type OrcaConfig } from '@connectorkit/orca'
+
+// Import locally for internal use
 import { createJupiter } from '@connector-kit/jupiter'
+
+// Provider registry type for future extensibility
 export interface ProviderRegistry {
   jupiter: ReturnType<typeof createJupiter>
 }
