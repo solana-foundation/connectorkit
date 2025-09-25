@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       publish_packages:
-        description: "Publish @connectorkit packages to npm"
+        description: "Publish @connector-kit packages to npm"
         type: boolean
         default: true
 
@@ -52,25 +52,25 @@ jobs:
       - name: Run tests (skip for now)
         run: echo "Skipping tests for initial publish"
 
-      - name: Publish @connectorkit/connector
+      - name: Publish @connector-kit/connector
         working-directory: packages/connector
         run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Publish @connectorkit/sdk
+      - name: Publish @connector-kit/sdk
         working-directory: packages/sdk
         run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Publish @connectorkit/jupiter
+      - name: Publish @connector-kit/jupiter
         working-directory: packages/jupiter
         run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Publish @connectorkit/providers
+      - name: Publish @connector-kit/providers
         working-directory: packages/providers
         run: npm publish --access public
         env:
@@ -95,23 +95,23 @@ jobs:
           body: |
             ## ConnectorKit Packages Published
 
-            ### @connectorkit/connector
-            - Package: `@connectorkit/connector`
+            ### @connector-kit/connector
+            - Package: `@connector-kit/connector`
             - Version: ${{ github.ref_name }}
             - Registry: npm
 
-            ### @connectorkit/sdk
-            - Package: `@connectorkit/sdk`
+            ### @connector-kit/sdk
+            - Package: `@connector-kit/sdk`
             - Version: ${{ github.ref_name }}
             - Registry: npm
 
-            ### @connectorkit/jupiter
-            - Package: `@connectorkit/jupiter`
+            ### @connector-kit/jupiter
+            - Package: `@connector-kit/jupiter`
             - Version: ${{ github.ref_name }}
             - Registry: npm
 
-            ### @connectorkit/providers
-            - Package: `@connectorkit/providers`
+            ### @connector-kit/providers
+            - Package: `@connector-kit/providers`
             - Version: ${{ github.ref_name }}
             - Registry: npm
 
@@ -119,22 +119,22 @@ jobs:
 
             **Install the main SDK:**
             ```bash
-            npm install @connectorkit/sdk@${{ github.ref_name }}
+            npm install @connector-kit/sdk@${{ github.ref_name }}
             ```
 
             **Install the connector (if using headless):**
             ```bash
-            npm install @connectorkit/connector@${{ github.ref_name }}
+            npm install @connector-kit/connector@${{ github.ref_name }}
             ```
 
             **Install Jupiter integration:**
             ```bash
-            npm install @connectorkit/jupiter@${{ github.ref_name }}
+            npm install @connector-kit/jupiter@${{ github.ref_name }}
             ```
 
             **Install providers:**
             ```bash
-            npm install @connectorkit/providers@${{ github.ref_name }}
+            npm install @connector-kit/providers@${{ github.ref_name }}
             ```
           draft: false
           prerelease: ${{ contains(github.ref_name, '-') }}

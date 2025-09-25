@@ -45,10 +45,10 @@ importers:
 
   apps/docs:
     dependencies:
-      '@connectorkit/jupiter':
+      '@connector-kit/jupiter':
         specifier: workspace:*
         version: link:../../packages/jupiter
-      '@connectorkit/sdk':
+      '@connector-kit/sdk':
         specifier: workspace:*
         version: link:../../packages/sdk
       '@radix-ui/react-accordion':
@@ -248,7 +248,7 @@ importers:
 
   packages/jupiter:
     devDependencies:
-      '@connectorkit/sdk':
+      '@connector-kit/sdk':
         specifier: workspace:*
         version: link:../sdk
       '@solana/kit':
@@ -263,11 +263,11 @@ importers:
 
   packages/providers:
     dependencies:
-      '@connectorkit/jupiter':
+      '@connector-kit/jupiter':
         specifier: workspace:*
         version: link:../jupiter
     devDependencies:
-      '@connectorkit/sdk':
+      '@connector-kit/sdk':
         specifier: workspace:*
         version: link:../sdk
       tsup:
@@ -279,7 +279,7 @@ importers:
 
   packages/sdk:
     dependencies:
-      '@connectorkit/connector':
+      '@connector-kit/connector':
         specifier: workspace:*
         version: link:../connector
       '@nanostores/react':

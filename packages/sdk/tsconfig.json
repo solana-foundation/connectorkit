@@ -7,7 +7,7 @@
     "noEmit": false,
     "baseUrl": ".",
     "paths": {
-      "@connectorkit/connector": ["./src/types/connector-kit-shim.d.ts"]
+      "@connector-kit/connector": ["./src/types/connector-kit-shim.d.ts"]
     }
   },
   "include": ["src/**/*"],
