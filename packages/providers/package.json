@@ -1,5 +1,5 @@
 {
-  "name": "@connector-kit/providers",
+  "name": "@connectorkit/providers",
   "version": "0.0.1",
   "private": false,
   "type": "module",
@@ -19,13 +19,13 @@
     "lint": "echo skip"
   },
   "peerDependencies": {
-    "@connector-kit/sdk": "*"
+    "@connectorkit/sdk": "*"
   },
   "dependencies": {
-    "@connector-kit/jupiter": "workspace:*"
+    "@connectorkit/jupiter": "workspace:*"
   },
   "devDependencies": {
-    "@connector-kit/sdk": "workspace:*",
+    "@connectorkit/sdk": "workspace:*",
     "tsup": "^8.5.0",
     "typescript": "^5.3.3"
   },

@@ -9,7 +9,7 @@ import {
   WalletStandardKitSigner,
   type StandardWalletInfo,
 } from '../hooks/use-standard-wallets'
-import { type ConnectorState, ConnectorClient } from '@connector-kit/connector'
+import { type ConnectorState, ConnectorClient } from '@connectorkit/connector'
 import type { SolanaCluster } from '@wallet-ui/core'
 
 // Connector is the single source of truth; no Arc-managed persistence

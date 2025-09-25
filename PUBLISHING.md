@@ -77,17 +77,17 @@ You can also trigger publishing manually:
 
 The following packages will be published to npm:
 
-- `@connector-kit/connector` - Headless wallet connector
-- `@connector-kit/sdk` - React hooks for Solana development
-- `@connector-kit/jupiter` - Jupiter integration
-- `@connector-kit/providers` - Providers package
+- `@connectorkit/connector` - Headless wallet connector
+- `@connectorkit/sdk` - React hooks for Solana development
+- `@connectorkit/jupiter` - Jupiter integration
+- `@connectorkit/providers` - Providers package
 
 ## Package Dependencies
 
 The packages have the following dependency structure:
-- `@connector-kit/sdk` depends on `@connector-kit/connector`
-- `@connector-kit/jupiter` depends on `@connector-kit/sdk`
-- `@connector-kit/providers` depends on both `@connector-kit/sdk` and `@connector-kit/jupiter`
+- `@connectorkit/sdk` depends on `@connectorkit/connector`
+- `@connectorkit/jupiter` depends on `@connectorkit/sdk`
+- `@connectorkit/providers` depends on both `@connectorkit/sdk` and `@connectorkit/jupiter`
 
 The workflow will publish them in the correct order to handle these dependencies.
 
@@ -127,16 +127,16 @@ Once published, users can install your packages:
 
 ```bash
 # Install the main SDK
-npm install @connector-kit/sdk
+npm install @connectorkit/sdk
 
 # Install the connector for headless usage
-npm install @connector-kit/connector
+npm install @connectorkit/connector
 
 # Install Jupiter integration
-npm install @connector-kit/jupiter
+npm install @connectorkit/jupiter
 
 # Install providers
-npm install @connector-kit/providers
+npm install @connectorkit/providers
 ```
 
 The packages are designed to work together as a complete Solana development toolkit.
