@@ -1,9 +1,8 @@
 /**
- * Enhanced Modal Router with Route-Based Navigation
- * Inspired by ConnectKit's smooth modal transitions
+ * Modal Router with Route-Based Navigation
  */
 
-// Enhanced modal routes
+// Modal routes
 export const modalRoutes = {
   WALLETS: 'wallets',
   PROFILE: 'profile', 
@@ -18,7 +17,7 @@ export const modalRoutes = {
 
 export type ModalRoute = (typeof modalRoutes)[keyof typeof modalRoutes]
 
-// Enhanced modal state with history and transitions
+// Modal state with history and transitions
 export interface ModalState {
   isOpen: boolean
   route: ModalRoute
@@ -28,7 +27,7 @@ export interface ModalState {
   direction?: 'forward' | 'backward'
 }
 
-// Modal router class for managing navigation
+// Modal router for managing navigation
 export class ModalRouter {
   private state: ModalState
   private listeners = new Set<(state: ModalState) => void>()

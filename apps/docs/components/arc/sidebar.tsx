@@ -88,7 +88,8 @@ function shouldShowFolderIcon(folderName: string, depth: number) {
   if (depth === 0 && (
     name.includes('connector') || 
     name.includes('solana') || 
-    name.includes('provider')
+    name.includes('provider') ||
+    name.includes('sdk')
   )) {
     return false
   }
@@ -254,8 +255,8 @@ export function ArcSidebar({ tree }: ArcSidebarProps) {
                {/* NPM Install Copy Button */}
                <div className="hidden w-full mt-4 pt-2">
                  <CopyButton
-                   textToCopy="npm install @connectorkit/sdk"
-                   displayText="npm install @connectorkit/sdk"
+                   textToCopy="npm install @connector-kit/sdk"
+                   displayText="npm install @connector-kit/sdk"
                    className="w-full text-xs bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-700 border border-zinc-300 shadow-sm dark:border-zinc-800 px-3 py-2 rounded-lg transition-all duration-150 ease-in-out active:scale-[0.98] hover:cursor-pointer"
                    iconClassName="h-3 w-3"
                    iconClassNameCheck="h-3 w-3"

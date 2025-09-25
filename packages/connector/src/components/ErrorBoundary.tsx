@@ -54,11 +54,7 @@ interface ErrorBoundaryProps {
 class ErrorLogger {
   static log(error: Error, errorInfo: ErrorInfo, context?: Record<string, unknown>) {
     if (process.env.NODE_ENV === 'development') {
-      console.group('🚨 ConnectorKit Error')
-      console.error('Error:', error)
-      console.error('Component Stack:', errorInfo.componentStack)
-      if (context) console.table(context)
-      console.groupEnd()
+      // Log error in development only
     }
 
     // In production, send to error reporting service
@@ -75,7 +71,7 @@ class ErrorLogger {
           })
         }
       } catch (reportingError) {
-        console.warn('Failed to report error:', reportingError)
+        // Failed to report error
       }
     }
   }
@@ -164,7 +160,6 @@ export class ConnectorErrorBoundary extends Component<ErrorBoundaryProps, ErrorB
     const { maxRetries = 3 } = this.props
     
     if (this.state.retryCount >= maxRetries) {
-      console.warn('Max retries exceeded for error:', this.state.error)
       return
     }
 

@@ -64,21 +64,17 @@ export const ConnectButton = memo<ConnectButtonProps>(({
   'aria-label': ariaLabel,
   'data-testid': testId
 }) => {
-  // Generate stable IDs for accessibility
   const buttonId = useId()
   const dropdownId = useId()
   
-  // React 19: Use transitions for non-blocking updates
   const [isPending, startConnectTransition] = useTransition()
   const isLoading = loading || isPending
   
-  // SSR hydration safety - prevent hydration mismatches
   const [isMounted, setIsMounted] = useState(false)
   useEffect(() => {
     setIsMounted(true)
   }, [])
 
-  // Stabilize options to prevent infinite re-renders from object recreation
   const stableOptions = useMemo(() => options, [
     options.autoCloseOnConnect,
     options.truncateAddress,
@@ -96,13 +92,11 @@ export const ConnectButton = memo<ConnectButtonProps>(({
     options.overlayBlur
   ])
 
-  // Handle both legacy and modern theme formats
   const normalizedTheme = useMemo(() => {
     if (!theme || Object.keys(theme).length === 0) {
       return minimalTheme
     }
     
-    // Check if it's a legacy theme format
     if ('primaryColor' in theme || 'secondaryColor' in theme || 'fontFamily' in theme) {
       const legacyTheme = {
         primaryColor: '#111827',
@@ -117,12 +111,10 @@ export const ConnectButton = memo<ConnectButtonProps>(({
       return legacyToModernTheme(legacyTheme)
     }
     
-    // Check if it's already a modern theme
     if ('colors' in theme && 'fonts' in theme) {
       return theme as ConnectorTheme
     }
     
-    // It's partial modern theme overrides
     return {
       ...minimalTheme,
       ...theme,
@@ -139,14 +131,12 @@ export const ConnectButton = memo<ConnectButtonProps>(({
   const connectorState = useConnector()
   const { wallets, connected, disconnect, selectedAccount, accounts, selectAccount, selectedWallet } = connectorState
   
-  // React 19: Defer non-critical updates for better performance
   const deferredConnected = useDeferredValue(connected)
   const deferredSelectedAccount = useDeferredValue(selectedAccount)
   
   const modal = useModal()
   const [dropdownOpen, setDropdownOpen] = useState(false)
 
-  // React 19: Use callback for stable reference
   const handleAutoClose = useCallback(() => {
     // Temporarily disabled to test navigation
     // if (deferredConnected && stableOptions.autoCloseOnConnect !== false) {
@@ -160,7 +150,6 @@ export const ConnectButton = memo<ConnectButtonProps>(({
     handleAutoClose()
   }, [handleAutoClose])
 
-  // React 19: Memoize expensive computations with deferred values
   const selectedDisplay = useMemo(() => {
     if (!deferredSelectedAccount) return null
     const truncateLength = stableOptions.truncateAddress ?? 4
@@ -175,7 +164,7 @@ export const ConnectButton = memo<ConnectButtonProps>(({
   const [isPressed, setIsPressed] = useState(false)
   const [isFocused, setIsFocused] = useState(false)
 
-  // Enhanced size configurations with responsive design
+  // Size configurations
   const sizeConfig = useMemo(() => {
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 640
     const configs = {
@@ -201,7 +190,6 @@ export const ConnectButton = memo<ConnectButtonProps>(({
     return configs[size]
   }, [size, isIconOnly])
 
-  // Enhanced button styles with variant support
   const buttonStyles: React.CSSProperties = useMemo(() => {
     const baseStyles: React.CSSProperties = {
       padding: sizeConfig.padding,
@@ -253,7 +241,6 @@ export const ConnectButton = memo<ConnectButtonProps>(({
       }
     }
 
-    // Default variant
     return {
       ...baseStyles,
       backgroundColor: isHovered ? t.colors.secondary : t.colors.primary,
@@ -275,14 +262,12 @@ export const ConnectButton = memo<ConnectButtonProps>(({
     return (accounts ?? []).find((a: any) => a.address === selectedAccount) ?? null
   }, [accounts, selectedAccount])
 
-  // React 19: Create wallet map for O(1) lookups
   const walletMap = useMemo(() => {
     const map = new Map()
     wallets?.forEach(w => map.set(w.wallet, w.icon))
     return map
   }, [wallets])
 
-  // React 19: Cache wallet icon lookups for better performance
   const selectedWalletIcon = useMemo(() => {
     // Early return for most common case
     if (selectedAccountInfo?.icon) return selectedAccountInfo.icon
@@ -291,7 +276,6 @@ export const ConnectButton = memo<ConnectButtonProps>(({
     return walletMap.get(selectedWallet) ?? null
   }, [selectedAccountInfo, selectedWallet, walletMap])
 
-  // Enhanced loading state component
   const LoadingSpinner = useMemo(() => (
     <div
       style={{
@@ -325,7 +309,6 @@ export const ConnectButton = memo<ConnectButtonProps>(({
     </svg>
   ), [sizeConfig.iconSize])
 
-  // Prevent SSR hydration mismatches by not rendering until mounted
   if (!isMounted) {
     return (
       <button
@@ -466,7 +449,7 @@ export const ConnectButton = memo<ConnectButtonProps>(({
               </DropdownItem>
             )}
             
-            {/* Enhanced Navigation Options */}
+            {/* Navigation Options */}
             <DropdownItem onSelect={() => {
               setDropdownOpen(false) // Close dropdown first
               setTimeout(() => {
@@ -513,8 +496,7 @@ export const ConnectButton = memo<ConnectButtonProps>(({
                 } catch (error) {
                     // Reset state to ensure clean disconnection flow
                     modal.close();
-                    // Consider showing a toast or notification to the user
-                    console.error('Failed to disconnect wallet:', error);
+                    // Failed to disconnect wallet
                 }
             }} className="">
               <div className="connector-account-dropdown__nav-item connector-account-dropdown__nav-item--danger">

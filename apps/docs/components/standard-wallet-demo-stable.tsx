@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect, useTransition, useDeferredValue, useCallback } from 'react'
 import { AnimatePresence, motion } from "motion/react"
-import { useBalance, useAirdrop, useCluster, useWalletAddress, WalletUiClusterDropdown } from '@connectorkit/sdk'
-import { useConnector, ConnectorErrorBoundary } from '@connectorkit/connector'
+import { useBalance, useAirdrop, useCluster, useWalletAddress, WalletUiClusterDropdown } from '@connector-kit/sdk'
+import { useConnector, ConnectorErrorBoundary } from '@connector-kit/connector'
 import { Button } from './ui/button'
 import { Alert, AlertDescription } from './ui/alert'
 import { Spinner } from './ui/spinner'
@@ -11,18 +11,15 @@ import { Droplets, RefreshCw } from 'lucide-react'
 import { WalletCard } from "./wallet-card"
 
 /**
- * Stable version of StandardWalletDemo with React 19 patterns
- * Focuses on reliability while showcasing performance improvements
+ * Stable version of StandardWalletDemo
  */
 function StandardWalletDemoStableContent() {
-  // React 19: Use transitions for smooth UX
   const [isPending, startWalletTransition] = useTransition()
   
   const [hasStarted, setHasStarted] = useState(false)
   const [isRevealing, setIsRevealing] = useState(false)
   const [hasMounted, setHasMounted] = useState(false)
 
-  // Enhanced Wallet connection with deferred values
   const {
     wallets,
     selectedWallet,
@@ -32,11 +29,9 @@ function StandardWalletDemoStableContent() {
 
   const { address, connected, connecting } = useWalletAddress()
   
-  // React 19: Defer non-critical updates for better performance
   const deferredConnected = useDeferredValue(connected)
   const deferredAddress = useDeferredValue(address)
 
-  // Use stable basic balance hook
   const { 
     balance, 
     isLoading: balanceLoading, 
@@ -59,7 +54,6 @@ function StandardWalletDemoStableContent() {
     canSwitch,
   } = useCluster()
 
-  // Enhanced utility functions with React 19 patterns
   const formatBalance = useCallback((lamports: bigint) => {
     return (Number(lamports) / 1e9).toFixed(4)
   }, [])
@@ -69,7 +63,6 @@ function StandardWalletDemoStableContent() {
     return `${address.slice(0, 6)}...${address.slice(-6)}`
   }, [])
 
-  // React 19: Enhanced wallet selection with transitions
   const handleWalletSelect = useCallback(async (walletName: string) => {
     setHasStarted(true)
     
@@ -97,7 +90,6 @@ function StandardWalletDemoStableContent() {
       const disconnectWallet = async () => {
         try {
           await disconnect()
-          console.log('✅ [StandardWalletDemo] Wallet disconnected successfully')
         } catch (error) {
           console.error('❌ [StandardWalletDemo] Disconnect failed:', error)
         }
@@ -107,13 +99,12 @@ function StandardWalletDemoStableContent() {
     })
   }, [disconnect])
 
-  // React 19: Enhanced effects with deferred values
   useEffect(() => {
     if (deferredConnected && !hasStarted) {
       setHasStarted(true)
       setIsRevealing(true)
     }
-  }, [deferredConnected, hasStarted])
+  }, [deferredConnected, hasStarted, deferredAddress])
 
   useEffect(() => {
     if (!deferredConnected && hasStarted) {
@@ -169,7 +160,7 @@ function StandardWalletDemoStableContent() {
         }}
       >
         
-        {/* Enhanced Refresh Button */}
+        {/* Refresh Button */}
         {deferredConnected && deferredAddress && (
           <Button
             variant="ghost"
@@ -190,7 +181,7 @@ function StandardWalletDemoStableContent() {
           </Button>
         )}
 
-        {/* Enhanced Airdrop Button */}
+        {/* Airdrop Button */}
         {deferredConnected && deferredAddress && Number(balance) === 0 && canAirdrop && (
           <Button 
             size="sm"
@@ -324,7 +315,7 @@ function StandardWalletDemoStableContent() {
         ) : (
           <AnimatePresence mode="wait">
             <div className="relative">
-              {/* Enhanced Wallet Card with deferred values */}
+              {/* Wallet Card */}
               <motion.div
                 className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
                 initial={{ opacity: 1 }}
@@ -395,7 +386,6 @@ function StandardWalletDemoStableContent() {
   )
 }
 
-// Enhanced demo with error boundary
 export function StandardWalletDemo() {
   return (
     <ConnectorErrorBoundary

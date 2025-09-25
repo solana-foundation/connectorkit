@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { ConnectButton, solanaTheme, mergeThemeOverrides } from '@connectorkit/connector'
+import { ConnectButton, solanaTheme, mergeThemeOverrides } from '@connector-kit/connector'
 import { StandardWalletDemo } from './standard-wallet-demo'
 import { TransactionStandardDemo } from './transaction-standard-demo'
 import { SwapDemo } from './swap-demo'

@@ -1,6 +1,5 @@
 /**
  * Enhanced useBalance hook with React 19 performance patterns
- * Features: useSyncExternalStore, automatic retry, stale-while-revalidate
  */
 
 'use client'
@@ -22,8 +21,8 @@ export interface UseBalanceEnhancedOptions {
   mint?: Address
   refreshInterval?: number
   enabled?: boolean
-  staleTime?: number // How long data stays fresh
-  cacheTime?: number // How long to keep cached data
+  staleTime?: number 
+  cacheTime?: number 
   onUpdate?: (balance: bigint) => void
   retryOnError?: boolean
 }
@@ -39,7 +38,6 @@ export interface UseBalanceEnhancedReturn {
   refresh: () => Promise<void>
 }
 
-// Type definitions for proper typing instead of 'as any'
 interface BalanceRpcResponse {
   value: string | number | bigint
 }
@@ -49,7 +47,6 @@ interface ClientConfigSubset {
   commitment?: 'processed' | 'confirmed' | 'finalized'
 }
 
-// Balance store for external state management
 class BalanceStore {
   private subscribers = new Set<() => void>()
   private state: {
@@ -206,16 +203,13 @@ class BalanceStore {
   }
 }
 
-// Cache stores by key to avoid recreating
 const storeCache = new Map<string, BalanceStore>()
 
 export function useBalanceEnhanced(options: UseBalanceEnhancedOptions = {}): UseBalanceEnhancedReturn {
   const client = useArcClient()
   
-  // Defer non-critical option updates
   const deferredOptions = useDeferredValue(options)
   
-  // Memoize options to prevent unnecessary re-renders
   const memoizedOptions = useMemo(() => ({
     address: deferredOptions.address,
     mint: deferredOptions.mint,
@@ -227,14 +221,12 @@ export function useBalanceEnhanced(options: UseBalanceEnhancedOptions = {}): Use
     retryOnError: deferredOptions.retryOnError ?? true
   }), [deferredOptions])
 
-  // Create cache key
   const cacheKey = useMemo(() => {
     const addr = memoizedOptions.address ? String(memoizedOptions.address) : 'none'
     const mint = memoizedOptions.mint ? String(memoizedOptions.mint) : 'sol'
     return `balance:${addr}:${mint}`
   }, [memoizedOptions.address, memoizedOptions.mint])
 
-  // Get or create store
   const store = useMemo(() => {
     let store = storeCache.get(cacheKey)
     if (!store) {

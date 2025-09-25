@@ -11,7 +11,7 @@ function injectConnectorGlobalStyles() {
     require('../styles/index.css')
     hasInjectedConnectorStyles = true
   } catch (error) {
-    console.warn('ConnectorKit: Failed to load styles', error)
+    // Failed to load styles silently
     
     // Fallback: Inject minimal critical styles directly
     const style = document.createElement('style')

@@ -17,7 +17,6 @@ import { WalletsPage } from '../../pages/wallets'
 
 // Temporary simplified pages for testing
 const ProfilePage = ({ options, onNavigate }: any) => {
-  console.log('ProfilePage component rendered!')
   return (
     <div style={{ padding: '20px', textAlign: 'center', backgroundColor: '#f0f9ff', border: '2px solid #3b82f6' }}>
       <h3 style={{ margin: '0 0 16px 0', fontSize: '18px', fontWeight: '600', color: '#1e40af' }}>🎉 Profile Page Working!</h3>
@@ -210,7 +209,7 @@ export function ConnectModal({
           <WalletsPage 
             options={options}
             onConnectError={(error: string) => {
-              console.error('Wallet connection error:', error)
+              // Handle wallet connection error
             }}
             helpMode={helpMode}
             onHelpModeChange={setHelpMode}

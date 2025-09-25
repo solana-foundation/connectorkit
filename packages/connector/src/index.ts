@@ -15,37 +15,30 @@ export type {
   ModalRoute
 } from './lib/connector-client'
 
-// React exports
 export { ConnectorProvider, useConnector, useConnectorClient } from './ui/connector-provider'
 export type { ConnectorSnapshot } from './ui/connector-provider'
 export type { MobileWalletAdapterConfig } from './ui/connector-provider'
 export { UnifiedProvider, AppProvider, WalletProvider } from './ui/unified-provider'
 export type { UnifiedProviderProps } from './ui/unified-provider'
 
-// Hooks
 export { useModal } from './hooks'
 export type { UseModalReturn } from './hooks'
 
-// UI exports - Enhanced with React 19 features
 export { ConnectButton } from './ui/connect-button'
 export type { ConnectButtonProps } from './ui/connect-button'
 export { ConnectModal } from './ui/connect-modal'
 
-// React 19 Enhanced Components
 export { ConnectorErrorBoundary, withErrorBoundary } from './components/ErrorBoundary'
 export { VirtualizedWalletList } from './components/VirtualizedWalletList'
 export type { WalletError, WalletErrorType } from './components/ErrorBoundary'
 
-// Enhanced Pages
 export { ProfilePage } from './pages/profile'
 export { AboutPage } from './pages/about'
 export { SettingsPage } from './pages/settings'
 
-// Enhanced Modal System
 export { ModalRouter, defaultModalRouter } from './lib/modal-router'
 export type { ModalState } from './lib/modal-router'
 
-// Pages for custom implementations
 export { WalletsPage } from './pages/wallets'
 
 // Theming system

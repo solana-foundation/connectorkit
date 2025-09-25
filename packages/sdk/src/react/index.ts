@@ -1,5 +1,5 @@
 /**
- * @connectorkit/solana/react - MVP React Hooks Export
+ * @connector-kit/solana/react - MVP React Hooks Export
  * 
  * React-specific hooks and providers for Solana development.
  * MVP version with only the hooks used in demo components.

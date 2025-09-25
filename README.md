@@ -1,123 +1,122 @@
-# Connector Kit
+# ConnectorKit
 
-A framework agnostic wallet connection and state management development kit for Solana applications.
+Headless wallet connector and React toolkit for building modern Solana applications.
 
 ## 🚀 Quick Start
 
-### Prerequisites
-
-- **Node.js**: Version 18.0.0 or higher
-- **pnpm**: 9.12.3 or higher (recommended package manager)
-
 ### Installation
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/your-username/connector-kit.git
-   cd connector-kit
-   ```
+```bash
+npm install @connector-kit/connector
+# Optional: Add SDK for Solana operations
+npm install @connector-kit/sdk
+```
 
-2. **Install dependencies**
-   ```bash
-   pnpm install
-   ```
+### Basic Setup
 
-## 📦 Available Packages
+```tsx
+"use client"
 
-This monorepo contains several packages:
+import { ConnectorProvider, ConnectButton, getDefaultConfig } from '@connector-kit/connector'
 
-- **@connectorkit/sdk** - Core React hooks and utilities for Solana development
-- **@connectorkit/connector** - Wallet connector components and context management
-- **@connectorkit/providers** - Provider templates and configurations
-- **@connectorkit/jupiter** - Jupiter DEX integration example
-- **@connectorkit/ui-primitives** - Headless UI component primitives
+export default function App() {
+  return (
+    <ConnectorProvider config={getDefaultConfig({ appName: "Your App" })}>
+      <ConnectButton />
+    </ConnectorProvider>
+  )
+}
+```
+
+## 📦 Packages
+
+| Package | Description | Version |
+|---------|-------------|---------|
+| `@connector-kit/connector` | Headless wallet connection with React components built on Wallet Standard | ![npm](https://img.shields.io/npm/v/@connector-kit/connector) |
+| `@connector-kit/sdk` | Type-safe React hooks for Solana operations like balance, transactions | ![npm](https://img.shields.io/npm/v/@connector-kit/sdk) |
+| `@connector-kit/jupiter` | Jupiter DEX integration for token swapping | ![npm](https://img.shields.io/npm/v/@connector-kit/jupiter) |
+| `@connector-kit/providers` | Provider utilities and templates | ![npm](https://img.shields.io/npm/v/@connector-kit/providers) |
+
+## ✨ Features
+
+- **🔌 Wallet Standard** - Built on official Wallet Standard for maximum compatibility
+- **⚡ TypeScript Ready** - Full type safety with excellent IntelliSense support  
+- **🪝 React Hooks** - Intuitive hooks for wallet state and Solana operations
+- **📱 Mobile Support** - Mobile Wallet Adapter integration for mobile apps
+- **🎨 Headless Design** - Use pre-built components or build custom UI
+- **⚙️ Zero Config** - Sensible defaults with `getDefaultConfig()` helper
+- **🚀 Modern React** - Supports React 18+ with concurrent features
+- **🏭 Production Ready** - Used in production Solana applications
+
+## 📖 Documentation
+
+Visit our [documentation site](https://connectorkit.dev) for:
+
+- [Getting Started Guide](https://connectorkit.dev/docs/connector-kit/introduction)
+- [API Reference](https://connectorkit.dev/docs/connector-kit/api-reference) 
+- [Interactive Examples](https://connectorkit.dev/docs/connector-kit/try-it-out)
+- [Customization Guide](https://connectorkit.dev/docs/connector-kit/customization)
+
+## 🔧 Usage Examples
+
+### Wallet Connection
+
+```tsx
+import { useConnector } from '@connector-kit/connector'
+
+function WalletStatus() {
+  const { connected, selectedWallet, disconnect } = useConnector()
+  
+  if (!connected) return <div>Not connected</div>
+  
+  return (
+    <div>
+      <p>Connected to {selectedWallet?.name}</p>
+      <button onClick={disconnect}>Disconnect</button>
+    </div>
+  )
+}
+```
+
+### Solana Operations
+
+```tsx
+import { useWalletAddress, useBalance } from '@connector-kit/sdk'
+
+function BalanceDisplay() {
+  const { address, connected } = useWalletAddress()
+  const { balance } = useBalance({ address })
+  
+  if (!connected) return <div>Connect wallet to view balance</div>
+  
+  return (
+    <div>
+      <p>Address: {address}</p>
+      <p>Balance: {balance ? Number(balance) / 1e9 : 0} SOL</p>
+    </div>
+  )
+}
+```
 
 ## 🛠️ Development
 
-### Available Scripts
+For contributors and maintainers:
 
 ```bash
+# Clone and setup
+git clone https://github.com/your-org/connector-kit.git
+cd connector-kit
+pnpm install
+
 # Development
-pnpm dev              # Start all apps in development mode
-pnpm build            # Build all packages and apps
-pnpm test             # Run tests across all packages
-pnpm lint             # Lint all code
-pnpm type-check       # Run TypeScript type checking
-pnpm format           # Format code with Biome
-
-# Package management
-pnpm changeset        # Create a changeset for releases
-pnpm version-packages # Version packages based on changesets
-pnpm release          # Build and publish packages
+pnpm dev      # Start docs site
+pnpm build    # Build all packages
+pnpm test     # Run tests
 ```
 
-### Development Workflow
+## 🤝 Contributing
 
-1. **Start the docs site** (includes all examples and demos)
-   ```bash
-   cd apps/docs
-   pnpm dev
-   ```
-   Visit http://localhost:3000 to see the documentation and interactive examples.
-
-2. **Work on a specific package**
-   ```bash
-   cd packages/sdk
-   pnpm dev    # Start development mode
-   pnpm test   # Run tests
-   ```
-
-3. **Build everything**
-   ```bash
-   pnpm build  # From root - builds all packages
-   ```
-
-## 🏗️ Project Structure
-
-```
-connector-kit/
-├── apps/
-│   └── docs/              # Documentation site
-├── packages/
-│   ├── sdk/               # Core React hooks and utilities
-│   ├── connector/         # Connection components
-│   ├── providers/         # Provider configurations and templates
-│   ├── jupiter/           # Jupiter DEX integration example
-│   └── ui-primitives/     # Headless UI components library
-
-```
-
-## 🔧 Testing
-
-```bash
-# Run all tests
-pnpm test
-
-# Run tests for specific package
-cd packages/sdk
-pnpm test
-
-# Run tests in watch mode
-pnpm test --watch
-```
-
-## ✨ Recent Improvements
-
-### Documentation Experience
-- **Collapsible sidebar navigation** with smooth animations
-- **Intelligent section management** - relevant sections stay expanded
-- **Clean, modern interface** with improved visual hierarchy
-- **Enhanced accessibility** with proper ARIA labels and keyboard navigation
-
-### Developer Experience
-- **Framework agnostic design** - works with React, Vue, Angular, and vanilla JavaScript
-- **TypeScript-first** - comprehensive type definitions for better DX
-- **Modular architecture** - use only what you need
-- **Extensible theming system** - customize appearance to match your brand
-
-## 🚀 Contributing
-
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details on how to get started.
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
 
 ## 📄 License
 

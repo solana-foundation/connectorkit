@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { ArcClientProvider, useArcClient } from './arc-client-provider'
 import { useConnectorClient } from '@connector-kit/connector'
@@ -26,14 +26,13 @@ export type ArcProviderProps = {
  */
 export function ArcProvider({ children, config, queryClient, enhancedCluster }: ArcProviderProps) {
   const connector = useConnectorClient()
+  
+  // Always pass the connector (even if null) - let ArcWebClient handle the loading state
   const merged: ArcWebClientConfig = { ...config, connector } as ArcWebClientConfig
   
-  // If enhanced cluster config provided, wrap with wallet-ui provider
   if (enhancedCluster) {
-    // Merge Arc config into enhanced cluster config (wallet-ui is source of truth)
     const enhancedConfig = {
       ...enhancedCluster,
-      // Inherit Arc network settings if not explicitly set
       network: enhancedCluster.network || merged.network || 'mainnet',
       rpcUrl: enhancedCluster.rpcUrl || merged.rpcUrl
     }
@@ -47,7 +46,6 @@ export function ArcProvider({ children, config, queryClient, enhancedCluster }: 
     )
   }
   
-  // Otherwise, use standard Arc provider (backward compatible)
   return (
     <ArcClientProvider config={merged} queryClient={queryClient}>
       {children}

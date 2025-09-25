@@ -171,7 +171,7 @@ export function AboutPage({ options, onNavigate }: AboutPageProps) {
         {[
           { label: 'Documentation', url: 'https://connectorkit.dev', icon: '📚' },
           { label: 'GitHub Repository', url: 'https://github.com/your-org/connectorkit', icon: '🔗' },
-          { label: 'Report Issue', url: 'https://github.com/your-org/connectorkit/issues', icon: '🐛' }
+          { label: 'Report Issue', url: 'https://github.com/your-org/connector-kit/issues', icon: '🐛' }
         ].map((link, index) => (
           <motion.a
             key={link.label}

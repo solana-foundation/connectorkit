@@ -2,7 +2,6 @@
   "pages": [
     "index",
     "connector-kit",
-    "hooks",
-    "providers"
+    "sdk"
   ]
 }

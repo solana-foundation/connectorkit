@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Bundle Analysis Script for @connectorkit/connector
+ * Bundle Analysis Script for @connector-kit/connector
  * Provides detailed bundle size analysis and optimization recommendations
  */
 
@@ -32,7 +32,7 @@ function formatBytes(bytes) {
 }
 
 async function analyzeBundle() {
-  log('blue', '📦 Analyzing @connectorkit/connector bundle...\n')
+  log('blue', '📦 Analyzing @connector-kit/connector bundle...\n')
 
   const distPath = path.join(__dirname, '../dist')
   

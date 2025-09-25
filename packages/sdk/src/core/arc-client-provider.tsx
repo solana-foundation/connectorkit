@@ -44,7 +44,7 @@ export function ArcClientProvider({ children, config, queryClient }: ArcClientPr
   // Apply config updates without recreating the client instance
   useEffect(() => {
     clientRef.current?.updateConfig?.(config)
-  }, [config])
+  }, [config, config.connector])
 
   // Cleanup wallet listeners on unmount
   useEffect(() => {

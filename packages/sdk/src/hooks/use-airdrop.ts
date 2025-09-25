@@ -197,7 +197,6 @@ export function useAirdrop(
         amount: amountInLamports,
       })
     } catch (error) {
-      console.error('Failed to parse amount or request airdrop:', error)
       throw error
     }
   }, [addressInput, amountInput, mutation.mutateAsync])

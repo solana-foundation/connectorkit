@@ -1,5 +1,0 @@
-{
-  "title": "Architecture",
-  "defaultOpen": false,
-  "pages": ["core", "client", "transports", "utils"]
-}

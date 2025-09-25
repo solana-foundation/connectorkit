@@ -1,4 +1,4 @@
-// Enhanced theme interface with comprehensive styling options
+// Theme interface
 export interface ConnectorTheme {
   // Base colors
   colors: {

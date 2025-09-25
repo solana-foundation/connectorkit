@@ -73,7 +73,6 @@ export function createJupiter(config: JupiterConfig = {}): SwapProvider {
       // Allowlist proxy hosts for security
       const allowedProxies = ['https://corsproxy.io/?']
       if (typeof config.corsProxy === 'string' && !allowedProxies.some(a => (config.corsProxy as string).startsWith(a))) {
-        console.warn('[Jupiter] Untrusted CORS proxy blocked:', config.corsProxy)
         return url
       }
       return `${proxyBase}${encodeURIComponent(url)}`
@@ -121,7 +120,6 @@ export function createJupiter(config: JupiterConfig = {}): SwapProvider {
       const id = setTimeout(() => controller.abort(), timeoutMs)
       try {
         const url = withCorsProxy(input)
-        if (config.debug) console.log('[Jupiter] GET/POST →', url)
         const res = await fetch(url, { ...init, signal: controller.signal })
         if (!res.ok) {
           const text = await res.text().catch(() => '')
@@ -176,7 +174,6 @@ export function createJupiter(config: JupiterConfig = {}): SwapProvider {
       // Check if we have a recent cached quote
       const cached = quoteCache.get(cacheKey)
       if (cached && Date.now() - cached.timestamp < QUOTE_CACHE_TTL) {
-        console.log('[Jupiter] Returning cached quote for', params.inputMint.slice(0, 8), '→', params.outputMint.slice(0, 8))
         const data = await cached.promise
         return {
           provider: 'jupiter',
@@ -299,7 +296,6 @@ export async function getJupiterTokens(): Promise<Array<{ address: string; symbo
     
     return await fetchWithTimeout()
   } catch (error) {
-    console.warn('[Jupiter] Failed to fetch token list:', error)
     return []
   }
 }

@@ -3,6 +3,8 @@ title: API Reference
 description: Complete API reference for ConnectorKit components and utilities
 ---
 
+import React from 'react'
+
 # API Reference
 
 Complete reference for all ConnectorKit APIs, components, and utilities.
@@ -11,15 +13,18 @@ Complete reference for all ConnectorKit APIs, components, and utilities.
 
 ### ConnectButton
 
-The main wallet connection component with built-in modal and state management.
+The main wallet connection component with built-in modal and account management.
 
 ```tsx
-import { ConnectButton } from '@connectorkit/connector'
+import { ConnectButton } from '@connector-kit/connector'
 
 <ConnectButton 
-  size="default"     // "small" | "default" | "large"
-  variant="primary"  // "primary" | "secondary" | "outline"
-  showBalance={true} // Show wallet balance when connected
+  size="md"                    // "sm" | "md" | "lg"
+  variant="default"            // "default" | "icon-only" | "minimal" | "outline"
+  label="Connect Wallet"       // Custom button text
+  disabled={false}             // Disable button
+  loading={false}              // Show loading state
+  className="custom-styles"    // Custom CSS classes
 />
 ```
 
@@ -27,56 +32,165 @@ import { ConnectButton } from '@connectorkit/connector'
 
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
-| `size` | `"small" \| "default" \| "large"` | `"default"` | Button size |
-| `variant` | `"primary" \| "secondary" \| "outline"` | `"primary"` | Button variant |
-| `showBalance` | `boolean` | `false` | Show balance when connected |
+| `size` | `"sm" \| "md" \| "lg"` | `"md"` | Button size |
+| `variant` | `"default" \| "icon-only" \| "minimal" \| "outline"` | `"default"` | Button style variant |
+| `label` | `string` | `"Connect Wallet"` | Custom button text |
+| `disabled` | `boolean` | `false` | Disable the button |
+| `loading` | `boolean` | `false` | Show loading spinner |
+| `className` | `string` | - | Custom CSS classes |
+| `theme` | `ConnectorTheme` | - | Custom theme overrides |
 
-### AppProvider
+### ConnectorProvider
 
 Root provider that manages wallet connections and configuration.
 
 ```tsx
-import { AppProvider } from '@connectorkit/connector'
+import { ConnectorProvider, getDefaultConfig } from '@connector-kit/connector'
 
-<AppProvider connectorConfig={config} mobile={mobileConfig}>
+<ConnectorProvider 
+  config={getDefaultConfig({ appName: "Your App" })}
+  mobile={getDefaultMobileConfig({ appName: "Your App" })}
+>
   {children}
-</AppProvider>
+</ConnectorProvider>
 ```
 
 **Props:**
 
 | Prop | Type | Required | Description |
 |------|------|----------|-------------|
-| `connectorConfig` | `ConnectorConfig` | ✓ | Main configuration object |
-| `mobile` | `MobileConfig` | ✗ | Mobile wallet adapter config |
+| `config` | `ConnectorConfig` | ✓ | Main configuration object |
+| `mobile` | `MobileWalletAdapterConfig` | ✗ | Mobile wallet adapter config |
 
-## Configuration Objects
+### ConnectModal
+
+Standalone modal for wallet connection (automatically included with ConnectButton).
+
+```tsx
+import { ConnectModal } from '@connector-kit/connector'
+
+<ConnectModal options={{ autoCloseOnConnect: true }} />
+```
+
+## Hooks
+
+### useConnector
+
+Main hook for wallet connection state and methods.
+
+```tsx
+import { useConnector } from '@connector-kit/connector'
+
+function WalletStatus() {
+  const {
+    // State
+    connected,
+    connecting,
+    wallets,
+    selectedWallet,
+    accounts,
+    selectedAccount,
+    modalOpen,
+    modalRoute,
+    
+    // Methods
+    select,
+    disconnect,
+    selectAccount,
+    openModal,
+    closeModal
+  } = useConnector()
+}
+```
+
+**Returns:**
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `connected` | `boolean` | Whether a wallet is connected |
+| `connecting` | `boolean` | Whether connection is in progress |
+| `wallets` | `WalletInfo[]` | Available wallets |
+| `selectedWallet` | `Wallet \| null` | Currently connected wallet |
+| `accounts` | `AccountInfo[]` | Available accounts |
+| `selectedAccount` | `string \| null` | Selected account address |
+| `modalOpen` | `boolean` | Modal visibility state |
+| `modalRoute` | `ModalRoute` | Current modal route |
+| `select(name)` | `(name: string) => Promise<void>` | Connect to wallet by name |
+| `disconnect()` | `() => Promise<void>` | Disconnect current wallet |
+| `selectAccount(address)` | `(address: string) => Promise<void>` | Switch account |
+| `openModal(route?)` | `(route?: ModalRoute) => void` | Open modal |
+| `closeModal()` | `() => void` | Close modal |
+
+### useModal
+
+Hook for managing modal state and navigation.
+
+```tsx
+import { useModal } from '@connector-kit/connector'
+
+function ModalControls() {
+  const {
+    isOpen,
+    route,
+    open,
+    close,
+    openWallets,
+    openProfile,
+    openSettings
+  } = useModal()
+}
+```
+
+**Returns:**
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `isOpen` | `boolean` | Whether modal is open |
+| `route` | `ModalRoute` | Current modal route |
+| `open(route?)` | `(route?: ModalRoute) => void` | Open modal with optional route |
+| `close()` | `() => void` | Close modal |
+| `openWallets()` | `() => void` | Open wallet selection |
+| `openProfile()` | `() => void` | Open user profile |
+| `openSettings()` | `() => void` | Open settings |
+
+### useConnectorClient
+
+Access to the underlying connector client instance.
+
+```tsx
+import { useConnectorClient } from '@connector-kit/connector'
+
+function ClientAccess() {
+  const client = useConnectorClient()
+  // Direct access to ConnectorClient methods
+}
+```
+
+## Configuration
 
 ### ConnectorConfig
 
 ```tsx
 interface ConnectorConfig {
-  appName: string
-  appUrl: string
-  network: 'devnet' | 'testnet' | 'mainnet-beta'
-  enableMobile?: boolean
-  wallets?: WalletAdapter[]
-  theme?: ThemeConfig
+  autoConnect?: boolean
+  debug?: boolean
+  storage?: {
+    getItem: (key: string) => string | null
+    setItem: (key: string, value: string) => void
+    removeItem: (key: string) => void
+  }
 }
 ```
 
-### ArcConfig
+### MobileWalletAdapterConfig
 
 ```tsx
-interface ArcConfig {
-  network: 'devnet' | 'testnet' | 'mainnet'
-  rpcUrl: string
-  commitment?: Commitment
-  autoConnect?: boolean
-  providers?: Provider[]
-  onConnect?: (publicKey: PublicKey) => void
-  onDisconnect?: () => void
-  onError?: (error: Error) => void
+interface MobileWalletAdapterConfig {
+  appIdentity: {
+    name: string
+    uri: string
+    icon: string
+  }
 }
 ```
 
@@ -84,16 +198,18 @@ interface ArcConfig {
 
 ### getDefaultConfig
 
-Creates a default connector configuration.
+Creates a default connector configuration with sensible defaults.
 
 ```tsx
-import { getDefaultConfig } from '@connectorkit/connector'
+import { getDefaultConfig } from '@connector-kit/connector'
 
 const config = getDefaultConfig({
-  appName: 'My App',
-  appUrl: 'https://myapp.com',
-  network: 'mainnet-beta',
-  enableMobile: true,
+  appName: 'My App',              // Required: App name for wallet prompts
+  appUrl: 'https://myapp.com',    // Optional: App URL
+  autoConnect: true,              // Optional: Auto-reconnect (default: true)
+  debug: false,                   // Optional: Debug logging (default: dev mode)
+  network: 'mainnet-beta',        // Optional: Solana network (default: mainnet-beta)
+  enableMobile: true,             // Optional: Enable mobile support (default: true)
 })
 ```
 
@@ -102,7 +218,7 @@ const config = getDefaultConfig({
 Creates default mobile wallet adapter configuration.
 
 ```tsx
-import { getDefaultMobileConfig } from '@connectorkit/connector'
+import { getDefaultMobileConfig } from '@connector-kit/connector'
 
 const mobileConfig = getDefaultMobileConfig({
   appName: 'My App',
@@ -111,54 +227,100 @@ const mobileConfig = getDefaultMobileConfig({
 })
 ```
 
-## Hooks Integration
+## SDK Integration
 
-ConnectorKit integrates seamlessly with `@connectorkit/sdk`:
+ConnectorKit integrates with `@connector-kit/sdk` for Solana operations:
 
 ```tsx
-import { useWalletAddress, useBalance } from '@connectorkit/sdk'
-import { ConnectButton } from '@connectorkit/connector'
+import { useWalletAddress, useBalance, useTransaction } from '@connector-kit/sdk'
+import { useConnector } from '@connector-kit/connector'
 
-function MyComponent() {
-  const address = useWalletAddress()
-  const { data: balance } = useBalance()
+function WalletIntegration() {
+  const { connected } = useConnector()
+  const { address } = useWalletAddress()
+  const { balance } = useBalance({ address })
+  const { sendTransaction } = useTransaction()
+  
+  const handleSend = async () => {
+    try {
+      const signature = await sendTransaction({
+        to: 'recipient-address',
+        amount: 1000000 // 0.001 SOL in lamports
+      })
+      console.log('Sent:', signature)
+    } catch (error) {
+      console.error('Failed:', error)
+    }
+  }
   
   return (
     <div>
-      <ConnectButton />
-      {address && (
-        <p>Balance: {balance ? Number(balance) / 1e9 : 0} SOL</p>
+      {connected ? (
+        <div>
+          <p>Address: {address}</p>
+          <p>Balance: {balance ? Number(balance) / 1e9 : 0} SOL</p>
+          <button onClick={handleSend}>Send SOL</button>
+        </div>
+      ) : (
+        <p>Connect wallet to continue</p>
       )}
     </div>
   )
 }
 ```
 
-## TypeScript Support
+## Types
 
-Full TypeScript support with proper type definitions:
-
-```tsx
-import type { 
-  ConnectorConfig,
-  ArcConfig,
-  MobileConfig,
-  ThemeConfig
-} from '@connectorkit/connector'
-```
-
-## Error Types
+### Core Types
 
 ```tsx
-interface ConnectorError extends Error {
-  code: string
-  details?: unknown
+interface WalletInfo {
+  wallet: Wallet
+  name: string
+  icon?: string
+  installed: boolean
+  connectable?: boolean
 }
 
-// Common error codes:
-// - 'wallet_not_found'
-// - 'user_rejected' 
-// - 'insufficient_funds'
-// - 'transaction_failed'
-// - 'network_error'
+interface AccountInfo {
+  address: string
+  icon?: string
+}
+
+type ModalRoute = 'wallets' | 'profile' | 'settings' | 'about'
+
+interface ConnectorSnapshot {
+  wallets: WalletInfo[]
+  selectedWallet: Wallet | null
+  connected: boolean
+  connecting: boolean
+  accounts: AccountInfo[]
+  selectedAccount: string | null
+  modalOpen: boolean
+  modalRoute: ModalRoute
+  // ... methods
+}
+```
+
+### Theme Types
+
+```tsx
+interface ConnectorTheme {
+  colors: {
+    primary: string
+    secondary: string
+    background: string
+    foreground: string
+  }
+  fonts: {
+    body: string
+    heading: string
+  }
+  borderRadius: {
+    sm: number
+    md: number
+    lg: number
+  }
+  // ... additional theme properties
+}
 ```

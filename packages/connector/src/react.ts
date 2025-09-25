@@ -1,5 +1,5 @@
 /**
- * @connectorkit/connector/react
+ * @connector-kit/connector/react
  * 
  * React-specific exports with hooks and components
  * Use this when you only need React functionality
@@ -34,7 +34,7 @@ export * from './headless'
  * React 19 Usage Example:
  * 
  * ```tsx
- * import { AppProvider, ConnectButton, useConnector } from '@connectorkit/connector/react'
+ * import { AppProvider, ConnectButton, useConnector } from '@connector-kit/connector/react'
  * 
  * function App() {
  *   return (

@@ -31,11 +31,6 @@ export function validateRoute(route: ModalRoute, connected: boolean): ModalRoute
 	const availableRoutes = connected ? safeRoutes.connected : safeRoutes.disconnected
 	if (!(availableRoutes as readonly ModalRoute[]).includes(route)) {
 		const fallback = connected ? modalRoutes.PROFILE : modalRoutes.WALLETS
-		if (typeof console !== 'undefined' && console.warn) {
-			console.warn(
-				`[ConnectorKit] Route "${route}" is not valid when ${connected ? 'connected' : 'disconnected'}. Falling back to "${fallback}".`
-			)
-		}
 		return fallback
 	}
 	return route
@@ -152,7 +147,7 @@ export class ConnectorClient {
 			this.unsubscribers.push(walletsApi.on('unregister', update))
 			if (this.config.autoConnect) setTimeout(() => this.attemptAutoConnect(), 100)
 		} catch (e) {
-			if (this.config.debug) console.warn('[Connector] init failed', e)
+			// Init failed silently
 		}
 	}
 
@@ -196,12 +191,9 @@ export class ConnectorClient {
 				if (changed) {
 					this.state = { ...this.state, accounts: nextAccounts, selectedAccount: newSelected }
 					this.notify()
-					if (this.config.debug) console.log('[Connector] Poll updated accounts:', nextAccounts.length)
 				}
 			} catch (error) {
-				if (this.config.debug) {
-					console.warn('[Connector] Error during account polling:', error)
-				}
+				// Error during account polling
 			}
 		}, 1500)
 	}
@@ -217,7 +209,7 @@ export class ConnectorClient {
 			try {
 				if (this.walletChangeUnsub) this.walletChangeUnsub()
 			} catch (e) {
-				if (this.config.debug) console.warn('[Connector] Error unsubscribing wallet events:', e)
+				// Error unsubscribing wallet events
 			}
 		if (this.walletChangeUnsub) {
 			try { this.walletChangeUnsub() } catch {}
@@ -253,14 +245,10 @@ export class ConnectorClient {
 				this.state = { ...this.state, accounts: nextAccounts, selectedAccount: newSelected }
 				this.notify()
 
-				if (this.config.debug) {
-					console.log('[Connector] Wallet accounts changed:', nextAccounts.length, 'accounts')
-				}
+				// Wallet accounts changed
 			})
 		} catch (error) {
-			if (this.config.debug) {
-				console.warn('[Connector] Failed to subscribe to wallet events:', error)
-			}
+			// Failed to subscribe to wallet events
 			// Fallback to polling when event subscription fails
 			this.startPollingWalletAccounts()
 		}
@@ -288,11 +276,7 @@ export class ConnectorClient {
 				const firstNew = accounts.find(a => !previousAddresses.has(a.address))
 				const selected = firstNew?.address ?? previouslySelected ?? accounts[0]?.address ?? null
 			
-			if (this.config.debug) {
-				console.log(`[Connector] Connected to ${walletName} with ${accounts.length} accounts`)
-				console.log('[Connector] Accounts:', accounts.map((a: AccountInfo) => a.address))
-				console.log('[Connector] Selected account:', selected)
-			}
+			// Successfully connected to wallet
 				this.state = {
 					...this.state,
 					selectedWallet: w.wallet,
@@ -327,13 +311,9 @@ export class ConnectorClient {
 			if (disconnectFeature?.disconnect) {
 				try {
 					await disconnectFeature.disconnect()
-					if (this.config.debug) {
-						console.log('[Connector] Called wallet disconnect feature')
-					}
+					// Called wallet disconnect feature
 				} catch (error) {
-					if (this.config.debug) {
-						console.warn('[Connector] Wallet disconnect failed:', error)
-					}
+					// Wallet disconnect failed
 				}
 			}
 		}
@@ -357,9 +337,7 @@ export class ConnectorClient {
 					this.state = { ...this.state, accounts }
 				}
 			} catch (error) {
-				if (this.config.debug) {
-					console.warn('[Connector] Failed to reconnect for account selection:', error)
-				}
+				// Failed to reconnect for account selection
 				throw new Error('Failed to reconnect wallet for account selection')
 			}
 		}
@@ -416,9 +394,7 @@ export class ConnectorClient {
 		this.unsubscribers = []
 		// Clear external store listeners
 		this.listeners.clear()
-		if (this.config.debug) {
-			console.log('[Connector] destroyed')
-		}
+		// Connector destroyed
 	}
 }
 

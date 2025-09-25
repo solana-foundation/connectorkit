@@ -1,5 +1,5 @@
 /**
- * @connectorkit/solana/client - Server-side Client API
+ * @connector-kit/solana/client - Server-side Client API
  * 
  * Minimal client for server-side usage (API routes, serverless functions, etc.)
  * No React dependencies.

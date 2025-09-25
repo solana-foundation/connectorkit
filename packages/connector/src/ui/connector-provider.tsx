@@ -33,7 +33,9 @@ export interface MobileWalletAdapterConfig {
 
 export function ConnectorProvider({ children, config, mobile }: { children: ReactNode; config?: ConnectorConfig; mobile?: MobileWalletAdapterConfig }) {
 	const ref = useRef<ConnectorClient | null>(null)
-	if (!ref.current) ref.current = new ConnectorClient(config)
+	if (!ref.current) {
+		ref.current = new ConnectorClient(config)
+	}
 
 	React.useEffect(() => {
 		return () => {
@@ -69,9 +71,7 @@ export function ConnectorProvider({ children, config, mobile }: { children: Reac
 					onWalletNotFound: mobile.onWalletNotFound ?? createDefaultWalletNotFoundHandler(),
 				})
 			} catch (e) {
-				if (process.env.NODE_ENV !== 'production') {
-					console.warn('[ConnectorKit] Failed to register Mobile Wallet Adapter', e)
-				}
+				// Failed to register Mobile Wallet Adapter
 			}
 		})()
 		return () => {
