@@ -8,7 +8,7 @@ export {
   type JupiterQuoteResponse,
   type JupiterSwapResponse,
   getJupiterTokens 
-} from '@connectorkit/jupiter'
+} from '@connector-kit/jupiter'
 
 // Future providers will be added here:
 // export { createKamino, type KaminoConfig } from '@connectorkit/kamino'
@@ -16,7 +16,7 @@ export {
 // export { createOrcaWhirlpools, type OrcaConfig } from '@connectorkit/orca'
 
 // Import locally for internal use
-import { createJupiter } from '@connectorkit/jupiter'
+import { createJupiter } from '@connector-kit/jupiter'
 
 // Provider registry type for future extensibility
 export interface ProviderRegistry {

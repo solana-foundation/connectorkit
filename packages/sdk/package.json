@@ -1,5 +1,5 @@
 {
-  "name": "@connectorkit/sdk",
+  "name": "@connector-kit/sdk",
   "version": "0.0.0",
   "description": "React hooks for Solana development - MVP with essential hooks only",
   "main": "./dist/index.js",
@@ -40,7 +40,7 @@
     "@tanstack/react-query": { "optional": true }
   },
   "dependencies": {
-    "@connectorkit/connector": "workspace:*",
+    "@connector-kit/connector": "workspace:*",
     "@solana-program/compute-budget": "^0.3.0",
     "@solana-program/system": "^0.7.0",
     "@solana-program/token": "^0.5.1",

@@ -13,7 +13,7 @@ export default defineConfig({
   treeshake: true,
   minify: process.env.NODE_ENV === 'production',
   splitting: true,
-  external: ['react', 'react-dom', '@connectorkit/sdk'],
+  external: ['react', 'react-dom', '@connector-kit/sdk'],
   esbuildOptions: (options) => {
     // React 19 optimizations
     options.treeShaking = true
