@@ -1,5 +1,5 @@
 {
-  "name": "@connectorkit/jupiter",
+  "name": "@connector-kit/jupiter",
   "version": "0.0.1",
   "private": false,
   "type": "module",
@@ -19,10 +19,10 @@
     "lint": "echo skip"
   },
   "peerDependencies": {
-    "@connectorkit/sdk": "*"
+    "@connector-kit/sdk": "*"
   },
   "devDependencies": {
-    "@connectorkit/sdk": "workspace:*",
+    "@connector-kit/sdk": "workspace:*",
     "@solana/kit": "^2.0.0",
     "tsup": "^8.5.0",
     "typescript": "^5.3.3"
