@@ -172,7 +172,7 @@ export abstract class BaseWalletAdapter implements WalletAdapter {
       try {
         (listener as Function)(...args)
       } catch (error) {
-        console.error(`Error in ${event} listener:`, error)
+        // Error in event listener
       }
     })
   }

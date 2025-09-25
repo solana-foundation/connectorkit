@@ -9,7 +9,7 @@ import {
   WalletStandardKitSigner,
   type StandardWalletInfo,
 } from '../hooks/use-standard-wallets'
-import { type ConnectorState, ConnectorClient } from '@connector-kit/connector'
+import { ConnectorClient, type ConnectorState } from '@connector-kit/connector'
 import type { SolanaCluster } from '@wallet-ui/core'
 
 // Connector is the single source of truth; no Arc-managed persistence
@@ -146,7 +146,8 @@ export class ArcWebClient {
       // Prefer externally provided connector (from app-level provider) when available
       const providedConnector = this.state.config.connector
       if (!providedConnector) {
-        throw new Error('ArcProvider requires @arc/connector-kit AppProvider. Wrap your app with AppProvider and ensure connector is passed to Arc.')
+        // If no connector available (e.g. during SSR), skip wallet initialization
+        return
       }
       this.connector = providedConnector
 
@@ -201,7 +202,10 @@ export class ArcWebClient {
       syncFromConnector(this.connector.getSnapshot())
       this.walletUnsubscribers.push(this.connector.subscribe(syncFromConnector))
     } catch (error) {
-      console.warn('Failed to initialize connector:', error)
+      // Critical: subscription failure breaks wallet connection
+      if (process.env.NODE_ENV === 'development') {
+        console.error('ArcWebClient initialization failed:', error)
+      }
     }
   }
 
@@ -210,6 +214,8 @@ export class ArcWebClient {
     const rpcUrl = next.rpcUrl || `https://api.${next.network || 'devnet'}.solana.com`
     const clusterInfo = getClusterInfo(rpcUrl)
     const prevRpcUrl = this.state.network.rpcUrl
+    const prevConnector = this.state.config.connector
+    
     // Ensure transport persists or defaults when config updates
     const transport =
       next.transport ||
@@ -227,6 +233,11 @@ export class ArcWebClient {
         clusterInfo,
       },
       config: { ...next, transport },
+    }
+
+    // If connector became available and wasn't before, initialize wallets
+    if (!prevConnector && next.connector) {
+      this.initializeWallets()
     }
 
     // If RPC URL changed, we may want to reset ephemeral wallet state if needed
@@ -313,7 +324,6 @@ export class ArcWebClient {
         this.notify()
       }
     } catch (error) {
-      console.error('Failed to select account:', error)
       throw error
     }
   }

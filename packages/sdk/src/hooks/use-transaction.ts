@@ -373,7 +373,6 @@ export function useTransaction(options: UseTransactionOptions = {}): UseTransact
         ])
       } catch (wsError) {
         // If WebSocket fails, fall back to polling
-        console.warn('[Arc] WebSocket confirmation failed, using polling:', wsError)
         const start = Date.now()
         // eslint-disable-next-line no-constant-condition
         while (true) {
@@ -416,13 +415,11 @@ export function useTransaction(options: UseTransactionOptions = {}): UseTransact
       }
       
       if (error instanceof Error) {
-        // eslint-disable-next-line no-console
-        console.error('[Arc/useTransaction] sendPrebuilt failed:', error)
+        // Send prebuilt transaction failed
         throw new ArcTransactionError(`Failed to send prebuilt transaction: ${error.message}`,'SEND_FAILED', error)
       }
       
-      // eslint-disable-next-line no-console
-      console.error('[Arc/useTransaction] sendPrebuilt unknown error:', error)
+      // Unknown error sending prebuilt transaction
       throw new ArcTransactionError('Unknown error sending prebuilt transaction', 'SEND_FAILED')
     }
   }, [getRpcClient, wallet.signer])

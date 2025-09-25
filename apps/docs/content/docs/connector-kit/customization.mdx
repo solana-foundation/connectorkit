@@ -3,6 +3,7 @@ title: Customization
 description: Customize themes, modals, and wallet registry in Arc Connector Kit with live examples.
 ---
 
+import React from 'react'
 import { CustomizationDemo } from '@/components/customization-demo'
 
 ## Interactive Demo
@@ -18,7 +19,7 @@ Try out the customization features live:
 Choose from 4 Solana-optimized themes:
 
 ```tsx
-import { ConnectButton, solanaTheme, phantomTheme, minimalTheme, darkTheme } from '@connectorkit/connector'
+import { ConnectButton, solanaTheme, phantomTheme, minimalTheme, darkTheme } from '@connector-kit/connector'
 
 function App() {
   return <ConnectButton theme={solanaTheme} />
@@ -30,7 +31,7 @@ function App() {
 Create branded themes with partial overrides:
 
 ```tsx
-import { mergeThemeOverrides, solanaTheme } from '@connectorkit/connector'
+import { mergeThemeOverrides, solanaTheme } from '@connector-kit/connector'
 
 const brandTheme = mergeThemeOverrides(solanaTheme, {
   colors: { primary: '#FF6B6B', accent: '#4ECDC4' },
@@ -45,7 +46,7 @@ const brandTheme = mergeThemeOverrides(solanaTheme, {
 Use `getDefaultConfig` for quick setup:
 
 ```tsx
-import { AppProvider, getDefaultConfig } from '@connectorkit/connector'
+import { AppProvider, getDefaultConfig } from '@connector-kit/connector'
 
 const config = getDefaultConfig({
   appName: 'My App',
@@ -61,7 +62,7 @@ const config = getDefaultConfig({
 Programmatically manage modals:
 
 ```tsx
-import { useModal, modalRoutes } from '@connectorkit/connector'
+import { useModal, modalRoutes } from '@connector-kit/connector'
 
 function WalletControls() {
   const modal = useModal()
@@ -81,7 +82,7 @@ function WalletControls() {
 Filter wallets by capabilities:
 
 ```tsx
-import { getPopularWallets, getMobileWallets } from '@connectorkit/connector'
+import { getPopularWallets, getMobileWallets } from '@connector-kit/connector'
 
 const popularWallets = getPopularWallets() // Phantom, Solflare, etc.
 const mobileWallets = getMobileWallets()   // Mobile-first wallets
@@ -92,7 +93,7 @@ const mobileWallets = getMobileWallets()   // Mobile-first wallets
 Build your own connect experience:
 
 ```tsx
-import { useConnector, useModal } from '@connectorkit/connector'
+import { useConnector, useModal } from '@connector-kit/connector'
 
 function CustomButton() {
   const { connected, connecting, selectedWallet } = useConnector()

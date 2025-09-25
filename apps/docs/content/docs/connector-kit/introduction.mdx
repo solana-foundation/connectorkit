@@ -3,10 +3,12 @@ title: Getting Started
 description: Headless wallet connector client and React provider built on Wallet Standard for Solana applications.
 ---
 
+import React from 'react'
+
 ## Install
 
 ```bash
-npm install @connectorkit/connector
+npm install @connector-kit/connector
 ```
 
 ## Quick Start
@@ -16,11 +18,11 @@ Wrap your app with `ConnectorProvider` and add a connect button:
 ```tsx title="App.tsx"
 "use client"
 
-import { ConnectorProvider, ConnectButton } from '@connectorkit/connector'
+import { ConnectorProvider, ConnectButton, getDefaultConfig } from '@connector-kit/connector'
 
 export default function App() {
   return (
-    <ConnectorProvider config={{ autoConnect: true }}>
+    <ConnectorProvider config={getDefaultConfig({ appName: "Your App" })}>
       <ConnectButton />
     </ConnectorProvider>
   )
@@ -29,10 +31,10 @@ export default function App() {
 
 ## Access Wallet State
 
-Use the `useConnector` hook to access wallet connection state:
+Use the `useConnector` hook to access wallet connection state and methods:
 
 ```tsx title="WalletInfo.tsx"
-import { useConnector } from '@connectorkit/connector'
+import { useConnector } from '@connector-kit/connector'
 
 function WalletInfo() {
   const { connected, selectedWallet, selectedAccount, disconnect } = useConnector()
@@ -51,33 +53,37 @@ function WalletInfo() {
 
 ## Configuration
 
-Configure the provider with optional settings:
+Configure the provider with `getDefaultConfig()` helper:
 
 ```tsx
-<ConnectorProvider
-  config={{
-    autoConnect: true,    // Auto-reconnect to last wallet
-    debug: false,         // Enable debug logging
-  }}
-  mobile={{
-    appIdentity: {
-      name: "Your App",
-      uri: "https://your-app.com",
-      icon: "https://your-app.com/icon.png",
-    },
-  }}
->
+import { getDefaultConfig, getDefaultMobileConfig } from '@connector-kit/connector'
+
+const config = getDefaultConfig({
+  appName: "Your App",
+  appUrl: "https://your-app.com",
+  autoConnect: true,      // Auto-reconnect to last wallet
+  debug: false,           // Enable debug logging
+  network: 'mainnet-beta' // Solana network
+})
+
+const mobile = getDefaultMobileConfig({
+  appName: "Your App", 
+  appUrl: "https://your-app.com",
+  network: 'mainnet-beta'
+})
+
+<ConnectorProvider config={config} mobile={mobile}>
+  {children}
+</ConnectorProvider>
 ```
 
 ## Components
 
 | Component | Description |
 |-----------|-------------|
-| `ConnectorProvider` | Provides wallet state to child components |
-| `ConnectButton` | Complete wallet connection interface |
-| `WalletList` | Display available wallets for selection |
-| `AccountDropdown` | Connected wallet info with disconnect option |
-| `ConnectorDialog` | Standalone wallet selection dialog |
+| `ConnectorProvider` | Root provider for wallet state management |
+| `ConnectButton` | Complete wallet connection interface with dropdown |
+| `ConnectModal` | Standalone wallet selection modal |
 
 ## Hooks
 
@@ -85,6 +91,7 @@ Configure the provider with optional settings:
 |------|---------|-------------|
 | `useConnector()` | `ConnectorSnapshot` | Main wallet connection state and methods |
 | `useConnectorClient()` | `ConnectorClient` | Access to underlying client instance |
+| `useModal()` | `UseModalReturn` | Modal state management and navigation |
 
 ### useConnector Properties
 
@@ -99,27 +106,49 @@ Configure the provider with optional settings:
 | `select(name)` | `(name: string) => Promise<void>` | Connect to wallet |
 | `disconnect()` | `() => Promise<void>` | Disconnect wallet |
 | `selectAccount(address)` | `(address: string) => Promise<void>` | Switch account |
+| `modalOpen` | `boolean` | Modal visibility state |
+| `openModal()` | `() => void` | Open connection modal |
+| `closeModal()` | `() => void` | Close connection modal |
 
-## Framework Setup
+## SDK Integration
 
-### Next.js
+Add the SDK for Solana operations:
 
-Add webpack fallbacks if needed:
+```bash
+npm install @connector-kit/sdk
+```
 
-```js title="next.config.js"
-module.exports = {
-  webpack: (config) => {
-    config.resolve.fallback = { fs: false, net: false, tls: false }
-    return config
-  },
+Use together with connector for complete functionality:
+
+```tsx title="BalanceDisplay.tsx"
+import { useWalletAddress, useBalance } from '@connector-kit/sdk'
+
+function BalanceDisplay() {
+  const { address, connected } = useWalletAddress()
+  const { balance } = useBalance({ address })
+
+  if (!connected) return <div>Connect wallet to view balance</div>
+
+  return (
+    <div>
+      <p>Address: {address}</p>
+      <p>Balance: {balance ? Number(balance) / 1e9 : 0} SOL</p>
+    </div>
+  )
 }
 ```
 
-### React Server Components
+## Framework Setup
 
-Use `"use client"` directive when needed:
+### Next.js App Router
 
-```tsx
+Use `"use client"` directive for components using hooks:
+
+```tsx title="components/wallet-connect.tsx"
 "use client"
-import { ConnectorProvider } from '@connectorkit/connector'
+import { ConnectorProvider, ConnectButton } from '@connector-kit/connector'
+
+export function WalletConnect() {
+  return <ConnectButton />
+}
 ```

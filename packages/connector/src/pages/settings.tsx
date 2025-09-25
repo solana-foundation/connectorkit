@@ -1,5 +1,5 @@
 /**
- * Enhanced Settings Page - Superior User Experience
+ * Settings Page
  * Features: Theme switching, preferences, developer options
  */
 
@@ -23,8 +23,7 @@ export function SettingsPage({ options, onNavigate }: SettingsPageProps) {
 
   const handleThemeChange = useCallback((themeName: string) => {
     setSelectedTheme(themeName)
-    // In a real implementation, this would update the global theme
-    console.log('Theme changed to:', themeName)
+    // Theme changed
   }, [])
 
   const availableThemes = useMemo(() => [

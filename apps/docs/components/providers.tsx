@@ -2,15 +2,15 @@
 
 import { QueryClient } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
-import { createProvider, ArcProvider } from '@connectorkit/sdk'
-import { createJupiter } from '@connectorkit/jupiter'
+import { createProvider, ArcProvider } from '@connector-kit/sdk'
+import { createJupiter } from '@connector-kit/jupiter'
 import { 
   AppProvider, 
   getDefaultConfig, 
   getDefaultMobileConfig,
   solanaTheme,
   type MobileWalletAdapterConfig 
-} from '@connectorkit/connector'
+} from '@connector-kit/connector'
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(() => new QueryClient({
@@ -70,7 +70,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         config={arcConfig} 
         queryClient={queryClient}
         enhancedCluster={{
-          network: arcConfig.network, // Explicitly pass mainnet
+          network: arcConfig.network,
           allowSwitching: true,
           persistSelection: true
         }}

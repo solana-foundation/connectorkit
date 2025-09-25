@@ -1,19 +1,19 @@
 ---
 title: Overview
-description: ConnectorKit is a modular React development kit for building modern Solana applications with hooks and providers.
+description: Connector Kit is a headless wallet connector and React toolkit for building modern Solana applications.
 ---
 
+import React from 'react'
 import { Button } from '@/components/ui/button'
-
 
 <div className="hidden flex flex-col sm:flex-row gap-4 not-prose my-6 w-1/2">
   <Button asChild size="lg" className="flex-1">
-    <a href="/docs/quick-start">
+    <a href="/docs/connector-kit/introduction">
       Get Started
     </a>
   </Button>
   <Button asChild variant="outline" size="lg" className="flex-1">
-    <a href="/docs/playground">
+    <a href="/docs/connector-kit/try-it-out">
       Try It Out
     </a>
   </Button>
@@ -21,39 +21,38 @@ import { Button } from '@/components/ui/button'
 
 ## Main Packages
 
-Arc provides a headless wallet connection and state management solution, as well as pre-built framework agnostic components, that can be used alongside type-safe hooks and an easy to use provider integrations. 
+ConnectorKit provides headless wallet connection with Wallet Standard support, plus type-safe React hooks for Solana development. 
 
 <Cards>
   <Card 
-    title="Connector Kit" 
-    description="Wallet connection and management with Wallet Standard support" 
+    title="@connector-kit/connector" 
+    description="Headless wallet connection with React components and hooks built on Wallet Standard" 
     href="/docs/connector-kit/introduction"
   />
   <Card 
-    title="Solana" 
-    description="Type-safe React hooks for Solana development with progressive complexity" 
-    href="/docs/solana/hooks"
+    title="@connector-kit/sdk - Experimental" 
+    description="Type-safe React hooks for Solana operations like balance, transactions, and more" 
+    href="#"
   />
   <Card 
-    title="Providers" 
-    description="Modular integrations for DeFi protocols like Jupiter, Metaplex, and more" 
-    href="/docs/providers/providers"
+    title="@connector-kit/providers - Experimental" 
+    description="Provider templates and configurations" 
+    href="#"
   />
 </Cards>
-This simple combination creates a seamless but powerful front end developer experience for making Solana development as intuitive as traditional web development.
+
+Simple, powerful toolkit for Solana development with minimal setup and maximum flexibility.
 
 
 ## Features
 
-Get the experience you and your users deserve.
-
 <Cards>
-  <Card title="TypeScript Ready" description="Get types straight out of the box." />
-  <Card title="Solana Standards" description="Uses @solana/kit and Wallet Standard." />
-  <Card title="Progressive Complexity" description="Simple hooks to custom codecs." />
-  <Card title="Wallet Integration" description="Connect to any Solana wallet seamlessly." />
-  <Card title="Responsive Design" description="Mobile-first components that work everywhere." />
-  <Card title="Simple DX" description="Zero-config setup with sensible defaults." />
-  <Card title="Beautiful Components" description="Pre-built components or full customization." />
-  <Card title="Enterprise Ready" description="Built for production Solana applications." />
+  <Card title="Wallet Standard" description="Built on official Wallet Standard for maximum compatibility" />
+  <Card title="TypeScript Ready" description="Full type safety with excellent IntelliSense support" />
+  <Card title="React Hooks" description="Intuitive hooks for wallet state and Solana operations" />
+  <Card title="Mobile Support" description="Mobile Wallet Adapter integration for mobile apps" />
+  <Card title="Headless Design" description="Use pre-built components or build custom UI" />
+  <Card title="Zero Config" description="Sensible defaults with getDefaultConfig() helper" />
+  <Card title="Modern React" description="Supports React 18+ with concurrent features" />
+  <Card title="Production Ready" description="Used in production Solana applications" />
 </Cards>

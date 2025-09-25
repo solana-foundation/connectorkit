@@ -1,6 +1,6 @@
 # Provider Template
 
-This template shows how to add a new provider to the `@connectorkit/providers` package.
+This template shows how to add a new provider to the `@connector-kit/providers` package.
 
 ## Steps to add a new provider (e.g., Kamino):
 
@@ -45,7 +45,7 @@ mkdir -p packages/kamino/src
 
 ### 3. Implement the provider in src/index.ts
 ```typescript
-import type { SwapProvider, SwapParams, SwapQuote, SwapBuild } from '@connectorkit/solana'
+import type { SwapProvider, SwapParams, SwapQuote, SwapBuild } from '@connector-kit/solana'
 
 export interface KaminoConfig {
   // Provider-specific config
@@ -69,7 +69,7 @@ export function createKamino(config: KaminoConfig = {}): SwapProvider {
 }
 ```
 
-### 4. Add to @connectorkit/providers dependencies
+### 4. Add to @connector-kit/providers dependencies
 Update `packages/providers/package.json`:
 ```json
 {
@@ -83,7 +83,7 @@ Update `packages/providers/package.json`:
 ### 5. Update providers/src/index.ts
 ```typescript
 // Add the export
-export { createKamino, type KaminoConfig } from '@connectorkit/kamino'
+export { createKamino, type KaminoConfig } from '@connector-kit/kamino'
 
 // Update the registry type
 export interface ProviderRegistry {

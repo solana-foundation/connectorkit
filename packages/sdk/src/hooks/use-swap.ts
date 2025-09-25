@@ -38,7 +38,6 @@ export function useSwap(options: UseSwapOptions = {}): UseSwapReturn {
       
       const quotePromises = filteredProviders.map(provider => 
         provider.quote(params).catch(err => {
-          console.warn(`Quote failed for ${provider.name}:`, err)
           return null
         })
       )

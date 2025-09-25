@@ -1,5 +1,5 @@
 /**
- * @connectorkit/connector/headless
+ * @connector-kit/connector/headless
  * 
  * Framework-agnostic core - works with Vue, Angular, Vanilla JS
  * Zero React dependencies for maximum compatibility
@@ -60,7 +60,7 @@ export type { DefaultConfigOptions } from './config'
  * Vanilla JS Usage Example:
  * 
  * ```javascript
- * import { ConnectorClient, getDefaultConfig, solanaTheme } from '@connectorkit/connector/headless'
+ * import { ConnectorClient, getDefaultConfig, solanaTheme } from '@connector-kit/connector/headless'
  * 
  * const config = getDefaultConfig({
  *   appName: 'My App',
@@ -85,7 +85,7 @@ export type { DefaultConfigOptions } from './config'
  * 
  * ```javascript
  * import { ref, onMounted, onUnmounted } from 'vue'
- * import { ConnectorClient, getDefaultConfig } from '@connectorkit/connector/headless'
+ * import { ConnectorClient, getDefaultConfig } from '@connector-kit/connector/headless'
  * 
  * export function useConnector() {
  *   const state = ref(null)

@@ -16,7 +16,7 @@
     "incremental": true,
     "baseUrl": ".",
     "paths": {
-      "@connectorkit/*": ["packages/*/src"]
+      "@connector-kit/*": ["packages/*/src"]
     }
   },
   "include": ["**/*.ts", "**/*.tsx"],

@@ -27,11 +27,11 @@
     "@types/d3-path": "^3.1.1",
     "@types/js-cookie": "^3.0.6",
     "@types/node": "^24.5.2",
-    "@typescript-eslint/eslint-plugin": "^8.44.0",
-    "@typescript-eslint/parser": "^8.44.0",
-    "eslint": "^9.35.0",
+    "@typescript-eslint/eslint-plugin": "^8.44.1",
+    "@typescript-eslint/parser": "^8.44.1",
+    "eslint": "^9.36.0",
     "prettier": "^3.6.2",
-    "turbo": "^2.5.6"
+    "turbo": "^2.5.8"
   },
   "engines": {
     "node": ">=18.0.0"

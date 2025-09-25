@@ -1,10 +1,5 @@
 /**
- * 🚀 Arc RPC Manager - Singleton Connection Pool
- * 
- * FIXES: Critical performance issue where every hook creates fresh RPC connections
- * IMPACT: Reduces 50+ connections per page to 1-2 shared connections
- * 
- * This is the foundation of Arc's performance optimization.
+ * Arc RPC Manager - Singleton Connection Pool
  */
 
 import { 
@@ -23,12 +18,6 @@ export interface RpcConnectionConfig {
 
 /**
  * Singleton RPC connection manager
- * 
- * Pools RPC and WebSocket connections to prevent:
- * - Connection spam (50+ per page)
- * - Rate limiting from providers
- * - Memory leaks from unclosed connections
- * - Poor performance from constant handshakes
  */
 class ArcRpcManager {
   private static instance: ArcRpcManager
@@ -80,14 +69,12 @@ class ArcRpcManager {
     
     // Check connection limit
     if (this.rpcPool.size >= this.MAX_CONNECTIONS) {
-      console.warn('[Arc RPC] Max connections reached, reusing oldest connection')
       const oldestKey = this.rpcPool.keys().next().value!
       this.incrementUsage(oldestKey)
       return this.rpcPool.get(oldestKey)!
     }
     
     // Create new connection
-    console.log(`[Arc RPC] Creating new RPC connection: ${key}`)
     const rpc = createSolanaRpc(config.rpcUrl!)
     this.rpcPool.set(key, rpc)
     this.incrementUsage(key)
@@ -112,14 +99,12 @@ class ArcRpcManager {
     
     // Check connection limit
     if (this.wsPool.size >= this.MAX_CONNECTIONS) {
-      console.warn('[Arc RPC] Max WebSocket connections reached, reusing oldest')
       const oldestKey = this.wsPool.keys().next().value!
       this.incrementUsage(oldestKey)
       return this.wsPool.get(oldestKey)!
     }
     
     // Create new WebSocket connection
-    console.log(`[Arc RPC] Creating new WebSocket connection: ${key}`)
     const wsUrl = config.rpcUrl!.replace('https://', 'wss://').replace('http://', 'ws://')
     const ws = createSolanaRpcSubscriptions(wsUrl)
     this.wsPool.set(key, ws)
@@ -148,8 +133,6 @@ class ArcRpcManager {
    * Force cleanup all connections
    */
   cleanup(): void {
-    console.log('[Arc RPC] Cleaning up all connections')
-    
     // Clear all timers
     this.cleanupTimers.forEach(timer => clearTimeout(timer))
     this.cleanupTimers.clear()
@@ -192,7 +175,6 @@ class ArcRpcManager {
   
   private scheduleCleanup(key: string): void {
     const timer = setTimeout(() => {
-      console.log(`[Arc RPC] Cleaning up unused connection: ${key}`)
       this.rpcPool.delete(key)
       this.wsPool.delete(key)
       this.connectionCount.delete(key)

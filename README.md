@@ -26,11 +26,11 @@ A framework agnostic wallet connection and state management development kit for 
 
 This monorepo contains several packages:
 
-- **@connectorkit/sdk** - Core React hooks and utilities for Solana development
-- **@connectorkit/connector** - Wallet connector components and context management
-- **@connectorkit/providers** - Provider templates and configurations
-- **@connectorkit/jupiter** - Jupiter DEX integration example
-- **@connectorkit/ui-primitives** - Headless UI component primitives
+- **@connector-kit/sdk** - Core React hooks and utilities for Solana development
+- **@connector-kit/connector** - Wallet connector components and context management
+- **@connector-kit/providers** - Provider templates and configurations
+- **@connector-kit/jupiter** - Jupiter DEX integration example
+- **@connector-kit/ui-primitives** - Headless UI component primitives
 
 ## 🛠️ Development
 

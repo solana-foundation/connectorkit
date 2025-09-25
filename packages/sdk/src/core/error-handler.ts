@@ -319,7 +319,7 @@ export class ArcRetryManager {
           throw lastError
         }
 
-        console.warn(`[Arc] Operation failed (attempt ${attempt}/${retryConfig.maxAttempts}), retrying in ${delay}ms:`, lastError.message)
+        // Retry after delay
         await this.sleep(delay)
       }
     }

@@ -81,7 +81,6 @@ export function useModal(): UseModalReturn {
   
   const openProfile = useCallback(() => {
     if (!snapshot.connected) {
-      console.warn('[useModal] Cannot open profile when wallet is not connected')
       return
     }
     client?.openModal(modalRoutes.PROFILE)
@@ -89,7 +88,6 @@ export function useModal(): UseModalReturn {
   
   const openAccountSettings = useCallback(() => {
     if (!snapshot.connected) {
-      console.warn('[useModal] Cannot open account settings when wallet is not connected')
       return
     }
     client?.openModal(modalRoutes.ACCOUNT_SETTINGS)

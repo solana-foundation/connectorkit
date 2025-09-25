@@ -1,9 +1,10 @@
 ---
 title: Try It Out
-description: Arc Connector Kit offers multiple implementation approaches to fit your applications needs
+description: Connector Kit offers multiple implementation approaches to fit your applications needs
 
 ---
 
+import React from 'react'
 import { ConnectButtonWrapper } from '../../../components/connect-button-wrapper'
 import { StandardWalletDemo } from '../../../components/standard-wallet-demo-stable'
 
@@ -13,7 +14,7 @@ import { StandardWalletDemo } from '../../../components/standard-wallet-demo-sta
 Use the drop-in components for quick integrations.
 
 ```tsx
-import { ConnectButton } from '@connectorkit/connector'
+import { ConnectButton } from '@connector-kit/connector'
 
 <ConnectButton />
 ```
@@ -44,30 +45,40 @@ or use the simple headless SDK for wallet connection and state management.
 Complete control over UI and behavior:
 
 ```tsx
-import { useConnector } from '@connectorkit/connector'
-import { useWalletAddress, useBalance } from '@connectorkit/sdk'
+import { useConnector } from '@connector-kit/connector'
+import { useWalletAddress, useBalance } from '@connector-kit/sdk'
 
 function CustomWalletConnect() {
-  const { wallets, select, disconnect } = useConnector()
-  const { address, connected } = useWalletAddress()
+  const { wallets, select, disconnect, connected, connecting } = useConnector()
+  const { address } = useWalletAddress()
   const { balance } = useBalance({ address })
 
   return (
     <div>
       {!connected ? (
-        wallets?.map(wallet => (
-          <button 
-            key={wallet.name}
-            onClick={() => select(wallet.name)}
-            disabled={!wallet.installed}
-          >
-            Connect {wallet.name}
-          </button>
-        ))
+        <div>
+          <h3>Available Wallets</h3>
+          {wallets?.map(wallet => (
+            <button 
+              key={wallet.name}
+              onClick={() => select(wallet.name)}
+              disabled={!wallet.installed || connecting}
+            >
+              {wallet.installed ? (
+                <>
+                  {wallet.icon && <img src={wallet.icon} alt="" width={16} height={16} />}
+                  Connect {wallet.name}
+                </>
+              ) : (
+                `${wallet.name} (Not Installed)`
+              )}
+            </button>
+          ))}
+        </div>
       ) : (
         <div>
           <p>Connected: {address}</p>
-          <p>Balance: {Number(balance) / 1e9} SOL</p>
+          <p>Balance: {balance ? Number(balance) / 1e9 : 0} SOL</p>
           <button onClick={disconnect}>Disconnect</button>
         </div>
       )}
@@ -78,33 +89,81 @@ function CustomWalletConnect() {
 
 ## 4. Advanced Features
 
-Access wallet capabilities and sign transactions:
+Access wallet capabilities and modal navigation:
 
 ```tsx
-function TransactionSigner() {
-  const { selectedWallet } = useConnector()
+import { useConnector, useModal } from '@connector-kit/connector'
+import { useTransaction } from '@connector-kit/sdk'
+
+function AdvancedWalletFeatures() {
+  const { selectedWallet, connected } = useConnector()
+  const modal = useModal()
+  const { sendTransaction } = useTransaction()
   
-  const handleSign = async () => {
-    const features = selectedWallet?.features
-    const signFeature = features?.['solana:signTransaction']
-    
-    if (signFeature) {
-      // Your transaction signing logic
+  const handleOpenProfile = () => {
+    modal.openProfile() // Opens profile modal
+  }
+  
+  const handleOpenSettings = () => {
+    modal.openSettings() // Opens settings modal
+  }
+
+  const handleSendSOL = async () => {
+    try {
+      // Create a simple transfer transaction
+      const signature = await sendTransaction({
+        to: 'recipient-address',
+        amount: 0.001 * 1e9 // 0.001 SOL in lamports
+      })
+      console.log('Transaction sent:', signature)
+    } catch (error) {
+      console.error('Transaction failed:', error)
     }
   }
   
-  return <button onClick={handleSign}>Sign Transaction</button>
+  if (!connected) return <div>Connect wallet to access features</div>
+  
+  return (
+    <div>
+      <h3>Wallet: {selectedWallet?.name}</h3>
+      <button onClick={handleOpenProfile}>View Profile</button>
+      <button onClick={handleOpenSettings}>Settings</button>
+      <button onClick={handleSendSOL}>Send 0.001 SOL</button>
+    </div>
+  )
 }
 ```
 
-## Choose Your Approach
+## Complete Setup
 
-- **Pre-built Components** - Fastest setup, minimal customization
-- **Interactive Demo** - Rich UX with animations and wallet management
-- **Headless Implementation** - Maximum flexibility and control
-- **Advanced Features** - Transaction signing and wallet capabilities
+For full functionality, install both packages:
+
+```bash
+npm install @connector-kit/connector @connector-kit/sdk
+```
+
+Setup providers at your app root:
+
+```tsx title="app/layout.tsx"
+import { ConnectorProvider, getDefaultConfig } from '@connector-kit/connector'
+import { ArcProvider } from '@connector-kit/sdk'
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html>
+      <body>
+        <ConnectorProvider config={getDefaultConfig({ appName: "Your App" })}>
+          <ArcProvider network="mainnet-beta">
+            {children}
+          </ArcProvider>
+        </ConnectorProvider>
+      </body>
+    </html>
+  )
+}
+```
 
 ## Next Steps
 
-- [Getting Started](/docs/connector-kit/introduction) - Full implementation guide
-- [@connectorkit/sdk](/docs/solana) - For transaction building and blockchain operations
+- [Getting Started](/docs/connector-kit/introduction) - Complete setup guide
+- [API Reference](/docs/connector-kit/api-reference) - Full component and hook documentation

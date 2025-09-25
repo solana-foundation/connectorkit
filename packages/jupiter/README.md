@@ -1,4 +1,4 @@
-# @connectorkit/jupiter
+# @connector-kit/jupiter
 
 **Example: Extending Arc with DeFi Protocols**
 
@@ -25,8 +25,8 @@ export function createJupiter(config): SwapProvider {
 }
 
 // 2. Use with Arc
-import { createJupiter } from '@connectorkit/jupiter'
-import { ArcProvider } from '@connectorkit/solana'
+import { createJupiter } from '@connector-kit/jupiter'
+import { ArcProvider } from '@connector-kit/solana'
 
 <ArcProvider config={{
   providers: [createProvider({ 
@@ -37,9 +37,9 @@ import { ArcProvider } from '@connectorkit/solana'
 
 ## 🚀 Extension Ideas
 
-- `@connectorkit/marinade` - Liquid staking
-- `@connectorkit/kamino` - Yield vaults
-- `@connectorkit/drift` - Perpetuals trading
-- `@connectorkit/phoenix` - Order book DEX
+- `@connector-kit/marinade` - Liquid staking
+- `@connector-kit/kamino` - Yield vaults
+- `@connector-kit/drift` - Perpetuals trading
+- `@connector-kit/phoenix` - Order book DEX
 
 Each extension follows the same pattern, implementing Arc's provider interfaces.

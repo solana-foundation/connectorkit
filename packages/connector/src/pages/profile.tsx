@@ -87,7 +87,7 @@ export function ProfilePage({ options, onNavigate, isTransitioning }: ProfilePag
     try {
       await disconnect()
     } catch (error) {
-      console.error('Failed to disconnect:', error)
+      // Failed to disconnect
     }
   }, [disconnect])
 

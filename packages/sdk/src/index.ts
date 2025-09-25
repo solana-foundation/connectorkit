@@ -1,17 +1,5 @@
 /**
- * @connectorkit/sdk - Enhanced Solana SDK with React 19 Performance
- * 
- * Ultra-optimized bundle with concurrent features and external state management.
- * Bundle size: ~15KB MVP (~35KB full) with React 19 patterns
- * 
- * Used hooks based on demo component analysis:
- * - useBalance (used in all 3 demos)
- * - useAirdrop (used in standard-wallet-demo)
- * - useCluster (used in standard-wallet-demo)
- * - useWalletAddress (used in standard-wallet-demo)
- * - useTransaction (used in transaction-demo)
- * - useSwap (used in swap-demo)
- * - useArcClient (used in transaction-demo and swap-demo)
+ * @connector-kit/sdk - Solana SDK (experimental)
  */
 
 // ===== CORE PROVIDERS =====
@@ -30,7 +18,6 @@ export type { UseAirdropReturn } from './hooks/use-airdrop'
 export { useCluster } from './hooks/use-cluster'
 export type { UseClusterReturn } from './hooks/use-cluster'
 
-// Enhanced wallet-ui integration
 export { 
   EnhancedClusterProvider,
   useEnhancedCluster,
@@ -40,7 +27,6 @@ export {
 } from './context/enhanced-cluster-provider'
 export type { EnhancedClusterConfig } from './context/enhanced-cluster-provider'
 
-// Re-export wallet-ui essentials
 export { 
   WalletUiClusterDropdown,
   useWalletUiCluster,
@@ -60,7 +46,7 @@ export type { UseSwapOptions, UseSwapReturn } from './hooks/use-swap'
 // Re-export commonly used types for convenience
 export type { ArcWebClientState } from './core/arc-web-client'
 
-// ===== SWAP PROVIDER TYPES (needed by @connectorkit/jupiter) =====
+// ===== SWAP PROVIDER TYPES (needed by @connector-kit/jupiter) =====
 export type { 
   SwapProvider, 
   SwapParams, 
