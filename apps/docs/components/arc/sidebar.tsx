@@ -88,7 +88,8 @@ function shouldShowFolderIcon(folderName: string, depth: number) {
   if (depth === 0 && (
     name.includes('connector') || 
     name.includes('solana') || 
-    name.includes('provider')
+    name.includes('provider') ||
+    name.includes('sdk')
   )) {
     return false
   }

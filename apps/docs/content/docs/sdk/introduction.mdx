@@ -1,0 +1,237 @@
+---
+title: SDK Introduction
+description: Type-safe React hooks for Solana operations like balance, transactions, and more - built on @solana/kit.
+---
+
+import React from 'react'
+
+## Installation
+
+```bash
+npm install @connector-kit/sdk @connector-kit/connector
+```
+
+## Quick Start
+
+The SDK provides React hooks for Solana operations and requires the connector for wallet management:
+
+```tsx title="App.tsx"
+"use client"
+
+import { ConnectorProvider, ConnectButton, getDefaultConfig } from '@connector-kit/connector'
+import { ArcProvider, useWalletAddress, useBalance } from '@connector-kit/sdk'
+
+export default function App() {
+  return (
+    <ConnectorProvider config={getDefaultConfig({ appName: "Your App" })}>
+      <ArcProvider network="mainnet-beta">
+        <ConnectButton />
+        <WalletInfo />
+      </ArcProvider>
+    </ConnectorProvider>
+  )
+}
+
+function WalletInfo() {
+  const { address, connected } = useWalletAddress()
+  const { balance } = useBalance({ address })
+  
+  if (!connected) return <div>Connect wallet to view balance</div>
+  
+  return (
+    <div>
+      <p>Address: {address}</p>
+      <p>Balance: {balance ? Number(balance) / 1e9 : 0} SOL</p>
+    </div>
+  )
+}
+```
+
+## Core Concepts
+
+### ArcProvider
+
+Root provider that manages Solana network connections and configuration:
+
+```tsx
+import { ArcProvider } from '@connector-kit/sdk'
+
+<ArcProvider 
+  network="mainnet-beta"    // Network selection
+  rpcUrl="custom-rpc-url"   // Optional: Custom RPC
+  commitment="confirmed"     // Transaction commitment level
+>
+  <YourApp />
+</ArcProvider>
+```
+
+### Hook Integration
+
+SDK hooks automatically integrate with wallet state from ConnectorProvider:
+
+```tsx
+import { useConnector } from '@connector-kit/connector'
+import { useBalance } from '@connector-kit/sdk'
+
+function BalanceDisplay() {
+  const { selectedAccount } = useConnector() 
+  const { balance, isLoading } = useBalance({ address: selectedAccount })
+  
+  return <div>Balance: {isLoading ? 'Loading...' : `${Number(balance || 0) / 1e9} SOL`}</div>
+}
+```
+
+## Essential Hooks
+
+### useWalletAddress
+
+Get wallet connection state and address:
+
+```tsx
+import { useWalletAddress } from '@connector-kit/sdk'
+
+function WalletStatus() {
+  const { address, addressParsed, connected, connecting } = useWalletAddress()
+  
+  return (
+    <div>
+      <p>Status: {connecting ? 'Connecting...' : connected ? 'Connected' : 'Disconnected'}</p>
+      {address && <p>Address: {address}</p>}
+    </div>
+  )
+}
+```
+
+### useBalance
+
+Fetch and monitor SOL balance:
+
+```tsx
+import { useBalance } from '@connector-kit/sdk'
+
+function Balance() {
+  const { balance, isLoading, error, refresh } = useBalance({ 
+    address: 'wallet-address',
+    refreshInterval: 30000 // Auto-refresh every 30 seconds
+  })
+  
+  if (isLoading) return <div>Loading balance...</div>
+  if (error) return <div>Error: {error.message}</div>
+  
+  return (
+    <div>
+      <p>Balance: {Number(balance || 0) / 1e9} SOL</p>
+      <button onClick={refresh}>Refresh</button>
+    </div>
+  )
+}
+```
+
+### useTransaction
+
+Send transactions with automatic wallet integration:
+
+```tsx
+import { useTransaction } from '@connector-kit/sdk'
+
+function SendSOL() {
+  const { sendTransaction, isLoading } = useTransaction()
+  
+  const handleSend = async () => {
+    try {
+      const signature = await sendTransaction({
+        to: 'recipient-address',
+        amount: 0.001 * 1e9 // 0.001 SOL in lamports
+      })
+      console.log('Transaction sent:', signature)
+    } catch (error) {
+      console.error('Transaction failed:', error)
+    }
+  }
+  
+  return (
+    <button onClick={handleSend} disabled={isLoading}>
+      {isLoading ? 'Sending...' : 'Send 0.001 SOL'}
+    </button>
+  )
+}
+```
+
+## Network Configuration
+
+### Built-in Networks
+
+```tsx
+<ArcProvider network="mainnet-beta">  {/* Production */}
+<ArcProvider network="devnet">        {/* Development */}
+<ArcProvider network="testnet">       {/* Testing */}
+```
+
+### Custom RPC
+
+```tsx
+<ArcProvider 
+  network="mainnet-beta"
+  rpcUrl="https://your-custom-rpc.com"
+  commitment="confirmed"
+>
+```
+
+### Development Tools
+
+For devnet/testnet, use the airdrop hook:
+
+```tsx
+import { useAirdrop } from '@connector-kit/sdk'
+
+function AirdropButton() {
+  const { address } = useWalletAddress()
+  const { requestAirdrop, isLoading } = useAirdrop()
+  
+  const handleAirdrop = () => {
+    requestAirdrop({ 
+      address, 
+      amount: 1e9 // 1 SOL 
+    })
+  }
+  
+  return (
+    <button onClick={handleAirdrop} disabled={isLoading}>
+      Request Airdrop
+    </button>
+  )
+}
+```
+
+## Error Handling
+
+All hooks include error handling and loading states:
+
+```tsx
+import { useBalance } from '@connector-kit/sdk'
+
+function BalanceWithErrorHandling() {
+  const { balance, isLoading, error, retry } = useBalance({ 
+    address: 'wallet-address' 
+  })
+  
+  if (isLoading) return <div>Loading...</div>
+  
+  if (error) {
+    return (
+      <div>
+        <p>Error: {error.message}</p>
+        <button onClick={retry}>Retry</button>
+      </div>
+    )
+  }
+  
+  return <div>Balance: {Number(balance || 0) / 1e9} SOL</div>
+}
+```
+
+## Next Steps
+
+- [Hooks Reference](/docs/sdk/hooks) - Complete hook documentation
+- [Providers Guide](/docs/sdk/providers) - Advanced configuration and protocol integrations
+- [Connector Kit](/docs/connector-kit/introduction) - Wallet connection setup

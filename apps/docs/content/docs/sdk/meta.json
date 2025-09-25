@@ -1,0 +1,9 @@
+{
+  "title": "SDK",
+  "defaultOpen": true,
+  "pages": [
+    "introduction",
+    "hooks",
+    "providers"
+  ]
+}
