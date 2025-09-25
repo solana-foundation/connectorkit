@@ -1,59 +1,92 @@
 # @connector-kit/providers
 
-Centralized provider exports for the Arc ecosystem. This package allows you to import all providers from a single location:
+Provider utilities and templates for the ConnectorKit ecosystem. This package provides tools for creating and managing protocol integrations.
 
 ```typescript
-import { createJupiter, createKamino } from 'arc/providers'
+import { createProvider } from '@connector-kit/providers'
 ```
 
 ## Current Providers
 
-- **Jupiter** (`createJupiter`) - Swap provider for Jupiter aggregator
+- **Jupiter** (`@connector-kit/jupiter`) - Swap provider for Jupiter aggregator
   - Configuration: `JupiterConfig`
-  - Types: `JupiterQuoteResponse`, `JupiterSwapResponse`
+  - Types: `JupiterQuoteResponse`, `JupiterSwapResponse` 
   - Utilities: `getJupiterTokens()`
 
 ## Usage
 
-### Individual Provider
+### Creating a Provider
 ```typescript
-import { createJupiter } from 'arc/providers'
+import { createProvider } from '@connector-kit/providers'
 
-const jupiter = createJupiter({
-  apiUrl: 'https://quote-api.jup.ag/v6',
-  slippageBps: 50
-})
-```
-
-### Multiple Providers
-```typescript
-import { createProviders } from 'arc/providers'
-
-const providers = createProviders({
-  jupiter: {
-    apiUrl: 'https://quote-api.jup.ag/v6',
-    slippageBps: 100
+const customProvider = createProvider({
+  name: 'my-protocol',
+  swap: {
+    quote: async (params) => { /* implementation */ },
+    buildTransaction: async (quote) => { /* implementation */ },
+    isTokenSupported: (mint) => { /* implementation */ }
   }
-  // kamino: { ... } // Future providers
 })
 ```
 
-## Adding New Providers
+### Using with SDK
+```typescript
+import { ArcProvider } from '@connector-kit/sdk'
+import { createJupiter } from '@connector-kit/jupiter'
 
-See `src/templates/provider-template.md` for a complete guide on adding new providers.
+<ArcProvider 
+  network="mainnet-beta"
+  providers={[createJupiter()]}
+>
+  <YourApp />
+</ArcProvider>
+```
+
+### Provider Registry
+```typescript
+import { createProviderRegistry } from '@connector-kit/providers'
+
+const registry = createProviderRegistry({
+  jupiter: createJupiter({
+    apiUrl: 'https://quote-api.jup.ag/v6',
+    slippageBps: 50
+  })
+  // Add more providers as they become available
+})
+```
+
+## Creating New Providers
+
+See `src/templates/provider-template.md` for a complete guide on creating new providers.
+
+### Provider Interface
+
+```typescript
+interface SwapProvider {
+  name: string
+  quote: (params: SwapParams) => Promise<SwapQuote>
+  buildTransaction: (quote: SwapQuote) => Promise<PrebuiltTransaction>
+  isTokenSupported: (mint: string) => boolean
+}
+```
 
 ## Architecture
 
-This package serves as a centralized re-export hub:
-- Re-exports all provider factories and types
-- Provides type-safe provider registry
-- Enables bulk provider creation
-- Maintains forward compatibility for new providers
+This package serves as the foundation for protocol integrations:
+- Provides base interfaces and types
+- Includes provider creation utilities
+- Offers templates for new integrations
+- Maintains type safety across all providers
 
-## Next Steps
+## Available Provider Packages
 
-1. **Add Kamino Provider** - Create `@arc/kamino` package following the template
-2. **Add Raydium Provider** - Create `@arc/raydium` package
-3. **Add Orca Provider** - Create `@arc/orca` package
-4. **Enhanced Provider Registry** - Add runtime provider discovery
-5. **Provider Configuration Validation** - Add schema validation for configs
+- `@connector-kit/jupiter` - Jupiter DEX integration
+- More providers coming soon...
+
+## Development Roadmap
+
+1. **Add Marinade Provider** - Liquid staking integration
+2. **Add Kamino Provider** - Yield farming integration  
+3. **Add Orca Provider** - AMM trading integration
+4. **Enhanced Provider Registry** - Runtime provider discovery
+5. **Provider Configuration Validation** - Schema validation for configs

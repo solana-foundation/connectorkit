@@ -1,45 +1,86 @@
 # @connector-kit/jupiter
 
-**Example: Extending Arc with DeFi Protocols**
+Jupiter DEX integration for token swapping functionality with ConnectorKit.
 
-This package demonstrates how to extend Arc with protocol-specific functionality. While not currently active, it shows the pattern for integrating Jupiter (or any DEX) into the Arc ecosystem.
+## Installation
+
+```bash
+npm install @connector-kit/jupiter @connector-kit/sdk
+```
 
 ## 🎯 Purpose
 
-Shows how to:
-- Implement the `SwapProvider` interface
-- Integrate with Arc's provider system
-- Add protocol-specific functionality
+Provides seamless Jupiter DEX integration for ConnectorKit applications:
+- Token swapping with Jupiter aggregator
+- Quote fetching and price comparison  
+- Transaction building and execution
+- Token list management
 
-## 🏗️ Pattern
+## 🏗️ Usage Pattern
 
 ```typescript
-// 1. Implement the provider interface
-export function createJupiter(config): SwapProvider {
-  return {
-    name: 'jupiter',
-    quote: async (params) => { /* ... */ },
-    buildTransaction: async (quote) => { /* ... */ },
-    isTokenSupported: (mint) => { /* ... */ }
-  }
-}
-
-// 2. Use with Arc
+// 1. Setup with SDK
+import { ArcProvider } from '@connector-kit/sdk'
 import { createJupiter } from '@connector-kit/jupiter'
-import { ArcProvider } from '@connector-kit/solana'
 
-<ArcProvider config={{
-  providers: [createProvider({ 
-    swap: [createJupiter()] 
-  })]
-}}>
+<ArcProvider 
+  network="mainnet-beta"
+  providers={[createJupiter()]}
+>
+  <YourApp />
+</ArcProvider>
+
+// 2. Use Jupiter swap hooks
+import { useSwap } from '@connector-kit/jupiter'
+
+function SwapComponent() {
+  const { 
+    quote, 
+    swap, 
+    isLoading,
+    supportedTokens 
+  } = useSwap()
+
+  const handleSwap = async () => {
+    const quoteResponse = await quote({
+      inputMint: 'SOL',
+      outputMint: 'USDC',
+      amount: 1000000 // 0.001 SOL
+    })
+    
+    if (quoteResponse) {
+      await swap(quoteResponse)
+    }
+  }
+
+  return (
+    <button onClick={handleSwap} disabled={isLoading}>
+      {isLoading ? 'Swapping...' : 'Swap SOL to USDC'}
+    </button>
+  )
+}
 ```
 
-## 🚀 Extension Ideas
+## 🔧 Configuration
 
-- `@connector-kit/marinade` - Liquid staking
-- `@connector-kit/kamino` - Yield vaults
-- `@connector-kit/drift` - Perpetuals trading
-- `@connector-kit/phoenix` - Order book DEX
+```typescript
+import { createJupiter } from '@connector-kit/jupiter'
 
-Each extension follows the same pattern, implementing Arc's provider interfaces.
+const jupiterProvider = createJupiter({
+  apiUrl: 'https://quote-api.jup.ag/v6',
+  slippageBps: 50, // 0.5%
+  computeUnitPriceMicroLamports: 1000,
+})
+```
+
+## 🚀 Extension Examples
+
+Following this pattern, you can create additional DeFi integrations:
+
+- `@connector-kit/marinade` - Liquid staking with Marinade
+- `@connector-kit/kamino` - Yield farming with Kamino  
+- `@connector-kit/drift` - Perpetuals trading with Drift
+- `@connector-kit/phoenix` - Order book trading with Phoenix
+- `@connector-kit/orca` - AMM swaps with Orca
+
+Each follows the same provider interface pattern for consistency.
