@@ -47,10 +47,10 @@ importers:
     dependencies:
       '@armadura/jupiter':
         specifier: latest
-        version: 0.1.5(@armadura/sdk@0.1.13(@solana/web3.js@2.0.0-preview.3(fastestsmallesttextencoderdecoder@1.0.22)(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@5.0.10)))(@tanstack/react-query@5.85.0(react@19.1.1))(fastestsmallesttextencoderdecoder@1.0.22)(gill@0.10.3(@solana/sysvars@2.3.0(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.2))(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.2)(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@5.0.10)))(nanostores@1.0.1)(react-dom@19.1.1(react@19.1.1))(react@19.1.1)(typescript@5.9.2)(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@5.0.10)))
+        version: 0.1.5(@armadura/sdk@0.1.16(@solana/web3.js@2.0.0-preview.3(fastestsmallesttextencoderdecoder@1.0.22)(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@5.0.10)))(@tanstack/react-query@5.85.0(react@19.1.1))(fastestsmallesttextencoderdecoder@1.0.22)(gill@0.10.3(@solana/sysvars@2.3.0(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.2))(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.2)(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@5.0.10)))(nanostores@1.0.1)(react-dom@19.1.1(react@19.1.1))(react@19.1.1)(typescript@5.9.2)(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@5.0.10)))
       '@armadura/sdk':
-        specifier: 0.1.13
-        version: 0.1.13(@solana/web3.js@2.0.0-preview.3(fastestsmallesttextencoderdecoder@1.0.22)(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@5.0.10)))(@tanstack/react-query@5.85.0(react@19.1.1))(fastestsmallesttextencoderdecoder@1.0.22)(gill@0.10.3(@solana/sysvars@2.3.0(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.2))(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.2)(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@5.0.10)))(nanostores@1.0.1)(react-dom@19.1.1(react@19.1.1))(react@19.1.1)(typescript@5.9.2)(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@5.0.10))
+        specifier: 0.1.16
+        version: 0.1.16(@solana/web3.js@2.0.0-preview.3(fastestsmallesttextencoderdecoder@1.0.22)(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@5.0.10)))(@tanstack/react-query@5.85.0(react@19.1.1))(fastestsmallesttextencoderdecoder@1.0.22)(gill@0.10.3(@solana/sysvars@2.3.0(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.2))(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.2)(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@5.0.10)))(nanostores@1.0.1)(react-dom@19.1.1(react@19.1.1))(react@19.1.1)(typescript@5.9.2)(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@5.0.10))
       '@radix-ui/react-accordion':
         specifier: ^1.2.11
         version: 1.2.12(@types/react-dom@19.1.7(@types/react@19.1.10))(@types/react@19.1.10)(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
@@ -261,8 +261,8 @@ packages:
     peerDependencies:
       '@armadura/sdk': workspace:*
 
-  '@armadura/sdk@0.1.13':
-    resolution: {integrity: sha512-SvrOnGi+l2Idllh9CgKtC6ViFigDZsE8Je8ekB8Wwf835pDlKXGG3R6QZie7Z3wPU0/RG/3J6KRSLU4XaPZA1Q==}
+  '@armadura/sdk@0.1.16':
+    resolution: {integrity: sha512-g8QjpBnQOq3XlqggLkCxWmbJvuib0EGKCTls6xqZRtkDvJQ/tqXfeI1N5qdVlqW7Mg8oBXSPokzkMY7szhQgUQ==}
     peerDependencies:
       '@tanstack/react-query': '>=5.0.0'
       react: '>=18.0.0'
@@ -6955,11 +6955,11 @@ snapshots:
       '@jridgewell/gen-mapping': 0.3.13
       '@jridgewell/trace-mapping': 0.3.30
 
-  '@armadura/jupiter@0.1.5(@armadura/sdk@0.1.13(@solana/web3.js@2.0.0-preview.3(fastestsmallesttextencoderdecoder@1.0.22)(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@5.0.10)))(@tanstack/react-query@5.85.0(react@19.1.1))(fastestsmallesttextencoderdecoder@1.0.22)(gill@0.10.3(@solana/sysvars@2.3.0(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.2))(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.2)(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@5.0.10)))(nanostores@1.0.1)(react-dom@19.1.1(react@19.1.1))(react@19.1.1)(typescript@5.9.2)(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@5.0.10)))':
+  '@armadura/jupiter@0.1.5(@armadura/sdk@0.1.16(@solana/web3.js@2.0.0-preview.3(fastestsmallesttextencoderdecoder@1.0.22)(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@5.0.10)))(@tanstack/react-query@5.85.0(react@19.1.1))(fastestsmallesttextencoderdecoder@1.0.22)(gill@0.10.3(@solana/sysvars@2.3.0(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.2))(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.2)(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@5.0.10)))(nanostores@1.0.1)(react-dom@19.1.1(react@19.1.1))(react@19.1.1)(typescript@5.9.2)(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@5.0.10)))':
     dependencies:
-      '@armadura/sdk': 0.1.13(@solana/web3.js@2.0.0-preview.3(fastestsmallesttextencoderdecoder@1.0.22)(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@5.0.10)))(@tanstack/react-query@5.85.0(react@19.1.1))(fastestsmallesttextencoderdecoder@1.0.22)(gill@0.10.3(@solana/sysvars@2.3.0(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.2))(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.2)(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@5.0.10)))(nanostores@1.0.1)(react-dom@19.1.1(react@19.1.1))(react@19.1.1)(typescript@5.9.2)(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@5.0.10))
+      '@armadura/sdk': 0.1.16(@solana/web3.js@2.0.0-preview.3(fastestsmallesttextencoderdecoder@1.0.22)(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@5.0.10)))(@tanstack/react-query@5.85.0(react@19.1.1))(fastestsmallesttextencoderdecoder@1.0.22)(gill@0.10.3(@solana/sysvars@2.3.0(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.2))(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.2)(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@5.0.10)))(nanostores@1.0.1)(react-dom@19.1.1(react@19.1.1))(react@19.1.1)(typescript@5.9.2)(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@5.0.10))
 
-  '@armadura/sdk@0.1.13(@solana/web3.js@2.0.0-preview.3(fastestsmallesttextencoderdecoder@1.0.22)(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@5.0.10)))(@tanstack/react-query@5.85.0(react@19.1.1))(fastestsmallesttextencoderdecoder@1.0.22)(gill@0.10.3(@solana/sysvars@2.3.0(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.2))(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.2)(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@5.0.10)))(nanostores@1.0.1)(react-dom@19.1.1(react@19.1.1))(react@19.1.1)(typescript@5.9.2)(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@5.0.10))':
+  '@armadura/sdk@0.1.16(@solana/web3.js@2.0.0-preview.3(fastestsmallesttextencoderdecoder@1.0.22)(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@5.0.10)))(@tanstack/react-query@5.85.0(react@19.1.1))(fastestsmallesttextencoderdecoder@1.0.22)(gill@0.10.3(@solana/sysvars@2.3.0(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.2))(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.2)(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@5.0.10)))(nanostores@1.0.1)(react-dom@19.1.1(react@19.1.1))(react@19.1.1)(typescript@5.9.2)(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@5.0.10))':
     dependencies:
       '@nanostores/react': 1.0.0(nanostores@1.0.1)(react@19.1.1)
       '@solana-program/compute-budget': 0.3.2(@solana/web3.js@2.0.0-preview.3(fastestsmallesttextencoderdecoder@1.0.22)(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@5.0.10)))
