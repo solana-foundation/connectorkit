@@ -10,6 +10,7 @@ export { ConnectorClient, modalRoutes, validateRoute } from './lib/connector-cli
 
 // Configuration helpers
 export { getDefaultConfig, getDefaultMobileConfig } from './config'
+export type { DefaultConfigOptions, ExtendedConnectorConfig } from './config'
 
 // Wallet registry
 export { 
@@ -54,7 +55,6 @@ export type {
 } from './themes/types'
 
 export type { SolanaWalletConfig } from './wallets'
-export type { DefaultConfigOptions } from './config'
 
 /**
  * Vanilla JS Usage Example:

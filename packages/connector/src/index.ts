@@ -3,7 +3,7 @@ export { injectConnectorGlobalStyles, injectArcConnectorGlobalStyles } from './u
 
 // Configuration helpers
 export { getDefaultConfig, getDefaultMobileConfig } from './config'
-export type { DefaultConfigOptions } from './config'
+export type { DefaultConfigOptions, ExtendedConnectorConfig } from './config'
 
 // Core exports
 export { ConnectorClient, modalRoutes, validateRoute, safeRoutes } from './lib/connector-client'
