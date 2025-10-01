@@ -83,15 +83,6 @@ export type {
   ConnectorThemeExtended 
 } from './types'
 
-// Wallet registry
-export { 
-  solanaWallets,
-  getPopularWallets,
-  getMobileWallets,
-  getWalletByIdentifier,
-  getAllWallets
-} from './wallets'
-export type { SolanaWalletConfig } from './wallets'
 
 // Optional programmatic registration helper
 export async function registerMobileWalletAdapter(config: import('./ui/connector-provider').MobileWalletAdapterConfig) {

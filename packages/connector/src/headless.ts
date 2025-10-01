@@ -12,14 +12,6 @@ export { ConnectorClient, modalRoutes, validateRoute } from './lib/connector-cli
 export { getDefaultConfig, getDefaultMobileConfig } from './config'
 export type { DefaultConfigOptions, ExtendedConnectorConfig } from './config'
 
-// Wallet registry
-export { 
-  solanaWallets,
-  getPopularWallets,
-  getMobileWallets, 
-  getWalletByIdentifier,
-  getAllWallets
-} from './wallets'
 
 // Theme system (works without React)
 export {
@@ -54,7 +46,6 @@ export type {
   ConnectorThemeOverrides
 } from './themes/types'
 
-export type { SolanaWalletConfig } from './wallets'
 
 // Error handling utilities for headless users
 export { WalletErrorType } from './components/ErrorBoundary'
