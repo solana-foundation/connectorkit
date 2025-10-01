@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState } from 'react'
 import { ChevronDown, LogOut, Plus, Wallet as WalletIcon } from 'lucide-react'
-import { useArcClient } from '@connector-kit/sdk'
+import { useArmaClient } from '@armadura/sdk'
 import { Button } from './ui/button'
 import {
 	DropdownMenu,
@@ -26,7 +26,7 @@ interface Wallet {
 }
 
 export function ConnectWalletMenu({ children }: Props) {
-	const { wallet, select, disconnect, selectAccount } = useArcClient()
+	const { wallet, select, disconnect, selectAccount } = useArmaClient()
 	const [forceClose, setForceClose] = useState(false)
 
 	const wallets = (wallet.wallets ?? []).filter((w: any): w is Wallet => {

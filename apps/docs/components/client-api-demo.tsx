@@ -9,7 +9,7 @@ import { motion } from 'motion/react'
 import { Code, Server, Monitor, Zap } from 'lucide-react'
 
 // Import both client and hooks for demonstration
-import { useBalance, useArcClient } from '@connector-kit/sdk'
+import { useBalance, useArmaClient } from '@armadura/sdk'
 
 /**
  * 🚀 Demo: Arc Client API vs React Hooks
@@ -40,12 +40,12 @@ function ClientApiDemoInner() {
   const [clientError, setClientError] = useState<string | null>(null)
 
   // 🎯 FRONTEND: React hooks (context-aware)
-  const { wallet, network } = useArcClient()
+  const { wallet, network } = useArmaClient()
   const { balance, isLoading: hooksLoading, error: hooksError } = useBalance()
   
   // Safe access with fallbacks
   const connected = wallet?.connected || false
-  const address = wallet?.address || null
+  const address = wallet?.selectedAccount || null
   const networkName = network?.isMainnet ? 'mainnet' : 'devnet'
   const isDevnet = network?.isDevnet || false
 

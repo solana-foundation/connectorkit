@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import { useArcClient, useSwap, useBalance } from '@connector-kit/sdk'
+import { useArmaClient, useSwap, useBalance } from '@armadura/sdk'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Spinner } from './ui/spinner'
@@ -48,8 +48,8 @@ function solToLamportsBigInt(amountSol: string): bigint {
 
 export function SwapDemo() {
   const [mounted, setMounted] = useState(false)
-  const { wallet } = useArcClient()
-  const { balance, isLoading: balanceLoading, refetch: refetchBalance } = useBalance({ address: wallet.address || undefined })
+  const { wallet } = useArmaClient()
+  const { balance, isLoading: balanceLoading, refetch: refetchBalance } = useBalance({ address: wallet.selectedAccount || undefined })
 
   // UI state
   const [fromMint, setFromMint] = useState(TOKENS[0].mint) // SOL (WSOL)
