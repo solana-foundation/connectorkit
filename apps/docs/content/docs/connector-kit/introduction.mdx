@@ -110,34 +110,6 @@ const mobile = getDefaultMobileConfig({
 | `openModal()` | `() => void` | Open connection modal |
 | `closeModal()` | `() => void` | Close connection modal |
 
-## SDK Integration
-
-Add the SDK for Solana operations:
-
-```bash
-npm install @connector-kit/sdk
-```
-
-Use together with connector for complete functionality:
-
-```tsx title="BalanceDisplay.tsx"
-import { useWalletAddress, useBalance } from '@connector-kit/sdk'
-
-function BalanceDisplay() {
-  const { address, connected } = useWalletAddress()
-  const { balance } = useBalance({ address })
-
-  if (!connected) return <div>Connect wallet to view balance</div>
-
-  return (
-    <div>
-      <p>Address: {address}</p>
-      <p>Balance: {balance ? Number(balance) / 1e9 : 0} SOL</p>
-    </div>
-  )
-}
-```
-
 ## Framework Setup
 
 ### Next.js App Router

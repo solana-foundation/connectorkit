@@ -34,9 +34,9 @@ import { ConnectButton } from '@connector-kit/connector'
   <ConnectButtonWrapper />
 </div>
 
-## 2. Build what you need with ARC
+## 2. Build what you need
 
-or use the simple headless SDK for wallet connection and state management.
+Use the connector's headless design for wallet connection and state management.
 
 <StandardWalletDemo />
 
@@ -46,12 +46,9 @@ Complete control over UI and behavior:
 
 ```tsx
 import { useConnector } from '@connector-kit/connector'
-import { useWalletAddress, useBalance } from '@connector-kit/sdk'
 
 function CustomWalletConnect() {
-  const { wallets, select, disconnect, connected, connecting } = useConnector()
-  const { address } = useWalletAddress()
-  const { balance } = useBalance({ address })
+  const { wallets, select, disconnect, connected, connecting, selectedAccount } = useConnector()
 
   return (
     <div>
@@ -77,8 +74,7 @@ function CustomWalletConnect() {
         </div>
       ) : (
         <div>
-          <p>Connected: {address}</p>
-          <p>Balance: {balance ? Number(balance) / 1e9 : 0} SOL</p>
+          <p>Connected: {selectedAccount}</p>
           <button onClick={disconnect}>Disconnect</button>
         </div>
       )}
@@ -87,38 +83,19 @@ function CustomWalletConnect() {
 }
 ```
 
-## 4. Advanced Features
+## 4. Modal Navigation
 
-Access wallet capabilities and modal navigation:
+Access modal state and navigation:
 
 ```tsx
 import { useConnector, useModal } from '@connector-kit/connector'
-import { useTransaction } from '@connector-kit/sdk'
 
-function AdvancedWalletFeatures() {
+function ModalDemo() {
   const { selectedWallet, connected } = useConnector()
-  const modal = useModal()
-  const { sendTransaction } = useTransaction()
+  const { modalOpen, openModal, closeModal } = useModal()
   
-  const handleOpenProfile = () => {
-    modal.openProfile() // Opens profile modal
-  }
-  
-  const handleOpenSettings = () => {
-    modal.openSettings() // Opens settings modal
-  }
-
-  const handleSendSOL = async () => {
-    try {
-      // Create a simple transfer transaction
-      const signature = await sendTransaction({
-        to: 'recipient-address',
-        amount: 0.001 * 1e9 // 0.001 SOL in lamports
-      })
-      console.log('Transaction sent:', signature)
-    } catch (error) {
-      console.error('Transaction failed:', error)
-    }
+  const handleToggleModal = () => {
+    modalOpen ? closeModal() : openModal()
   }
   
   if (!connected) return <div>Connect wallet to access features</div>
@@ -126,39 +103,10 @@ function AdvancedWalletFeatures() {
   return (
     <div>
       <h3>Wallet: {selectedWallet?.name}</h3>
-      <button onClick={handleOpenProfile}>View Profile</button>
-      <button onClick={handleOpenSettings}>Settings</button>
-      <button onClick={handleSendSOL}>Send 0.001 SOL</button>
+      <button onClick={handleToggleModal}>
+        {modalOpen ? 'Close Modal' : 'Open Modal'}
+      </button>
     </div>
-  )
-}
-```
-
-## Complete Setup
-
-For full functionality, install both packages:
-
-```bash
-npm install @connector-kit/connector @connector-kit/sdk
-```
-
-Setup providers at your app root:
-
-```tsx title="app/layout.tsx"
-import { ConnectorProvider, getDefaultConfig } from '@connector-kit/connector'
-import { ArcProvider } from '@connector-kit/sdk'
-
-export default function RootLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <html>
-      <body>
-        <ConnectorProvider config={getDefaultConfig({ appName: "Your App" })}>
-          <ArcProvider network="mainnet-beta">
-            {children}
-          </ArcProvider>
-        </ConnectorProvider>
-      </body>
-    </html>
   )
 }
 ```
@@ -166,4 +114,3 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 ## Next Steps
 
 - [Getting Started](/docs/connector-kit/introduction) - Complete setup guide
-- [API Reference](/docs/connector-kit/api-reference) - Full component and hook documentation
