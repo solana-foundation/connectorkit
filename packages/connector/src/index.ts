@@ -83,22 +83,12 @@ export type {
   ConnectorThemeExtended 
 } from './types'
 
-
-// Optional programmatic registration helper
-export async function registerMobileWalletAdapter(config: import('./ui/connector-provider').MobileWalletAdapterConfig) {
-  const {
-    registerMwa,
-    createDefaultAuthorizationCache,
-    createDefaultChainSelector,
-    createDefaultWalletNotFoundHandler,
-    MWA_SOLANA_CHAINS,
-  } = (await import('@solana-mobile/wallet-standard-mobile')) as any
-  registerMwa({
-    appIdentity: config.appIdentity,
-    authorizationCache: config.authorizationCache ?? createDefaultAuthorizationCache(),
-    chains: (config.chains ?? MWA_SOLANA_CHAINS) as any,
-    chainSelector: config.chainSelector ?? createDefaultChainSelector(),
-    remoteHostAuthority: config.remoteHostAuthority,
-    onWalletNotFound: config.onWalletNotFound ?? createDefaultWalletNotFoundHandler(),
-  })
-}
+// Utility functions for advanced usage
+export {
+  createMemoryStorage,
+  createLocalStorage,
+  isWalletInstalled,
+  getInstalledWallets,
+  classifyWalletError,
+  registerMobileWalletAdapter
+} from './headless'
