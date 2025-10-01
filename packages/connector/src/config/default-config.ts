@@ -1,5 +1,6 @@
 import type { ConnectorConfig } from '../lib/connector-client'
 import type { SolanaCluster } from '@wallet-ui/core'
+import type React from 'react'
 
 export interface DefaultConfigOptions {
   /** Application name shown in wallet connection prompts */
@@ -20,6 +21,12 @@ export interface DefaultConfigOptions {
   clusters?: SolanaCluster[]
   /** Persist cluster selection across sessions */
   persistClusterSelection?: boolean
+  /** Enable error boundaries for automatic error handling (default: true) */
+  enableErrorBoundary?: boolean
+  /** Maximum retry attempts for error recovery (default: 3) */
+  maxRetries?: number
+  /** Custom error handler */
+  onError?: (error: Error, errorInfo: any) => void
 }
 
 /** Extended ConnectorConfig with app metadata */
@@ -32,6 +39,17 @@ export interface ExtendedConnectorConfig extends ConnectorConfig {
   enableMobile?: boolean
   /** Selected network for convenience */
   network?: 'mainnet-beta' | 'devnet' | 'testnet'
+  /** Error boundary configuration */
+  errorBoundary?: {
+    /** Enable error boundaries (default: true) */
+    enabled?: boolean
+    /** Maximum retry attempts (default: 3) */
+    maxRetries?: number
+    /** Custom error handler */
+    onError?: (error: Error, errorInfo: any) => void
+    /** Custom fallback component */
+    fallback?: (error: any, retry: () => void) => React.ReactNode
+  }
 }
 
 /**
@@ -48,6 +66,9 @@ export function getDefaultConfig(options: DefaultConfigOptions): ExtendedConnect
     storage,
     clusters,
     persistClusterSelection = true,
+    enableErrorBoundary = true,
+    maxRetries = 3,
+    onError,
   } = options
 
   // Default to localStorage if available
@@ -85,6 +106,12 @@ export function getDefaultConfig(options: DefaultConfigOptions): ExtendedConnect
     appUrl,
     enableMobile,
     network,
+    // Error boundary configuration
+    errorBoundary: {
+      enabled: enableErrorBoundary,
+      maxRetries,
+      onError,
+    },
   }
 
   // Add cluster configuration if provided

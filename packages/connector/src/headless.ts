@@ -56,6 +56,64 @@ export type {
 
 export type { SolanaWalletConfig } from './wallets'
 
+// Error handling utilities for headless users
+export { WalletErrorType } from './components/ErrorBoundary'
+export type { WalletError } from './components/ErrorBoundary'
+import { WalletErrorType, type WalletError } from './components/ErrorBoundary'
+
+/**
+ * Classify error utility for headless error handling
+ * @example
+ * ```javascript
+ * import { classifyWalletError, WalletErrorType } from '@connector-kit/connector/headless'
+ * 
+ * try {
+ *   await client.select('phantom')
+ * } catch (error) {
+ *   const classified = classifyWalletError(error)
+ *   if (classified.type === WalletErrorType.USER_REJECTED) {
+ *     // Handle user rejection gracefully
+ *   }
+ * }
+ * ```
+ */
+export function classifyWalletError(error: Error): WalletError {
+  const walletError = error as WalletError
+  
+  // Already classified
+  if (walletError.type) return walletError
+
+  // Classify based on message patterns
+  let type = WalletErrorType.UNKNOWN_ERROR
+  let recoverable = false
+
+  if (error.message.includes('User rejected') || error.message.includes('User denied')) {
+    type = WalletErrorType.USER_REJECTED
+    recoverable = true
+  } else if (error.message.includes('Insufficient funds')) {
+    type = WalletErrorType.INSUFFICIENT_FUNDS  
+    recoverable = false
+  } else if (error.message.includes('Network') || error.message.includes('fetch')) {
+    type = WalletErrorType.NETWORK_ERROR
+    recoverable = true
+  } else if (error.message.includes('Wallet not found') || error.message.includes('not installed')) {
+    type = WalletErrorType.WALLET_NOT_FOUND
+    recoverable = true
+  } else if (error.message.includes('Failed to connect') || error.message.includes('Connection')) {
+    type = WalletErrorType.CONNECTION_FAILED
+    recoverable = true
+  }
+
+  return {
+    ...error,
+    name: error.name,
+    message: error.message,
+    type,
+    recoverable,
+    context: { originalMessage: error.message }
+  }
+}
+
 /**
  * Vanilla JS Usage Example:
  * 

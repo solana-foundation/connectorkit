@@ -3,6 +3,8 @@
 import React, { createContext, useContext, useMemo, useRef, useSyncExternalStore } from 'react'
 import type { ReactNode } from 'react'
 import { ConnectorClient, type ConnectorConfig } from '../lib/connector-client'
+import type { ExtendedConnectorConfig } from '../config/default-config'
+import { ConnectorErrorBoundary } from '../components/ErrorBoundary'
 
 // Global connector client declaration for auto-detection
 declare global {
@@ -38,7 +40,8 @@ export interface MobileWalletAdapterConfig {
 	onWalletNotFound?: (wallet: any) => Promise<void>
 }
 
-export function ConnectorProvider({ children, config, mobile }: { children: ReactNode; config?: ConnectorConfig; mobile?: MobileWalletAdapterConfig }) {
+// Internal provider without error boundary
+function ConnectorProviderInternal({ children, config, mobile }: { children: ReactNode; config?: ConnectorConfig; mobile?: MobileWalletAdapterConfig }) {
 	const ref = useRef<ConnectorClient | null>(null)
 	if (!ref.current) {
 		ref.current = new ConnectorClient(config)
@@ -94,6 +97,34 @@ export function ConnectorProvider({ children, config, mobile }: { children: Reac
 	}, [mobile])
 
 	return <ConnectorContext.Provider value={ref.current}>{children}</ConnectorContext.Provider>
+}
+
+// Enhanced provider with optional error boundary
+export function ConnectorProvider({ children, config, mobile }: { children: ReactNode; config?: ExtendedConnectorConfig; mobile?: MobileWalletAdapterConfig }) {
+	const extendedConfig = config as ExtendedConnectorConfig
+	const errorBoundaryConfig = extendedConfig?.errorBoundary
+
+	// If error boundary is disabled, use internal provider directly
+	if (!errorBoundaryConfig?.enabled) {
+		return (
+			<ConnectorProviderInternal config={config} mobile={mobile}>
+				{children}
+			</ConnectorProviderInternal>
+		)
+	}
+
+	// Wrap with error boundary for enhanced error handling
+	return (
+		<ConnectorErrorBoundary
+			maxRetries={errorBoundaryConfig.maxRetries ?? 3}
+			onError={errorBoundaryConfig.onError}
+			fallback={errorBoundaryConfig.fallback}
+		>
+			<ConnectorProviderInternal config={config} mobile={mobile}>
+				{children}
+			</ConnectorProviderInternal>
+		</ConnectorErrorBoundary>
+	)
 }
 
 export function useConnector(): ConnectorSnapshot {

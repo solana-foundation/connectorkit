@@ -28,9 +28,13 @@ export { ConnectButton } from './ui/connect-button'
 export type { ConnectButtonProps } from './ui/connect-button'
 export { ConnectModal } from './ui/connect-modal'
 
-export { ConnectorErrorBoundary, withErrorBoundary } from './components/ErrorBoundary'
-export { VirtualizedWalletList } from './components/VirtualizedWalletList'
-export type { WalletError, WalletErrorType } from './components/ErrorBoundary'
+// Error handling utilities - useful for both pre-built and headless usage
+export { 
+  ConnectorErrorBoundary, 
+  withErrorBoundary,
+  WalletErrorType 
+} from './components/ErrorBoundary'
+export type { WalletError } from './components/ErrorBoundary'
 
 export { ProfilePage } from './pages/profile'
 export { AboutPage } from './pages/about'
