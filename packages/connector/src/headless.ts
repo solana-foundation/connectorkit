@@ -28,14 +28,6 @@ export type {
   WalletStandardAccount
 } from './lib/wallet-standard-shim'
 
-// Storage utilities (legacy)
-export { 
-  SimpleStorage,
-  MemoryStorage,
-  createAccountStorage,
-  createClusterStorage,
-  createWalletStorage
-} from './lib/storage-manager'
 
 // Enhanced storage (recommended - extends wallet-ui's Storage)
 export {

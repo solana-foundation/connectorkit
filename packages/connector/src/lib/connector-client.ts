@@ -1,6 +1,6 @@
 import { getWalletsRegistry, type Wallet, type WalletAccount } from './wallet-standard-shim'
 import type { SolanaCluster, SolanaClusterId } from '@wallet-ui/core'
-import type { StorageAdapter } from './storage-manager'
+import type { StorageAdapter } from './enhanced-storage'
 
 export interface WalletInfo {
 	wallet: Wallet
@@ -34,21 +34,12 @@ type Listener = (s: ConnectorState) => void
 export interface ConnectorConfig {
 	autoConnect?: boolean
 	debug?: boolean
-	/** 
-	 * Storage configuration - can be legacy localStorage-like interface
-	 * or enhanced storage adapters for account, cluster, and wallet
-	 */
-	storage?: 
-		| {
-				getItem: (k: string) => string | null
-				setItem: (k: string, v: string) => void
-				removeItem: (k: string) => void
-		  }
-		| {
-				account: StorageAdapter<string | undefined>
-				cluster: StorageAdapter<SolanaClusterId>
-				wallet: StorageAdapter<string | undefined>
-		  }
+	/** Storage configuration using enhanced storage adapters */
+	storage?: {
+		account: StorageAdapter<string | undefined>
+		cluster: StorageAdapter<SolanaClusterId>
+		wallet: StorageAdapter<string | undefined>
+	}
 	
 	/** Enhanced cluster configuration using wallet-ui */
 	cluster?: {
@@ -58,7 +49,6 @@ export interface ConnectorConfig {
 	}
 }
 
-const STORAGE_KEY = 'arc-connector:lastWallet'
 
 export class ConnectorClient {
 	private state: ConnectorState
@@ -74,7 +64,7 @@ export class ConnectorClient {
 		const clusters = clusterConfig?.clusters ?? []
 		
 		// Set up storage adapters
-		if (this.config.storage && 'wallet' in this.config.storage) {
+		if (this.config.storage) {
 			this.walletStorage = this.config.storage.wallet
 			this.clusterStorage = this.config.storage.cluster
 		}
@@ -98,57 +88,205 @@ export class ConnectorClient {
 		this.initialize()
 	}
 
-	private getStorage(): ConnectorConfig['storage'] | null {
-		if (this.config.storage) return this.config.storage
-		if (typeof window !== 'undefined' && window.localStorage) {
-			return {
-				getItem: (k: string) => window.localStorage.getItem(k),
-				setItem: (k: string, v: string) => window.localStorage.setItem(k, v),
-				removeItem: (k: string) => window.localStorage.removeItem(k),
+	/** Helper: Get wallet name from storage */
+	private getStoredWallet(): string | null {
+		return this.walletStorage?.get() ?? null
+	}
+
+	/** Helper: Save wallet name to storage */
+	private setStoredWallet(walletName: string): void {
+		this.walletStorage?.set(walletName)
+	}
+
+	/** Helper: Remove wallet name from storage */
+	private removeStoredWallet(): void {
+		this.walletStorage?.set(undefined)
+	}
+
+	/**
+	 * Check if a specific wallet is available immediately via direct window object detection
+	 * This enables instant reconnection without waiting for wallet standard
+	 */
+	private isWalletAvailableDirectly(walletName: string): any {
+		if (typeof window === 'undefined') return null
+		
+		const name = walletName.toLowerCase()
+		
+		// Check common wallet injection patterns
+		const checks = [
+			() => (window as any)[name],           // window.phantom, window.backpack
+			() => (window as any)[`${name}Wallet`], // window.phantomWallet
+			() => (window as any).solana,          // Legacy Phantom injection
+			() => {
+				// Check for wallet in window keys
+				const keys = Object.keys(window).filter(k => k.toLowerCase().includes(name))
+				return keys.length > 0 ? (window as any)[keys[0]] : null
+			}
+		]
+		
+		for (const check of checks) {
+			try {
+				const result = check()
+				if (result && typeof result === 'object') {
+					// Verify it looks like a wallet (has standard methods or legacy methods)
+					const hasStandardConnect = result.features?.['standard:connect']
+					const hasLegacyConnect = typeof result.connect === 'function'
+					if (hasStandardConnect || hasLegacyConnect) {
+						return result
+					}
+				}
+			} catch (e) {
+				continue
 			}
 		}
+		
 		return null
 	}
 
-	/** Helper: Get wallet name from storage (works with both legacy and enhanced storage) */
-	private getStoredWallet(): string | null {
-		const storage = this.getStorage()
-		if (!storage) return null
+	/**
+	 * Attempt instant auto-connection using direct wallet detection
+	 * This bypasses wallet standard initialization for maximum speed
+	 */
+	private async attemptInstantAutoConnect(): Promise<boolean> {
+		const storedWalletName = this.getStoredWallet()
+		if (!storedWalletName) return false
 		
-		if ('wallet' in storage) {
-			// Enhanced storage
-			return storage.wallet.get() ?? null
-		} else {
-			// Legacy storage
-			return storage.getItem(STORAGE_KEY)
+		const directWallet = this.isWalletAvailableDirectly(storedWalletName)
+		if (!directWallet) return false
+		
+		if (this.config.debug) {
+			console.log('⚡ Instant auto-connect: found', storedWalletName, 'directly in window')
 		}
-	}
-
-	/** Helper: Save wallet name to storage (works with both legacy and enhanced storage) */
-	private setStoredWallet(walletName: string): void {
-		const storage = this.getStorage()
-		if (!storage) return
 		
-		if ('wallet' in storage) {
-			// Enhanced storage
-			storage.wallet.set(walletName)
-		} else {
-			// Legacy storage
-			storage.setItem(STORAGE_KEY, walletName)
-		}
-	}
-
-	/** Helper: Remove wallet name from storage (works with both legacy and enhanced storage) */
-	private removeStoredWallet(): void {
-		const storage = this.getStorage()
-		if (!storage) return
-		
-		if ('wallet' in storage) {
-			// Enhanced storage
-			storage.wallet.set(undefined)
-		} else {
-			// Legacy storage
-			storage.removeItem(STORAGE_KEY)
+		try {
+			// Create proper features object for direct wallet
+			const features: any = {}
+			
+			// Map direct wallet methods to wallet standard features
+			if (directWallet.connect) {
+				features['standard:connect'] = {
+					connect: async (options: any = {}) => {
+						const result = await directWallet.connect(options)
+						
+						// Normalize result to wallet standard format
+						if (result && result.publicKey) {
+							// Legacy wallet format (like Phantom, Backpack)
+							return {
+								accounts: [{
+									address: result.publicKey.toString(),
+									publicKey: result.publicKey.toBytes ? result.publicKey.toBytes() : result.publicKey,
+									chains: ['solana:mainnet', 'solana:devnet', 'solana:testnet'],
+									features: []
+								}]
+							}
+						} else if (result && result.accounts) {
+							// Already wallet standard format
+							return result
+						} else {
+							// Unknown format, try to handle gracefully
+							return { accounts: [] }
+						}
+					}
+				}
+			}
+			if (directWallet.disconnect) {
+				features['standard:disconnect'] = {
+					disconnect: directWallet.disconnect.bind(directWallet)
+				}
+			}
+			if (directWallet.signTransaction) {
+				features['standard:signTransaction'] = {
+					signTransaction: directWallet.signTransaction.bind(directWallet)
+				}
+			}
+			if (directWallet.signMessage) {
+				features['standard:signMessage'] = {
+					signMessage: directWallet.signMessage.bind(directWallet)
+				}
+			}
+			
+			// If wallet already has proper features, use them
+			if (directWallet.features) {
+				Object.assign(features, directWallet.features)
+			}
+			
+			// Create a minimal wallet object for immediate connection
+			// Check multiple common icon property locations
+			const walletIcon = directWallet.icon || 
+							  directWallet._metadata?.icon ||
+							  directWallet.adapter?.icon ||
+							  directWallet.metadata?.icon ||
+							  (directWallet as any).iconUrl ||
+							  undefined
+			
+			const wallet: Wallet = {
+				name: storedWalletName,
+				icon: walletIcon,
+				chains: directWallet.chains || ['solana:mainnet', 'solana:devnet', 'solana:testnet'],
+				features,
+				accounts: directWallet.accounts || []
+			}
+			
+			// Add to state immediately for instant UI feedback
+			this.state = {
+				...this.state,
+				wallets: [{
+					wallet,
+					name: wallet.name,
+					icon: wallet.icon,
+					installed: true,
+					connectable: true
+				}]
+			}
+			this.notify()
+			
+			// Connect immediately
+			await this.select(storedWalletName)
+			
+			// Force wallet list update after successful connection to get proper icons
+			setTimeout(() => {
+				const walletsApi = getWalletsRegistry()
+				const ws = walletsApi.get()
+				
+				if (this.config.debug) {
+					console.log('🔍 Checking for wallet standard update:', {
+						wsLength: ws.length,
+						currentWalletsLength: this.state.wallets.length,
+						shouldUpdate: ws.length > 1
+					})
+				}
+				
+				if (ws.length > 1) { // Only update if we have more wallets than just our connected one
+					const unique = Array.from(new Set(ws.map(w => w.name)))
+					  .map(n => ws.find(w => w.name === n))
+					  .filter((w): w is Wallet => w !== undefined)
+					this.state = {
+						...this.state,
+						wallets: unique.map(w => {
+							const features = (w.features as any) || {}
+							const hasConnect = Boolean(features['standard:connect'])
+							const hasDisconnect = Boolean(features['standard:disconnect'])
+							const chains = (w as any)?.chains as unknown as string[] | undefined
+							const isSolana = Array.isArray(chains) && chains.some(c => typeof c === 'string' && c.includes('solana'))
+							const connectable = hasConnect && hasDisconnect && Boolean(isSolana)
+							return { wallet: w, name: w.name, icon: w.icon, installed: true, connectable } satisfies WalletInfo
+						})
+					}
+					this.notify()
+					
+					console.log('🎨 Updated wallet list after instant connection, now have', this.state.wallets.length, 'wallets with icons')
+				} else {
+					console.log('⚠️ Wallet standard not ready yet, wallet list not updated')
+				}
+			}, 500) // Faster icon update
+			
+			return true
+			
+		} catch (error) {
+			if (this.config.debug) {
+				console.error('⚠️ Instant auto-connect failed, will retry with standard detection:', error)
+			}
+			return false
 		}
 	}
 
@@ -161,13 +299,32 @@ export class ConnectorClient {
 		this.initialized = true
 		
 		try {
+			// Try instant auto-connect FIRST (for reconnection speed)
+			// But delay slightly to avoid hydration mismatch
+			if (this.config.autoConnect) {
+				setTimeout(() => {
+					this.attemptInstantAutoConnect().then(success => {
+						if (!success) {
+							// Fallback to standard detection if instant connection failed
+							setTimeout(() => this.attemptAutoConnect(), 200)
+						}
+					})
+				}, 100) // Small delay to avoid hydration issues
+			}
+			
 			const walletsApi = getWalletsRegistry()
 			const update = () => {
 				const ws = walletsApi.get()
-				console.log('🔍 ConnectorClient.update() found wallets:', ws.length)
+				if (this.config.debug && ws.length !== this.state.wallets.length) {
+					console.log('🔍 ConnectorClient: found wallets:', ws.length)
+				}
+				
 				const unique = Array.from(new Set(ws.map(w => w.name)))
 				  .map(n => ws.find(w => w.name === n))
 				  .filter((w): w is Wallet => w !== undefined)
+				
+				// Update wallet list for UI, but don't interfere with connection state
+				// This ensures the connect button has access to wallet icons
 				this.state = {
 					...this.state,
 					wallets: unique.map(w => {
@@ -178,35 +335,26 @@ export class ConnectorClient {
 						const isSolana = Array.isArray(chains) && chains.some(c => typeof c === 'string' && c.includes('solana'))
 						const connectable = hasConnect && hasDisconnect && Boolean(isSolana)
 						return { wallet: w, name: w.name, icon: w.icon, installed: true, connectable } satisfies WalletInfo
-					}),
+					})
 				}
 				this.notify()
 			}
 			
-			// Initial update
+			// Initial update for wallet discovery
 			update()
 			
-			// Subscribe to wallet changes
+			// Subscribe to wallet changes for discovery (not critical for reconnection)
 			this.unsubscribers.push(walletsApi.on('register', update))
 			this.unsubscribers.push(walletsApi.on('unregister', update))
 			
-			// Poll for wallets in case they register after initialization
-			const pollForWallets = () => {
-				const currentCount = this.state.wallets.length
-				const newWallets = walletsApi.get()
-				if (newWallets.length > currentCount) {
-					console.log('🔍 Polling found new wallets:', newWallets.length)
-					update()
-				}
+			// Minimal wallet discovery - only if instant connection failed
+			if (!this.state.connected) {
+				setTimeout(() => {
+					if (!this.state.connected) {
+						update()
+					}
+				}, 1000)
 			}
-			
-			// Poll every 500ms for up to 5 seconds
-			const pollInterval = setInterval(pollForWallets, 500)
-			setTimeout(() => {
-				clearInterval(pollInterval)
-			}, 5000)
-			
-			if (this.config.autoConnect) setTimeout(() => this.attemptAutoConnect(), 100)
 		} catch (e) {
 			// Init failed silently
 		}
@@ -214,10 +362,42 @@ export class ConnectorClient {
 
 	private async attemptAutoConnect() {
 		try {
+			// Skip if already connected (e.g., via instant auto-connect)
+			if (this.state.connected) {
+				if (this.config.debug) {
+					console.log('🔄 Auto-connect: Already connected, skipping fallback auto-connect')
+				}
+				return
+			}
+			
 			const last = this.getStoredWallet()
+			if (this.config.debug) {
+				console.log('🔄 Auto-connect: stored wallet =', last)
+				console.log('🔄 Auto-connect: available wallets =', this.state.wallets.map(w => w.name))
+			}
 			if (!last) return
-			if (this.state.wallets.some(w => w.name === last)) await this.select(last)
+			
+			const walletFound = this.state.wallets.some(w => w.name === last)
+			if (walletFound) {
+				if (this.config.debug) {
+					console.log('✅ Auto-connect: Found stored wallet, connecting')
+				}
+				await this.select(last)
+			} else {
+				// Single shorter retry - wallets usually register within 1-2 seconds
+				setTimeout(() => {
+					if (this.state.wallets.some(w => w.name === last)) {
+						if (this.config.debug) {
+							console.log('✅ Auto-connect: Retry successful')
+						}
+						this.select(last).catch(console.error)
+					}
+				}, 1000) // Reduced from 2000ms to 1000ms
+			}
 		} catch (e) {
+			if (this.config.debug) {
+				console.error('❌ Auto-connect failed:', e)
+			}
 			this.removeStoredWallet()
 		}
 	}
@@ -239,24 +419,30 @@ export class ConnectorClient {
 		if (this.pollTimer) return
 		const wallet = this.state.selectedWallet
 		if (!wallet) return
+		
+		// Simple polling - don't mess with account selection if we have one
 		this.pollTimer = setInterval(() => {
 			try {
 				const walletAccounts = ((wallet as any)?.accounts ?? []) as any[]
-				const accountMap = new Map<string, any>()
-				for (const a of walletAccounts) accountMap.set(a.address, a)
-				const nextAccounts: AccountInfo[] = Array.from(accountMap.values()).map((a: any) => ({ address: a.address as string, icon: a.icon, raw: a }))
-				const selectedStillExists = this.state.selectedAccount && nextAccounts.some(acc => acc.address === this.state.selectedAccount)
-				const newSelected = selectedStillExists ? this.state.selectedAccount : (nextAccounts[0]?.address ?? null)
-				// Only update if changed
-				const changed = nextAccounts.length !== this.state.accounts.length || nextAccounts.some((acc, i) => acc.address !== this.state.accounts[i]?.address)
-				if (changed) {
-					this.state = { ...this.state, accounts: nextAccounts, selectedAccount: newSelected }
+				const nextAccounts: AccountInfo[] = walletAccounts.map((a: any) => ({ 
+					address: a.address as string, 
+					icon: a.icon, 
+					raw: a 
+				}))
+				
+				// Only update if we don't have accounts yet or they actually changed
+				if (this.state.accounts.length === 0 && nextAccounts.length > 0) {
+					this.state = { 
+						...this.state, 
+						accounts: nextAccounts,
+						selectedAccount: this.state.selectedAccount || nextAccounts[0]?.address || null
+					}
 					this.notify()
 				}
 			} catch (error) {
-				// Error during account polling
+				// Error during account polling - ignore
 			}
-		}, 1500)
+		}, 3000) // Less frequent polling
 	}
 
 	private stopPollingWalletAccounts() {
@@ -290,23 +476,24 @@ export class ConnectorClient {
 		}
 
 		try {
-			// Subscribe to change events
+			// Subscribe to change events - but don't interfere with account selection
 			this.walletChangeUnsub = eventsFeature.on('change', (properties: any) => {
-				// Aggregate accounts from event and wallet.accounts (some wallets only include selected account in the event)
+				// Only handle actual account changes, not selection changes
 				const changeAccounts = (properties?.accounts ?? []) as any[]
-				const walletAccounts = ((wallet as any)?.accounts ?? []) as any[]
-				const accountMap = new Map<string, any>()
-				for (const a of [...walletAccounts, ...changeAccounts]) accountMap.set(a.address, a)
-				const nextAccounts: AccountInfo[] = Array.from(accountMap.values()).map((a: any) => ({ address: a.address as string, icon: a.icon, raw: a }))
-
-				// Preserve selection if possible
-				const selectedStillExists = this.state.selectedAccount && nextAccounts.some(acc => acc.address === this.state.selectedAccount)
-				const newSelected = selectedStillExists ? this.state.selectedAccount : (nextAccounts[0]?.address ?? null)
-
-				this.state = { ...this.state, accounts: nextAccounts, selectedAccount: newSelected }
+				if (changeAccounts.length === 0) return
+				
+				const nextAccounts: AccountInfo[] = changeAccounts.map((a: any) => ({ 
+					address: a.address as string, 
+					icon: a.icon, 
+					raw: a 
+				}))
+				
+				// Only update accounts, preserve selected account
+				this.state = { 
+					...this.state, 
+					accounts: nextAccounts.length > 0 ? nextAccounts : this.state.accounts 
+				}
 				this.notify()
-
-				// Wallet accounts changed
 			})
 		} catch (error) {
 			// Failed to subscribe to wallet events
@@ -382,6 +569,33 @@ export class ConnectorClient {
 		this.state = { ...this.state, selectedWallet: null, connected: false, accounts: [], selectedAccount: null }
 		this.removeStoredWallet()
 		this.notify()
+		
+		// Force wallet discovery after disconnect to show available wallets
+		setTimeout(() => {
+			if (!this.state.connected) {
+				// Re-run wallet discovery
+				const walletsApi = getWalletsRegistry()
+				const ws = walletsApi.get()
+				if (ws.length > 0) {
+					const unique = Array.from(new Set(ws.map(w => w.name)))
+					  .map(n => ws.find(w => w.name === n))
+					  .filter((w): w is Wallet => w !== undefined)
+					this.state = {
+						...this.state,
+						wallets: unique.map(w => {
+							const features = (w.features as any) || {}
+							const hasConnect = Boolean(features['standard:connect'])
+							const hasDisconnect = Boolean(features['standard:disconnect'])
+							const chains = (w as any)?.chains as unknown as string[] | undefined
+							const isSolana = Array.isArray(chains) && chains.some(c => typeof c === 'string' && c.includes('solana'))
+							const connectable = hasConnect && hasDisconnect && Boolean(isSolana)
+							return { wallet: w, name: w.name, icon: w.icon, installed: true, connectable } satisfies WalletInfo
+						}),
+					}
+					this.notify()
+				}
+			}
+		}, 100)
 	}
 
 	async selectAccount(address: string): Promise<void> {

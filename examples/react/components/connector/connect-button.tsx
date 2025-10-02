@@ -19,14 +19,10 @@ interface ConnectButtonProps {
   className?: string
 }
 
-interface WalletWithIcon {
-  icon?: string
-  name: string
-}
 
 export function ConnectButton({ className }: ConnectButtonProps) {
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const { connected, connecting, selectedWallet, selectedAccount, disconnect } = useConnector()
+  const { connected, connecting, selectedWallet, selectedAccount, disconnect, wallets } = useConnector()
 
   const handleCopyAddress = async () => {
     if (selectedAccount) {
@@ -46,8 +42,11 @@ export function ConnectButton({ className }: ConnectButtonProps) {
 
   if (connected && selectedAccount && selectedWallet) {
     const shortAddress = `${selectedAccount.slice(0, 4)}...${selectedAccount.slice(-4)}`
-    const wallet = selectedWallet as unknown as WalletWithIcon
-    const walletIcon = wallet.icon
+    
+    // Get wallet icon from wallets list (has proper icons) or fallback to selectedWallet
+    const walletWithIcon = wallets.find(w => w.name === selectedWallet.name)
+    const walletIcon = walletWithIcon?.icon || selectedWallet.icon
+    
 
     return (
       <DropdownMenu>

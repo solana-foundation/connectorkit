@@ -117,15 +117,23 @@ export function getWalletsRegistry(): WalletsRegistry {
       return cachedRegistry
     }
     
-    console.log('⚠️ window.navigator.wallets not found')
+    if (process.env.NODE_ENV === 'development') {
+      console.log('⚠️ window.navigator.wallets not found')
+    }
     
-    // Try to initialize via dynamic import
+    // Try to initialize via dynamic import (eagerly)
     import('@wallet-standard/app')
       .then(mod => {
         const registry = mod.getWallets?.()
         if (registry && typeof registry.get === 'function') {
           console.log('✅ Wallet Standard initialized via import')
           cachedRegistry = wrapRegistry(registry)
+          // Trigger wallet detection update after initialization
+          setTimeout(() => {
+            if (window.navigator && (window.navigator as any).wallets) {
+              console.log('🔄 Triggering wallet detection after standard initialization')
+            }
+          }, 100)
         }
       })
       .catch(error => {
