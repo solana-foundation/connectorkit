@@ -1,2 +1,9 @@
-export { useModal } from './use-modal'
-export type { UseModalReturn } from './use-modal'
+/**
+ * @connector-kit/connector - React Hooks
+ * 
+ * Enhanced React hooks for wallet and cluster management
+ */
+
+export * from './use-cluster'
+export * from './use-account'
+export * from './use-wallet-info'

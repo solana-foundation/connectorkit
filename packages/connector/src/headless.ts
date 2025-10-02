@@ -6,65 +6,83 @@
  */
 
 // Core client logic
-export { ConnectorClient, modalRoutes, validateRoute, safeRoutes } from './lib/connector-client'
+export { ConnectorClient } from './lib/connector-client'
+export { getWalletsRegistry } from './lib/wallet-standard-shim'
 
 // Configuration helpers
 export { getDefaultConfig, getDefaultMobileConfig } from './config'
 export type { DefaultConfigOptions, ExtendedConnectorConfig } from './config'
-
-// Simplified theme system (works without React)
-export {
-  themes,
-  lightTheme,
-  darkTheme,
-  defaultConnectorTheme,
-  minimalTheme, // Alias for backward compatibility
-  // Essential theme utilities
-  getBorderRadius,
-  getSpacing,
-  getButtonHeight,
-  getButtonShadow,
-  getButtonBorder,
-  getAccessibleTextColor,
-  legacyToModernTheme,
-} from './themes'
 
 // Essential types for non-React usage
 export type { 
   ConnectorConfig,
   ConnectorState,
   WalletInfo,
-  AccountInfo,
-  ModalRoute
+  AccountInfo
 } from './lib/connector-client'
 
 export type {
-  ConnectorTheme,
-  LegacyConnectorTheme,
-  ConnectorThemeOverrides,
-  LegacyConnectorThemeOverrides
-} from './themes/types'
+  Wallet,
+  WalletAccount,
+  WalletStandardWallet,
+  WalletStandardAccount
+} from './lib/wallet-standard-shim'
 
-// Theme name type from themes index
-export type { ThemeName } from './themes'
+// Storage utilities (legacy)
+export { 
+  SimpleStorage,
+  MemoryStorage,
+  createAccountStorage,
+  createClusterStorage,
+  createWalletStorage
+} from './lib/storage-manager'
+
+// Enhanced storage (recommended - extends wallet-ui's Storage)
+export {
+  EnhancedStorage,
+  EnhancedStorageAdapter,
+  createEnhancedStorageAccount,
+  createEnhancedStorageCluster,
+  createEnhancedStorageWallet
+} from './lib/enhanced-storage'
+export type { 
+  StorageAdapter,
+  StorageOptions,
+  EnhancedStorageAccountOptions,
+  EnhancedStorageClusterOptions,
+  EnhancedStorageWalletOptions
+} from './lib/enhanced-storage'
 
 // Configuration and option types
 export type { 
   ConnectorOptions, 
-  MobileConnectorOptions, 
-  ConnectorThemeExtended 
+  MobileConnectorOptions
 } from './types'
 
 // Mobile Wallet Adapter utilities for headless users
 export type { MobileWalletAdapterConfig } from './ui/connector-provider'
 
-// Modal router for advanced modal management
-export { ModalRouter, defaultModalRouter } from './lib/modal-router'
-export type { ModalState } from './lib/modal-router'
-
 // Error handling utilities for headless users
 export { WalletErrorType } from './components/ErrorBoundary'
 export type { WalletError } from './components/ErrorBoundary'
+
+// Utility functions (framework-agnostic)
+export * from './utils/clipboard'
+export * from './utils/formatting'
+export * from './utils/cluster'
+
+// Re-export wallet-ui types and utilities for convenience
+export type {
+  SolanaCluster,
+  SolanaClusterId,
+} from '@wallet-ui/core'
+
+export {
+  createSolanaMainnet,
+  createSolanaDevnet,
+  createSolanaTestnet,
+  createSolanaLocalnet,
+} from '@wallet-ui/core'
 
 // Import for internal use only
 import { WalletErrorType, type WalletError } from './components/ErrorBoundary'

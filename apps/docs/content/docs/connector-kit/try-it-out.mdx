@@ -5,40 +5,20 @@ description: Connector Kit offers multiple implementation approaches to fit your
 ---
 
 import React from 'react'
-import { ConnectButtonWrapper } from '../../../components/connect-button-wrapper'
 import { StandardWalletDemo } from '../../../components/standard-wallet-demo-stable'
+import { TransactionStandardDemo } from '../../../components/transaction-standard-demo'
 
-
-## 1. Drop-in and build
-
-Use the drop-in components for quick integrations.
-
-```tsx
-import { ConnectButton } from '@connector-kit/connector'
-
-<ConnectButton />
-```
-
-<div 
-  className="relative flex flex-col items-center justify-center w-full h-[300px] rounded-xl gap-6 p-6 border border-gray-200"
-  style={{
-    backgroundImage: `repeating-linear-gradient(
-      45deg,
-      transparent,
-      transparent 10px,
-      rgba(46, 77, 97, 0.08) 10px,
-      rgba(46, 77, 97, 0.08) 11px
-    )`
-  }}
-  >
-  <ConnectButtonWrapper />
-</div>
-
-## 2. Build what you need
+## 1. Build what you need
 
 Use the connector's headless design for wallet connection and state management.
 
 <StandardWalletDemo />
+
+## 2. Send Transactions
+
+Once connected, use the transaction hooks to send SOL and interact with the blockchain.
+
+<TransactionStandardDemo />
 
 ## 3. Headless Implementation
 

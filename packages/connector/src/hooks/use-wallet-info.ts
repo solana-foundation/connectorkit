@@ -1,0 +1,94 @@
+/**
+ * @connector-kit/connector - useWalletInfo hook
+ * 
+ * React hook for getting information about the connected wallet
+ */
+
+'use client'
+
+import { useMemo } from 'react'
+import { useConnector } from '../ui/connector-provider'
+
+export interface UseWalletInfoReturn {
+  /** Name of the connected wallet (e.g., 'Phantom', 'Solflare') */
+  name: string | null
+  /** Wallet icon/logo URL if available */
+  icon: string | null
+  /** Whether the wallet extension is installed */
+  installed: boolean
+  /** Whether the wallet supports Solana connections */
+  connectable: boolean
+  /** Whether currently connected to the wallet */
+  connected: boolean
+  /** Whether a connection attempt is in progress */
+  connecting: boolean
+  /** All available wallets */
+  wallets: Array<{
+    name: string
+    icon?: string
+    installed: boolean
+    connectable?: boolean
+  }>
+}
+
+/**
+ * Hook for getting information about the connected wallet
+ * Provides wallet metadata, connection status, and capabilities
+ * 
+ * @example
+ * ```tsx
+ * function WalletBadge() {
+ *   const { name, icon, connected, connecting } = useWalletInfo()
+ *   
+ *   if (connecting) return <p>Connecting...</p>
+ *   if (!connected) return <p>No wallet connected</p>
+ *   
+ *   return (
+ *     <div>
+ *       {icon && <img src={icon} alt={name} />}
+ *       <span>{name}</span>
+ *     </div>
+ *   )
+ * }
+ * ```
+ */
+export function useWalletInfo(): UseWalletInfoReturn {
+  const { selectedWallet, wallets, connected, connecting } = useConnector()
+  
+  return useMemo(() => {
+    if (!selectedWallet) {
+      return {
+        name: null,
+        icon: null,
+        installed: false,
+        connectable: false,
+        connected,
+        connecting,
+        wallets: wallets.map(w => ({
+          name: w.name,
+          icon: w.icon,
+          installed: w.installed,
+          connectable: w.connectable,
+        })),
+      }
+    }
+    
+    const info = wallets.find(w => w.name === selectedWallet.name)
+    
+    return {
+      name: selectedWallet.name,
+      icon: selectedWallet.icon ?? null,
+      installed: info?.installed ?? false,
+      connectable: info?.connectable ?? false,
+      connected,
+      connecting,
+      wallets: wallets.map(w => ({
+        name: w.name,
+        icon: w.icon,
+        installed: w.installed,
+        connectable: w.connectable,
+      })),
+    }
+  }, [selectedWallet, wallets, connected, connecting])
+}
+

@@ -1,32 +1,64 @@
-// Initialize UI global styles (e.g., spinner keyframes) once per app
-export { injectConnectorGlobalStyles, injectArcConnectorGlobalStyles } from './ui/global-styles'
-
 // Configuration helpers
 export { getDefaultConfig, getDefaultMobileConfig } from './config'
 export type { DefaultConfigOptions, ExtendedConnectorConfig } from './config'
 
 // Core exports
-export { ConnectorClient, modalRoutes, validateRoute, safeRoutes } from './lib/connector-client'
+export { ConnectorClient } from './lib/connector-client'
 export type { 
   ConnectorState, 
   ConnectorConfig, 
   WalletInfo, 
-  AccountInfo,
-  ModalRoute
+  AccountInfo
 } from './lib/connector-client'
 
+// Wallet standard types and utilities
+export { getWalletsRegistry } from './lib/wallet-standard-shim'
+export type {
+  Wallet,
+  WalletAccount,
+  WalletStandardWallet,
+  WalletStandardAccount
+} from './lib/wallet-standard-shim'
+
+// Storage utilities (legacy)
+export { 
+  SimpleStorage,
+  MemoryStorage,
+  createAccountStorage,
+  createClusterStorage,
+  createWalletStorage
+} from './lib/storage-manager'
+
+// Enhanced storage (recommended - extends wallet-ui's Storage)
+export {
+  EnhancedStorage,
+  EnhancedStorageAdapter,
+  createEnhancedStorageAccount,
+  createEnhancedStorageCluster,
+  createEnhancedStorageWallet
+} from './lib/enhanced-storage'
+export type { 
+  StorageAdapter,
+  StorageOptions,
+  EnhancedStorageAccountOptions,
+  EnhancedStorageClusterOptions,
+  EnhancedStorageWalletOptions
+} from './lib/enhanced-storage'
+
+// React providers and hooks
 export { ConnectorProvider, useConnector, useConnectorClient } from './ui/connector-provider'
 export type { ConnectorSnapshot } from './ui/connector-provider'
 export type { MobileWalletAdapterConfig } from './ui/connector-provider'
 export { UnifiedProvider, AppProvider, WalletProvider } from './ui/unified-provider'
 export type { UnifiedProviderProps } from './ui/unified-provider'
 
-export { useModal } from './hooks'
-export type { UseModalReturn } from './hooks'
-
-export { ConnectButton } from './ui/connect-button'
-export type { ConnectButtonProps } from './ui/connect-button'
-export { ConnectModal } from './ui/connect-modal'
+// Enhanced React hooks
+export { useCluster } from './hooks/use-cluster'
+export { useAccount } from './hooks/use-account'
+export { useWalletInfo } from './hooks/use-wallet-info'
+export type { UseClusterReturn } from './hooks/use-cluster'
+export type { UseAccountReturn } from './hooks/use-account'
+export type { UseWalletInfoReturn } from './hooks/use-wallet-info'
 
 // Error handling utilities - useful for both pre-built and headless usage
 export { 
@@ -36,45 +68,29 @@ export {
 } from './components/ErrorBoundary'
 export type { WalletError } from './components/ErrorBoundary'
 
-export { ProfilePage } from './pages/profile'
-export { AboutPage } from './pages/about'
-export { SettingsPage } from './pages/settings'
-
-export { ModalRouter, defaultModalRouter } from './lib/modal-router'
-export type { ModalState } from './lib/modal-router'
-
-export { WalletsPage } from './pages/wallets'
-
-// Simplified theming system
-export {
-  themes,
-  lightTheme,
-  darkTheme,
-  defaultConnectorTheme,
-  minimalTheme, // Alias for backward compatibility
-  // Essential theme utilities
-  getBorderRadius,
-  getSpacing,
-  getButtonHeight,
-  getButtonShadow,
-  getButtonBorder,
-  getAccessibleTextColor,
-  legacyToModernTheme,
-} from './themes'
-export type { 
-  ConnectorTheme,
-  LegacyConnectorTheme,
-  ConnectorThemeOverrides,
-  LegacyConnectorThemeOverrides,
-  ThemeName
-} from './themes'
-
 // Configuration types
 export type { 
   ConnectorOptions, 
-  MobileConnectorOptions, 
-  ConnectorThemeExtended 
+  MobileConnectorOptions
 } from './types'
+
+// Utility functions
+export * from './utils/clipboard'
+export * from './utils/formatting'
+export * from './utils/cluster'
+
+// Re-export wallet-ui types and utilities
+export type {
+  SolanaCluster,
+  SolanaClusterId,
+} from '@wallet-ui/core'
+
+export {
+  createSolanaMainnet,
+  createSolanaDevnet,
+  createSolanaTestnet,
+  createSolanaLocalnet,
+} from '@wallet-ui/core'
 
 // Utility functions for advanced usage
 export {

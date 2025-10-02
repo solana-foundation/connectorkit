@@ -2,12 +2,26 @@
 
 import React, { useState, useEffect, useTransition, useDeferredValue, useCallback } from 'react'
 import { AnimatePresence, motion } from "motion/react"
-import { useBalance, useAirdrop, useCluster, useEnhancedCluster, useWalletAddress, WalletUiClusterDropdown } from '@armadura/sdk'
-import { useConnector, ConnectorErrorBoundary } from '@connector-kit/connector'
+import { 
+  useBalance, 
+  useAirdrop, 
+  useCluster as useArmaCluster, 
+  useEnhancedCluster, 
+  useWalletAddress, 
+  WalletUiClusterDropdown 
+} from '@armadura/sdk'
+import { 
+  useConnector, 
+  useAccount,
+  useCluster,
+  useWalletInfo,
+  formatSOL,
+  ConnectorErrorBoundary 
+} from '@connector-kit/connector'
 import { Button } from './ui/button'
 import { Alert, AlertDescription } from './ui/alert'
 import { Spinner } from './ui/spinner'
-import { Droplets, RefreshCw } from 'lucide-react'
+import { Droplets, RefreshCw, Copy, CheckCircle2 } from 'lucide-react'
 import { WalletCard } from "./wallet-card"
 
 /**
@@ -27,7 +41,37 @@ function StandardWalletDemoStableContent() {
     disconnect,
   } = useConnector()
 
-  const { address, connected, connecting } = useWalletAddress()
+  // ✨ NEW: Use connector-kit's enhanced hooks
+  const { 
+    address, 
+    formatted: formattedAddress, 
+    copy: copyAddress, 
+    copied: addressCopied,
+    connected 
+  } = useAccount()
+  
+  const { 
+    name: walletName, 
+    icon: walletIcon, 
+    connecting 
+  } = useWalletInfo()
+
+  // Use armadura's cluster since that's what WalletUiClusterDropdown controls
+  const { 
+    name: clusterName, 
+    isDevnet,
+    isMainnet,
+    canAirdrop,
+    rpcUrl: armaRpcUrl,
+  } = useArmaCluster()
+
+  const { canSwitch } = useEnhancedCluster()
+
+  // Also get connector-kit cluster for demonstration (shows both systems)
+  const {
+    cluster: connectorCluster,
+    explorerUrl
+  } = useCluster()
   
   const deferredConnected = useDeferredValue(connected)
   const deferredAddress = useDeferredValue(address)
@@ -45,24 +89,6 @@ function StandardWalletDemoStableContent() {
     error: airdropError,
     data: airdropResult
   } = useAirdrop()
-
-  const { 
-    name: clusterName, 
-    isDevnet,
-    isMainnet,
-    canAirdrop,
-  } = useCluster()
-
-  const { canSwitch } = useEnhancedCluster()
-
-  const formatBalance = useCallback((lamports: bigint) => {
-    return (Number(lamports) / 1e9).toFixed(4)
-  }, [])
-
-  const truncateAddress = useCallback((address: string | null) => {
-    if (!address) return 'No address'
-    return `${address.slice(0, 6)}...${address.slice(-6)}`
-  }, [])
 
   const handleWalletSelect = useCallback(async (walletName: string) => {
     setHasStarted(true)
@@ -161,25 +187,49 @@ function StandardWalletDemoStableContent() {
         }}
       >
         
-        {/* Refresh Button */}
+        {/* Top-right actions */}
         {deferredConnected && deferredAddress && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              startWalletTransition(() => {
-                refetchBalance()
-              })
-            }}
-            disabled={balanceLoading || isPending}
-            className="group absolute top-4 right-4 h-8 w-8 p-0 rounded-full border border-gray-200 hover:border-gray-300 hover:bg-white bg-zinc-100 transition-all duration-300 ease-in-out"
-          >
-            {balanceLoading ? (
-              <Spinner size={14} />
-            ) : (
-              <RefreshCw className="h-4 w-4 text-gray-500 hover:text-gray-700 group-hover:scale-110 transition-all duration-300 ease-in-out" />
-            )}
-          </Button>
+          <div className="absolute top-4 right-4 flex gap-2">
+            {/* Copy Address Button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={copyAddress}
+              disabled={!deferredAddress}
+              className="group h-8 px-3 rounded-full border border-gray-200 hover:border-gray-300 hover:bg-white bg-zinc-100 transition-all duration-300 ease-in-out"
+            >
+              {addressCopied ? (
+                <>
+                  <CheckCircle2 className="h-3 w-3 text-green-600 mr-1.5" />
+                  <span className="text-xs text-green-600">Copied!</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="h-3 w-3 text-gray-500 group-hover:text-gray-700 mr-1.5" />
+                  <span className="text-xs text-gray-600 group-hover:text-gray-800">{formattedAddress}</span>
+                </>
+              )}
+            </Button>
+
+            {/* Refresh Button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                startWalletTransition(() => {
+                  refetchBalance()
+                })
+              }}
+              disabled={balanceLoading || isPending}
+              className="group h-8 w-8 p-0 rounded-full border border-gray-200 hover:border-gray-300 hover:bg-white bg-zinc-100 transition-all duration-300 ease-in-out"
+            >
+              {balanceLoading ? (
+                <Spinner size={14} />
+              ) : (
+                <RefreshCw className="h-4 w-4 text-gray-500 hover:text-gray-700 group-hover:scale-110 transition-all duration-300 ease-in-out" />
+              )}
+            </Button>
+          </div>
         )}
 
         {/* Airdrop Button */}
@@ -329,10 +379,12 @@ function StandardWalletDemoStableContent() {
               >
                 <WalletCard 
                   key={deferredAddress || 'default'}
-                  walletName={deferredConnected ? `Connected to ${clusterName}` : selectedWallet?.name || "Wallet"}
-                  ethValue={deferredConnected && balance !== null && balance !== undefined ? `${formatBalance(balance)} SOL` : 
-                           deferredConnected && !deferredAddress ? "No Address Found" :
-                           "0 SOL"}
+                  walletName={deferredConnected ? `${walletName} · ${clusterName}` : selectedWallet?.name || "Wallet"}
+                  ethValue={deferredConnected && balance !== null && balance !== undefined 
+                    ? formatSOL(balance, { decimals: 4 }) 
+                    : deferredConnected && !deferredAddress 
+                      ? "No Address Found" 
+                      : "0 SOL"}
                   uniqueId={deferredAddress || "1"}
                   bgColor={deferredConnected ? (isDevnet ? "#10b981" : isMainnet ? "#2d2d2d" : "#FFBE1A") : "#FFBE1A"}
                   address={deferredAddress || undefined}
@@ -342,14 +394,23 @@ function StandardWalletDemoStableContent() {
 
               {connecting && (
                 <div className="flex flex-col items-center gap-4">
-                  <motion.p
+                  <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0 }}
-                    className="text-gray-500 text-xl font-medium"
+                    className="flex flex-col items-center gap-3"
                   >
-                    Connecting to {selectedWallet?.name || 'wallet'}...
-                  </motion.p>
+                    {walletIcon && (
+                      <img 
+                        src={walletIcon} 
+                        alt={walletName || 'wallet'} 
+                        className="w-12 h-12 rounded-full"
+                      />
+                    )}
+                    <p className="text-gray-500 text-xl font-medium">
+                      Connecting to {walletName || selectedWallet?.name || 'wallet'}...
+                    </p>
+                  </motion.div>
                   <Spinner size={32} />
                 </div>
               )}
@@ -371,7 +432,46 @@ function StandardWalletDemoStableContent() {
       {airdropResult && (
         <Alert>
           <AlertDescription>
-            🪂 Airdrop successful! {Number(airdropResult.amount) / 1e9} SOL sent
+            🪂 Airdrop successful! {formatSOL(airdropResult.amount, { decimals: 2 })} sent to {formattedAddress}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Cluster Info Display - Shows both Armadura (active) and Connector-kit clusters */}
+      {deferredConnected && clusterName && (
+        <Alert>
+          <AlertDescription className="flex items-center justify-between">
+            <div className="flex flex-col gap-1">
+              <div className="text-sm font-medium">
+                Connected to {clusterName}
+                {connectorCluster && connectorCluster.label !== clusterName && (
+                  <span className="text-xs text-gray-500 ml-2">
+                    (Connector-kit: {connectorCluster.label})
+                  </span>
+                )}
+              </div>
+              <div className="text-xs text-gray-500">RPC: {armaRpcUrl}</div>
+              {explorerUrl && (
+                <a 
+                  href={explorerUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-xs text-blue-600 hover:text-blue-800 underline"
+                >
+                  View on Solana Explorer →
+                </a>
+              )}
+            </div>
+            {isMainnet && (
+              <span className="px-2 py-1 text-xs font-medium bg-gray-900 text-white rounded">
+                Mainnet
+              </span>
+            )}
+            {isDevnet && (
+              <span className="px-2 py-1 text-xs font-medium bg-green-600 text-white rounded">
+                Devnet
+              </span>
+            )}
           </AlertDescription>
         </Alert>
       )}
