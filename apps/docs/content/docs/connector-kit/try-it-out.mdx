@@ -6,6 +6,7 @@ description: Connector Kit offers multiple implementation approaches to fit your
 
 import React from 'react'
 import { StandardWalletDemo } from '../../../components/standard-wallet-demo-stable'
+import { TransactionStandardDemo } from '../../../components/transaction-standard-demo'
 
 ## 1. Build what you need
 
@@ -13,7 +14,13 @@ Use the connector's headless design for wallet connection and state management.
 
 <StandardWalletDemo />
 
-## 2. Headless Implementation
+## 2. Send Transactions
+
+Once connected, use the transaction hooks to send SOL and interact with the blockchain.
+
+<TransactionStandardDemo />
+
+## 3. Headless Implementation
 
 Complete control over UI and behavior:
 
@@ -56,7 +63,7 @@ function CustomWalletConnect() {
 }
 ```
 
-## 3. Modal Navigation
+## 4. Modal Navigation
 
 Access modal state and navigation:
 
