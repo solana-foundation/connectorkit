@@ -38,15 +38,24 @@ export interface MobileWalletAdapterConfig {
 // Internal provider without error boundary
 function ConnectorProviderInternal({ children, config, mobile }: { children: ReactNode; config?: ConnectorConfig; mobile?: MobileWalletAdapterConfig }) {
 	const ref = useRef<ConnectorClient | null>(null)
+	
+	// Create client immediately (works in both SSR and client)
 	if (!ref.current) {
 		ref.current = new ConnectorClient(config)
 	}
-
-	// Expose connector globally for auto-detection by other providers
+	
+	// On client mount, ensure wallet detection runs
 	React.useEffect(() => {
 		if (typeof window !== 'undefined' && ref.current) {
 			window.__connectorClient = ref.current
+			// Force re-initialization if client was created during SSR
+			// This ensures wallets are detected even if client was created before window existed
+			const privateClient = ref.current as any
+			if (privateClient.initialize && typeof privateClient.initialize === 'function') {
+				privateClient.initialize()
+			}
 		}
+		
 		return () => {
 			// Cleanup global reference and client on unmount
 			if (typeof window !== 'undefined') {

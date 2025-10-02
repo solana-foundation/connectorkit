@@ -152,12 +152,19 @@ export class ConnectorClient {
 		}
 	}
 
+	private initialized = false
+	
 	private initialize() {
 		if (typeof window === 'undefined') return
+		// Prevent double initialization
+		if (this.initialized) return
+		this.initialized = true
+		
 		try {
 			const walletsApi = getWalletsRegistry()
 			const update = () => {
 				const ws = walletsApi.get()
+				console.log('🔍 ConnectorClient.update() found wallets:', ws.length)
 				const unique = Array.from(new Set(ws.map(w => w.name)))
 				  .map(n => ws.find(w => w.name === n))
 				  .filter((w): w is Wallet => w !== undefined)
@@ -175,9 +182,30 @@ export class ConnectorClient {
 				}
 				this.notify()
 			}
+			
+			// Initial update
 			update()
+			
+			// Subscribe to wallet changes
 			this.unsubscribers.push(walletsApi.on('register', update))
 			this.unsubscribers.push(walletsApi.on('unregister', update))
+			
+			// Poll for wallets in case they register after initialization
+			const pollForWallets = () => {
+				const currentCount = this.state.wallets.length
+				const newWallets = walletsApi.get()
+				if (newWallets.length > currentCount) {
+					console.log('🔍 Polling found new wallets:', newWallets.length)
+					update()
+				}
+			}
+			
+			// Poll every 500ms for up to 5 seconds
+			const pollInterval = setInterval(pollForWallets, 500)
+			setTimeout(() => {
+				clearInterval(pollInterval)
+			}, 5000)
+			
 			if (this.config.autoConnect) setTimeout(() => this.attemptAutoConnect(), 100)
 		} catch (e) {
 			// Init failed silently
