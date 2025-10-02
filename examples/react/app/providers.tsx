@@ -10,9 +10,8 @@ import type { ReactNode } from "react"
 
 export function Providers({ children }: { children: ReactNode }) {
   const connectorConfig = useMemo(() => getDefaultConfig({
-    appName: 'ConnectorKit Example',
+    appName: 'ConnectorKit Example', 
     appUrl: 'http://localhost:3000',
-    network: 'devnet',
     autoConnect: true,
     enableMobile: true,
   }), [])
@@ -20,7 +19,6 @@ export function Providers({ children }: { children: ReactNode }) {
   const mobile = useMemo(() => getDefaultMobileConfig({
     appName: 'ConnectorKit Example',
     appUrl: 'http://localhost:3000',
-    network: 'devnet',
   }), [])
 
   return (

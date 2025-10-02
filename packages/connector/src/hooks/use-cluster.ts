@@ -97,7 +97,7 @@ export function useCluster(): UseClusterReturn {
     [client]
   )
 
-  return useMemo(() => ({
+  return {
     cluster,
     clusters,
     setCluster,
@@ -108,6 +108,6 @@ export function useCluster(): UseClusterReturn {
     rpcUrl,
     explorerUrl,
     type,
-  }), [cluster, clusters, setCluster, isMainnet, isDevnet, isTestnet, isLocal, rpcUrl, explorerUrl, type])
+  }
 }
 

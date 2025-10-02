@@ -44,7 +44,7 @@ function ConnectorProviderInternal({ children, config, mobile }: { children: Rea
 		ref.current = new ConnectorClient(config)
 	}
 	
-	// On client mount, ensure wallet detection runs
+	// On client mount, ensure wallet detection runs (run only once)
 	React.useEffect(() => {
 		if (typeof window !== 'undefined' && ref.current) {
 			window.__connectorClient = ref.current
@@ -66,7 +66,7 @@ function ConnectorProviderInternal({ children, config, mobile }: { children: Rea
 				ref.current = null
 			}
 		}
-	}, [])
+	}, []) // Empty dependency array - run only once
 
 	// Optionally register Mobile Wallet Adapter on the client
 	React.useEffect(() => {

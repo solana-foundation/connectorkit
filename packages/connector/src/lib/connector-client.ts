@@ -36,10 +36,10 @@ export interface ConnectorConfig {
 	debug?: boolean
 	/** Storage configuration using enhanced storage adapters */
 	storage?: {
-		account: StorageAdapter<string | undefined>
-		cluster: StorageAdapter<SolanaClusterId>
-		wallet: StorageAdapter<string | undefined>
-	}
+				account: StorageAdapter<string | undefined>
+				cluster: StorageAdapter<SolanaClusterId>
+				wallet: StorageAdapter<string | undefined>
+		  }
 	
 	/** Enhanced cluster configuration using wallet-ui */
 	cluster?: {
@@ -166,26 +166,64 @@ export class ConnectorClient {
 			if (directWallet.connect) {
 				features['standard:connect'] = {
 					connect: async (options: any = {}) => {
+						// Try connection
 						const result = await directWallet.connect(options)
 						
-						// Normalize result to wallet standard format
-						if (result && result.publicKey) {
-							// Legacy wallet format (like Phantom, Backpack)
+						if (this.config.debug) {
+							console.log('🔍 Direct wallet connect result:', result)
+							console.log('🔍 Direct wallet publicKey property:', directWallet.publicKey)
+						}
+						
+						// Strategy 1: Check if result has proper wallet standard format
+						if (result && result.accounts && Array.isArray(result.accounts)) {
+							return result // Already wallet standard format
+						}
+						
+						// Strategy 2: Check if result has legacy publicKey format  
+						if (result && result.publicKey && typeof result.publicKey.toString === 'function') {
 							return {
 								accounts: [{
 									address: result.publicKey.toString(),
-									publicKey: result.publicKey.toBytes ? result.publicKey.toBytes() : result.publicKey,
+									publicKey: result.publicKey.toBytes ? result.publicKey.toBytes() : new Uint8Array(),
 									chains: ['solana:mainnet', 'solana:devnet', 'solana:testnet'],
 									features: []
 								}]
 							}
-						} else if (result && result.accounts) {
-							// Already wallet standard format
-							return result
-						} else {
-							// Unknown format, try to handle gracefully
-							return { accounts: [] }
 						}
+						
+						// Strategy 3: Legacy wallet pattern - publicKey on wallet object (Solflare, etc.)
+						if (directWallet.publicKey && typeof directWallet.publicKey.toString === 'function') {
+							const address = directWallet.publicKey.toString()
+							if (this.config.debug) {
+								console.log('🔧 Using legacy wallet pattern - publicKey from wallet object')
+							}
+							return {
+								accounts: [{
+									address,
+									publicKey: directWallet.publicKey.toBytes ? directWallet.publicKey.toBytes() : new Uint8Array(),
+									chains: ['solana:mainnet', 'solana:devnet', 'solana:testnet'],
+									features: []
+								}]
+							}
+						}
+						
+						// Strategy 4: Check if result itself is a publicKey
+						if (result && typeof result.toString === 'function' && result.toString().length > 30) {
+							return {
+								accounts: [{
+									address: result.toString(),
+									publicKey: result.toBytes ? result.toBytes() : new Uint8Array(),
+									chains: ['solana:mainnet', 'solana:devnet', 'solana:testnet'],
+									features: []
+								}]
+							}
+						}
+						
+						// No valid account found
+						if (this.config.debug) {
+							console.error('❌ Legacy wallet: No valid publicKey found in any expected location')
+						}
+						return { accounts: [] }
 					}
 				}
 			}
@@ -238,10 +276,18 @@ export class ConnectorClient {
 					connectable: true
 				}]
 			}
-			this.notify()
+			this.notifyImmediate() // Critical for instant UI feedback
 			
 			// Connect immediately
+			if (this.config.debug) {
+				console.log('🔄 Attempting to connect to', storedWalletName, 'via instant auto-connect')
+			}
+			
 			await this.select(storedWalletName)
+			
+			if (this.config.debug) {
+				console.log('✅ Instant auto-connect successful for', storedWalletName)
+			}
 			
 			// Force wallet list update after successful connection to get proper icons
 			setTimeout(() => {
@@ -275,7 +321,7 @@ export class ConnectorClient {
 					this.notify()
 					
 					console.log('🎨 Updated wallet list after instant connection, now have', this.state.wallets.length, 'wallets with icons')
-				} else {
+		} else {
 					console.log('⚠️ Wallet standard not ready yet, wallet list not updated')
 				}
 			}, 500) // Faster icon update
@@ -284,7 +330,7 @@ export class ConnectorClient {
 			
 		} catch (error) {
 			if (this.config.debug) {
-				console.error('⚠️ Instant auto-connect failed, will retry with standard detection:', error)
+				console.error('❌ Instant auto-connect failed for', storedWalletName + ':', error instanceof Error ? error.message : error)
 			}
 			return false
 		}
@@ -351,8 +397,8 @@ export class ConnectorClient {
 			if (!this.state.connected) {
 				setTimeout(() => {
 					if (!this.state.connected) {
-						update()
-					}
+					update()
+				}
 				}, 1000)
 			}
 		} catch (e) {
@@ -411,7 +457,26 @@ export class ConnectorClient {
 		return this.state
 	}
 
+	private notifyTimeout?: ReturnType<typeof setTimeout>
+
 	private notify() {
+		// Debounce notifications to reduce React re-renders
+		if (this.notifyTimeout) {
+			clearTimeout(this.notifyTimeout)
+		}
+		
+		this.notifyTimeout = setTimeout(() => {
+			this.listeners.forEach(l => l(this.state))
+			this.notifyTimeout = undefined
+		}, 16) // One frame delay - smooth but responsive
+	}
+	
+	private notifyImmediate() {
+		// For critical updates that need immediate notification
+		if (this.notifyTimeout) {
+			clearTimeout(this.notifyTimeout)
+			this.notifyTimeout = undefined
+		}
 		this.listeners.forEach(l => l(this.state))
 	}
 
@@ -507,7 +572,7 @@ export class ConnectorClient {
 		const w = this.state.wallets.find(x => x.name === walletName)
 		if (!w) throw new Error(`Wallet ${walletName} not found`)
 		this.state = { ...this.state, connecting: true }
-		this.notify()
+		this.notifyImmediate() // Critical UI state - notify immediately
 		try {
 			const connectFeature = (w.wallet.features as any)['standard:connect']
 			if (!connectFeature) throw new Error(`Wallet ${walletName} does not support standard connect`)
@@ -533,13 +598,23 @@ export class ConnectorClient {
 					accounts,
 					selectedAccount: selected,
 				}
+				
+				if (this.config.debug) {
+					console.log('✅ Connection successful - state updated:', {
+						connected: this.state.connected,
+						selectedWallet: this.state.selectedWallet?.name,
+						selectedAccount: this.state.selectedAccount,
+						accountsCount: this.state.accounts.length
+					})
+				}
+				
 			this.setStoredWallet(walletName)
 			// Subscribe to wallet change events (or start polling if unavailable)
 			this.subscribeToWalletEvents()
-			this.notify()
+			this.notifyImmediate() // Critical state change - notify immediately
 		} catch (e) {
 			this.state = { ...this.state, selectedWallet: null, connected: false, connecting: false, accounts: [], selectedAccount: null }
-			this.notify()
+			this.notifyImmediate() // Critical error state - notify immediately
 			throw e
 		}
 	}
@@ -568,7 +643,7 @@ export class ConnectorClient {
 
 		this.state = { ...this.state, selectedWallet: null, connected: false, accounts: [], selectedAccount: null }
 		this.removeStoredWallet()
-		this.notify()
+		this.notifyImmediate() // Critical state change - notify immediately
 		
 		// Force wallet discovery after disconnect to show available wallets
 		setTimeout(() => {
@@ -592,7 +667,7 @@ export class ConnectorClient {
 							return { wallet: w, name: w.name, icon: w.icon, installed: true, connectable } satisfies WalletInfo
 						}),
 					}
-					this.notify()
+		this.notify()
 				}
 			}
 		}, 100)
@@ -657,7 +732,11 @@ export class ConnectorClient {
 			this.clusterStorage.set(clusterId)
 		}
 		
-		this.notify()
+		this.notifyImmediate() // Critical state change - notify immediately
+		
+		if (this.config.debug) {
+			console.log('🌐 Cluster changed:', { from: this.state.cluster?.id, to: clusterId })
+		}
 	}
 
 	/**

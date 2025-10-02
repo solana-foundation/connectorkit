@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Check, ChevronDown, Globe } from "lucide-react"
 import { cn } from "@/lib/utils"
-import type { SolanaClusterId } from "@connector-kit/connector"
+import type { SolanaClusterId, SolanaCluster } from "@connector-kit/connector"
 
 interface ClusterSelectorProps {
   className?: string
@@ -38,6 +38,14 @@ export function ClusterSelector({ className }: ClusterSelectorProps) {
 
   const currentClusterLabel = clusterLabels[cluster?.id || ""] || cluster?.label || "Unknown"
   const currentClusterColor = clusterColors[cluster?.id || ""] || "outline"
+  
+  const handleClusterChange = async (clusterId: SolanaClusterId) => {
+    try {
+      await setCluster(clusterId)
+    } catch (error) {
+      console.error('❌ ClusterSelector: Cluster change failed:', error)
+    }
+  }
 
   return (
     <DropdownMenu>
@@ -53,7 +61,7 @@ export function ClusterSelector({ className }: ClusterSelectorProps) {
       <DropdownMenuContent align="end" className="w-48">
         <DropdownMenuLabel>Select Network</DropdownMenuLabel>
         <DropdownMenuSeparator />
-        {clusters.map((c) => {
+        {clusters.map((c: SolanaCluster) => {
           const isSelected = c.id === cluster?.id
           const label = clusterLabels[c.id] || c.label || c.id
           const color = clusterColors[c.id] || "outline"
@@ -61,7 +69,7 @@ export function ClusterSelector({ className }: ClusterSelectorProps) {
           return (
             <DropdownMenuItem
               key={c.id}
-              onClick={() => setCluster(c.id as SolanaClusterId)}
+              onClick={() => handleClusterChange(c.id as SolanaClusterId)}
               className={cn(
                 "cursor-pointer",
                 isSelected && "bg-accent"

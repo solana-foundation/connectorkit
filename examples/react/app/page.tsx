@@ -12,6 +12,7 @@ export default function Home() {
   const { accounts } = useAccount()
   const { cluster } = useCluster()
   const walletInfo = useWalletInfo()
+  
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
