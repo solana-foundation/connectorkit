@@ -6,46 +6,36 @@ export type {
   LegacyConnectorThemeOverrides 
 } from './types'
 
-// Pre-built themes
-export { solanaTheme } from './solana'
-export { minimalTheme } from './minimal'
+// Simple themes - light and dark only
+export { lightTheme } from './light'
 export { darkTheme } from './dark'
-export { phantomTheme } from './phantom'
 
 // Import themes for internal use
-import { solanaTheme } from './solana'
-import { minimalTheme } from './minimal'
+import { lightTheme } from './light'
 import { darkTheme } from './dark'
-import { phantomTheme } from './phantom'
 
-// Theme utilities
+// Theme utilities (keep essential ones for component compatibility)
 export {
-  getValue,
   getBorderRadius,
   getSpacing,
   getButtonHeight,
   getButtonShadow,
   getButtonBorder,
   getAccessibleTextColor,
-  mergeThemeOverrides,
   legacyToModernTheme,
-  // Legacy compatibility exports
-  getBorderRadiusLegacy,
-  getButtonHeightLegacy,
-  getButtonShadowLegacy,
-  getButtonBorderLegacy,
 } from './utils'
 
-// Default themes collection
+// Simple themes collection
 export const themes = {
-  solana: solanaTheme,
-  minimal: minimalTheme,
+  light: lightTheme,
   dark: darkTheme,
-  phantom: phantomTheme,
 } as const
 
-// Default theme (backwards compatible)
-export const defaultConnectorTheme = minimalTheme
+// Default theme (light)
+export const defaultConnectorTheme = lightTheme
 
-// Theme name type for convenience
+// Aliases for backwards compatibility
+export const minimalTheme = lightTheme  // Alias for existing usage
+
+// Theme name type
 export type ThemeName = keyof typeof themes

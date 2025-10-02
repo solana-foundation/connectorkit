@@ -11,6 +11,7 @@ import {
 } from '../../primitives'
 import { modalRoutes } from '../../lib/connector-client'
 import type { ConnectorOptions } from '../../types'
+import { ConnectorErrorBoundary } from '../../components/ErrorBoundary'
 
 // Import all pages
 import { WalletsPage } from '../../pages/wallets'
@@ -179,41 +180,107 @@ export function ConnectModal({
     }
   }, [modal.isOpen, handleClose])
 
-  // Determine which page to render based on current route
+  // Determine which page to render based on current route with error boundaries
   const renderCurrentPage = () => {
+    const PageErrorBoundary = ({ children, pageName }: { children: React.ReactNode; pageName: string }) => (
+      <ConnectorErrorBoundary
+        maxRetries={2}
+        fallback={(error: any, retry: () => void) => (
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '2rem',
+            textAlign: 'center',
+            minHeight: '200px',
+          }}>
+            <div style={{
+              fontSize: '1.5rem',
+              marginBottom: '0.5rem',
+              color: '#ef4444'
+            }}>
+              ⚠️
+            </div>
+            <h3 style={{ 
+              margin: '0 0 0.5rem 0', 
+              fontSize: '1rem', 
+              fontWeight: '600',
+              color: '#111827'
+            }}>
+              {pageName} Error
+            </h3>
+            <p style={{ 
+              margin: '0 0 1rem 0', 
+              fontSize: '0.875rem', 
+              color: '#6b7280',
+              lineHeight: '1.4'
+            }}>
+              Something went wrong loading this page.
+            </p>
+            <button
+              onClick={retry}
+              style={{
+                padding: '0.5rem 1rem',
+                backgroundColor: '#3b82f6',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                fontSize: '0.875rem',
+                fontWeight: '500',
+                cursor: 'pointer',
+              }}
+            >
+              Try Again
+            </button>
+          </div>
+        )}
+      >
+        {children}
+      </ConnectorErrorBoundary>
+    )
+
     switch (modal.route) {
       case modalRoutes.PROFILE:
         return (
-          <ProfilePage 
-            options={options} 
-            onNavigate={handleNavigate}
-          />
+          <PageErrorBoundary pageName="Profile">
+            <ProfilePage 
+              options={options} 
+              onNavigate={handleNavigate}
+            />
+          </PageErrorBoundary>
         )
       case modalRoutes.SETTINGS:
         return (
-          <SettingsPage 
-            options={options} 
-            onNavigate={handleNavigate}
-          />
+          <PageErrorBoundary pageName="Settings">
+            <SettingsPage 
+              options={options} 
+              onNavigate={handleNavigate}
+            />
+          </PageErrorBoundary>
         )
       case modalRoutes.ABOUT:
         return (
-          <AboutPage 
-            options={options} 
-            onNavigate={handleNavigate}
-          />
+          <PageErrorBoundary pageName="About">
+            <AboutPage 
+              options={options} 
+              onNavigate={handleNavigate}
+            />
+          </PageErrorBoundary>
         )
       case modalRoutes.WALLETS:
       default:
         return (
-          <WalletsPage 
-            options={options}
-            onConnectError={(error: string) => {
-              // Handle wallet connection error
-            }}
-            helpMode={helpMode}
-            onHelpModeChange={setHelpMode}
-          />
+          <PageErrorBoundary pageName="Wallet Connection">
+            <WalletsPage 
+              options={options}
+              onConnectError={(error: string) => {
+                // Handle wallet connection error
+              }}
+              helpMode={helpMode}
+              onHelpModeChange={setHelpMode}
+            />
+          </PageErrorBoundary>
         )
     }
   }

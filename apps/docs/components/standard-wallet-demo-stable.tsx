@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useTransition, useDeferredValue, useCallback } from 'react'
 import { AnimatePresence, motion } from "motion/react"
-import { useBalance, useAirdrop, useCluster, useWalletAddress, WalletUiClusterDropdown } from '@connector-kit/sdk'
+import { useBalance, useAirdrop, useCluster, useEnhancedCluster, useWalletAddress, WalletUiClusterDropdown } from '@armadura/sdk'
 import { useConnector, ConnectorErrorBoundary } from '@connector-kit/connector'
 import { Button } from './ui/button'
 import { Alert, AlertDescription } from './ui/alert'
@@ -51,8 +51,9 @@ function StandardWalletDemoStableContent() {
     isDevnet,
     isMainnet,
     canAirdrop,
-    canSwitch,
   } = useCluster()
+
+  const { canSwitch } = useEnhancedCluster()
 
   const formatBalance = useCallback((lamports: bigint) => {
     return (Number(lamports) / 1e9).toFixed(4)

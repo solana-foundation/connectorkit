@@ -1,52 +1,45 @@
-// Theme interface
+// Simplified theme interface - utilitarian design tokens
 export interface ConnectorTheme {
-  // Base colors
+  // Essential colors only
   colors: {
-    primary: string
-    secondary: string
-    background: string
-    surface: string
-    text: string
-    textSecondary: string
-    border: string
-    error: string
-    warning: string
-    success: string
-    accent: string
-    modalOverlay: string
+    primary: string        // Primary action color
+    secondary: string      // Secondary color (keep for button states)
+    background: string     // Main background
+    surface: string        // Card/modal surfaces  
+    text: string          // Primary text
+    textSecondary: string // Secondary text
+    border: string        // Border color
+    error: string         // Error state
   }
   
-  // Typography
+  // Basic typography (simplified)
   fonts: {
-    body: string
-    mono: string
+    body: string          // Body font stack
   }
   
-  // Layout
+  // Basic border radius tokens
   borderRadius: {
-    sm: string | number
-    md: string | number
-    lg: string | number
+    sm: string | number    // Small rounded (4px)
+    md: string | number    // Medium rounded (8px) 
+    lg: string | number    // Large rounded (12px)
+    full: string | number  // Fully rounded (9999px)
   }
   
-  // Shadows
-  shadows: {
-    sm: string
-    md: string
-    lg: string
-    xl: string
-  }
-  
-  // Spacing
+  // Simple spacing system
   spacing: {
-    xs: string | number
-    sm: string | number
-    md: string | number
-    lg: string | number
-    xl: string | number
+    sm: string | number    // Small spacing (8px)
+    md: string | number    // Medium spacing (16px)  
+    lg: string | number    // Large spacing (24px)
   }
   
-  // Button specific
+  // Basic shadows
+  shadows: {
+    sm: string            // Small shadow
+    md: string            // Medium shadow
+    lg: string            // Large shadow
+  }
+  
+  // Button styling (simplified)
   button: {
     height: string | number
     shadow: 'none' | 'sm' | 'md' | 'lg' | string
@@ -58,17 +51,20 @@ export interface ConnectorTheme {
   name: string
 }
 
-// Backwards compatibility with legacy theme interface
+// Theme overrides for customization
+export type ConnectorThemeOverrides = Partial<ConnectorTheme>
+
+// Backwards compatibility with legacy themes (include secondaryColor for connect-button compatibility)
 export interface LegacyConnectorTheme {
   primaryColor: string
-  secondaryColor: string
+  secondaryColor: string    // Added for connect-button compatibility
+  backgroundColor: string  
   borderRadius: number | string
-  fontFamily: string
-  buttonShadow: 'none' | 'sm' | 'md' | 'lg' | string
-  border: 'none' | string
-  height: number | string
+  textColor: string
+  fontFamily: string        // Added for connect-button compatibility
+  buttonShadow: 'none' | 'sm' | 'md' | 'lg' | string  // Added for connect-button compatibility
+  border: string            // Added for connect-button compatibility
+  height: number | string   // Added for connect-button compatibility
 }
 
-// Helper type for partial theme overrides
-export type ConnectorThemeOverrides = Partial<ConnectorTheme>
 export type LegacyConnectorThemeOverrides = Partial<LegacyConnectorTheme>

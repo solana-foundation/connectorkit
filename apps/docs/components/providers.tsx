@@ -2,14 +2,13 @@
 
 import { QueryClient } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
-import { createProvider, ArcProvider } from '@connector-kit/sdk'
-import { createJupiter } from '@connector-kit/jupiter'
+import { createProvider, ArmaProvider } from '@armadura/sdk'
+import { createJupiter } from '@armadura/jupiter'
 import { 
   AppProvider, 
   getDefaultConfig, 
   getDefaultMobileConfig,
-  solanaTheme,
-  type MobileWalletAdapterConfig 
+  useConnectorClient
 } from '@connector-kit/connector'
 
 export function Providers({ children }: { children: React.ReactNode }) {
@@ -50,7 +49,6 @@ export function Providers({ children }: { children: React.ReactNode }) {
     ],
   }), [])
 
-  // Simplified configuration using new helpers
   const connectorConfig = useMemo(() => getDefaultConfig({
     appName: 'Arc Docs',
     appUrl: 'https://docs.arc.so',
@@ -66,9 +64,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <AppProvider connectorConfig={connectorConfig} mobile={mobile}>
-      <ArcProvider 
+      <ArmaProvider 
         config={arcConfig} 
         queryClient={queryClient}
+        useConnector={useConnectorClient}
         enhancedCluster={{
           network: arcConfig.network,
           allowSwitching: true,
@@ -76,7 +75,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         }}
       >
         {children as any}
-      </ArcProvider>
+      </ArmaProvider>
     </AppProvider>
   )
 }

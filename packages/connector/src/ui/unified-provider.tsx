@@ -1,6 +1,5 @@
 'use client'
 
-import React from 'react'
 import type { ReactNode, ComponentType } from 'react'
 import { ConnectorProvider } from './connector-provider'
 import type { MobileWalletAdapterConfig } from './connector-provider'

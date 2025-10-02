@@ -3,8 +3,8 @@
   "defaultOpen": false,
   "pages": [
     "introduction",
-    "getting-started", 
     "try-it-out",
-    "api-reference"
+    "api-reference",
+    "advanced"
   ]
 }

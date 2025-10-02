@@ -3,7 +3,7 @@ export { injectConnectorGlobalStyles, injectArcConnectorGlobalStyles } from './u
 
 // Configuration helpers
 export { getDefaultConfig, getDefaultMobileConfig } from './config'
-export type { DefaultConfigOptions } from './config'
+export type { DefaultConfigOptions, ExtendedConnectorConfig } from './config'
 
 // Core exports
 export { ConnectorClient, modalRoutes, validateRoute, safeRoutes } from './lib/connector-client'
@@ -28,9 +28,13 @@ export { ConnectButton } from './ui/connect-button'
 export type { ConnectButtonProps } from './ui/connect-button'
 export { ConnectModal } from './ui/connect-modal'
 
-export { ConnectorErrorBoundary, withErrorBoundary } from './components/ErrorBoundary'
-export { VirtualizedWalletList } from './components/VirtualizedWalletList'
-export type { WalletError, WalletErrorType } from './components/ErrorBoundary'
+// Error handling utilities - useful for both pre-built and headless usage
+export { 
+  ConnectorErrorBoundary, 
+  withErrorBoundary,
+  WalletErrorType 
+} from './components/ErrorBoundary'
+export type { WalletError } from './components/ErrorBoundary'
 
 export { ProfilePage } from './pages/profile'
 export { AboutPage } from './pages/about'
@@ -41,27 +45,20 @@ export type { ModalState } from './lib/modal-router'
 
 export { WalletsPage } from './pages/wallets'
 
-// Theming system
+// Simplified theming system
 export {
   themes,
-  solanaTheme,
-  minimalTheme, 
+  lightTheme,
   darkTheme,
-  phantomTheme,
   defaultConnectorTheme,
-  // Theme utilities
+  minimalTheme, // Alias for backward compatibility
+  // Essential theme utilities
   getBorderRadius,
   getSpacing,
   getButtonHeight,
   getButtonShadow,
   getButtonBorder,
   getAccessibleTextColor,
-  mergeThemeOverrides,
-  // Legacy compatibility
-  getBorderRadiusLegacy,
-  getButtonHeightLegacy,
-  getButtonShadowLegacy,
-  getButtonBorderLegacy,
   legacyToModernTheme,
 } from './themes'
 export type { 
@@ -79,31 +76,12 @@ export type {
   ConnectorThemeExtended 
 } from './types'
 
-// Wallet registry
-export { 
-  solanaWallets,
-  getPopularWallets,
-  getMobileWallets,
-  getWalletByIdentifier,
-  getAllWallets
-} from './wallets'
-export type { SolanaWalletConfig } from './wallets'
-
-// Optional programmatic registration helper
-export async function registerMobileWalletAdapter(config: import('./ui/connector-provider').MobileWalletAdapterConfig) {
-  const {
-    registerMwa,
-    createDefaultAuthorizationCache,
-    createDefaultChainSelector,
-    createDefaultWalletNotFoundHandler,
-    MWA_SOLANA_CHAINS,
-  } = (await import('@solana-mobile/wallet-standard-mobile')) as any
-  registerMwa({
-    appIdentity: config.appIdentity,
-    authorizationCache: config.authorizationCache ?? createDefaultAuthorizationCache(),
-    chains: (config.chains ?? MWA_SOLANA_CHAINS) as any,
-    chainSelector: config.chainSelector ?? createDefaultChainSelector(),
-    remoteHostAuthority: config.remoteHostAuthority,
-    onWalletNotFound: config.onWalletNotFound ?? createDefaultWalletNotFoundHandler(),
-  })
-}
+// Utility functions for advanced usage
+export {
+  createMemoryStorage,
+  createLocalStorage,
+  isWalletInstalled,
+  getInstalledWallets,
+  classifyWalletError,
+  registerMobileWalletAdapter
+} from './headless'
