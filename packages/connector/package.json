@@ -48,8 +48,9 @@
   "dependencies": {
     "@solana-mobile/wallet-standard-mobile": "^0.3.0",
     "@wallet-standard/app": "^1.0.0",
-    "@wallet-standard/base": "^1.0.0",
-    "@wallet-ui/core": "^2.0.0"
+    "@wallet-ui/core": "^2.0.0",
+    "nanostores": "^1.0.1",
+    "@nanostores/persistent": "^1.1.0"
   },
   "devDependencies": {
     "@types/react": "^18.0.0",

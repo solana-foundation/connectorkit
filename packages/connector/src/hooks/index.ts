@@ -1,1 +1,9 @@
-// No hooks exported yet - reserved for future headless hooks
+/**
+ * @connector-kit/connector - React Hooks
+ * 
+ * Enhanced React hooks for wallet and cluster management
+ */
+
+export * from './use-cluster'
+export * from './use-account'
+export * from './use-wallet-info'

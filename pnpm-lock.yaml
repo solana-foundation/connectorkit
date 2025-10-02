@@ -211,18 +211,21 @@ importers:
 
   packages/connector:
     dependencies:
+      '@nanostores/persistent':
+        specifier: ^1.1.0
+        version: 1.1.0(nanostores@1.0.1)
       '@solana-mobile/wallet-standard-mobile':
         specifier: ^0.3.0
-        version: 0.3.0(@solana/wallet-adapter-base@0.9.27(@solana/web3.js@2.0.0-preview.3(fastestsmallesttextencoderdecoder@1.0.22)(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@5.0.10))))(@solana/web3.js@2.0.0-preview.3(fastestsmallesttextencoderdecoder@1.0.22)(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@5.0.10)))(react-native@0.81.0(@babel/core@7.28.4)(@react-native/metro-config@0.81.0(@babel/core@7.28.4))(@types/react@18.3.23)(bufferutil@4.0.9)(react@19.1.1)(utf-8-validate@5.0.10))(react@19.1.1)
+        version: 0.3.0(@solana/wallet-adapter-base@0.9.27(@solana/web3.js@2.0.0-preview.3(fastestsmallesttextencoderdecoder@1.0.22)(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@5.0.10))))(@solana/web3.js@2.0.0-preview.3(fastestsmallesttextencoderdecoder@1.0.22)(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@5.0.10)))(react-native@0.81.0(@babel/core@7.28.4)(@react-native/metro-config@0.81.0(@babel/core@7.28.4)(bufferutil@4.0.9)(utf-8-validate@5.0.10))(@types/react@18.3.23)(bufferutil@4.0.9)(react@19.1.1)(utf-8-validate@5.0.10))(react@19.1.1)
       '@wallet-standard/app':
-        specifier: ^1.0.0
-        version: 1.1.0
-      '@wallet-standard/base':
         specifier: ^1.0.0
         version: 1.1.0
       '@wallet-ui/core':
         specifier: ^2.0.0
         version: 2.0.0(@solana/kit@2.3.0(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.2)(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@5.0.10)))
+      nanostores:
+        specifier: ^1.0.1
+        version: 1.0.1
       react:
         specifier: '>=18.0.0'
         version: 19.1.1
@@ -8976,10 +8979,10 @@ snapshots:
       nullthrows: 1.1.1
       yargs: 17.7.2
 
-  '@react-native/community-cli-plugin@0.81.0(@react-native/metro-config@0.81.0(@babel/core@7.28.4))(bufferutil@4.0.9)(utf-8-validate@5.0.10)':
+  '@react-native/community-cli-plugin@0.81.0(@react-native/metro-config@0.81.0(@babel/core@7.28.4)(bufferutil@4.0.9)(utf-8-validate@5.0.10))(bufferutil@4.0.9)(utf-8-validate@5.0.10)':
     dependencies:
       '@react-native/dev-middleware': 0.81.0(bufferutil@4.0.9)(utf-8-validate@5.0.10)
-      '@react-native/metro-config': 0.81.0(@babel/core@7.28.4)
+      '@react-native/metro-config': 0.81.0(@babel/core@7.28.4)(bufferutil@4.0.9)(utf-8-validate@5.0.10)
       debug: 4.4.3
       invariant: 2.2.4
       metro: 0.83.2(bufferutil@4.0.9)(utf-8-validate@5.0.10)
@@ -9024,7 +9027,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@react-native/metro-config@0.81.0(@babel/core@7.28.4)':
+  '@react-native/metro-config@0.81.0(@babel/core@7.28.4)(bufferutil@4.0.9)(utf-8-validate@5.0.10)':
     dependencies:
       '@react-native/js-polyfills': 0.81.0
       '@react-native/metro-babel-transformer': 0.81.0(@babel/core@7.28.4)
@@ -9032,16 +9035,18 @@ snapshots:
       metro-runtime: 0.83.2
     transitivePeerDependencies:
       - '@babel/core'
+      - bufferutil
       - supports-color
+      - utf-8-validate
 
   '@react-native/normalize-colors@0.81.0': {}
 
-  '@react-native/virtualized-lists@0.81.0(@types/react@18.3.23)(react-native@0.81.0(@babel/core@7.28.4)(@react-native/metro-config@0.81.0(@babel/core@7.28.4))(@types/react@18.3.23)(bufferutil@4.0.9)(react@19.1.1)(utf-8-validate@5.0.10))(react@19.1.1)':
+  '@react-native/virtualized-lists@0.81.0(@types/react@18.3.23)(react-native@0.81.0(@babel/core@7.28.4)(@react-native/metro-config@0.81.0(@babel/core@7.28.4)(bufferutil@4.0.9)(utf-8-validate@5.0.10))(@types/react@18.3.23)(bufferutil@4.0.9)(react@19.1.1)(utf-8-validate@5.0.10))(react@19.1.1)':
     dependencies:
       invariant: 2.2.4
       nullthrows: 1.1.1
       react: 19.1.1
-      react-native: 0.81.0(@babel/core@7.28.4)(@react-native/metro-config@0.81.0(@babel/core@7.28.4))(@types/react@18.3.23)(bufferutil@4.0.9)(react@19.1.1)(utf-8-validate@5.0.10)
+      react-native: 0.81.0(@babel/core@7.28.4)(@react-native/metro-config@0.81.0(@babel/core@7.28.4)(bufferutil@4.0.9)(utf-8-validate@5.0.10))(@types/react@18.3.23)(bufferutil@4.0.9)(react@19.1.1)(utf-8-validate@5.0.10)
     optionalDependencies:
       '@types/react': 18.3.23
 
@@ -9215,22 +9220,22 @@ snapshots:
       - uglify-js
       - webpack-cli
 
-  '@solana-mobile/mobile-wallet-adapter-protocol@2.2.2(@solana/wallet-adapter-base@0.9.27(@solana/web3.js@2.0.0-preview.3(fastestsmallesttextencoderdecoder@1.0.22)(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@5.0.10))))(@solana/web3.js@2.0.0-preview.3(fastestsmallesttextencoderdecoder@1.0.22)(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@5.0.10)))(bs58@5.0.0)(react-native@0.81.0(@babel/core@7.28.4)(@react-native/metro-config@0.81.0(@babel/core@7.28.4))(@types/react@18.3.23)(bufferutil@4.0.9)(react@19.1.1)(utf-8-validate@5.0.10))(react@19.1.1)':
+  '@solana-mobile/mobile-wallet-adapter-protocol@2.2.2(@solana/wallet-adapter-base@0.9.27(@solana/web3.js@2.0.0-preview.3(fastestsmallesttextencoderdecoder@1.0.22)(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@5.0.10))))(@solana/web3.js@2.0.0-preview.3(fastestsmallesttextencoderdecoder@1.0.22)(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@5.0.10)))(bs58@5.0.0)(react-native@0.81.0(@babel/core@7.28.4)(@react-native/metro-config@0.81.0(@babel/core@7.28.4)(bufferutil@4.0.9)(utf-8-validate@5.0.10))(@types/react@18.3.23)(bufferutil@4.0.9)(react@19.1.1)(utf-8-validate@5.0.10))(react@19.1.1)':
     dependencies:
       '@solana/wallet-standard': 1.1.4(@solana/wallet-adapter-base@0.9.27(@solana/web3.js@2.0.0-preview.3(fastestsmallesttextencoderdecoder@1.0.22)(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@5.0.10))))(@solana/web3.js@2.0.0-preview.3(fastestsmallesttextencoderdecoder@1.0.22)(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@5.0.10)))(bs58@5.0.0)(react@19.1.1)
       '@solana/wallet-standard-util': 1.1.2
       '@wallet-standard/core': 1.1.1
       js-base64: 3.7.8
-      react-native: 0.81.0(@babel/core@7.28.4)(@react-native/metro-config@0.81.0(@babel/core@7.28.4))(@types/react@18.3.23)(bufferutil@4.0.9)(react@19.1.1)(utf-8-validate@5.0.10)
+      react-native: 0.81.0(@babel/core@7.28.4)(@react-native/metro-config@0.81.0(@babel/core@7.28.4)(bufferutil@4.0.9)(utf-8-validate@5.0.10))(@types/react@18.3.23)(bufferutil@4.0.9)(react@19.1.1)(utf-8-validate@5.0.10)
     transitivePeerDependencies:
       - '@solana/wallet-adapter-base'
       - '@solana/web3.js'
       - bs58
       - react
 
-  '@solana-mobile/wallet-standard-mobile@0.3.0(@solana/wallet-adapter-base@0.9.27(@solana/web3.js@2.0.0-preview.3(fastestsmallesttextencoderdecoder@1.0.22)(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@5.0.10))))(@solana/web3.js@2.0.0-preview.3(fastestsmallesttextencoderdecoder@1.0.22)(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@5.0.10)))(react-native@0.81.0(@babel/core@7.28.4)(@react-native/metro-config@0.81.0(@babel/core@7.28.4))(@types/react@18.3.23)(bufferutil@4.0.9)(react@19.1.1)(utf-8-validate@5.0.10))(react@19.1.1)':
+  '@solana-mobile/wallet-standard-mobile@0.3.0(@solana/wallet-adapter-base@0.9.27(@solana/web3.js@2.0.0-preview.3(fastestsmallesttextencoderdecoder@1.0.22)(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@5.0.10))))(@solana/web3.js@2.0.0-preview.3(fastestsmallesttextencoderdecoder@1.0.22)(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@5.0.10)))(react-native@0.81.0(@babel/core@7.28.4)(@react-native/metro-config@0.81.0(@babel/core@7.28.4)(bufferutil@4.0.9)(utf-8-validate@5.0.10))(@types/react@18.3.23)(bufferutil@4.0.9)(react@19.1.1)(utf-8-validate@5.0.10))(react@19.1.1)':
     dependencies:
-      '@solana-mobile/mobile-wallet-adapter-protocol': 2.2.2(@solana/wallet-adapter-base@0.9.27(@solana/web3.js@2.0.0-preview.3(fastestsmallesttextencoderdecoder@1.0.22)(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@5.0.10))))(@solana/web3.js@2.0.0-preview.3(fastestsmallesttextencoderdecoder@1.0.22)(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@5.0.10)))(bs58@5.0.0)(react-native@0.81.0(@babel/core@7.28.4)(@react-native/metro-config@0.81.0(@babel/core@7.28.4))(@types/react@18.3.23)(bufferutil@4.0.9)(react@19.1.1)(utf-8-validate@5.0.10))(react@19.1.1)
+      '@solana-mobile/mobile-wallet-adapter-protocol': 2.2.2(@solana/wallet-adapter-base@0.9.27(@solana/web3.js@2.0.0-preview.3(fastestsmallesttextencoderdecoder@1.0.22)(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@5.0.10))))(@solana/web3.js@2.0.0-preview.3(fastestsmallesttextencoderdecoder@1.0.22)(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@5.0.10)))(bs58@5.0.0)(react-native@0.81.0(@babel/core@7.28.4)(@react-native/metro-config@0.81.0(@babel/core@7.28.4)(bufferutil@4.0.9)(utf-8-validate@5.0.10))(@types/react@18.3.23)(bufferutil@4.0.9)(react@19.1.1)(utf-8-validate@5.0.10))(react@19.1.1)
       '@solana/wallet-standard-chains': 1.1.1
       '@solana/wallet-standard-features': 1.3.0
       '@wallet-standard/base': 1.1.0
@@ -14128,16 +14133,16 @@ snapshots:
       react: 19.1.1
       react-dom: 19.1.1(react@19.1.1)
 
-  react-native@0.81.0(@babel/core@7.28.4)(@react-native/metro-config@0.81.0(@babel/core@7.28.4))(@types/react@18.3.23)(bufferutil@4.0.9)(react@19.1.1)(utf-8-validate@5.0.10):
+  react-native@0.81.0(@babel/core@7.28.4)(@react-native/metro-config@0.81.0(@babel/core@7.28.4)(bufferutil@4.0.9)(utf-8-validate@5.0.10))(@types/react@18.3.23)(bufferutil@4.0.9)(react@19.1.1)(utf-8-validate@5.0.10):
     dependencies:
       '@jest/create-cache-key-function': 29.7.0
       '@react-native/assets-registry': 0.81.0
       '@react-native/codegen': 0.81.0(@babel/core@7.28.4)
-      '@react-native/community-cli-plugin': 0.81.0(@react-native/metro-config@0.81.0(@babel/core@7.28.4))(bufferutil@4.0.9)(utf-8-validate@5.0.10)
+      '@react-native/community-cli-plugin': 0.81.0(@react-native/metro-config@0.81.0(@babel/core@7.28.4)(bufferutil@4.0.9)(utf-8-validate@5.0.10))(bufferutil@4.0.9)(utf-8-validate@5.0.10)
       '@react-native/gradle-plugin': 0.81.0
       '@react-native/js-polyfills': 0.81.0
       '@react-native/normalize-colors': 0.81.0
-      '@react-native/virtualized-lists': 0.81.0(@types/react@18.3.23)(react-native@0.81.0(@babel/core@7.28.4)(@react-native/metro-config@0.81.0(@babel/core@7.28.4))(@types/react@18.3.23)(bufferutil@4.0.9)(react@19.1.1)(utf-8-validate@5.0.10))(react@19.1.1)
+      '@react-native/virtualized-lists': 0.81.0(@types/react@18.3.23)(react-native@0.81.0(@babel/core@7.28.4)(@react-native/metro-config@0.81.0(@babel/core@7.28.4)(bufferutil@4.0.9)(utf-8-validate@5.0.10))(@types/react@18.3.23)(bufferutil@4.0.9)(react@19.1.1)(utf-8-validate@5.0.10))(react@19.1.1)
       abort-controller: 3.0.0
       anser: 1.4.10
       ansi-regex: 5.0.1

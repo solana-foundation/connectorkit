@@ -7,6 +7,7 @@
 
 // Core client logic
 export { ConnectorClient } from './lib/connector-client'
+export { getWalletsRegistry } from './lib/wallet-standard-shim'
 
 // Configuration helpers
 export { getDefaultConfig, getDefaultMobileConfig } from './config'
@@ -20,6 +21,38 @@ export type {
   AccountInfo
 } from './lib/connector-client'
 
+export type {
+  Wallet,
+  WalletAccount,
+  WalletStandardWallet,
+  WalletStandardAccount
+} from './lib/wallet-standard-shim'
+
+// Storage utilities (legacy)
+export { 
+  SimpleStorage,
+  MemoryStorage,
+  createAccountStorage,
+  createClusterStorage,
+  createWalletStorage
+} from './lib/storage-manager'
+
+// Enhanced storage (recommended - extends wallet-ui's Storage)
+export {
+  EnhancedStorage,
+  EnhancedStorageAdapter,
+  createEnhancedStorageAccount,
+  createEnhancedStorageCluster,
+  createEnhancedStorageWallet
+} from './lib/enhanced-storage'
+export type { 
+  StorageAdapter,
+  StorageOptions,
+  EnhancedStorageAccountOptions,
+  EnhancedStorageClusterOptions,
+  EnhancedStorageWalletOptions
+} from './lib/enhanced-storage'
+
 // Configuration and option types
 export type { 
   ConnectorOptions, 
@@ -32,6 +65,24 @@ export type { MobileWalletAdapterConfig } from './ui/connector-provider'
 // Error handling utilities for headless users
 export { WalletErrorType } from './components/ErrorBoundary'
 export type { WalletError } from './components/ErrorBoundary'
+
+// Utility functions (framework-agnostic)
+export * from './utils/clipboard'
+export * from './utils/formatting'
+export * from './utils/cluster'
+
+// Re-export wallet-ui types and utilities for convenience
+export type {
+  SolanaCluster,
+  SolanaClusterId,
+} from '@wallet-ui/core'
+
+export {
+  createSolanaMainnet,
+  createSolanaDevnet,
+  createSolanaTestnet,
+  createSolanaLocalnet,
+} from '@wallet-ui/core'
 
 // Import for internal use only
 import { WalletErrorType, type WalletError } from './components/ErrorBoundary'

@@ -1,0 +1,157 @@
+/**
+ * @connector-kit/connector - Cluster utilities
+ * 
+ * Utility functions for working with Solana clusters (networks)
+ */
+
+import type { SolanaCluster } from '@wallet-ui/core'
+
+/**
+ * Get the RPC endpoint URL for a cluster
+ * Handles both string cluster names and full URLs
+ * 
+ * @example
+ * getClusterRpcUrl(devnetCluster) // Returns: 'https://api.devnet.solana.com'
+ */
+export function getClusterRpcUrl(cluster: SolanaCluster): string {
+  const url = (cluster as any).url as string
+  
+  // If it's already a full URL, return it
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url
+  }
+  
+  // Handle special cluster names
+  const presets: Record<string, string> = {
+    'mainnet': 'https://api.mainnet-beta.solana.com',
+    'mainnet-beta': 'https://api.mainnet-beta.solana.com',
+    'devnet': 'https://api.devnet.solana.com',
+    'testnet': 'https://api.testnet.solana.com',
+    'localnet': 'http://localhost:8899',
+  }
+  
+  return presets[url] || url
+}
+
+/**
+ * Get the base Solana Explorer URL for a cluster
+ * 
+ * @example
+ * getClusterExplorerUrl(mainnetCluster) // Returns: 'https://explorer.solana.com'
+ */
+export function getClusterExplorerUrl(
+  cluster: SolanaCluster,
+  path?: string
+): string {
+  const isMainnet = cluster.id === 'solana:mainnet' || cluster.id.includes('mainnet')
+  
+  const base = isMainnet
+    ? 'https://explorer.solana.com'
+    : `https://explorer.solana.com?cluster=${cluster.id.split(':')[1] || 'devnet'}`
+  
+  return path ? `${base}/${path}` : base
+}
+
+/**
+ * Get the Solana Explorer URL for a transaction signature
+ * 
+ * @example
+ * getTransactionUrl('5VERv8...', devnetCluster)
+ * // Returns: 'https://explorer.solana.com/tx/5VERv8...?cluster=devnet'
+ */
+export function getTransactionUrl(
+  signature: string,
+  cluster: SolanaCluster
+): string {
+  return getClusterExplorerUrl(cluster, `tx/${signature}`)
+}
+
+/**
+ * Get the Solana Explorer URL for an address
+ * Works for wallet addresses, token accounts, and programs
+ * 
+ * @example
+ * getAddressUrl('7xKXtg2C...', mainnetCluster)
+ * // Returns: 'https://explorer.solana.com/address/7xKXtg2C...'
+ */
+export function getAddressUrl(
+  address: string,
+  cluster: SolanaCluster
+): string {
+  return getClusterExplorerUrl(cluster, `address/${address}`)
+}
+
+/**
+ * Get the Solana Explorer URL for a token
+ * 
+ * @example
+ * getTokenUrl('EPjFWdd5...', mainnetCluster)
+ */
+export function getTokenUrl(
+  tokenAddress: string,
+  cluster: SolanaCluster
+): string {
+  return getClusterExplorerUrl(cluster, `token/${tokenAddress}`)
+}
+
+/**
+ * Get the Solana Explorer URL for a block
+ */
+export function getBlockUrl(
+  slot: number,
+  cluster: SolanaCluster
+): string {
+  return getClusterExplorerUrl(cluster, `block/${slot}`)
+}
+
+/**
+ * Check if a cluster is production (mainnet)
+ */
+export function isMainnetCluster(cluster: SolanaCluster): boolean {
+  return cluster.id === 'solana:mainnet' || cluster.id.includes('mainnet')
+}
+
+/**
+ * Check if a cluster is devnet
+ */
+export function isDevnetCluster(cluster: SolanaCluster): boolean {
+  return cluster.id === 'solana:devnet' || cluster.id.includes('devnet')
+}
+
+/**
+ * Check if a cluster is testnet
+ */
+export function isTestnetCluster(cluster: SolanaCluster): boolean {
+  return cluster.id === 'solana:testnet' || cluster.id.includes('testnet')
+}
+
+/**
+ * Check if a cluster is running locally
+ */
+export function isLocalCluster(cluster: SolanaCluster): boolean {
+  const url = (cluster as any).url as string
+  return (
+    cluster.id === 'solana:localnet' || 
+    url.includes('localhost') ||
+    url.includes('127.0.0.1')
+  )
+}
+
+/**
+ * Get a user-friendly name for the cluster
+ */
+export function getClusterName(cluster: SolanaCluster): string {
+  return cluster.label || cluster.id.split(':')[1] || 'Unknown'
+}
+
+/**
+ * Get the cluster type (mainnet, devnet, testnet, localnet, custom)
+ */
+export function getClusterType(cluster: SolanaCluster): 'mainnet' | 'devnet' | 'testnet' | 'localnet' | 'custom' {
+  if (isMainnetCluster(cluster)) return 'mainnet'
+  if (isDevnetCluster(cluster)) return 'devnet'
+  if (isTestnetCluster(cluster)) return 'testnet'
+  if (isLocalCluster(cluster)) return 'localnet'
+  return 'custom'
+}
+

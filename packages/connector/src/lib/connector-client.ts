@@ -1,7 +1,6 @@
-import { getWallets } from '@wallet-standard/app'
-
-import type { Wallet } from '@wallet-standard/base'
-import type { SolanaCluster } from '@wallet-ui/core'
+import { getWalletsRegistry, type Wallet, type WalletAccount } from './wallet-standard-shim'
+import type { SolanaCluster, SolanaClusterId } from '@wallet-ui/core'
+import type { StorageAdapter } from './storage-manager'
 
 export interface WalletInfo {
 	wallet: Wallet
@@ -11,8 +10,6 @@ export interface WalletInfo {
 	/** Precomputed capability flag for UI convenience */
 	connectable?: boolean
 }
-
-import type { WalletAccount } from '@wallet-standard/base'
 
 export interface AccountInfo {
 	address: string
@@ -28,6 +25,8 @@ export interface ConnectorState {
 	connecting: boolean
 	accounts: AccountInfo[]
 	selectedAccount: string | null
+	cluster: SolanaCluster | null
+	clusters: SolanaCluster[]
 }
 
 type Listener = (s: ConnectorState) => void
@@ -35,16 +34,27 @@ type Listener = (s: ConnectorState) => void
 export interface ConnectorConfig {
 	autoConnect?: boolean
 	debug?: boolean
-	storage?: {
-		getItem: (k: string) => string | null
-		setItem: (k: string, v: string) => void
-		removeItem: (k: string) => void
-	}
+	/** 
+	 * Storage configuration - can be legacy localStorage-like interface
+	 * or enhanced storage adapters for account, cluster, and wallet
+	 */
+	storage?: 
+		| {
+				getItem: (k: string) => string | null
+				setItem: (k: string, v: string) => void
+				removeItem: (k: string) => void
+		  }
+		| {
+				account: StorageAdapter<string | undefined>
+				cluster: StorageAdapter<SolanaClusterId>
+				wallet: StorageAdapter<string | undefined>
+		  }
 	
 	/** Enhanced cluster configuration using wallet-ui */
 	cluster?: {
 		clusters?: SolanaCluster[]
 		persistSelection?: boolean
+		initialCluster?: SolanaClusterId
 	}
 }
 
@@ -56,8 +66,24 @@ export class ConnectorClient {
 	private unsubscribers: Array<() => void> = []
 	private walletChangeUnsub: (() => void) | null = null
 	private pollTimer: ReturnType<typeof setInterval> | null = null
+	private walletStorage?: StorageAdapter<string | undefined>
+	private clusterStorage?: StorageAdapter<SolanaClusterId>
 
 	constructor(private config: ConnectorConfig = {}) {
+		const clusterConfig = config.cluster
+		const clusters = clusterConfig?.clusters ?? []
+		
+		// Set up storage adapters
+		if (this.config.storage && 'wallet' in this.config.storage) {
+			this.walletStorage = this.config.storage.wallet
+			this.clusterStorage = this.config.storage.cluster
+		}
+		
+		// Determine initial cluster from storage or config
+		const storedClusterId = this.clusterStorage?.get()
+		const initialClusterId = storedClusterId ?? clusterConfig?.initialCluster ?? 'solana:mainnet'
+		const initialCluster = clusters.find(c => c.id === initialClusterId) ?? clusters[0] ?? null
+		
 		this.state = {
 			wallets: [],
 			selectedWallet: null,
@@ -65,7 +91,10 @@ export class ConnectorClient {
 			connecting: false,
 			accounts: [],
 			selectedAccount: null,
+			cluster: initialCluster,
+			clusters,
 		}
+		
 		this.initialize()
 	}
 
@@ -81,10 +110,52 @@ export class ConnectorClient {
 		return null
 	}
 
+	/** Helper: Get wallet name from storage (works with both legacy and enhanced storage) */
+	private getStoredWallet(): string | null {
+		const storage = this.getStorage()
+		if (!storage) return null
+		
+		if ('wallet' in storage) {
+			// Enhanced storage
+			return storage.wallet.get() ?? null
+		} else {
+			// Legacy storage
+			return storage.getItem(STORAGE_KEY)
+		}
+	}
+
+	/** Helper: Save wallet name to storage (works with both legacy and enhanced storage) */
+	private setStoredWallet(walletName: string): void {
+		const storage = this.getStorage()
+		if (!storage) return
+		
+		if ('wallet' in storage) {
+			// Enhanced storage
+			storage.wallet.set(walletName)
+		} else {
+			// Legacy storage
+			storage.setItem(STORAGE_KEY, walletName)
+		}
+	}
+
+	/** Helper: Remove wallet name from storage (works with both legacy and enhanced storage) */
+	private removeStoredWallet(): void {
+		const storage = this.getStorage()
+		if (!storage) return
+		
+		if ('wallet' in storage) {
+			// Enhanced storage
+			storage.wallet.set(undefined)
+		} else {
+			// Legacy storage
+			storage.removeItem(STORAGE_KEY)
+		}
+	}
+
 	private initialize() {
 		if (typeof window === 'undefined') return
 		try {
-			const walletsApi = getWallets()
+			const walletsApi = getWalletsRegistry()
 			const update = () => {
 				const ws = walletsApi.get()
 				const unique = Array.from(new Set(ws.map(w => w.name)))
@@ -115,11 +186,11 @@ export class ConnectorClient {
 
 	private async attemptAutoConnect() {
 		try {
-			const last = this.getStorage()?.getItem(STORAGE_KEY)
+			const last = this.getStoredWallet()
 			if (!last) return
 			if (this.state.wallets.some(w => w.name === last)) await this.select(last)
 		} catch (e) {
-			this.getStorage()?.removeItem(STORAGE_KEY)
+			this.removeStoredWallet()
 		}
 	}
 
@@ -247,7 +318,7 @@ export class ConnectorClient {
 					accounts,
 					selectedAccount: selected,
 				}
-			this.getStorage()?.setItem(STORAGE_KEY, walletName)
+			this.setStoredWallet(walletName)
 			// Subscribe to wallet change events (or start polling if unavailable)
 			this.subscribeToWalletEvents()
 			this.notify()
@@ -281,7 +352,7 @@ export class ConnectorClient {
 		}
 
 		this.state = { ...this.state, selectedWallet: null, connected: false, accounts: [], selectedAccount: null }
-		this.getStorage()?.removeItem(STORAGE_KEY)
+		this.removeStoredWallet()
 		this.notify()
 	}
 
@@ -326,6 +397,39 @@ export class ConnectorClient {
 		// Clear external store listeners
 		this.listeners.clear()
 		// Connector destroyed
+	}
+
+	/**
+	 * Set the active cluster (network)
+	 */
+	async setCluster(clusterId: SolanaClusterId): Promise<void> {
+		const cluster = this.state.clusters.find(c => c.id === clusterId)
+		if (!cluster) {
+			throw new Error(`Cluster ${clusterId} not found. Available clusters: ${this.state.clusters.map(c => c.id).join(', ')}`)
+		}
+		
+		this.state = { ...this.state, cluster }
+		
+		// Persist cluster selection if storage is configured
+		if (this.clusterStorage) {
+			this.clusterStorage.set(clusterId)
+		}
+		
+		this.notify()
+	}
+
+	/**
+	 * Get the currently active cluster
+	 */
+	getCluster(): SolanaCluster | null {
+		return this.state.cluster
+	}
+
+	/**
+	 * Get all available clusters
+	 */
+	getClusters(): SolanaCluster[] {
+		return this.state.clusters
 	}
 }
 
