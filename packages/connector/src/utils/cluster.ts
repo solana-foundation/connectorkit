@@ -14,10 +14,12 @@ import type { SolanaCluster } from '@wallet-ui/core'
  * getClusterRpcUrl(devnetCluster) // Returns: 'https://api.devnet.solana.com'
  */
 export function getClusterRpcUrl(cluster: SolanaCluster): string {
-  const url = (cluster as any).url as string
+  // Safely extract url property with type validation
+  const rawUrl = (cluster as any)?.url
+  const url = typeof rawUrl === 'string' ? rawUrl : String(cluster ?? '')
   
   // If it's already a full URL, return it
-  if (url.startsWith('http://') || url.startsWith('https://')) {
+  if (url?.startsWith('http://') || url?.startsWith('https://')) {
     return url
   }
   
@@ -30,7 +32,17 @@ export function getClusterRpcUrl(cluster: SolanaCluster): string {
     'localnet': 'http://localhost:8899',
   }
   
-  return presets[url] || url
+  // Check presets mapping first
+  if (url && presets[url]) {
+    return presets[url]
+  }
+  
+  // If url is empty or invalid, throw an error
+  if (!url || url === '[object Object]') {
+    throw new Error(`Invalid cluster configuration: unable to determine RPC URL for cluster ${cluster?.id ?? 'unknown'}`)
+  }
+  
+  return url
 }
 
 /**
@@ -43,11 +55,20 @@ export function getClusterExplorerUrl(
   cluster: SolanaCluster,
   path?: string
 ): string {
-  const isMainnet = cluster.id === 'solana:mainnet' || cluster.id.includes('mainnet')
+  // Defensively extract cluster segment from id (format: 'solana:cluster')
+  const parts = cluster.id.split(':')
+  const clusterSegment = parts.length === 2 && parts[1] ? parts[1] : 'devnet'
+  
+  // Strict mainnet check: exact match or post-colon segment equals 'mainnet' or 'mainnet-beta'
+  const isMainnet = 
+    cluster.id === 'solana:mainnet' || 
+    cluster.id === 'solana:mainnet-beta' ||
+    clusterSegment === 'mainnet' ||
+    clusterSegment === 'mainnet-beta'
   
   const base = isMainnet
     ? 'https://explorer.solana.com'
-    : `https://explorer.solana.com?cluster=${cluster.id.split(':')[1] || 'devnet'}`
+    : `https://explorer.solana.com?cluster=${clusterSegment}`
   
   return path ? `${base}/${path}` : base
 }
@@ -108,28 +129,31 @@ export function getBlockUrl(
  * Check if a cluster is production (mainnet)
  */
 export function isMainnetCluster(cluster: SolanaCluster): boolean {
-  return cluster.id === 'solana:mainnet' || cluster.id.includes('mainnet')
+  return cluster.id === 'solana:mainnet' || cluster.id === 'solana:mainnet-beta'
 }
 
 /**
  * Check if a cluster is devnet
  */
 export function isDevnetCluster(cluster: SolanaCluster): boolean {
-  return cluster.id === 'solana:devnet' || cluster.id.includes('devnet')
+  return cluster.id === 'solana:devnet'
 }
 
 /**
  * Check if a cluster is testnet
  */
 export function isTestnetCluster(cluster: SolanaCluster): boolean {
-  return cluster.id === 'solana:testnet' || cluster.id.includes('testnet')
+  return cluster.id === 'solana:testnet'
 }
 
 /**
  * Check if a cluster is running locally
  */
 export function isLocalCluster(cluster: SolanaCluster): boolean {
-  const url = (cluster as any).url as string
+  // Safely extract url property with type validation
+  const rawUrl = (cluster as any)?.url
+  const url = typeof rawUrl === 'string' ? rawUrl : ''
+  
   return (
     cluster.id === 'solana:localnet' || 
     url.includes('localhost') ||
@@ -141,7 +165,11 @@ export function isLocalCluster(cluster: SolanaCluster): boolean {
  * Get a user-friendly name for the cluster
  */
 export function getClusterName(cluster: SolanaCluster): string {
-  return cluster.label || cluster.id.split(':')[1] || 'Unknown'
+  if (cluster.label) return cluster.label
+  
+  // Defensively extract cluster segment from id
+  const parts = cluster.id.split(':')
+  return parts.length === 2 && parts[1] ? parts[1] : 'Unknown'
 }
 
 /**

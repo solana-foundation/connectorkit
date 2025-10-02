@@ -1,6 +1,6 @@
 {
   "name": "@connector-kit/connector",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Headless wallet connector client and React provider built on Wallet Standard",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
