@@ -17,11 +17,6 @@ export type ConnectorSnapshot = ReturnType<ConnectorClient['getSnapshot']> & {
 	select: (walletName: string) => Promise<void>
 	disconnect: () => Promise<void>
 	selectAccount: (address: string) => Promise<void>
-	// Modal management methods
-	setModalOpen: (open: boolean, route?: import('../lib/connector-client').ModalRoute) => void
-	setModalRoute: (route: import('../lib/connector-client').ModalRoute) => void
-	openModal: (route?: import('../lib/connector-client').ModalRoute) => void
-	closeModal: () => void
 }
 
 export const ConnectorContext = createContext<ConnectorClient | null>(null)
@@ -137,11 +132,6 @@ export function useConnector(): ConnectorSnapshot {
 		select: client.select.bind(client), 
 		disconnect: client.disconnect.bind(client), 
 		selectAccount: client.selectAccount.bind(client),
-		// Bind modal management methods
-		setModalOpen: client.setModalOpen.bind(client),
-		setModalRoute: client.setModalRoute.bind(client),
-		openModal: client.openModal.bind(client),
-		closeModal: client.closeModal.bind(client),
 	}), [client])
 
 	return useMemo(() => ({ 

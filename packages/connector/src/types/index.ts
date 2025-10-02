@@ -65,22 +65,3 @@ export interface MobileConnectorOptions {
   }
 }
 
-/**
- * Theme customization interface extending the basic theme system
- */
-export interface ConnectorThemeExtended {
-  /** Animation duration in milliseconds */
-  animationDuration?: number
-  
-  /** Font loading strategy */
-  fontStrategy?: 'none' | 'preload' | 'fallback'
-  
-  /** Custom CSS variables to inject */
-  cssVariables?: Record<string, string>
-  
-  /** Modal positioning */
-  modalPosition?: 'center' | 'top' | 'bottom'
-  
-  /** Backdrop click behavior */
-  backdropClosable?: boolean
-}

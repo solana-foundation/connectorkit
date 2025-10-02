@@ -6,61 +6,28 @@
  */
 
 // Core client logic
-export { ConnectorClient, modalRoutes, validateRoute, safeRoutes } from './lib/connector-client'
+export { ConnectorClient } from './lib/connector-client'
 
 // Configuration helpers
 export { getDefaultConfig, getDefaultMobileConfig } from './config'
 export type { DefaultConfigOptions, ExtendedConnectorConfig } from './config'
-
-// Simplified theme system (works without React)
-export {
-  themes,
-  lightTheme,
-  darkTheme,
-  defaultConnectorTheme,
-  minimalTheme, // Alias for backward compatibility
-  // Essential theme utilities
-  getBorderRadius,
-  getSpacing,
-  getButtonHeight,
-  getButtonShadow,
-  getButtonBorder,
-  getAccessibleTextColor,
-  legacyToModernTheme,
-} from './themes'
 
 // Essential types for non-React usage
 export type { 
   ConnectorConfig,
   ConnectorState,
   WalletInfo,
-  AccountInfo,
-  ModalRoute
+  AccountInfo
 } from './lib/connector-client'
-
-export type {
-  ConnectorTheme,
-  LegacyConnectorTheme,
-  ConnectorThemeOverrides,
-  LegacyConnectorThemeOverrides
-} from './themes/types'
-
-// Theme name type from themes index
-export type { ThemeName } from './themes'
 
 // Configuration and option types
 export type { 
   ConnectorOptions, 
-  MobileConnectorOptions, 
-  ConnectorThemeExtended 
+  MobileConnectorOptions
 } from './types'
 
 // Mobile Wallet Adapter utilities for headless users
 export type { MobileWalletAdapterConfig } from './ui/connector-provider'
-
-// Modal router for advanced modal management
-export { ModalRouter, defaultModalRouter } from './lib/modal-router'
-export type { ModalState } from './lib/modal-router'
 
 // Error handling utilities for headless users
 export { WalletErrorType } from './components/ErrorBoundary'

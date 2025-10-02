@@ -3,39 +3,6 @@ import { getWallets } from '@wallet-standard/app'
 import type { Wallet } from '@wallet-standard/base'
 import type { SolanaCluster } from '@wallet-ui/core'
 
-// Modal routes for navigation within the connector modal
-export const modalRoutes = {
-	WALLETS: 'wallets',
-	PROFILE: 'profile',
-	ACCOUNT_SETTINGS: 'account-settings',
-	NETWORK_SETTINGS: 'network-settings',
-	ABOUT: 'about',
-	SETTINGS: 'settings',
-} as const
-
-export type ModalRoute = (typeof modalRoutes)[keyof typeof modalRoutes]
-
-// Route validation system inspired by ConnectKit
-export const safeRoutes = {
-	disconnected: [modalRoutes.WALLETS, modalRoutes.ABOUT] as const,
-	connected: [modalRoutes.WALLETS, modalRoutes.PROFILE, modalRoutes.ACCOUNT_SETTINGS, modalRoutes.NETWORK_SETTINGS, modalRoutes.ABOUT, modalRoutes.SETTINGS] as const,
-} as const
-
-/**
- * Validates and corrects modal routes based on connection state
- * @param route - The requested route
- * @param connected - Current connection state
- * @returns Valid route for the current state
- */
-export function validateRoute(route: ModalRoute, connected: boolean): ModalRoute {
-	const availableRoutes = connected ? safeRoutes.connected : safeRoutes.disconnected
-	if (!(availableRoutes as readonly ModalRoute[]).includes(route)) {
-		const fallback = connected ? modalRoutes.PROFILE : modalRoutes.WALLETS
-		return fallback
-	}
-	return route
-}
-
 export interface WalletInfo {
 	wallet: Wallet
 	name: string
@@ -61,9 +28,6 @@ export interface ConnectorState {
 	connecting: boolean
 	accounts: AccountInfo[]
 	selectedAccount: string | null
-	// Modal state management
-	modalOpen: boolean
-	modalRoute: string
 }
 
 type Listener = (s: ConnectorState) => void
@@ -101,8 +65,6 @@ export class ConnectorClient {
 			connecting: false,
 			accounts: [],
 			selectedAccount: null,
-			modalOpen: false,
-			modalRoute: modalRoutes.WALLETS,
 		}
 		this.initialize()
 	}
@@ -346,37 +308,6 @@ export class ConnectorClient {
 		this.notify()
 	}
 
-	// Modal management methods
-	setModalOpen(open: boolean, route?: ModalRoute): void {
-		const targetRoute = route || (open ? (this.state.connected ? modalRoutes.PROFILE : modalRoutes.WALLETS) : this.state.modalRoute as ModalRoute)
-		const validatedRoute = validateRoute(targetRoute, this.state.connected)
-		
-		// Avoid redundant updates
-		if (this.state.modalOpen === open && this.state.modalRoute === validatedRoute) return
-		
-		this.state = { 
-			...this.state, 
-			modalOpen: open,
-			modalRoute: validatedRoute
-		}
-		this.notify()
-	}
-
-	setModalRoute(route: ModalRoute): void {
-		const validatedRoute = validateRoute(route, this.state.connected)
-		// Avoid redundant updates
-		if (this.state.modalRoute === validatedRoute) return
-		this.state = { ...this.state, modalRoute: validatedRoute }
-		this.notify()
-	}
-
-	openModal(route?: ModalRoute): void {
-		this.setModalOpen(true, route)
-	}
-
-	closeModal(): void {
-		this.setModalOpen(false)
-	}
 
 	// Cleanup any resources (event listeners, timers) created by this client
 	destroy(): void {

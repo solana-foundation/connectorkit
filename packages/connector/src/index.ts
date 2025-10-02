@@ -1,18 +1,14 @@
-// Initialize UI global styles (e.g., spinner keyframes) once per app
-export { injectConnectorGlobalStyles, injectArcConnectorGlobalStyles } from './ui/global-styles'
-
 // Configuration helpers
 export { getDefaultConfig, getDefaultMobileConfig } from './config'
 export type { DefaultConfigOptions, ExtendedConnectorConfig } from './config'
 
 // Core exports
-export { ConnectorClient, modalRoutes, validateRoute, safeRoutes } from './lib/connector-client'
+export { ConnectorClient } from './lib/connector-client'
 export type { 
   ConnectorState, 
   ConnectorConfig, 
   WalletInfo, 
-  AccountInfo,
-  ModalRoute
+  AccountInfo
 } from './lib/connector-client'
 
 export { ConnectorProvider, useConnector, useConnectorClient } from './ui/connector-provider'
@@ -20,13 +16,6 @@ export type { ConnectorSnapshot } from './ui/connector-provider'
 export type { MobileWalletAdapterConfig } from './ui/connector-provider'
 export { UnifiedProvider, AppProvider, WalletProvider } from './ui/unified-provider'
 export type { UnifiedProviderProps } from './ui/unified-provider'
-
-export { useModal } from './hooks'
-export type { UseModalReturn } from './hooks'
-
-export { ConnectButton } from './ui/connect-button'
-export type { ConnectButtonProps } from './ui/connect-button'
-export { ConnectModal } from './ui/connect-modal'
 
 // Error handling utilities - useful for both pre-built and headless usage
 export { 
@@ -36,44 +25,10 @@ export {
 } from './components/ErrorBoundary'
 export type { WalletError } from './components/ErrorBoundary'
 
-export { ProfilePage } from './pages/profile'
-export { AboutPage } from './pages/about'
-export { SettingsPage } from './pages/settings'
-
-export { ModalRouter, defaultModalRouter } from './lib/modal-router'
-export type { ModalState } from './lib/modal-router'
-
-export { WalletsPage } from './pages/wallets'
-
-// Simplified theming system
-export {
-  themes,
-  lightTheme,
-  darkTheme,
-  defaultConnectorTheme,
-  minimalTheme, // Alias for backward compatibility
-  // Essential theme utilities
-  getBorderRadius,
-  getSpacing,
-  getButtonHeight,
-  getButtonShadow,
-  getButtonBorder,
-  getAccessibleTextColor,
-  legacyToModernTheme,
-} from './themes'
-export type { 
-  ConnectorTheme,
-  LegacyConnectorTheme,
-  ConnectorThemeOverrides,
-  LegacyConnectorThemeOverrides,
-  ThemeName
-} from './themes'
-
 // Configuration types
 export type { 
   ConnectorOptions, 
-  MobileConnectorOptions, 
-  ConnectorThemeExtended 
+  MobileConnectorOptions
 } from './types'
 
 // Utility functions for advanced usage

@@ -1,2 +1,1 @@
-export { useModal } from './use-modal'
-export type { UseModalReturn } from './use-modal'
+// No hooks exported yet - reserved for future headless hooks
