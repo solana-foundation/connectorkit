@@ -45,27 +45,20 @@ export type { ModalState } from './lib/modal-router'
 
 export { WalletsPage } from './pages/wallets'
 
-// Theming system
+// Simplified theming system
 export {
   themes,
-  solanaTheme,
-  minimalTheme, 
+  lightTheme,
   darkTheme,
-  phantomTheme,
   defaultConnectorTheme,
-  // Theme utilities
+  minimalTheme, // Alias for backward compatibility
+  // Essential theme utilities
   getBorderRadius,
   getSpacing,
   getButtonHeight,
   getButtonShadow,
   getButtonBorder,
   getAccessibleTextColor,
-  mergeThemeOverrides,
-  // Legacy compatibility
-  getBorderRadiusLegacy,
-  getButtonHeightLegacy,
-  getButtonShadowLegacy,
-  getButtonBorderLegacy,
   legacyToModernTheme,
 } from './themes'
 export type { 

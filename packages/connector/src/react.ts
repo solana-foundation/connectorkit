@@ -37,28 +37,3 @@ export type { UseModalReturn } from './hooks'
 // Re-export headless core for convenience
 // This includes: ConnectorClient, themes, config, utilities, etc.
 export * from './headless'
-
-/**
- * React 19 Usage Example:
- * 
- * ```tsx
- * import { AppProvider, ConnectButton, useConnector } from '@connector-kit/connector/react'
- * 
- * function App() {
- *   return (
- *     <AppProvider>
- *       <ConnectButton />
- *       <WalletInfo />
- *     </AppProvider>
- *   )
- * }
- * 
- * function WalletInfo() {
- *   const { connected, selectedAccount } = useConnector()
- *   
- *   if (!connected) return <p>Not connected</p>
- *   
- *   return <p>Connected: {selectedAccount}</p>
- * }
- * ```
- */

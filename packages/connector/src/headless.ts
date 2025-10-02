@@ -12,27 +12,20 @@ export { ConnectorClient, modalRoutes, validateRoute, safeRoutes } from './lib/c
 export { getDefaultConfig, getDefaultMobileConfig } from './config'
 export type { DefaultConfigOptions, ExtendedConnectorConfig } from './config'
 
-// Theme system (works without React)
+// Simplified theme system (works without React)
 export {
   themes,
-  solanaTheme,
-  minimalTheme,
+  lightTheme,
   darkTheme,
-  phantomTheme,
   defaultConnectorTheme,
-  // Theme utilities
+  minimalTheme, // Alias for backward compatibility
+  // Essential theme utilities
   getBorderRadius,
   getSpacing,
   getButtonHeight,
   getButtonShadow,
   getButtonBorder,
   getAccessibleTextColor,
-  mergeThemeOverrides,
-  // Legacy compatibility
-  getBorderRadiusLegacy,
-  getButtonHeightLegacy,
-  getButtonShadowLegacy,
-  getButtonBorderLegacy,
   legacyToModernTheme,
 } from './themes'
 
@@ -147,19 +140,6 @@ export const getInstalledWallets = (walletList: string[] = ['phantom', 'solflare
 
 /**
  * Classify error utility for headless error handling
- * @example
- * ```javascript
- * import { classifyWalletError, WalletErrorType } from '@connector-kit/connector/headless'
- * 
- * try {
- *   await client.select('phantom')
- * } catch (error) {
- *   const classified = classifyWalletError(error)
- *   if (classified.type === WalletErrorType.USER_REJECTED) {
- *     // Handle user rejection gracefully
- *   }
- * }
- * ```
  */
 export function classifyWalletError(error: Error): WalletError {
   const walletError = error as WalletError

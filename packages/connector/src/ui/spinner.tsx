@@ -1,7 +1,5 @@
-import React from 'react'
 import { injectConnectorGlobalStyles } from './global-styles'
 
-// Ensure styles are loaded
 injectConnectorGlobalStyles()
 
 interface SpinnerProps {

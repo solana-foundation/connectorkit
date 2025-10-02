@@ -1,51 +1,44 @@
 import type { ConnectorTheme } from './types'
 
-// Classic dark theme
+// Clean, utilitarian dark theme
 export const darkTheme: ConnectorTheme = {
   colors: {
-    primary: '#FFFFFF',
-    secondary: '#1F2937',
-    background: '#111827',
-    surface: '#1F2937',
-    text: '#F9FAFB',
-    textSecondary: '#9CA3AF',
-    border: '#374151',
-    error: '#F87171',
-    warning: '#FBBF24',
-    success: '#34D399',
-    accent: '#60A5FA',
-    modalOverlay: 'rgba(0, 0, 0, 0.75)',
+    primary: '#FFFFFF',      // White for dark mode actions
+    secondary: '#9CA3AF',    // Gray for secondary actions
+    background: '#111827',   // Dark background
+    surface: '#1F2937',     // Dark surface
+    text: '#FFFFFF',        // White text
+    textSecondary: '#9CA3AF', // Gray text
+    border: '#374151',      // Dark border
+    error: '#EF4444',       // Red for errors
   },
   
   fonts: {
     body: 'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif',
-    mono: 'ui-monospace, SFMono-Regular, Monaco, Consolas, Liberation Mono, Courier New, monospace',
   },
   
   borderRadius: {
-    sm: 6,
-    md: 8,
-    lg: 12,
-  },
-  
-  shadows: {
-    sm: '0 1px 2px rgba(0, 0, 0, 0.2)',
-    md: '0 4px 12px rgba(0, 0, 0, 0.3)',
-    lg: '0 10px 24px rgba(0, 0, 0, 0.4)',
-    xl: '0 20px 40px rgba(0, 0, 0, 0.5)',
+    sm: 4,    // Small rounded corners
+    md: 8,    // Standard rounded 
+    lg: 12,   // Large rounded
+    full: 9999, // Fully rounded (pills, circles)
   },
   
   spacing: {
-    xs: 8,
-    sm: 12,
-    md: 16,
-    lg: 24,
-    xl: 32,
+    sm: 8,    // Tight spacing
+    md: 16,   // Standard spacing  
+    lg: 24,   // Loose spacing
+  },
+  
+  shadows: {
+    sm: '0 1px 2px rgba(0, 0, 0, 0.3)',
+    md: '0 4px 8px rgba(0, 0, 0, 0.4)',
+    lg: '0 8px 16px rgba(0, 0, 0, 0.5)',
   },
   
   button: {
-    height: 48,
-    shadow: 'md',
+    height: 44,
+    shadow: 'sm',
     border: '1px solid #374151',
   },
   
