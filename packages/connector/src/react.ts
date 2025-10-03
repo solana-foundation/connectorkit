@@ -45,7 +45,7 @@ export type {
 } from './lib/wallet-standard-shim'
 
 // Essential configuration types
-export type { DefaultConfigOptions, ExtendedConnectorConfig } from './config'
+export type { DefaultConfigOptions, ExtendedConnectorConfig, UnifiedConfigOptions, UnifiedConfig } from './config'
 
 // Re-export wallet-ui types for React components
 export type {

@@ -10,7 +10,8 @@
   },
   "dependencies": {
     "@armadura/jupiter": "latest",
-    "@armadura/sdk": "0.1.16",
+    "@armadura/sdk": "0.1.23",
+    "@connector-kit/connector": "workspace:*",
     "@radix-ui/react-accordion": "^1.2.11",
     "@radix-ui/react-alert-dialog": "^1.1.14",
     "@radix-ui/react-avatar": "^1.1.10",

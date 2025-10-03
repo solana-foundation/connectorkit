@@ -42,12 +42,17 @@ function ConnectorProviderInternal({ children, config, mobile }: { children: Rea
 	// Create client immediately (works in both SSR and client)
 	if (!ref.current) {
 		ref.current = new ConnectorClient(config)
+		
+		// ✅ Set window.__connectorClient IMMEDIATELY for auto-detection
+		// This ensures Armadura's auto-detection can find it synchronously
+		if (typeof window !== 'undefined') {
+			window.__connectorClient = ref.current
+		}
 	}
 	
 	// On client mount, ensure wallet detection runs (run only once)
 	React.useEffect(() => {
-		if (typeof window !== 'undefined' && ref.current) {
-			window.__connectorClient = ref.current
+		if (ref.current) {
 			// Force re-initialization if client was created during SSR
 			// This ensures wallets are detected even if client was created before window existed
 			const privateClient = ref.current as any

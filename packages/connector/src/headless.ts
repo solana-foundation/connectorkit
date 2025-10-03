@@ -17,8 +17,8 @@ export { getWalletsRegistry } from './lib/wallet-standard-shim'
 // ============================================================================
 // Configuration
 // ============================================================================
-export { getDefaultConfig, getDefaultMobileConfig } from './config'
-export type { DefaultConfigOptions, ExtendedConnectorConfig } from './config'
+export { getDefaultConfig, getDefaultMobileConfig, createConfig, isUnifiedConfig } from './config'
+export type { DefaultConfigOptions, ExtendedConnectorConfig, UnifiedConfigOptions, UnifiedConfig } from './config'
 
 // ============================================================================
 // Essential Types
@@ -130,6 +130,7 @@ export {
 export * from './utils/clipboard'
 export * from './utils/formatting'
 export * from './utils/cluster'
+export * from './utils/network'
 
 // ============================================================================
 // Mobile Wallet Adapter Integration
