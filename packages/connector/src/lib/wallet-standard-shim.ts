@@ -1,20 +1,18 @@
 /**
- * @connector-kit/connector - wallet-standard shim
+ * @connector-kit/connector - wallet-standard integration
  * 
- * Minimal wallet-standard types and utilities that can work with or without wallet-ui/react.
- * This provides a clean abstraction layer that allows us to optionally use wallet-ui types
- * while maintaining compatibility with direct wallet-standard usage.
+ * Simplified wallet standard types and registry access
  */
 
-export interface WalletStandardWallet {
+export interface Wallet {
   name: string
   icon?: string
   chains: readonly string[]
   features: Record<string, unknown>
-  accounts: readonly WalletStandardAccount[]
+  accounts: readonly WalletAccount[]
 }
 
-export interface WalletStandardAccount {
+export interface WalletAccount {
   address: string
   publicKey: Uint8Array
   chains: readonly string[]
@@ -23,77 +21,31 @@ export interface WalletStandardAccount {
   icon?: string
 }
 
-export interface WalletStandardEvents {
-  register(wallet: WalletStandardWallet): void
-  unregister(wallet: WalletStandardWallet): void
-}
-
-// Re-export as base types
-export type Wallet = WalletStandardWallet
-export type WalletAccount = WalletStandardAccount
-
 export interface WalletsRegistry {
   get(): readonly Wallet[]
   on(event: 'register' | 'unregister', callback: (wallet: Wallet) => void): () => void
 }
 
-// Cached registry to avoid repeated initialization
-let cachedRegistry: WalletsRegistry | null = null
+// Legacy aliases for backward compatibility
+export type WalletStandardWallet = Wallet
+export type WalletStandardAccount = WalletAccount
 
-function normalizeAccount(account: any): WalletStandardAccount {
-  const publicKey = account.publicKey instanceof Uint8Array
-    ? account.publicKey
-    : new Uint8Array(account.publicKey ?? [])
+// Simple registry reference
+let registry: any = null
 
-  return {
-    address: account.address,
-    publicKey,
-    chains: Array.isArray(account.chains) ? account.chains : [],
-    features: Array.isArray(account.features) ? account.features : [],
-    label: account.label,
-    icon: account.icon,
-  }
-}
-
-function normalizeWallet(wallet: any): WalletStandardWallet {
+function normalizeWallet(wallet: any): Wallet {
   return {
     name: wallet?.name ?? 'Unknown Wallet',
     icon: wallet?.icon,
-    chains: Array.isArray(wallet?.chains) ? wallet.chains : [],
+    chains: wallet?.chains ?? [],
     features: wallet?.features ?? {},
-    accounts: Array.isArray(wallet?.accounts)
-      ? wallet.accounts.map(normalizeAccount)
-      : [],
-  }
-}
-
-function wrapRegistry(raw: any): WalletsRegistry {
-  const safe = raw ?? {}
-  return {
-    get: () => {
-      try {
-        const wallets = typeof safe.get === 'function' ? safe.get() : []
-        if (!Array.isArray(wallets)) return []
-        return wallets.map(normalizeWallet)
-      } catch {
-        return []
-      }
-    },
-    on: (event, callback) => {
-      if (typeof safe.on !== 'function') return () => {}
-      const handler = (...wallets: any[]) => {
-        wallets.forEach(wallet => callback(normalizeWallet(wallet)))
-      }
-      const cleanup = safe.on(event, handler)
-      return typeof cleanup === 'function' ? cleanup : () => {}
-    }
+    accounts: wallet?.accounts ?? [],
   }
 }
 
 
 /**
- * Get the wallets registry using @wallet-standard/react
- * This is the proper way that wallet-ui does it
+ * Get the wallets registry - simplified approach
  */
 export function getWalletsRegistry(): WalletsRegistry {
   if (typeof window === 'undefined') {
@@ -103,69 +55,54 @@ export function getWalletsRegistry(): WalletsRegistry {
     }
   }
 
-  // Return cached registry if available
-  if (cachedRegistry) {
-    return cachedRegistry
-  }
-
-  try {
-    // Check window.navigator.wallets first (where wallets register)
+  // Initialize wallet standard if not available
+  if (!registry) {
     const nav = window.navigator as any
+    
+    // Try direct registry first
     if (nav.wallets && typeof nav.wallets.get === 'function') {
-      console.log('✅ Found wallet standard registry on navigator.wallets')
-      cachedRegistry = wrapRegistry(nav.wallets)
-      return cachedRegistry
+      registry = nav.wallets
+    } else {
+      // Initialize wallet standard
+      import('@wallet-standard/app')
+        .then(mod => {
+          const walletStandardRegistry = mod.getWallets?.()
+          if (walletStandardRegistry) {
+            registry = walletStandardRegistry
+          }
+        })
+        .catch(() => {
+          // Wallet standard unavailable - not critical since we have instant auto-connect
+        })
     }
-    
-    if (process.env.NODE_ENV === 'development') {
-      console.log('⚠️ window.navigator.wallets not found')
-    }
-    
-    // Try to initialize via dynamic import (eagerly)
-    import('@wallet-standard/app')
-      .then(mod => {
-        const registry = mod.getWallets?.()
-        if (registry && typeof registry.get === 'function') {
-          console.log('✅ Wallet Standard initialized via import')
-          cachedRegistry = wrapRegistry(registry)
-          // Trigger wallet detection update after initialization
-          setTimeout(() => {
-            if (window.navigator && (window.navigator as any).wallets) {
-              console.log('🔄 Triggering wallet detection after standard initialization')
-            }
-          }, 100)
-        }
-      })
-      .catch(error => {
-        console.warn('Could not initialize @wallet-standard/app:', error)
-      })
-  } catch (error) {
-    console.warn('Failed to access wallet standard:', error)
   }
 
-  // Return dynamic registry that checks navigator.wallets on each call
+  // Return simplified registry interface
   return {
     get: () => {
-      if (cachedRegistry) {
-        return cachedRegistry.get()
+      try {
+        const nav = window.navigator as any
+        const activeRegistry = nav.wallets || registry
+        if (activeRegistry && typeof activeRegistry.get === 'function') {
+          const wallets = activeRegistry.get()
+          return Array.isArray(wallets) ? wallets.map(normalizeWallet) : []
+        }
+        return []
+      } catch {
+        return []
       }
-      const nav = (window.navigator as any).wallets
-      if (nav && typeof nav.get === 'function') {
-        cachedRegistry = wrapRegistry(nav)
-        return cachedRegistry.get()
-      }
-      return []
     },
     on: (event, callback) => {
-      if (cachedRegistry) {
-        return cachedRegistry.on(event, callback)
+      try {
+        const nav = window.navigator as any
+        const activeRegistry = nav.wallets || registry
+        if (activeRegistry && typeof activeRegistry.on === 'function') {
+          return activeRegistry.on(event, (wallet: any) => callback(normalizeWallet(wallet)))
+        }
+        return () => {}
+      } catch {
+        return () => {}
       }
-      const nav = (window.navigator as any).wallets
-      if (nav && typeof nav.on === 'function') {
-        cachedRegistry = wrapRegistry(nav)
-        return cachedRegistry.on(event, callback)
-      }
-      return () => {}
     }
   }
 }

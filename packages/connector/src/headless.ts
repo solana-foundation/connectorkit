@@ -5,15 +5,24 @@
  * Zero React dependencies for maximum compatibility
  */
 
-// Core client logic
+import { WalletErrorType, type WalletError } from './components/ErrorBoundary'
+import type { MobileWalletAdapterConfig } from './ui/connector-provider'
+
+// ============================================================================
+// Core Client & Registry
+// ============================================================================
 export { ConnectorClient } from './lib/connector-client'
 export { getWalletsRegistry } from './lib/wallet-standard-shim'
 
-// Configuration helpers
+// ============================================================================
+// Configuration
+// ============================================================================
 export { getDefaultConfig, getDefaultMobileConfig } from './config'
 export type { DefaultConfigOptions, ExtendedConnectorConfig } from './config'
 
-// Essential types for non-React usage
+// ============================================================================
+// Essential Types
+// ============================================================================
 export type { 
   ConnectorConfig,
   ConnectorState,
@@ -28,8 +37,16 @@ export type {
   WalletStandardAccount
 } from './lib/wallet-standard-shim'
 
+export type { 
+  ConnectorOptions, 
+  MobileConnectorOptions
+} from './types'
 
-// Enhanced storage (recommended - extends wallet-ui's Storage)
+export type { MobileWalletAdapterConfig } from './ui/connector-provider'
+
+// ============================================================================
+// Storage System
+// ============================================================================
 export {
   EnhancedStorage,
   EnhancedStorageAdapter,
@@ -37,6 +54,7 @@ export {
   createEnhancedStorageCluster,
   createEnhancedStorageWallet
 } from './lib/enhanced-storage'
+
 export type { 
   StorageAdapter,
   StorageOptions,
@@ -45,111 +63,14 @@ export type {
   EnhancedStorageWalletOptions
 } from './lib/enhanced-storage'
 
-// Configuration and option types
-export type { 
-  ConnectorOptions, 
-  MobileConnectorOptions
-} from './types'
-
-// Mobile Wallet Adapter utilities for headless users
-export type { MobileWalletAdapterConfig } from './ui/connector-provider'
-
-// Error handling utilities for headless users
+// ============================================================================
+// Error Handling
+// ============================================================================
 export { WalletErrorType } from './components/ErrorBoundary'
 export type { WalletError } from './components/ErrorBoundary'
 
-// Utility functions (framework-agnostic)
-export * from './utils/clipboard'
-export * from './utils/formatting'
-export * from './utils/cluster'
-
-// Re-export wallet-ui types and utilities for convenience
-export type {
-  SolanaCluster,
-  SolanaClusterId,
-} from '@wallet-ui/core'
-
-export {
-  createSolanaMainnet,
-  createSolanaDevnet,
-  createSolanaTestnet,
-  createSolanaLocalnet,
-} from '@wallet-ui/core'
-
-// Import for internal use only
-import { WalletErrorType, type WalletError } from './components/ErrorBoundary'
-
 /**
- * Register Mobile Wallet Adapter programmatically
- * Useful for headless implementations that need mobile support
- */
-export async function registerMobileWalletAdapter(config: import('./ui/connector-provider').MobileWalletAdapterConfig) {
-  const {
-    registerMwa,
-    createDefaultAuthorizationCache,
-    createDefaultChainSelector,
-    createDefaultWalletNotFoundHandler,
-    MWA_SOLANA_CHAINS,
-  } = (await import('@solana-mobile/wallet-standard-mobile')) as any
-  registerMwa({
-    appIdentity: config.appIdentity,
-    authorizationCache: config.authorizationCache ?? createDefaultAuthorizationCache(),
-    chains: (config.chains ?? MWA_SOLANA_CHAINS) as any,
-    chainSelector: config.chainSelector ?? createDefaultChainSelector(),
-    remoteHostAuthority: config.remoteHostAuthority,
-    onWalletNotFound: config.onWalletNotFound ?? createDefaultWalletNotFoundHandler(),
-  })
-}
-
-/**
- * Storage utility helpers for custom implementations
- */
-export const createMemoryStorage = () => {
-  const store = new Map<string, string>()
-  return {
-    getItem: (key: string) => store.get(key) || null,
-    setItem: (key: string, value: string) => store.set(key, value),
-    removeItem: (key: string) => store.delete(key)
-  }
-}
-
-export const createLocalStorage = () => {
-  if (typeof window === 'undefined') return createMemoryStorage()
-  return {
-    getItem: (key: string) => {
-      try { return localStorage.getItem(key) } catch { return null }
-    },
-    setItem: (key: string, value: string) => {
-      try { localStorage.setItem(key, value) } catch { /* ignore */ }
-    },
-    removeItem: (key: string) => {
-      try { localStorage.removeItem(key) } catch { /* ignore */ }
-    }
-  }
-}
-
-/**
- * Wallet detection utilities for headless implementations
- */
-export const isWalletInstalled = (walletName: string): boolean => {
-  if (typeof window === 'undefined') return false
-  // Simple heuristic - check for common wallet properties
-  const lowerName = walletName.toLowerCase()
-  return Boolean(
-    (window as any)[lowerName] || 
-    (window as any).solana || 
-    (window as any)[`${lowerName}Wallet`] ||
-    // Check for wallet standard registration
-    typeof (window as any).navigator?.wallet !== 'undefined'
-  )
-}
-
-export const getInstalledWallets = (walletList: string[] = ['phantom', 'solflare', 'backpack', 'glow', 'sollet']): string[] => {
-  return walletList.filter(isWalletInstalled)
-}
-
-/**
- * Classify error utility for headless error handling
+ * Classify wallet errors for better error handling
  */
 export function classifyWalletError(error: Error): WalletError {
   const walletError = error as WalletError
@@ -186,4 +107,115 @@ export function classifyWalletError(error: Error): WalletError {
     recoverable,
     context: { originalMessage: error.message }
   }
+}
+
+// ============================================================================
+// Wallet-UI Integration
+// ============================================================================
+export type {
+  SolanaCluster,
+  SolanaClusterId,
+} from '@wallet-ui/core'
+
+export {
+  createSolanaMainnet,
+  createSolanaDevnet,
+  createSolanaTestnet,
+  createSolanaLocalnet,
+} from '@wallet-ui/core'
+
+// ============================================================================
+// Utility Functions
+// ============================================================================
+export * from './utils/clipboard'
+export * from './utils/formatting'
+export * from './utils/cluster'
+
+// ============================================================================
+// Mobile Wallet Adapter Integration
+// ============================================================================
+
+/**
+ * Register Mobile Wallet Adapter programmatically
+ * Useful for headless implementations that need mobile support
+ */
+export async function registerMobileWalletAdapter(config: MobileWalletAdapterConfig) {
+  const {
+    registerMwa,
+    createDefaultAuthorizationCache,
+    createDefaultChainSelector,
+    createDefaultWalletNotFoundHandler,
+    MWA_SOLANA_CHAINS,
+  } = (await import('@solana-mobile/wallet-standard-mobile')) as any
+  
+  registerMwa({
+    appIdentity: config.appIdentity,
+    authorizationCache: config.authorizationCache ?? createDefaultAuthorizationCache(),
+    chains: (config.chains ?? MWA_SOLANA_CHAINS) as any,
+    chainSelector: config.chainSelector ?? createDefaultChainSelector(),
+    remoteHostAuthority: config.remoteHostAuthority,
+    onWalletNotFound: config.onWalletNotFound ?? createDefaultWalletNotFoundHandler(),
+  })
+}
+
+// ============================================================================
+// Storage Utilities
+// ============================================================================
+
+/**
+ * Create memory-based storage (useful for SSR or testing)
+ */
+export const createMemoryStorage = () => {
+  const store = new Map<string, string>()
+  return {
+    getItem: (key: string) => store.get(key) || null,
+    setItem: (key: string, value: string) => store.set(key, value),
+    removeItem: (key: string) => store.delete(key)
+  }
+}
+
+/**
+ * Create localStorage wrapper with SSR fallback
+ */
+export const createLocalStorage = () => {
+  if (typeof window === 'undefined') return createMemoryStorage()
+  return {
+    getItem: (key: string) => {
+      try { return localStorage.getItem(key) } catch { return null }
+    },
+    setItem: (key: string, value: string) => {
+      try { localStorage.setItem(key, value) } catch { /* ignore */ }
+    },
+    removeItem: (key: string) => {
+      try { localStorage.removeItem(key) } catch { /* ignore */ }
+    }
+  }
+}
+
+// ============================================================================
+// Wallet Detection Utilities
+// ============================================================================
+
+/**
+ * Check if a wallet is installed by detecting window object
+ */
+export const isWalletInstalled = (walletName: string): boolean => {
+  if (typeof window === 'undefined') return false
+  
+  const lowerName = walletName.toLowerCase()
+  return Boolean(
+    (window as any)[lowerName] || 
+    (window as any).solana || 
+    (window as any)[`${lowerName}Wallet`] ||
+    typeof (window as any).navigator?.wallet !== 'undefined'
+  )
+}
+
+/**
+ * Get list of installed wallets from a given list
+ */
+export const getInstalledWallets = (
+  walletList: string[] = ['phantom', 'solflare', 'backpack', 'glow', 'sollet']
+): string[] => {
+  return walletList.filter(isWalletInstalled)
 }
