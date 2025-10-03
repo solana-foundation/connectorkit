@@ -12,6 +12,7 @@ import {
   createEnhancedStorageWallet,
   EnhancedStorageAdapter 
 } from '../lib/enhanced-storage'
+import { toClusterId } from '../utils/network'
 import type React from 'react'
 
 export interface DefaultConfigOptions {
@@ -180,19 +181,10 @@ export function getDefaultConfig(options: DefaultConfigOptions): ExtendedConnect
 
 /**
  * Helper to convert network string to cluster ID
- * Accepts both naming conventions for compatibility
+ * Uses network utility for consistent translation
  */
 function getInitialCluster(network: 'mainnet' | 'mainnet-beta' | 'devnet' | 'testnet' | 'localnet' = 'mainnet-beta'): SolanaClusterId {
-  // Normalize network name (mainnet-beta -> mainnet for cluster ID)
-  const normalized = network === 'mainnet-beta' ? 'mainnet' : network
-  
-  switch (normalized) {
-    case 'mainnet': return 'solana:mainnet'
-    case 'devnet': return 'solana:devnet'
-    case 'testnet': return 'solana:testnet'
-    case 'localnet': return 'solana:localnet'
-    default: return 'solana:mainnet'
-  }
+  return toClusterId(network)
 }
 
 /**

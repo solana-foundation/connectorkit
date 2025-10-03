@@ -133,27 +133,6 @@ export function truncate(
   return text.slice(0, half) + '...' + text.slice(-half)
 }
 
-/**
- * Format a transaction signature for display
- * Uses same pattern as address formatting
- */
-export function formatSignature(
-  signature: string,
-  options: { length?: number } = {}
-): string {
-  return formatAddress(signature, options)
-}
-
-/**
- * Format a public key for display
- * Uses same pattern as address formatting
- */
-export function formatPublicKey(
-  publicKey: string,
-  options: { length?: number } = {}
-): string {
-  return formatAddress(publicKey, options)
-}
 
 /**
  * Format token amount with proper decimals

@@ -7,7 +7,7 @@
 
 // React-specific components and providers (not in headless)
 export { ConnectorProvider, useConnector, useConnectorClient } from './ui/connector-provider'
-export { UnifiedProvider, AppProvider, WalletProvider } from './ui/unified-provider'
+export { UnifiedProvider, AppProvider } from './ui/unified-provider'
 
 // React-specific error boundaries
 export { ConnectorErrorBoundary, withErrorBoundary } from './components/ErrorBoundary'

@@ -20,6 +20,17 @@ export type SolanaNetwork = 'mainnet' | 'devnet' | 'testnet' | 'localnet'
 export type SolanaNetworkRpc = 'mainnet-beta' | 'devnet' | 'testnet' | 'localnet'
 
 /**
+ * Default RPC endpoints for each Solana network
+ * Single source of truth for RPC URLs across the package
+ */
+export const RPC_ENDPOINTS: Record<SolanaNetwork, string> = {
+  mainnet: 'https://api.mainnet-beta.solana.com',
+  devnet: 'https://api.devnet.solana.com',
+  testnet: 'https://api.testnet.solana.com',
+  localnet: 'http://localhost:8899',
+} as const
+
+/**
  * Normalize network name to standard format
  * Accepts both conventions and returns the normalized version
  * 
@@ -88,19 +99,7 @@ export function toClusterId(network: SolanaNetwork | SolanaNetworkRpc | string):
  */
 export function getDefaultRpcUrl(network: SolanaNetwork | SolanaNetworkRpc | string): string {
   const normalized = normalizeNetwork(network)
-  
-  switch (normalized) {
-    case 'mainnet':
-      return 'https://api.mainnet-beta.solana.com'
-    case 'devnet':
-      return 'https://api.devnet.solana.com'
-    case 'testnet':
-      return 'https://api.testnet.solana.com'
-    case 'localnet':
-      return 'http://localhost:8899'
-    default:
-      return 'https://api.mainnet-beta.solana.com'
-  }
+  return RPC_ENDPOINTS[normalized] ?? RPC_ENDPOINTS.mainnet
 }
 
 /**

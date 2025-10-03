@@ -6,9 +6,9 @@
 
 'use client'
 
-import { useMemo, useSyncExternalStore } from 'react'
+import { useMemo } from 'react'
 import type { SolanaCluster, SolanaClusterId } from '@wallet-ui/core'
-import { useConnectorClient } from '../ui/connector-provider'
+import { useConnector, useConnectorClient } from '../ui/connector-provider'
 import { 
   getClusterRpcUrl, 
   getClusterExplorerUrl,
@@ -64,21 +64,14 @@ export interface UseClusterReturn {
  * ```
  */
 export function useCluster(): UseClusterReturn {
+  // ✅ Use useConnector (already subscribes via useSyncExternalStore)
+  // No need to re-subscribe - consistent with useAccount and useWalletInfo
+  const { cluster, clusters } = useConnector()
   const client = useConnectorClient()
   
   if (!client) {
     throw new Error('useCluster must be used within ConnectorProvider')
   }
-
-  // Subscribe to cluster changes via the client's state
-  const state = useSyncExternalStore(
-    (callback) => client.subscribe(callback),
-    () => client.getSnapshot(),
-    () => client.getSnapshot()
-  )
-
-  const cluster = state.cluster
-  const clusters = state.clusters
 
   // Compute derived values
   const isMainnet = cluster ? isMainnetCluster(cluster) : false
@@ -97,7 +90,7 @@ export function useCluster(): UseClusterReturn {
     [client]
   )
 
-  return {
+  return useMemo(() => ({
     cluster,
     clusters,
     setCluster,
@@ -108,6 +101,6 @@ export function useCluster(): UseClusterReturn {
     rpcUrl,
     explorerUrl,
     type,
-  }
+  }), [cluster, clusters, setCluster, isMainnet, isDevnet, isTestnet, isLocal, rpcUrl, explorerUrl, type])
 }
 

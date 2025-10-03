@@ -53,8 +53,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AppProvider connectorConfig={config.connectorConfig} mobile={config.mobile}>
-      <ArmaProvider 
+      <AppProvider config={config}>
+        <ArmaProvider 
         config={armaConfig} 
         queryClient={queryClient}
         useConnector="auto"

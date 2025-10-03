@@ -59,6 +59,54 @@ export class ConnectorClient {
 	private walletStorage?: StorageAdapter<string | undefined>
 	private clusterStorage?: StorageAdapter<SolanaClusterId>
 
+	// ============================================================================
+	// Helper Methods
+	// ============================================================================
+
+	/**
+	 * Convert a Wallet Standard wallet to WalletInfo with capability checks
+	 */
+	private mapToWalletInfo(wallet: Wallet): WalletInfo {
+		const features = (wallet.features as any) || {}
+		const hasConnect = Boolean(features['standard:connect'])
+		const hasDisconnect = Boolean(features['standard:disconnect'])
+		const chains = (wallet as any)?.chains as unknown as string[] | undefined
+		const isSolana = Array.isArray(chains) && chains.some(c => typeof c === 'string' && c.includes('solana'))
+		const connectable = hasConnect && hasDisconnect && Boolean(isSolana)
+		
+		return { 
+			wallet, 
+			name: wallet.name, 
+			icon: wallet.icon, 
+			installed: true, 
+			connectable 
+		} satisfies WalletInfo
+	}
+
+	/**
+	 * Deduplicate wallets by name (keeps first occurrence)
+	 */
+	private deduplicateWallets(wallets: readonly Wallet[]): Wallet[] {
+		return Array.from(new Set(wallets.map(w => w.name)))
+			.map(n => wallets.find(w => w.name === n))
+			.filter((w): w is Wallet => w !== undefined)
+	}
+
+	/**
+	 * Convert wallet account to AccountInfo
+	 */
+	private toAccountInfo(account: any): AccountInfo {
+		return {
+			address: account.address as string,
+			icon: account.icon,
+			raw: account
+		}
+	}
+
+	// ============================================================================
+	// Constructor & Initialization
+	// ============================================================================
+
 	constructor(private config: ConnectorConfig = {}) {
 		const clusterConfig = config.cluster
 		const clusters = clusterConfig?.clusters ?? []
@@ -302,28 +350,18 @@ export class ConnectorClient {
 					})
 				}
 				
-				if (ws.length > 1) { // Only update if we have more wallets than just our connected one
-					const unique = Array.from(new Set(ws.map(w => w.name)))
-					  .map(n => ws.find(w => w.name === n))
-					  .filter((w): w is Wallet => w !== undefined)
-					this.state = {
-						...this.state,
-						wallets: unique.map(w => {
-							const features = (w.features as any) || {}
-							const hasConnect = Boolean(features['standard:connect'])
-							const hasDisconnect = Boolean(features['standard:disconnect'])
-							const chains = (w as any)?.chains as unknown as string[] | undefined
-							const isSolana = Array.isArray(chains) && chains.some(c => typeof c === 'string' && c.includes('solana'))
-							const connectable = hasConnect && hasDisconnect && Boolean(isSolana)
-							return { wallet: w, name: w.name, icon: w.icon, installed: true, connectable } satisfies WalletInfo
-						})
-					}
-					this.notify()
-					
-					console.log('🎨 Updated wallet list after instant connection, now have', this.state.wallets.length, 'wallets with icons')
-		} else {
-					console.log('⚠️ Wallet standard not ready yet, wallet list not updated')
+			if (ws.length > 1) { // Only update if we have more wallets than just our connected one
+				const unique = this.deduplicateWallets(ws)
+				this.state = {
+					...this.state,
+					wallets: unique.map(w => this.mapToWalletInfo(w))
 				}
+				this.notify()
+				
+				console.log('🎨 Updated wallet list after instant connection, now have', this.state.wallets.length, 'wallets with icons')
+			} else {
+				console.log('⚠️ Wallet standard not ready yet, wallet list not updated')
+			}
 			}, 500) // Faster icon update
 			
 			return true
@@ -358,33 +396,23 @@ export class ConnectorClient {
 				}, 100) // Small delay to avoid hydration issues
 			}
 			
-			const walletsApi = getWalletsRegistry()
-			const update = () => {
-				const ws = walletsApi.get()
-				if (this.config.debug && ws.length !== this.state.wallets.length) {
-					console.log('🔍 ConnectorClient: found wallets:', ws.length)
-				}
-				
-				const unique = Array.from(new Set(ws.map(w => w.name)))
-				  .map(n => ws.find(w => w.name === n))
-				  .filter((w): w is Wallet => w !== undefined)
-				
-				// Update wallet list for UI, but don't interfere with connection state
-				// This ensures the connect button has access to wallet icons
-				this.state = {
-					...this.state,
-					wallets: unique.map(w => {
-						const features = (w.features as any) || {}
-						const hasConnect = Boolean(features['standard:connect'])
-						const hasDisconnect = Boolean(features['standard:disconnect'])
-						const chains = (w as any)?.chains as unknown as string[] | undefined
-						const isSolana = Array.isArray(chains) && chains.some(c => typeof c === 'string' && c.includes('solana'))
-						const connectable = hasConnect && hasDisconnect && Boolean(isSolana)
-						return { wallet: w, name: w.name, icon: w.icon, installed: true, connectable } satisfies WalletInfo
-					})
-				}
-				this.notify()
+		const walletsApi = getWalletsRegistry()
+		const update = () => {
+			const ws = walletsApi.get()
+			if (this.config.debug && ws.length !== this.state.wallets.length) {
+				console.log('🔍 ConnectorClient: found wallets:', ws.length)
 			}
+			
+			const unique = this.deduplicateWallets(ws)
+			
+			// Update wallet list for UI, but don't interfere with connection state
+			// This ensures the connect button has access to wallet icons
+			this.state = {
+				...this.state,
+				wallets: unique.map(w => this.mapToWalletInfo(w))
+			}
+			this.notify()
+		}
 			
 			// Initial update for wallet discovery
 			update()
@@ -489,11 +517,7 @@ export class ConnectorClient {
 		this.pollTimer = setInterval(() => {
 			try {
 				const walletAccounts = ((wallet as any)?.accounts ?? []) as any[]
-				const nextAccounts: AccountInfo[] = walletAccounts.map((a: any) => ({ 
-					address: a.address as string, 
-					icon: a.icon, 
-					raw: a 
-				}))
+				const nextAccounts = walletAccounts.map(a => this.toAccountInfo(a))
 				
 				// Only update if we don't have accounts yet or they actually changed
 				if (this.state.accounts.length === 0 && nextAccounts.length > 0) {
@@ -518,11 +542,7 @@ export class ConnectorClient {
 	}
 
 	private subscribeToWalletEvents() {
-			try {
-				if (this.walletChangeUnsub) this.walletChangeUnsub()
-			} catch (e) {
-				// Error unsubscribing wallet events
-			}
+		// Cleanup existing subscription if present
 		if (this.walletChangeUnsub) {
 			try { this.walletChangeUnsub() } catch {}
 			this.walletChangeUnsub = null
@@ -547,11 +567,7 @@ export class ConnectorClient {
 				const changeAccounts = (properties?.accounts ?? []) as any[]
 				if (changeAccounts.length === 0) return
 				
-				const nextAccounts: AccountInfo[] = changeAccounts.map((a: any) => ({ 
-					address: a.address as string, 
-					icon: a.icon, 
-					raw: a 
-				}))
+				const nextAccounts = changeAccounts.map(a => this.toAccountInfo(a))
 				
 				// Only update accounts, preserve selected account
 				this.state = { 
@@ -578,11 +594,11 @@ export class ConnectorClient {
 			if (!connectFeature) throw new Error(`Wallet ${walletName} does not support standard connect`)
 				// Force non-silent connection to ensure wallet prompts for account selection
 				const result = await connectFeature.connect({ silent: false })
-				// Aggregate accounts from result and wallet.accounts (some wallets only return the selected account)
-				const walletAccounts = ((w.wallet as any)?.accounts ?? []) as any[]
-				const accountMap = new Map<string, any>()
-				for (const a of [...walletAccounts, ...result.accounts]) accountMap.set(a.address, a)
-				const accounts: AccountInfo[] = Array.from(accountMap.values()).map((a: any) => ({ address: a.address as string, icon: a.icon, raw: a }))
+			// Aggregate accounts from result and wallet.accounts (some wallets only return the selected account)
+			const walletAccounts = ((w.wallet as any)?.accounts ?? []) as any[]
+			const accountMap = new Map<string, any>()
+			for (const a of [...walletAccounts, ...result.accounts]) accountMap.set(a.address, a)
+			const accounts = Array.from(accountMap.values()).map(a => this.toAccountInfo(a))
 				// Prefer a never-before-seen account when reconnecting; otherwise preserve selection
 				const previouslySelected = this.state.selectedAccount
 				const previousAddresses = new Set(this.state.accounts.map(a => a.address))
@@ -648,27 +664,17 @@ export class ConnectorClient {
 		// Force wallet discovery after disconnect to show available wallets
 		setTimeout(() => {
 			if (!this.state.connected) {
-				// Re-run wallet discovery
-				const walletsApi = getWalletsRegistry()
-				const ws = walletsApi.get()
-				if (ws.length > 0) {
-					const unique = Array.from(new Set(ws.map(w => w.name)))
-					  .map(n => ws.find(w => w.name === n))
-					  .filter((w): w is Wallet => w !== undefined)
-					this.state = {
-						...this.state,
-						wallets: unique.map(w => {
-							const features = (w.features as any) || {}
-							const hasConnect = Boolean(features['standard:connect'])
-							const hasDisconnect = Boolean(features['standard:disconnect'])
-							const chains = (w as any)?.chains as unknown as string[] | undefined
-							const isSolana = Array.isArray(chains) && chains.some(c => typeof c === 'string' && c.includes('solana'))
-							const connectable = hasConnect && hasDisconnect && Boolean(isSolana)
-							return { wallet: w, name: w.name, icon: w.icon, installed: true, connectable } satisfies WalletInfo
-						}),
-					}
-		this.notify()
+			// Re-run wallet discovery
+			const walletsApi = getWalletsRegistry()
+			const ws = walletsApi.get()
+			if (ws.length > 0) {
+				const unique = this.deduplicateWallets(ws)
+				this.state = {
+					...this.state,
+					wallets: unique.map(w => this.mapToWalletInfo(w)),
 				}
+				this.notify()
+			}
 			}
 		}, 100)
 	}
@@ -682,7 +688,7 @@ export class ConnectorClient {
 				const feature = (current.features as any)['standard:connect']
 				if (feature) {
 					const res = await feature.connect()
-					const accounts: AccountInfo[] = res.accounts.map((a: WalletAccount) => ({ address: a.address, icon: a.icon, raw: a }))
+					const accounts = res.accounts.map((a: any) => this.toAccountInfo(a))
 					target = accounts.find((acc: AccountInfo) => acc.address === address)?.raw ?? res.accounts[0]
 					this.state = { ...this.state, accounts }
 				}

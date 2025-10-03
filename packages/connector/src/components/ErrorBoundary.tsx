@@ -53,7 +53,11 @@ interface ErrorBoundaryProps {
 class ErrorLogger {
   static log(error: Error, errorInfo: ErrorInfo, context?: Record<string, unknown>) {
     if (process.env.NODE_ENV === 'development') {
-      // Log error in development only
+      console.error('[ConnectorErrorBoundary]', error.message, {
+        error,
+        errorInfo,
+        context
+      })
     }
 
     // In production, send to error reporting service
@@ -70,7 +74,7 @@ class ErrorLogger {
           })
         }
       } catch (reportingError) {
-        // Failed to report error
+        // Failed to report error to analytics (silent failure in production)
       }
     }
   }

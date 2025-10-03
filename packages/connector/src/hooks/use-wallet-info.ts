@@ -55,6 +55,17 @@ export interface UseWalletInfoReturn {
 export function useWalletInfo(): UseWalletInfoReturn {
   const { selectedWallet, wallets, connected, connecting } = useConnector()
   
+  // ✅ Map wallets once to avoid duplication
+  const mappedWallets = useMemo(
+    () => wallets.map(w => ({
+      name: w.name,
+      icon: w.icon,
+      installed: w.installed,
+      connectable: w.connectable,
+    })),
+    [wallets]
+  )
+  
   return useMemo(() => {
     if (!selectedWallet) {
       return {
@@ -64,12 +75,7 @@ export function useWalletInfo(): UseWalletInfoReturn {
         connectable: false,
         connected,
         connecting,
-        wallets: wallets.map(w => ({
-          name: w.name,
-          icon: w.icon,
-          installed: w.installed,
-          connectable: w.connectable,
-        })),
+        wallets: mappedWallets,
       }
     }
     
@@ -82,13 +88,8 @@ export function useWalletInfo(): UseWalletInfoReturn {
       connectable: info?.connectable ?? false,
       connected,
       connecting,
-      wallets: wallets.map(w => ({
-        name: w.name,
-        icon: w.icon,
-        installed: w.installed,
-        connectable: w.connectable,
-      })),
+      wallets: mappedWallets,
     }
-  }, [selectedWallet, wallets, connected, connecting])
+  }, [selectedWallet, connected, connecting, mappedWallets, wallets])
 }
 

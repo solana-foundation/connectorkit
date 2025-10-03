@@ -5,7 +5,7 @@
  * Eliminates config duplication and provides a single source of truth
  */
 
-import type { ExtendedConnectorConfig } from './default-config'
+import type { ExtendedConnectorConfig, DefaultConfigOptions } from './default-config'
 import type { MobileWalletAdapterConfig } from '../ui/connector-provider'
 import { getDefaultConfig, getDefaultMobileConfig } from './default-config'
 import {
@@ -18,31 +18,17 @@ import {
 
 /**
  * Options for creating a unified configuration
+ * Extends DefaultConfigOptions with network translation support
  */
-export interface UnifiedConfigOptions {
-  /** Application name shown in wallet connection prompts */
-  appName: string
-  /** Application URL for wallet connection metadata */
-  appUrl?: string
+export interface UnifiedConfigOptions extends Omit<DefaultConfigOptions, 'network'> {
   /**
    * Solana network to connect to
    * Accepts both conventions: 'mainnet' or 'mainnet-beta'
+   * More flexible than DefaultConfigOptions which only accepts RPC convention
    */
   network?: SolanaNetwork | SolanaNetworkRpc | string
-  /** Enable automatic wallet reconnection on page load */
-  autoConnect?: boolean
-  /** Enable debug logging */
-  debug?: boolean
-  /** Enable Mobile Wallet Adapter support */
-  enableMobile?: boolean
   /** Custom RPC URL (overrides default for network) */
   rpcUrl?: string
-  /** Enable error boundaries for automatic error handling */
-  enableErrorBoundary?: boolean
-  /** Maximum retry attempts for error recovery */
-  maxRetries?: number
-  /** Custom error handler */
-  onError?: (error: Error, errorInfo: any) => void
 }
 
 /**
@@ -101,44 +87,27 @@ export interface UnifiedConfig {
  */
 export function createConfig(options: UnifiedConfigOptions): UnifiedConfig {
   const {
-    appName,
-    appUrl,
     network = 'mainnet',
-    autoConnect = true,
-    debug,
-    enableMobile = true,
     rpcUrl: customRpcUrl,
-    enableErrorBoundary = true,
-    maxRetries = 3,
-    onError,
+    ...restOptions
   } = options
 
-  // Normalize network name
+  // Normalize network name and determine RPC URL
   const normalizedNetwork = normalizeNetwork(network)
   const rpcNetwork = toRpcNetwork(normalizedNetwork)
   const rpcUrl = customRpcUrl || getDefaultRpcUrl(normalizedNetwork)
 
-  // Determine app URL
-  const resolvedAppUrl = appUrl || (typeof window !== 'undefined' ? window.location.origin : 'https://localhost:3000')
-
-  // Create ConnectorKit config
+  // Create ConnectorKit config with all options
   const connectorConfig = getDefaultConfig({
-    appName,
-    appUrl: resolvedAppUrl,
+    ...restOptions,
     network: rpcNetwork, // Use RPC convention for internal consistency
-    autoConnect,
-    debug,
-    enableMobile,
-    enableErrorBoundary,
-    maxRetries,
-    onError,
   })
 
   // Create mobile config if enabled (mobile doesn't support localnet)
-  const mobile = enableMobile && normalizedNetwork !== 'localnet'
+  const mobile = options.enableMobile !== false && normalizedNetwork !== 'localnet'
     ? getDefaultMobileConfig({
-        appName,
-        appUrl: resolvedAppUrl,
+        appName: options.appName,
+        appUrl: connectorConfig.appUrl,
         network: rpcNetwork as 'mainnet-beta' | 'devnet' | 'testnet',
       })
     : undefined
@@ -150,8 +119,8 @@ export function createConfig(options: UnifiedConfigOptions): UnifiedConfig {
     rpcNetwork,
     rpcUrl,
     app: {
-      name: appName,
-      url: resolvedAppUrl,
+      name: options.appName,
+      url: connectorConfig.appUrl || 'https://localhost:3000',
     },
   }
 }
