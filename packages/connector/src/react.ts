@@ -10,7 +10,7 @@ export { ConnectorProvider, useConnector, useConnectorClient } from './ui/connec
 export { UnifiedProvider, AppProvider } from './ui/unified-provider'
 
 // React-specific error boundaries
-export { ConnectorErrorBoundary, withErrorBoundary } from './components/ErrorBoundary'
+export { ConnectorErrorBoundary, withErrorBoundary } from './ui/error-boundary'
 
 // Enhanced React hooks
 export { useCluster } from './hooks/use-cluster'

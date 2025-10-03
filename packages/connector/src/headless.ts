@@ -5,8 +5,6 @@
  * Zero React dependencies for maximum compatibility
  */
 
-import { WalletErrorType, type WalletError } from './components/ErrorBoundary'
-import type { MobileWalletAdapterConfig } from './ui/connector-provider'
 
 // ============================================================================
 // Core Client & Registry
@@ -61,8 +59,8 @@ export type {
 // ============================================================================
 // Error Handling
 // ============================================================================
-export { WalletErrorType } from './components/ErrorBoundary'
-export type { WalletError } from './components/ErrorBoundary'
+export { WalletErrorType } from './ui/error-boundary'
+export type { WalletError } from './ui/error-boundary'
 
 // ============================================================================
 // Wallet-UI Integration

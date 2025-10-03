@@ -4,7 +4,7 @@ import React, { createContext, useContext, useMemo, useRef, useSyncExternalStore
 import type { ReactNode } from 'react'
 import { ConnectorClient, type ConnectorConfig } from '../lib/connector-client'
 import type { ExtendedConnectorConfig } from '../config/default-config'
-import { ConnectorErrorBoundary } from '../components/ErrorBoundary'
+import { ConnectorErrorBoundary } from './error-boundary'
 
 // Global connector client declaration for auto-detection
 declare global {
