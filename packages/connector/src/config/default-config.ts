@@ -12,6 +12,7 @@ import {
   createEnhancedStorageWallet,
   EnhancedStorageAdapter 
 } from '../lib/enhanced-storage'
+import { toClusterId } from '../utils/network'
 import type React from 'react'
 
 export interface DefaultConfigOptions {
@@ -23,8 +24,8 @@ export interface DefaultConfigOptions {
   autoConnect?: boolean
   /** Enable debug logging */
   debug?: boolean
-  /** Solana network to connect to */
-  network?: 'mainnet-beta' | 'devnet' | 'testnet' | 'localnet'
+  /** Solana network to connect to (accepts both 'mainnet' and 'mainnet-beta' conventions) */
+  network?: 'mainnet' | 'mainnet-beta' | 'devnet' | 'testnet' | 'localnet'
   /** Enable Mobile Wallet Adapter support */
   enableMobile?: boolean
   /** Custom storage implementation */
@@ -53,8 +54,8 @@ export interface ExtendedConnectorConfig extends ConnectorConfig {
   appUrl?: string
   /** Whether mobile wallet adapter is enabled */
   enableMobile?: boolean
-  /** Selected network for convenience */
-  network?: 'mainnet-beta' | 'devnet' | 'testnet' | 'localnet'
+  /** Selected network for convenience (accepts both 'mainnet' and 'mainnet-beta' conventions) */
+  network?: 'mainnet' | 'mainnet-beta' | 'devnet' | 'testnet' | 'localnet'
   /** Error boundary configuration */
   errorBoundary?: {
     /** Enable error boundaries (default: true) */
@@ -180,15 +181,10 @@ export function getDefaultConfig(options: DefaultConfigOptions): ExtendedConnect
 
 /**
  * Helper to convert network string to cluster ID
+ * Uses network utility for consistent translation
  */
-function getInitialCluster(network: 'mainnet-beta' | 'devnet' | 'testnet' | 'localnet' = 'mainnet-beta'): SolanaClusterId {
-  switch (network) {
-    case 'mainnet-beta': return 'solana:mainnet'
-    case 'devnet': return 'solana:devnet'
-    case 'testnet': return 'solana:testnet'
-    case 'localnet': return 'solana:localnet'
-    default: return 'solana:mainnet'
-  }
+function getInitialCluster(network: 'mainnet' | 'mainnet-beta' | 'devnet' | 'testnet' | 'localnet' = 'mainnet-beta'): SolanaClusterId {
+  return toClusterId(network)
 }
 
 /**
@@ -197,7 +193,7 @@ function getInitialCluster(network: 'mainnet-beta' | 'devnet' | 'testnet' | 'loc
 export function getDefaultMobileConfig(options: {
   appName: string
   appUrl?: string
-  network?: 'mainnet-beta' | 'devnet' | 'testnet'
+  network?: 'mainnet' | 'mainnet-beta' | 'devnet' | 'testnet'
 }) {
   const baseUrl = options.appUrl || (typeof window !== 'undefined' ? window.location.origin : 'https://localhost:3000')
   

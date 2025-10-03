@@ -5,6 +5,7 @@
  */
 
 import type { SolanaCluster } from '@wallet-ui/core'
+import { RPC_ENDPOINTS } from './network'
 
 /**
  * Get the RPC endpoint URL for a cluster
@@ -23,13 +24,10 @@ export function getClusterRpcUrl(cluster: SolanaCluster): string {
     return url
   }
   
-  // Handle special cluster names
+  // Use shared RPC endpoints with mainnet-beta alias
   const presets: Record<string, string> = {
-    'mainnet': 'https://api.mainnet-beta.solana.com',
-    'mainnet-beta': 'https://api.mainnet-beta.solana.com',
-    'devnet': 'https://api.devnet.solana.com',
-    'testnet': 'https://api.testnet.solana.com',
-    'localnet': 'http://localhost:8899',
+    ...RPC_ENDPOINTS,
+    'mainnet-beta': RPC_ENDPOINTS.mainnet,
   }
   
   // Check presets mapping first

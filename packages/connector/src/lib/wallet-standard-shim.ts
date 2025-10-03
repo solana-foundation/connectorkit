@@ -1,67 +1,108 @@
 /**
- * @connector-kit/connector - wallet-standard shim
+ * @connector-kit/connector - wallet-standard integration
  * 
- * Minimal wallet-standard types and utilities that can work with or without wallet-ui/react.
- * This provides a clean abstraction layer that allows us to optionally use wallet-ui types
- * while maintaining compatibility with direct wallet-standard usage.
+ * Simplified wallet standard types and registry access
  */
 
-export interface WalletStandardWallet {
+export interface Wallet {
   name: string
   icon?: string
   chains: readonly string[]
   features: Record<string, unknown>
-  accounts: readonly WalletStandardAccount[]
+  accounts: readonly WalletAccount[]
 }
 
-export interface WalletStandardAccount {
+export interface WalletAccount {
   address: string
   publicKey: Uint8Array
   chains: readonly string[]
-  features: string[]
+  features: readonly string[]
   label?: string
   icon?: string
 }
-
-export interface WalletStandardEvents {
-  register(wallet: WalletStandardWallet): void
-  unregister(wallet: WalletStandardWallet): void
-}
-
-// Re-export as base types
-export type Wallet = WalletStandardWallet
-export type WalletAccount = WalletStandardAccount
 
 export interface WalletsRegistry {
   get(): readonly Wallet[]
   on(event: 'register' | 'unregister', callback: (wallet: Wallet) => void): () => void
 }
 
+// Legacy aliases for backward compatibility
+export type WalletStandardWallet = Wallet
+export type WalletStandardAccount = WalletAccount
+
+// Simple registry reference
+let registry: any = null
+
+function normalizeWallet(wallet: any): Wallet {
+  return {
+    name: wallet?.name ?? 'Unknown Wallet',
+    icon: wallet?.icon,
+    chains: wallet?.chains ?? [],
+    features: wallet?.features ?? {},
+    accounts: wallet?.accounts ?? [],
+  }
+}
+
+
 /**
- * Get the wallets registry
- * Attempts to use wallet-ui/react if available, falls back to wallet-standard/app
+ * Get the wallets registry - simplified approach
  */
 export function getWalletsRegistry(): WalletsRegistry {
   if (typeof window === 'undefined') {
-    // SSR - return empty registry
     return {
       get: () => [],
       on: () => () => {}
     }
   }
 
-  // Always use wallet-standard/app for now
-  // wallet-ui/react is an optional peer dependency for React-specific features
-  try {
-    // Dynamic import to handle both CJS and ESM
-    const { getWallets } = require('@wallet-standard/app')
-    return getWallets()
-  } catch (error) {
-    // Fallback to empty registry if wallet-standard is not available
-    console.warn('Failed to load wallet-standard:', error)
-    return {
-      get: () => [],
-      on: () => () => {}
+  // Initialize wallet standard if not available
+  if (!registry) {
+    const nav = window.navigator as any
+    
+    // Try direct registry first
+    if (nav.wallets && typeof nav.wallets.get === 'function') {
+      registry = nav.wallets
+    } else {
+      // Initialize wallet standard
+      import('@wallet-standard/app')
+        .then(mod => {
+          const walletStandardRegistry = mod.getWallets?.()
+          if (walletStandardRegistry) {
+            registry = walletStandardRegistry
+          }
+        })
+        .catch(() => {
+          // Wallet standard unavailable - not critical since we have instant auto-connect
+        })
+    }
+  }
+
+  // Return simplified registry interface
+  return {
+    get: () => {
+      try {
+        const nav = window.navigator as any
+        const activeRegistry = nav.wallets || registry
+        if (activeRegistry && typeof activeRegistry.get === 'function') {
+          const wallets = activeRegistry.get()
+          return Array.isArray(wallets) ? wallets.map(normalizeWallet) : []
+        }
+        return []
+      } catch {
+        return []
+      }
+    },
+    on: (event, callback) => {
+      try {
+        const nav = window.navigator as any
+        const activeRegistry = nav.wallets || registry
+        if (activeRegistry && typeof activeRegistry.on === 'function') {
+          return activeRegistry.on(event, (wallet: any) => callback(normalizeWallet(wallet)))
+        }
+        return () => {}
+      } catch {
+        return () => {}
+      }
     }
   }
 }

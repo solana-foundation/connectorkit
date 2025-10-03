@@ -59,19 +59,20 @@ export class EnhancedStorage<T> extends WalletUiStorage<T> {
         return false
       }
 
-      // Call parent (wallet-ui's Storage.set)
+      // Call parent (wallet-ui's Storage.set) - it returns void
       super.set(value)
       
-      // Update memory fallback
+      // Update memory fallback on success
       this.memoryFallback = value
       return true
       
     } catch (error) {
       this.handleError(error as Error)
       
-      // Fallback to memory storage
+      // Fallback to memory storage on error
       if (this.options?.useMemoryFallback) {
         this.memoryFallback = value
+        return true // Successfully stored in memory fallback
       }
       
       return false
@@ -324,7 +325,7 @@ export function createEnhancedStorageWallet(
 }
 
 // ============================================================================
-// Storage Adapter Interface (for compatibility)
+// Storage Adapter Interface
 // ============================================================================
 
 export interface StorageAdapter<T> {
@@ -335,7 +336,7 @@ export interface StorageAdapter<T> {
 
 /**
  * Adapter to make EnhancedStorage compatible with StorageAdapter interface
- * Exposes both the basic interface and enhanced methods
+ * Exposes both the basic interface and enhanced methods for advanced usage
  */
 export class EnhancedStorageAdapter<T> implements StorageAdapter<T> {
   constructor(private storage: EnhancedStorage<T>) {}
@@ -345,11 +346,12 @@ export class EnhancedStorageAdapter<T> implements StorageAdapter<T> {
   }
 
   set(value: T): void {
+    // Enhanced storage returns boolean, but StorageAdapter interface expects void
     this.storage.set(value)
   }
 
   subscribe(callback: (value: T) => void): () => void {
-    // Use nanostores subscription from parent class
+    // Use nanostores subscription from the inherited Storage's value computed store
     return this.storage.value.subscribe(callback)
   }
 

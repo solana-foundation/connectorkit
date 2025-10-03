@@ -6,9 +6,9 @@
 
 'use client'
 
-import { useMemo, useSyncExternalStore } from 'react'
+import { useMemo } from 'react'
 import type { SolanaCluster, SolanaClusterId } from '@wallet-ui/core'
-import { useConnectorClient } from '../ui/connector-provider'
+import { useConnector, useConnectorClient } from '../ui/connector-provider'
 import { 
   getClusterRpcUrl, 
   getClusterExplorerUrl,
@@ -64,32 +64,16 @@ export interface UseClusterReturn {
  * ```
  */
 export function useCluster(): UseClusterReturn {
+  // ✅ Use useConnector (already subscribes via useSyncExternalStore)
+  // No need to re-subscribe - consistent with useAccount and useWalletInfo
+  const { cluster, clusters } = useConnector()
   const client = useConnectorClient()
   
   if (!client) {
     throw new Error('useCluster must be used within ConnectorProvider')
   }
 
-  // Subscribe to cluster changes via the client's state
-  const state = useSyncExternalStore(
-    (callback) => client.subscribe(callback),
-    () => client.getSnapshot(),
-    () => client.getSnapshot()
-  )
-
-  const cluster = state.cluster
-  const clusters = state.clusters
-
-  // Compute derived values
-  const isMainnet = cluster ? isMainnetCluster(cluster) : false
-  const isDevnet = cluster ? isDevnetCluster(cluster) : false
-  const isTestnet = cluster ? isTestnetCluster(cluster) : false
-  const isLocal = cluster ? isLocalCluster(cluster) : false
-  const rpcUrl = cluster ? getClusterRpcUrl(cluster) : ''
-  const explorerUrl = cluster ? getClusterExplorerUrl(cluster) : ''
-  const type = cluster ? getClusterType(cluster) : null
-
-  // Memoize the setCluster function
+  // Memoize the setCluster function only
   const setCluster = useMemo(
     () => async (id: SolanaClusterId) => {
       await client.setCluster(id)
@@ -97,17 +81,29 @@ export function useCluster(): UseClusterReturn {
     [client]
   )
 
-  return useMemo(() => ({
-    cluster,
-    clusters,
-    setCluster,
-    isMainnet,
-    isDevnet,
-    isTestnet,
-    isLocal,
-    rpcUrl,
-    explorerUrl,
-    type,
-  }), [cluster, clusters, setCluster, isMainnet, isDevnet, isTestnet, isLocal, rpcUrl, explorerUrl, type])
+  // Optimized: Compute derived values only when cluster changes
+  // No need for excessive useMemo on every boolean
+  return useMemo(() => {
+    const isMainnet = cluster ? isMainnetCluster(cluster) : false
+    const isDevnet = cluster ? isDevnetCluster(cluster) : false
+    const isTestnet = cluster ? isTestnetCluster(cluster) : false
+    const isLocal = cluster ? isLocalCluster(cluster) : false
+    const rpcUrl = cluster ? getClusterRpcUrl(cluster) : ''
+    const explorerUrl = cluster ? getClusterExplorerUrl(cluster) : ''
+    const type = cluster ? getClusterType(cluster) : null
+    
+    return {
+      cluster,
+      clusters,
+      setCluster,
+      isMainnet,
+      isDevnet,
+      isTestnet,
+      isLocal,
+      rpcUrl,
+      explorerUrl,
+      type,
+    }
+  }, [cluster, clusters, setCluster])
 }
 

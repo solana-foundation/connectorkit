@@ -55,21 +55,27 @@ export interface UseWalletInfoReturn {
 export function useWalletInfo(): UseWalletInfoReturn {
   const { selectedWallet, wallets, connected, connecting } = useConnector()
   
-  return useMemo(() => {
+  // Optimized: Only recreate when wallets array actually changes
+  // Map wallets once to avoid duplication and provide stable reference
+  const mappedWallets = useMemo(
+    () => wallets.map(w => ({
+      name: w.name,
+      icon: w.icon,
+      installed: w.installed,
+      connectable: w.connectable,
+    })),
+    [wallets]
+  )
+  
+  // Optimized: Compute wallet info only when selectedWallet changes
+  // Avoid recomputing on every connecting/connected state change
+  const walletInfo = useMemo(() => {
     if (!selectedWallet) {
       return {
         name: null,
         icon: null,
         installed: false,
         connectable: false,
-        connected,
-        connecting,
-        wallets: wallets.map(w => ({
-          name: w.name,
-          icon: w.icon,
-          installed: w.installed,
-          connectable: w.connectable,
-        })),
       }
     }
     
@@ -80,15 +86,15 @@ export function useWalletInfo(): UseWalletInfoReturn {
       icon: selectedWallet.icon ?? null,
       installed: info?.installed ?? false,
       connectable: info?.connectable ?? false,
-      connected,
-      connecting,
-      wallets: wallets.map(w => ({
-        name: w.name,
-        icon: w.icon,
-        installed: w.installed,
-        connectable: w.connectable,
-      })),
     }
-  }, [selectedWallet, wallets, connected, connecting])
+  }, [selectedWallet, wallets])
+  
+  // Return stable object with minimal dependencies
+  return useMemo(() => ({
+    ...walletInfo,
+    connected,
+    connecting,
+    wallets: mappedWallets,
+  }), [walletInfo, connected, connecting, mappedWallets])
 }
 

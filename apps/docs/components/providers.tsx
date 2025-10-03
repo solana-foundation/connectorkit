@@ -1,14 +1,12 @@
 'use client'
 
-import { QueryClient } from '@tanstack/react-query'
-import { useMemo, useState } from 'react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { useMemo, useState} from 'react'
 import { createProvider, ArmaProvider } from '@armadura/sdk'
 import { createJupiter } from '@armadura/jupiter'
 import { 
   AppProvider, 
-  getDefaultConfig, 
-  getDefaultMobileConfig,
-  useConnectorClient
+  createConfig,
 } from '@connector-kit/connector'
 
 export function Providers({ children }: { children: React.ReactNode }) {
@@ -16,15 +14,19 @@ export function Providers({ children }: { children: React.ReactNode }) {
     defaultOptions: { queries: { staleTime: 5 * 60 * 1000, retry: 3 } }
   }))
 
-  const arcConfig = useMemo(() => ({
-    network: (process.env.NEXT_PUBLIC_SOLANA_NETWORK as 'mainnet' | 'devnet' | 'testnet' | undefined) || 'mainnet',
-    rpcUrl:
-      (process.env.NEXT_PUBLIC_SOLANA_RPC_URL && process.env.NEXT_PUBLIC_SOLANA_RPC_URL.trim()) ||
-      ((process.env.NEXT_PUBLIC_SOLANA_NETWORK === 'devnet')
-        ? 'https://api.devnet.solana.com'
-        : (process.env.NEXT_PUBLIC_SOLANA_NETWORK === 'testnet')
-          ? 'https://api.testnet.solana.com'
-          : 'https://api.mainnet-beta.solana.com'),
+  const config = useMemo(() => createConfig({
+    appName: 'Arc Docs',
+    appUrl: 'https://docs.arc.so',
+    network: (process.env.NEXT_PUBLIC_SOLANA_NETWORK as any) || 'mainnet',
+    rpcUrl: process.env.NEXT_PUBLIC_SOLANA_RPC_URL,
+    enableMobile: true,
+    autoConnect: true,
+    debug: process.env.NODE_ENV === 'development',
+  }), [])
+
+  const armaConfig = useMemo(() => ({
+    network: config.network as 'mainnet' | 'devnet' | 'testnet',
+    rpcUrl: config.rpcUrl,
     autoConnect: true,
     providers: [
       createProvider({
@@ -41,41 +43,30 @@ export function Providers({ children }: { children: React.ReactNode }) {
             dynamicSlippage: true,
             timeoutMs: 15_000,
             retries: 2,
-            debug: process.env.NODE_ENV === 'development',
+            debug: config.connectorConfig.debug,
             corsProxy: true,
           }),
         ],
       }),
     ],
-  }), [])
-
-  const connectorConfig = useMemo(() => getDefaultConfig({
-    appName: 'Arc Docs',
-    appUrl: 'https://docs.arc.so',
-    network: (process.env.NEXT_PUBLIC_SOLANA_NETWORK as any) || 'mainnet-beta',
-    enableMobile: true,
-  }), [])
-
-  const mobile = useMemo(() => getDefaultMobileConfig({
-    appName: 'Arc Docs',
-    appUrl: 'https://docs.arc.so',
-    network: (process.env.NEXT_PUBLIC_SOLANA_NETWORK as any) || 'mainnet-beta',
-  }), [])
+  }), [config])
 
   return (
-    <AppProvider connectorConfig={connectorConfig} mobile={mobile}>
-      <ArmaProvider 
-        config={arcConfig} 
+    <QueryClientProvider client={queryClient}>
+      <AppProvider config={config}>
+        <ArmaProvider 
+        config={armaConfig} 
         queryClient={queryClient}
-        useConnector={useConnectorClient}
+        useConnector="auto"
         enhancedCluster={{
-          network: arcConfig.network,
+          network: config.network as 'mainnet' | 'devnet' | 'testnet',
           allowSwitching: true,
           persistSelection: true
         }}
       >
-        {children as any}
-      </ArmaProvider>
-    </AppProvider>
+          {children}
+        </ArmaProvider>
+      </AppProvider>
+    </QueryClientProvider>
   )
 }

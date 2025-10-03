@@ -53,7 +53,7 @@
     "@nanostores/persistent": "^1.1.0"
   },
   "devDependencies": {
-    "@types/react": "^18.0.0",
+    "@types/react": "^19.0.0",
     "size-limit": "^11.0.0",
     "@size-limit/preset-big-lib": "^11.0.0",
     "tsup": "^8.0.0",

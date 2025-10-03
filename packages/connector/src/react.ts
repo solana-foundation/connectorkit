@@ -7,10 +7,10 @@
 
 // React-specific components and providers (not in headless)
 export { ConnectorProvider, useConnector, useConnectorClient } from './ui/connector-provider'
-export { UnifiedProvider, AppProvider, WalletProvider } from './ui/unified-provider'
+export { UnifiedProvider, AppProvider } from './ui/unified-provider'
 
 // React-specific error boundaries
-export { ConnectorErrorBoundary, withErrorBoundary } from './components/ErrorBoundary'
+export { ConnectorErrorBoundary, withErrorBoundary } from './ui/error-boundary'
 
 // Enhanced React hooks
 export { useCluster } from './hooks/use-cluster'
@@ -29,6 +29,26 @@ export type {
 
 export type { UnifiedProviderProps } from './ui/unified-provider'
 
-// Re-export headless core for convenience
-// This includes: ConnectorClient, config, utilities, types, etc.
-export * from './headless'
+// Core types needed for React integration (no implementation re-exports)
+export type { 
+  ConnectorConfig,
+  ConnectorState,
+  WalletInfo,
+  AccountInfo
+} from './lib/connector-client'
+
+export type {
+  Wallet,
+  WalletAccount,
+  WalletStandardWallet,
+  WalletStandardAccount
+} from './lib/wallet-standard-shim'
+
+// Essential configuration types
+export type { DefaultConfigOptions, ExtendedConnectorConfig, UnifiedConfigOptions, UnifiedConfig } from './config'
+
+// Re-export wallet-ui types for React components
+export type {
+  SolanaCluster,
+  SolanaClusterId,
+} from '@wallet-ui/core'

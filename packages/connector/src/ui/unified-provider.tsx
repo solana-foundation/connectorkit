@@ -4,11 +4,18 @@ import type { ReactNode, ComponentType } from 'react'
 import { ConnectorProvider } from './connector-provider'
 import type { MobileWalletAdapterConfig } from './connector-provider'
 import type { ConnectorConfig } from '../lib/connector-client'
+import type { UnifiedConfig } from '../config/unified-config'
 
 export interface UnifiedProviderProps {
   children: ReactNode
+  
+  // NEW: Option 1 - Pass UnifiedConfig directly (recommended)
+  config?: UnifiedConfig
+  
+  // OLD: Option 2 - Pass configs separately (backward compatible)
   connectorConfig?: ConnectorConfig
   mobile?: MobileWalletAdapterConfig
+  
   // Optional additional providers to wrap around children
   providers?: Array<{
     component: ComponentType<any>
@@ -18,13 +25,18 @@ export interface UnifiedProviderProps {
 
 export function UnifiedProvider({
   children,
+  config,
   connectorConfig,
   mobile,
   providers = [],
 }: UnifiedProviderProps) {
+  // Handle both new and old patterns
+  const actualConnectorConfig = config?.connectorConfig ?? connectorConfig
+  const actualMobile = config?.mobile ?? mobile
+  
   // Start with connector provider as the base
   let content = (
-    <ConnectorProvider config={connectorConfig} mobile={mobile}>
+    <ConnectorProvider config={actualConnectorConfig} mobile={actualMobile}>
       {children}
     </ConnectorProvider>
   )
@@ -39,6 +51,5 @@ export function UnifiedProvider({
   return content
 }
 
-// Export with practical names
+// Export with practical alias
 export { UnifiedProvider as AppProvider }
-export { UnifiedProvider as WalletProvider }
