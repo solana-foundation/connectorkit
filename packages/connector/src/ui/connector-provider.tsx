@@ -37,25 +37,34 @@ export interface MobileWalletAdapterConfig {
 
 // Internal provider without error boundary
 function ConnectorProviderInternal({ children, config, mobile }: { children: ReactNode; config?: ConnectorConfig; mobile?: MobileWalletAdapterConfig }) {
-	const ref = useRef<ConnectorClient | null>(null)
+	const clientRef = useRef<ConnectorClient | null>(null)
 	
-	// Create client immediately (works in both SSR and client)
-	if (!ref.current) {
-		ref.current = new ConnectorClient(config)
-		
-		// ✅ Set window.__connectorClient IMMEDIATELY for auto-detection
-		// This ensures Armadura's auto-detection can find it synchronously
-		if (typeof window !== 'undefined') {
-			window.__connectorClient = ref.current
+	// Lazy initialization - only create client once on first render
+	// This prevents double-initialization in React 19 strict mode
+	const getClient = React.useCallback(() => {
+		if (!clientRef.current) {
+			clientRef.current = new ConnectorClient(config)
+			
+			// ✅ Set window.__connectorClient IMMEDIATELY for auto-detection
+			// This ensures Armadura's auto-detection can find it synchronously
+			if (typeof window !== 'undefined') {
+				window.__connectorClient = clientRef.current
+			}
 		}
-	}
+		return clientRef.current
+	}, [config])
+	
+	// Get client reference (memoized)
+	const client = getClient()
 	
 	// On client mount, ensure wallet detection runs (run only once)
 	React.useEffect(() => {
-		if (ref.current) {
+		const currentClient = clientRef.current
+		
+		if (currentClient) {
 			// Force re-initialization if client was created during SSR
 			// This ensures wallets are detected even if client was created before window existed
-			const privateClient = ref.current as any
+			const privateClient = currentClient as any
 			if (privateClient.initialize && typeof privateClient.initialize === 'function') {
 				privateClient.initialize()
 			}
@@ -66,9 +75,8 @@ function ConnectorProviderInternal({ children, config, mobile }: { children: Rea
 			if (typeof window !== 'undefined') {
 				window.__connectorClient = undefined
 			}
-			if (ref.current && typeof ref.current.destroy === 'function') {
-				ref.current.destroy()
-				ref.current = null
+			if (currentClient && typeof currentClient.destroy === 'function') {
+				currentClient.destroy()
 			}
 		}
 	}, []) // Empty dependency array - run only once
@@ -105,7 +113,7 @@ function ConnectorProviderInternal({ children, config, mobile }: { children: Rea
 		}
 	}, [mobile])
 
-	return <ConnectorContext.Provider value={ref.current}>{children}</ConnectorContext.Provider>
+	return <ConnectorContext.Provider value={client}>{children}</ConnectorContext.Provider>
 }
 
 // Enhanced provider with optional error boundary
@@ -139,15 +147,23 @@ export function ConnectorProvider({ children, config, mobile }: { children: Reac
 export function useConnector(): ConnectorSnapshot {
 	const client = useContext(ConnectorContext)
 	if (!client) throw new Error('useConnector must be used within ConnectorProvider')
-	const state = useSyncExternalStore(cb => client.subscribe(cb), () => client.getSnapshot(), () => client.getSnapshot())
+	
+	// Subscribe to state changes
+	const state = useSyncExternalStore(
+		React.useCallback((cb) => client.subscribe(cb), [client]),
+		React.useCallback(() => client.getSnapshot(), [client]),
+		React.useCallback(() => client.getSnapshot(), [client])
+	)
 	
 	// Stable method references that don't change when state changes
+	// These are bound once and reused across renders
 	const methods = useMemo(() => ({
 		select: client.select.bind(client), 
 		disconnect: client.disconnect.bind(client), 
 		selectAccount: client.selectAccount.bind(client),
 	}), [client])
 
+	// Optimized: Only create new object when state actually changes
 	return useMemo(() => ({ 
 		...state,
 		...methods

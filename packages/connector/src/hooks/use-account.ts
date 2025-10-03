@@ -6,9 +6,10 @@
 
 'use client'
 
-import { useState, useCallback, useMemo } from 'react'
+import React, { useState, useCallback, useMemo } from 'react'
 import { useConnector } from '../ui/connector-provider'
-import { copyAddressToClipboard, formatAddress } from '../utils'
+import { copyAddressToClipboard } from '../utils'
+import { formatAddressSimple } from '../utils/formatting-light'
 import type { AccountInfo } from '../lib/connector-client'
 
 export interface UseAccountReturn {
@@ -52,6 +53,7 @@ export interface UseAccountReturn {
 export function useAccount(): UseAccountReturn {
   const { selectedAccount, accounts, connected, selectAccount } = useConnector()
   const [copied, setCopied] = useState(false)
+  const copyTimeoutRef = React.useRef<NodeJS.Timeout | undefined>(undefined)
   
   // Find the full account object for the selected address
   const account = useMemo(
@@ -59,9 +61,9 @@ export function useAccount(): UseAccountReturn {
     [accounts, selectedAccount]
   )
   
-  // Format the address for display
+  // Format the address for display (using lightweight formatter)
   const formatted = useMemo(
-    () => selectedAccount ? formatAddress(selectedAccount) : '',
+    () => selectedAccount ? formatAddressSimple(selectedAccount) : '',
     [selectedAccount]
   )
   
@@ -69,15 +71,31 @@ export function useAccount(): UseAccountReturn {
   const copy = useCallback(async () => {
     if (!selectedAccount) return false
     
+    // Clear any existing timeout
+    if (copyTimeoutRef.current) {
+      clearTimeout(copyTimeoutRef.current)
+    }
+    
     const success = await copyAddressToClipboard(selectedAccount)
     if (success) {
       setCopied(true)
       // Reset copied state after 2 seconds
-      setTimeout(() => setCopied(false), 2000)
+      copyTimeoutRef.current = setTimeout(() => setCopied(false), 2000)
     }
     return success
   }, [selectedAccount])
   
+  // Cleanup timeout on unmount
+  React.useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current) {
+        clearTimeout(copyTimeoutRef.current)
+      }
+    }
+  }, [])
+  
+  // Optimized: Return stable object reference, only recreate when primitives change
+  // Don't include functions in dependency array as they're already memoized
   return useMemo(() => ({
     address: selectedAccount,
     account,

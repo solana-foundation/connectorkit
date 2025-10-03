@@ -73,16 +73,7 @@ export function useCluster(): UseClusterReturn {
     throw new Error('useCluster must be used within ConnectorProvider')
   }
 
-  // Compute derived values
-  const isMainnet = cluster ? isMainnetCluster(cluster) : false
-  const isDevnet = cluster ? isDevnetCluster(cluster) : false
-  const isTestnet = cluster ? isTestnetCluster(cluster) : false
-  const isLocal = cluster ? isLocalCluster(cluster) : false
-  const rpcUrl = cluster ? getClusterRpcUrl(cluster) : ''
-  const explorerUrl = cluster ? getClusterExplorerUrl(cluster) : ''
-  const type = cluster ? getClusterType(cluster) : null
-
-  // Memoize the setCluster function
+  // Memoize the setCluster function only
   const setCluster = useMemo(
     () => async (id: SolanaClusterId) => {
       await client.setCluster(id)
@@ -90,17 +81,29 @@ export function useCluster(): UseClusterReturn {
     [client]
   )
 
-  return useMemo(() => ({
-    cluster,
-    clusters,
-    setCluster,
-    isMainnet,
-    isDevnet,
-    isTestnet,
-    isLocal,
-    rpcUrl,
-    explorerUrl,
-    type,
-  }), [cluster, clusters, setCluster, isMainnet, isDevnet, isTestnet, isLocal, rpcUrl, explorerUrl, type])
+  // Optimized: Compute derived values only when cluster changes
+  // No need for excessive useMemo on every boolean
+  return useMemo(() => {
+    const isMainnet = cluster ? isMainnetCluster(cluster) : false
+    const isDevnet = cluster ? isDevnetCluster(cluster) : false
+    const isTestnet = cluster ? isTestnetCluster(cluster) : false
+    const isLocal = cluster ? isLocalCluster(cluster) : false
+    const rpcUrl = cluster ? getClusterRpcUrl(cluster) : ''
+    const explorerUrl = cluster ? getClusterExplorerUrl(cluster) : ''
+    const type = cluster ? getClusterType(cluster) : null
+    
+    return {
+      cluster,
+      clusters,
+      setCluster,
+      isMainnet,
+      isDevnet,
+      isTestnet,
+      isLocal,
+      rpcUrl,
+      explorerUrl,
+      type,
+    }
+  }, [cluster, clusters, setCluster])
 }
 
