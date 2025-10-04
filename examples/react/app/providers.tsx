@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo } from 'react'
-import { AppProvider } from '@connector-kit/connector/react'
+import { AppProvider, ConnectorDebugPanel } from '@connector-kit/connector/react'
 import { getDefaultConfig, getDefaultMobileConfig } from '@connector-kit/connector/headless'
 import type { ReactNode } from "react"
 
@@ -21,6 +21,8 @@ export function Providers({ children }: { children: ReactNode }) {
   return (
     <AppProvider connectorConfig={connectorConfig} mobile={mobile}>
       {children}
+      {/* Debug panel - only visible in development */}
+      {process.env.NODE_ENV === 'development' && <ConnectorDebugPanel />}
     </AppProvider>
   )
 }

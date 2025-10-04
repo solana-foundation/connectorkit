@@ -25,7 +25,10 @@ export type {
   ConnectorConfig,
   ConnectorState,
   WalletInfo,
-  AccountInfo
+  AccountInfo,
+  ConnectorHealth,
+  ConnectorEvent,
+  ConnectorEventListener
 } from './lib/connector-client'
 
 export type {
@@ -36,6 +39,37 @@ export type {
 } from './lib/wallet-standard-shim'
 
 export type { MobileWalletAdapterConfig } from './ui/connector-provider'
+
+// ============================================================================
+// Transaction Signing
+// ============================================================================
+export {
+  createTransactionSigner,
+  TransactionSignerError,
+  isTransactionSignerError
+} from './lib/transaction-signer'
+
+export type {
+  TransactionSigner,
+  TransactionSignerConfig,
+  TransactionSignerCapabilities,
+  SignedTransaction
+} from './lib/transaction-signer'
+
+// ============================================================================
+// RPC Connection Pooling
+// ============================================================================
+export {
+  ConnectionPool,
+  getConnectionPool,
+  createConnectionPool
+} from './lib/connection-pool'
+
+export type {
+  ConnectionLike,
+  ConnectionPoolOptions,
+  ConnectionPoolStats
+} from './lib/connection-pool'
 
 // ============================================================================
 // Storage System
@@ -76,6 +110,16 @@ export {
   createSolanaTestnet,
   createSolanaLocalnet,
 } from '@wallet-ui/core'
+
+// ============================================================================
+// Browser Compatibility
+// ============================================================================
+export { 
+  installPolyfills, 
+  isPolyfillInstalled, 
+  isCryptoAvailable, 
+  getPolyfillStatus 
+} from './lib/polyfills'
 
 // ============================================================================
 // Utility Functions

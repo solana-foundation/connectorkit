@@ -17,6 +17,52 @@ export interface AccountInfo {
 	raw: WalletAccount
 }
 
+/**
+ * Health check information for connector diagnostics
+ * Useful for debugging, monitoring, and support
+ */
+export interface ConnectorHealth {
+	/** Whether the connector has been initialized */
+	initialized: boolean
+	/** Whether Wallet Standard registry is available */
+	walletStandardAvailable: boolean
+	/** Whether localStorage/storage is available */
+	storageAvailable: boolean
+	/** Number of wallets currently detected */
+	walletsDetected: number
+	/** List of errors encountered during initialization or operation */
+	errors: string[]
+	/** Current connection state */
+	connectionState: {
+		connected: boolean
+		connecting: boolean
+		hasSelectedWallet: boolean
+		hasSelectedAccount: boolean
+	}
+	/** Timestamp of health check */
+	timestamp: string
+}
+
+/**
+ * Event types emitted by the connector
+ * Use these for analytics, logging, and custom behavior
+ */
+export type ConnectorEvent =
+	| { type: 'wallet:connected'; wallet: string; account: string; timestamp: string }
+	| { type: 'wallet:disconnected'; timestamp: string }
+	| { type: 'wallet:changed'; wallet: string; timestamp: string }
+	| { type: 'account:changed'; account: string; timestamp: string }
+	| { type: 'cluster:changed'; cluster: string; previousCluster: string | null; timestamp: string }
+	| { type: 'wallets:detected'; count: number; timestamp: string }
+	| { type: 'error'; error: Error; context: string; timestamp: string }
+	| { type: 'connecting'; wallet: string; timestamp: string }
+	| { type: 'connection:failed'; wallet: string; error: string; timestamp: string }
+
+/**
+ * Event listener function type
+ */
+export type ConnectorEventListener = (event: ConnectorEvent) => void
+
 
 export interface ConnectorState {
 	wallets: WalletInfo[]
@@ -53,6 +99,7 @@ export interface ConnectorConfig {
 export class ConnectorClient {
 	private state: ConnectorState
 	private listeners = new Set<Listener>()
+	private eventListeners = new Set<ConnectorEventListener>()
 	private unsubscribers: Array<() => void> = []
 	private walletChangeUnsub: (() => void) | null = null
 	private pollTimer: ReturnType<typeof setInterval> | null = null
@@ -66,6 +113,9 @@ export class ConnectorClient {
 	/**
 	 * Optimized state update with structural sharing
 	 * Only updates if values actually changed
+	 * 
+	 * This prevents unnecessary React re-renders by using deep equality checks
+	 * for arrays and objects, and only updating state when values truly differ.
 	 */
 	private updateState(updates: Partial<ConnectorState>, immediate = false): void {
 		let hasChanges = false
@@ -73,25 +123,51 @@ export class ConnectorClient {
 		
 		for (const [key, value] of Object.entries(updates)) {
 			const stateKey = key as keyof ConnectorState
-			// Deep equality check for arrays
-			if (Array.isArray(value) && Array.isArray(nextState[stateKey])) {
-				if (!this.arraysEqual(value, nextState[stateKey] as any[])) {
+			const currentValue = nextState[stateKey]
+			
+			// Array comparison (wallets, accounts, clusters)
+			if (Array.isArray(value) && Array.isArray(currentValue)) {
+				if (!this.arraysEqual(value, currentValue as any[])) {
 					(nextState as any)[stateKey] = value
 					hasChanges = true
 				}
-			} else if (nextState[stateKey] !== value) {
+			}
+			// Object comparison (wallet, cluster)
+			else if (
+				value && 
+				typeof value === 'object' && 
+				currentValue && 
+				typeof currentValue === 'object'
+			) {
+				if (!this.objectsEqual(value, currentValue as any)) {
+					(nextState as any)[stateKey] = value
+					hasChanges = true
+				}
+			}
+			// Primitive comparison (strings, booleans, numbers)
+			else if (currentValue !== value) {
 				(nextState as any)[stateKey] = value
 				hasChanges = true
 			}
 		}
 		
+		// Only update state and notify if there are actual changes
 		if (hasChanges) {
 			this.state = nextState
+			
+			// Log state changes in debug mode
+			if (this.config.debug) {
+				console.log('[Connector] State updated:', Object.keys(updates).join(', '))
+			}
+			
 			if (immediate) {
 				this.notifyImmediate()
 			} else {
 				this.notify()
 			}
+		} else if (this.config.debug) {
+			// Debug logging for no-op updates
+			console.log('[Connector] State update skipped (no changes):', Object.keys(updates).join(', '))
 		}
 	}
 
@@ -113,6 +189,29 @@ export class ConnectorClient {
 		
 		// Fallback to reference equality
 		return a === b
+	}
+
+	/**
+	 * Deep equality check for objects
+	 * Used to prevent unnecessary state updates when object contents haven't changed
+	 */
+	private objectsEqual(a: any, b: any): boolean {
+		// Reference equality (fast path)
+		if (a === b) return true
+		
+		// Null/undefined checks
+		if (!a || !b) return false
+		if (typeof a !== 'object' || typeof b !== 'object') return false
+		
+		// Get keys
+		const keysA = Object.keys(a)
+		const keysB = Object.keys(b)
+		
+		// Different number of keys
+		if (keysA.length !== keysB.length) return false
+		
+		// Compare each key's value (shallow comparison for nested objects)
+		return keysA.every(key => a[key] === b[key])
 	}
 
 	/**
@@ -452,8 +551,11 @@ export class ConnectorClient {
 		const walletsApi = getWalletsRegistry()
 		const update = () => {
 			const ws = walletsApi.get()
-			if (this.config.debug && ws.length !== this.state.wallets.length) {
-				console.log('🔍 ConnectorClient: found wallets:', ws.length)
+			const previousCount = this.state.wallets.length
+			const newCount = ws.length
+			
+			if (this.config.debug && newCount !== previousCount) {
+				console.log('🔍 ConnectorClient: found wallets:', newCount)
 			}
 			
 			const unique = this.deduplicateWallets(ws)
@@ -463,6 +565,15 @@ export class ConnectorClient {
 			this.updateState({
 				wallets: unique.map(w => this.mapToWalletInfo(w))
 			})
+			
+			// Emit wallet detection event if count changed
+			if (newCount !== previousCount && newCount > 0) {
+				this.emit({
+					type: 'wallets:detected',
+					count: newCount,
+					timestamp: new Date().toISOString()
+				})
+			}
 		}
 			
 			// Initial update for wallet discovery
@@ -636,6 +747,14 @@ export class ConnectorClient {
 		if (typeof window === 'undefined') return
 		const w = this.state.wallets.find(x => x.name === walletName)
 		if (!w) throw new Error(`Wallet ${walletName} not found`)
+		
+		// Emit connecting event
+		this.emit({
+			type: 'connecting',
+			wallet: walletName,
+			timestamp: new Date().toISOString()
+		})
+		
 		this.updateState({ connecting: true }, true) // Critical UI state - notify immediately
 		try {
 			const connectFeature = (w.wallet.features as any)['standard:connect']
@@ -671,10 +790,35 @@ export class ConnectorClient {
 				})
 			}
 			
+			// Emit connection success event
+			this.emit({
+				type: 'wallet:connected',
+				wallet: walletName,
+				account: this.state.selectedAccount || '',
+				timestamp: new Date().toISOString()
+			})
+			
 			this.setStoredWallet(walletName)
 			// Subscribe to wallet change events (or start polling if unavailable)
 			this.subscribeToWalletEvents()
 		} catch (e) {
+			const errorMessage = e instanceof Error ? e.message : String(e)
+			
+			// Emit connection failure event
+			this.emit({
+				type: 'connection:failed',
+				wallet: walletName,
+				error: errorMessage,
+				timestamp: new Date().toISOString()
+			})
+			
+			// Also emit generic error event
+			this.emit({
+				type: 'error',
+				error: e instanceof Error ? e : new Error(errorMessage),
+				context: 'wallet-connection',
+				timestamp: new Date().toISOString()
+			})
 			this.updateState({
 				selectedWallet: null,
 				connected: false,
@@ -714,6 +858,13 @@ export class ConnectorClient {
 			accounts: [],
 			selectedAccount: null
 		}, true) // Critical state change - notify immediately
+		
+		// Emit disconnection event
+		this.emit({
+			type: 'wallet:disconnected',
+			timestamp: new Date().toISOString()
+		})
+		
 		this.removeStoredWallet()
 		
 		// Force wallet discovery after disconnect to show available wallets
@@ -778,6 +929,7 @@ export class ConnectorClient {
 	 * Set the active cluster (network)
 	 */
 	async setCluster(clusterId: SolanaClusterId): Promise<void> {
+		const previousClusterId = this.state.cluster?.id || null
 		const cluster = this.state.clusters.find(c => c.id === clusterId)
 		if (!cluster) {
 			throw new Error(`Cluster ${clusterId} not found. Available clusters: ${this.state.clusters.map(c => c.id).join(', ')}`)
@@ -790,8 +942,18 @@ export class ConnectorClient {
 			this.clusterStorage.set(clusterId)
 		}
 		
+		// Emit cluster change event (only if actually changed)
+		if (previousClusterId !== clusterId) {
+			this.emit({
+				type: 'cluster:changed',
+				cluster: clusterId,
+				previousCluster: previousClusterId,
+				timestamp: new Date().toISOString()
+			})
+		}
+		
 		if (this.config.debug) {
-			console.log('🌐 Cluster changed:', { from: this.state.cluster?.id, to: clusterId })
+			console.log('🌐 Cluster changed:', { from: previousClusterId, to: clusterId })
 		}
 	}
 
@@ -807,6 +969,203 @@ export class ConnectorClient {
 	 */
 	getClusters(): SolanaCluster[] {
 		return this.state.clusters
+	}
+
+	/**
+	 * Check connector health and availability
+	 * Provides comprehensive diagnostics for debugging and monitoring
+	 * 
+	 * @returns ConnectorHealth object with detailed status information
+	 * 
+	 * @example
+	 * ```ts
+	 * const client = new ConnectorClient(config)
+	 * const health = client.getHealth()
+	 * 
+	 * if (!health.walletStandardAvailable) {
+	 *   console.error('Wallet Standard not available - wallets cannot be detected')
+	 * }
+	 * 
+	 * if (health.errors.length > 0) {
+	 *   console.error('Connector errors:', health.errors)
+	 * }
+	 * ```
+	 */
+	getHealth(): ConnectorHealth {
+		const errors: string[] = []
+		
+		// Check Wallet Standard availability
+		let walletStandardAvailable = false
+		try {
+			const registry = getWalletsRegistry()
+			walletStandardAvailable = Boolean(registry && typeof registry.get === 'function')
+			
+			if (!walletStandardAvailable) {
+				errors.push('Wallet Standard registry not properly initialized')
+			}
+		} catch (error) {
+			errors.push(`Wallet Standard error: ${error instanceof Error ? error.message : 'Unknown error'}`)
+			walletStandardAvailable = false
+		}
+		
+		// Check storage availability
+		let storageAvailable = false
+		try {
+			// Check if storage adapters are configured
+			if (!this.walletStorage || !this.clusterStorage) {
+				errors.push('Storage adapters not configured')
+				storageAvailable = false
+			} else {
+				// Check if the storage adapters have isAvailable method (EnhancedStorage)
+				if ('isAvailable' in this.walletStorage) {
+					storageAvailable = (this.walletStorage as any).isAvailable()
+				} else if (typeof window !== 'undefined') {
+					// Fallback: check localStorage availability
+					try {
+						const testKey = '__connector_storage_test__'
+						window.localStorage.setItem(testKey, 'test')
+						window.localStorage.removeItem(testKey)
+						storageAvailable = true
+					} catch {
+						storageAvailable = false
+					}
+				}
+				
+				if (!storageAvailable) {
+					errors.push('localStorage unavailable (private browsing mode or quota exceeded)')
+				}
+			}
+		} catch (error) {
+			errors.push(`Storage error: ${error instanceof Error ? error.message : 'Unknown error'}`)
+			storageAvailable = false
+		}
+		
+		// Validate connection state consistency
+		if (this.state.connected && !this.state.selectedWallet) {
+			errors.push('Inconsistent state: marked as connected but no wallet selected')
+		}
+		
+		if (this.state.connected && !this.state.selectedAccount) {
+			errors.push('Inconsistent state: marked as connected but no account selected')
+		}
+		
+		if (this.state.connecting && this.state.connected) {
+			errors.push('Inconsistent state: both connecting and connected flags are true')
+		}
+		
+		return {
+			initialized: this.initialized,
+			walletStandardAvailable,
+			storageAvailable,
+			walletsDetected: this.state.wallets.length,
+			errors,
+			connectionState: {
+				connected: this.state.connected,
+				connecting: this.state.connecting,
+				hasSelectedWallet: Boolean(this.state.selectedWallet),
+				hasSelectedAccount: Boolean(this.state.selectedAccount)
+			},
+			timestamp: new Date().toISOString()
+		}
+	}
+
+	// ============================================================================
+	// Event System
+	// ============================================================================
+
+	/**
+	 * Subscribe to connector events
+	 * 
+	 * Use this for analytics, logging, monitoring, or custom behavior.
+	 * Events are emitted for all major connector actions like connecting,
+	 * disconnecting, account changes, cluster changes, etc.
+	 * 
+	 * @param listener - Function to call when events occur
+	 * @returns Unsubscribe function to stop listening
+	 * 
+	 * @example
+	 * ```ts
+	 * // Analytics tracking
+	 * const unsubscribe = client.on((event) => {
+	 *   if (event.type === 'wallet:connected') {
+	 *     analytics.track('Wallet Connected', {
+	 *       wallet: event.wallet,
+	 *       account: event.account,
+	 *       timestamp: event.timestamp
+	 *     })
+	 *   }
+	 * })
+	 * 
+	 * // Clean up when done
+	 * unsubscribe()
+	 * ```
+	 * 
+	 * @example
+	 * ```ts
+	 * // Logging all events
+	 * client.on((event) => {
+	 *   console.log('[Connector Event]', event.type, event)
+	 * })
+	 * ```
+	 * 
+	 * @example
+	 * ```ts
+	 * // Custom behavior on connection
+	 * client.on((event) => {
+	 *   if (event.type === 'wallet:connected') {
+	 *     // Fetch user data from backend
+	 *     fetchUserProfile(event.account)
+	 *   }
+	 *   
+	 *   if (event.type === 'wallet:disconnected') {
+	 *     // Clear user data
+	 *     clearUserProfile()
+	 *   }
+	 * })
+	 * ```
+	 */
+	on(listener: ConnectorEventListener): () => void {
+		this.eventListeners.add(listener)
+		return () => this.eventListeners.delete(listener)
+	}
+
+	/**
+	 * Remove a specific event listener
+	 * Alternative to using the unsubscribe function returned by on()
+	 * 
+	 * @param listener - The listener function to remove
+	 */
+	off(listener: ConnectorEventListener): void {
+		this.eventListeners.delete(listener)
+	}
+
+	/**
+	 * Remove all event listeners
+	 * Useful for cleanup or resetting the connector
+	 */
+	offAll(): void {
+		this.eventListeners.clear()
+	}
+
+	/**
+	 * Emit an event to all listeners
+	 * Internal method - called by connector operations
+	 */
+	private emit(event: ConnectorEvent): void {
+		// Log events in debug mode
+		if (this.config.debug) {
+			console.log('[Connector Event]', event.type, event)
+		}
+		
+		// Call all event listeners
+		this.eventListeners.forEach(listener => {
+			try {
+				listener(event)
+			} catch (error) {
+				// Don't let listener errors crash the connector
+				console.error('[Connector] Event listener error:', error)
+			}
+		})
 	}
 }
 

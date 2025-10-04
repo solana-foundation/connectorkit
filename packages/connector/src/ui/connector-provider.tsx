@@ -5,6 +5,11 @@ import type { ReactNode } from 'react'
 import { ConnectorClient, type ConnectorConfig } from '../lib/connector-client'
 import type { ExtendedConnectorConfig } from '../config/default-config'
 import { ConnectorErrorBoundary } from './error-boundary'
+import { installPolyfills } from '../lib/polyfills'
+
+// Install browser compatibility polyfills immediately when module loads
+// This ensures crypto operations work across all browser environments
+installPolyfills()
 
 // Global connector client declaration for auto-detection
 declare global {
@@ -43,12 +48,36 @@ function ConnectorProviderInternal({ children, config, mobile }: { children: Rea
 	// This prevents double-initialization in React 19 strict mode
 	const getClient = React.useCallback(() => {
 		if (!clientRef.current) {
-			clientRef.current = new ConnectorClient(config)
-			
-			// ✅ Set window.__connectorClient IMMEDIATELY for auto-detection
-			// This ensures Armadura's auto-detection can find it synchronously
-			if (typeof window !== 'undefined') {
-				window.__connectorClient = clientRef.current
+			try {
+				clientRef.current = new ConnectorClient(config)
+				
+				// ✅ Set window.__connectorClient IMMEDIATELY for auto-detection
+				// This ensures Armadura's auto-detection can find it synchronously
+				if (typeof window !== 'undefined') {
+					window.__connectorClient = clientRef.current
+				}
+				
+				// Log successful initialization in debug mode
+				if (config?.debug) {
+					console.log('[Connector] ✓ Client initialized successfully')
+				}
+			} catch (error) {
+				const err = error as Error
+				console.error('[Connector] ✗ Failed to initialize client:', err)
+				
+				// Call config error handler if provided
+				const extendedConfig = config as ExtendedConnectorConfig
+				if (extendedConfig?.errorBoundary?.onError) {
+					extendedConfig.errorBoundary.onError(err, { 
+						context: 'client-initialization',
+						phase: 'constructor',
+						timestamp: new Date().toISOString()
+					})
+				}
+				
+				// Return null to allow graceful degradation
+				// Components can check for null client and show fallback UI
+				return null
 			}
 		}
 		return clientRef.current
@@ -146,7 +175,12 @@ export function ConnectorProvider({ children, config, mobile }: { children: Reac
 
 export function useConnector(): ConnectorSnapshot {
 	const client = useContext(ConnectorContext)
-	if (!client) throw new Error('useConnector must be used within ConnectorProvider')
+	if (!client) {
+		throw new Error(
+			'useConnector must be used within ConnectorProvider. ' +
+			'Wrap your app with <ConnectorProvider> or <UnifiedProvider> to use connector hooks.'
+		)
+	}
 	
 	// Subscribe to state changes
 	const state = useSyncExternalStore(
@@ -170,8 +204,26 @@ export function useConnector(): ConnectorSnapshot {
 	}), [state, methods])
 }
 
+/**
+ * Get the connector client instance
+ * Returns null if not within ConnectorProvider or if initialization failed
+ * 
+ * @example
+ * ```tsx
+ * function MyComponent() {
+ *   const client = useConnectorClient()
+ *   
+ *   if (!client) {
+ *     return <div>Connector not available</div>
+ *   }
+ *   
+ *   // Use client methods directly
+ *   const health = client.getHealth()
+ * }
+ * ```
+ */
 export function useConnectorClient(): ConnectorClient | null {
-    return useContext(ConnectorContext)
+	return useContext(ConnectorContext)
 }
 
 

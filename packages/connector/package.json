@@ -21,6 +21,11 @@
       "types": "./dist/react.d.ts",
       "import": "./dist/react.mjs",
       "require": "./dist/react.js"
+    },
+    "./compat": {
+      "types": "./dist/compat.d.ts",
+      "import": "./dist/compat.mjs",
+      "require": "./dist/compat.js"
     }
   },
   "files": [
@@ -47,6 +52,7 @@
   },
   "dependencies": {
     "@solana-mobile/wallet-standard-mobile": "^0.3.0",
+    "@solana/webcrypto-ed25519-polyfill": "^3.0.3",
     "@wallet-standard/app": "^1.0.0",
     "@wallet-ui/core": "^2.0.0",
     "nanostores": "^1.0.1",
