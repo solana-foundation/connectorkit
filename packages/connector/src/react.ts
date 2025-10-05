@@ -58,3 +58,14 @@ export type {
   SolanaCluster,
   SolanaClusterId,
 } from '@wallet-ui/core'
+
+// Integration helpers for third-party transaction libraries
+export {
+  useArmaduraTransaction,
+  withTransactionTracking,
+  useTrackedTransactionFunction
+} from './integrations/armadura'
+
+export type {
+  ArmaduraUseTransactionReturn
+} from './integrations/armadura'

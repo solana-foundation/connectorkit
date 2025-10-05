@@ -3,6 +3,7 @@
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useState } from "react";
 import { useTransaction, useBalance, useArmaClient } from '@armadura/sdk'
+import { useArmaduraTransaction } from '@connector-kit/connector/react'
 import { Button } from './ui/button'
 import { Alert, AlertDescription } from './ui/alert'
 import { Spinner } from './ui/spinner'
@@ -26,7 +27,10 @@ export function TransactionStandardDemo() {
     // 🎉 Shared wallet state through ArcClient context (replacement for deprecated useWallet)
     const { wallet: { connected, selectedAccount: walletAddress, signer } } = useArmaClient()
     const { balance, isLoading: balanceLoading, refetch: refetchBalance } = useBalance({ address: walletAddress || undefined }) // Explicit address from standard wallets
-    const { sendTransaction, isLoading, error } = useTransaction() // Automatically uses connected signer
+    
+    // 🔍 Wrap with auto-tracking for debug panel
+    const armaduraTx = useTransaction()
+    const { sendTransaction, isLoading, error } = useArmaduraTransaction(armaduraTx)
 
     useEffect(() => { setHasMounted(true) }, [])
 

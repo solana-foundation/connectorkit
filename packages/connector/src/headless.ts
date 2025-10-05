@@ -28,7 +28,10 @@ export type {
   AccountInfo,
   ConnectorHealth,
   ConnectorEvent,
-  ConnectorEventListener
+  ConnectorEventListener,
+  ConnectorDebugMetrics,
+  TransactionActivity,
+  ConnectorDebugState
 } from './lib/connector-client'
 
 export type {
@@ -129,3 +132,18 @@ export * from './utils/formatting'
 export * from './utils/formatting-light'
 export * from './utils/cluster'
 export * from './utils/network'
+
+// ============================================================================
+// Explorer URLs & Transaction Utilities
+// ============================================================================
+export {
+  getSolanaExplorerUrl,
+  getSolscanUrl,
+  getXrayUrl,
+  getSolanaFmUrl,
+  getAllExplorerUrls,
+  formatSignature,
+  copySignature
+} from './lib/explorer-urls'
+
+export type { ExplorerType, ExplorerOptions } from './lib/explorer-urls'

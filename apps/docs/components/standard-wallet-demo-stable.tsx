@@ -15,9 +15,9 @@ import {
   useAccount,
   useCluster,
   useWalletInfo,
-  formatSOL,
   ConnectorErrorBoundary 
-} from '@connector-kit/connector'
+} from '@connector-kit/connector/react'
+import { formatSOL } from '@connector-kit/connector/headless'
 import { Button } from './ui/button'
 import { Alert, AlertDescription } from './ui/alert'
 import { Spinner } from './ui/spinner'

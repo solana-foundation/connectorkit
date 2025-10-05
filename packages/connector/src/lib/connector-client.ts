@@ -44,6 +44,59 @@ export interface ConnectorHealth {
 }
 
 /**
+ * Performance and debug metrics for monitoring
+ * Useful for identifying performance issues and optimization opportunities
+ */
+export interface ConnectorDebugMetrics {
+	/** Total number of state updates that resulted in actual changes */
+	stateUpdates: number
+	/** Number of state updates that were skipped (no changes detected) */
+	noopUpdates: number
+	/** Percentage of updates that were optimized away */
+	optimizationRate: number
+	/** Number of active event listeners */
+	eventListenerCount: number
+	/** Number of state subscribers */
+	subscriptionCount: number
+	/** Average time taken for state updates (in milliseconds) */
+	avgUpdateTimeMs: number
+	/** Timestamp of last state update */
+	lastUpdateTime: number
+}
+
+/**
+ * Transaction activity record for debugging and monitoring
+ */
+export interface TransactionActivity {
+	/** Transaction signature */
+	signature: string
+	/** When the transaction was sent */
+	timestamp: string
+	/** Transaction status */
+	status: 'pending' | 'confirmed' | 'failed'
+	/** Error message if failed */
+	error?: string
+	/** Cluster where transaction was sent */
+	cluster: string
+	/** Fee payer address */
+	feePayer?: string
+	/** Method used (signAndSendTransaction, sendTransaction, etc) */
+	method: string
+	/** Additional metadata */
+	metadata?: Record<string, any>
+}
+
+/**
+ * Debug state with transaction history
+ */
+export interface ConnectorDebugState extends ConnectorDebugMetrics {
+	/** Recent transaction activity (limited by maxTransactions) */
+	transactions: TransactionActivity[]
+	/** Total transactions tracked in this session */
+	totalTransactions: number
+}
+
+/**
  * Event types emitted by the connector
  * Use these for analytics, logging, and custom behavior
  */
@@ -57,6 +110,8 @@ export type ConnectorEvent =
 	| { type: 'error'; error: Error; context: string; timestamp: string }
 	| { type: 'connecting'; wallet: string; timestamp: string }
 	| { type: 'connection:failed'; wallet: string; error: string; timestamp: string }
+	| { type: 'transaction:tracked'; signature: string; status: TransactionActivity['status']; timestamp: string }
+	| { type: 'transaction:updated'; signature: string; status: TransactionActivity['status']; timestamp: string }
 
 /**
  * Event listener function type
@@ -105,6 +160,19 @@ export class ConnectorClient {
 	private pollTimer: ReturnType<typeof setInterval> | null = null
 	private walletStorage?: StorageAdapter<string | undefined>
 	private clusterStorage?: StorageAdapter<SolanaClusterId>
+	
+	// Debug metrics tracking
+	private debugMetrics = {
+		stateUpdates: 0,
+		noopUpdates: 0,
+		updateTimes: [] as number[],
+		lastUpdateTime: 0
+	}
+
+	// Transaction tracking
+	private transactions: TransactionActivity[] = []
+	private totalTransactions = 0
+	private maxTransactions = 20 // Keep last 20 transactions
 
 	// ============================================================================
 	// Helper Methods
@@ -118,6 +186,7 @@ export class ConnectorClient {
 	 * for arrays and objects, and only updating state when values truly differ.
 	 */
 	private updateState(updates: Partial<ConnectorState>, immediate = false): void {
+		const startTime = performance.now()
 		let hasChanges = false
 		const nextState = { ...this.state }
 		
@@ -151,8 +220,18 @@ export class ConnectorClient {
 			}
 		}
 		
+		// Track metrics
+		const updateTime = performance.now() - startTime
+		this.debugMetrics.updateTimes.push(updateTime)
+		// Keep last 100 update times for average calculation
+		if (this.debugMetrics.updateTimes.length > 100) {
+			this.debugMetrics.updateTimes.shift()
+		}
+		this.debugMetrics.lastUpdateTime = Date.now()
+		
 		// Only update state and notify if there are actual changes
 		if (hasChanges) {
+			this.debugMetrics.stateUpdates++
 			this.state = nextState
 			
 			// Log state changes in debug mode
@@ -165,9 +244,13 @@ export class ConnectorClient {
 			} else {
 				this.notify()
 			}
-		} else if (this.config.debug) {
-			// Debug logging for no-op updates
-			console.log('[Connector] State update skipped (no changes):', Object.keys(updates).join(', '))
+		} else {
+			this.debugMetrics.noopUpdates++
+			
+			if (this.config.debug) {
+				// Debug logging for no-op updates
+				console.log('[Connector] State update skipped (no changes):', Object.keys(updates).join(', '))
+			}
 		}
 	}
 
@@ -1166,6 +1249,182 @@ export class ConnectorClient {
 				console.error('[Connector] Event listener error:', error)
 			}
 		})
+	}
+
+	/**
+	 * Get performance and debug metrics
+	 * Provides insights into connector performance and optimization effectiveness
+	 * 
+	 * @returns Debug metrics including update counts, timing, and listener counts
+	 * 
+	 * @example
+	 * ```ts
+	 * const metrics = client.getDebugMetrics()
+	 * 
+	 * console.log('State updates:', metrics.stateUpdates)
+	 * console.log('Optimized away:', metrics.noopUpdates)
+	 * console.log('Optimization rate:', `${metrics.optimizationRate}%`)
+	 * console.log('Avg update time:', `${metrics.avgUpdateTimeMs}ms`)
+	 * ```
+	 */
+	getDebugMetrics(): ConnectorDebugMetrics {
+		const totalUpdates = this.debugMetrics.stateUpdates + this.debugMetrics.noopUpdates
+		const optimizationRate = totalUpdates > 0 
+			? Math.round((this.debugMetrics.noopUpdates / totalUpdates) * 100)
+			: 0
+		
+		const avgUpdateTime = this.debugMetrics.updateTimes.length > 0
+			? this.debugMetrics.updateTimes.reduce((a, b) => a + b, 0) / this.debugMetrics.updateTimes.length
+			: 0
+		
+		return {
+			stateUpdates: this.debugMetrics.stateUpdates,
+			noopUpdates: this.debugMetrics.noopUpdates,
+			optimizationRate,
+			eventListenerCount: this.eventListeners.size,
+			subscriptionCount: this.listeners.size,
+			avgUpdateTimeMs: Math.round(avgUpdateTime * 100) / 100, // 2 decimal places
+			lastUpdateTime: this.debugMetrics.lastUpdateTime
+		}
+	}
+
+	/**
+	 * Reset debug metrics
+	 * Useful for benchmarking specific operations or time periods
+	 * 
+	 * @example
+	 * ```ts
+	 * client.resetDebugMetrics()
+	 * // ... perform operations ...
+	 * const metrics = client.getDebugMetrics()
+	 * console.log('Metrics for this period:', metrics)
+	 * ```
+	 */
+	resetDebugMetrics(): void {
+		this.debugMetrics = {
+			stateUpdates: 0,
+			noopUpdates: 0,
+			updateTimes: [],
+			lastUpdateTime: 0
+		}
+	}
+
+	// ============================================================================
+	// Transaction Tracking
+	// ============================================================================
+
+	/**
+	 * Track a transaction for debugging and monitoring
+	 * Call this from your transaction hooks/utils when sending transactions
+	 * 
+	 * @example
+	 * ```ts
+	 * const signature = await wallet.sendTransaction(tx, connection)
+	 * client.trackTransaction({
+	 *   signature,
+	 *   status: 'pending',
+	 *   method: 'sendTransaction',
+	 *   feePayer: publicKey.toString()
+	 * })
+	 * ```
+	 */
+	trackTransaction(activity: Omit<TransactionActivity, 'timestamp' | 'cluster'>): void {
+		const fullActivity: TransactionActivity = {
+			...activity,
+			timestamp: new Date().toISOString(),
+			cluster: this.state.cluster?.label || 'unknown'
+		}
+
+		this.transactions.unshift(fullActivity)
+		if (this.transactions.length > this.maxTransactions) {
+			this.transactions.pop()
+		}
+		this.totalTransactions++
+
+		// Emit event
+		this.emit({
+			type: 'transaction:tracked',
+			signature: fullActivity.signature,
+			status: fullActivity.status,
+			timestamp: fullActivity.timestamp
+		})
+
+		if (this.config.debug) {
+			console.log('[Connector] Transaction tracked:', fullActivity)
+		}
+
+		// Notify subscribers to update debug panel
+		this.notify()
+	}
+
+	/**
+	 * Update transaction status (e.g., from pending to confirmed/failed)
+	 * 
+	 * @example
+	 * ```ts
+	 * // After confirmation
+	 * client.updateTransactionStatus(signature, 'confirmed')
+	 * 
+	 * // On error
+	 * client.updateTransactionStatus(signature, 'failed', 'Transaction simulation failed')
+	 * ```
+	 */
+	updateTransactionStatus(
+		signature: string,
+		status: TransactionActivity['status'],
+		error?: string
+	): void {
+		const tx = this.transactions.find(t => t.signature === signature)
+		if (tx) {
+			tx.status = status
+			if (error) tx.error = error
+
+			// Emit event
+			this.emit({
+				type: 'transaction:updated',
+				signature,
+				status,
+				timestamp: new Date().toISOString()
+			})
+
+			if (this.config.debug) {
+				console.log('[Connector] Transaction updated:', { signature, status, error })
+			}
+
+			// Notify subscribers
+			this.notify()
+		}
+	}
+
+	/**
+	 * Get debug state including transactions
+	 * 
+	 * @example
+	 * ```ts
+	 * const state = client.getDebugState()
+	 * console.log('Total transactions:', state.totalTransactions)
+	 * console.log('Recent transactions:', state.transactions)
+	 * ```
+	 */
+	getDebugState(): ConnectorDebugState {
+		return {
+			...this.getDebugMetrics(),
+			transactions: [...this.transactions],
+			totalTransactions: this.totalTransactions
+		}
+	}
+
+	/**
+	 * Clear transaction history
+	 * 
+	 * @example
+	 * ```ts
+	 * client.clearTransactionHistory()
+	 * ```
+	 */
+	clearTransactionHistory(): void {
+		this.transactions = []
+		this.notify()
 	}
 }
 
