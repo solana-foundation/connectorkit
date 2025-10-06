@@ -3,11 +3,9 @@
  * 
  * Comprehensive development-only debug panel with:
  * - Tabbed interface for organization
- * - Transaction signer capabilities and activity
+ * - Comprehensive overview with wallet, signer, network, health, and storage state
+ * - Real-time transaction tracking with explorer links
  * - Real-time event stream with filtering
- * - Wallet features deep dive
- * - Performance metrics dashboard
- * - Storage state inspector
  * 
  * Only rendered in development mode - automatically excluded in production builds.
  */
@@ -28,23 +26,20 @@ import {
 	CloseIcon,
 	OverviewIcon,
 	TransactionsIcon,
-	EventsIcon,
-	InspectorIcon
+	EventsIcon
 } from './icons'
 import { TabButton } from './ui-components'
 import { 
 	EnhancedOverviewTab, 
 	TransactionsTab,
-	EventsTab, 
-	InspectorTab
+	EventsTab
 } from './tabs'
 
-// Tab configuration - Reduced from 7 to 4 for better UX
+// Tab configuration - Reduced to 3 tabs for better UX
 const TABS: TabConfig[] = [
 	{ id: 'overview', icon: <OverviewIcon />, label: 'Overview' },
 	{ id: 'transactions', icon: <TransactionsIcon />, label: 'Transactions' },
-	{ id: 'events', icon: <EventsIcon />, label: 'Events' },
-	{ id: 'inspector', icon: <InspectorIcon />, label: 'Inspector' }
+	{ id: 'events', icon: <EventsIcon />, label: 'Events' }
 ]
 
 // Position styles mapping
@@ -58,11 +53,10 @@ const POSITION_STYLES: Record<string, React.CSSProperties> = {
 /**
  * Enhanced development debug panel for connector
  * 
- * **Features** (4 focused tabs):
- * - 📊 Overview: Comprehensive status dashboard (connection, signer, account, network, wallet, health)
+ * **Features** (3 focused tabs):
+ * - 📊 Overview: Comprehensive status dashboard (connection, signer, account, network, wallet, health, storage)
  * - 📝 Transactions: Real-time transaction tracking with explorer links
  * - 📡 Events: Real-time event stream with pause/clear controls
- * - 🔍 Inspector: Advanced debugging (storage, performance metrics, resource monitoring)
  * 
  * **Important**: Only renders in development mode. Automatically excluded from production builds.
  * 
@@ -164,7 +158,7 @@ export function ConnectorDebugPanel({
 		padding: isOpen ? 0 : '10px 14px',
 		fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace',
 		fontSize: 12,
-		width: 'auto',
+		width: isOpen ? 400 : 'auto',
 		minHeight: isOpen ? 520 : 'auto',
 		maxHeight: isOpen ? 620 : 'auto',
 		boxShadow: '0 8px 32px rgba(0,0,0,0.7), 0 0 0 1px rgba(255, 255, 255, 0.1)',
@@ -267,6 +261,7 @@ export function ConnectorDebugPanel({
 								signer={signer}
 								ready={ready}
 								capabilities={capabilities}
+								client={client}
 							/>
 						</TabPanel>
 						
@@ -280,15 +275,6 @@ export function ConnectorDebugPanel({
 								onClear={handleClearEvents}
 								onPause={handleTogglePause}
 								isPaused={isPaused}
-							/>
-						</TabPanel>
-						
-						<TabPanel isActive={activeTab === 'inspector'}>
-							<InspectorTab 
-								client={client} 
-								state={state}
-								metrics={metrics}
-								poolStats={poolStats}
 							/>
 						</TabPanel>
 					</div>
@@ -380,7 +366,7 @@ function TabPanel({ isActive, children }: { isActive: boolean; children: React.R
 			top: 16,
 			left: 16,
 			right: 16,
-			bottom: 16,
+			bottom: 0,
 			opacity: isActive ? 1 : 0,
 			transform: isActive ? 'scale(1)' : 'scale(0.95)',
 			filter: isActive ? 'blur(0)' : 'blur(5px)',

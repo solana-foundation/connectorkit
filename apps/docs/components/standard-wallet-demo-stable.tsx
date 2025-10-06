@@ -389,6 +389,7 @@ function StandardWalletDemoStableContent() {
                   bgColor={deferredConnected ? (isDevnet ? "#10b981" : isMainnet ? "#2d2d2d" : "#FFBE1A") : "#FFBE1A"}
                   address={deferredAddress || undefined}
                   onDisconnect={resetAnimation}
+                  walletIcon={walletIcon || selectedWallet?.icon}
                 />
               </motion.div>
 

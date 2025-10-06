@@ -4,7 +4,9 @@
 
 'use client'
 
+import { useState } from 'react'
 import { Button, EmptyState } from '../ui-components'
+import { ExternalLinkIcon } from '../icons'
 import { 
 	getSolanaExplorerUrl, 
 	getSolscanUrl, 
@@ -105,111 +107,11 @@ export function TransactionsTab({ client, cluster }: TransactionsTabProps) {
 					/>
 				) : (
 					transactions.map((tx: TransactionActivity, i: number) => (
-						<div
+						<TransactionItem
 							key={`${tx.signature}-${i}`}
-							style={{
-								padding: '8px',
-								marginBottom: 6,
-								backgroundColor: 'rgba(255, 255, 255, 0.03)',
-								borderRadius: 6,
-								borderLeft: `3px solid ${getStatusColor(tx.status)}`,
-								fontSize: 10
-							}}
-						>
-							{/* Header */}
-							<div
-								style={{
-									display: 'flex',
-									justifyContent: 'space-between',
-									alignItems: 'center',
-									marginBottom: 4
-								}}
-							>
-								<div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-									<span style={{ fontSize: 12 }}>{getStatusIcon(tx.status)}</span>
-									<span
-										style={{
-											fontWeight: 600,
-											color: getStatusColor(tx.status)
-										}}
-									>
-										{tx.status.toUpperCase()}
-									</span>
-								</div>
-								<span style={{ fontSize: 9, opacity: 0.5 }}>
-									{getRelativeTime(tx.timestamp)}
-								</span>
-							</div>
-
-							{/* Signature */}
-							<div
-								style={{
-									fontFamily: 'monospace',
-									fontSize: 9,
-									marginBottom: 4,
-									opacity: 0.9,
-									cursor: 'pointer'
-								}}
-								onClick={async () => {
-									try {
-										await navigator.clipboard.writeText(tx.signature)
-									} catch (err) {
-										console.error('Failed to copy signature:', err)
-									}
-								}}
-								title="Click to copy full signature"
-							>
-								{formatSignature(tx.signature, 8)}
-							</div>
-
-							{/* Details */}
-							<div style={{ fontSize: 9, opacity: 0.7, marginBottom: 6 }}>
-								<div>Method: {tx.method}</div>
-								{tx.feePayer && <div>Fee Payer: {formatSignature(tx.feePayer, 8)}</div>}
-								<div>Cluster: {tx.cluster}</div>
-							</div>
-
-							{/* Error */}
-							{tx.error && (
-								<div
-									style={{
-										fontSize: 9,
-										color: '#ff6b6b',
-										marginBottom: 6,
-										padding: 4,
-										backgroundColor: 'rgba(255, 0, 0, 0.1)',
-										borderRadius: 4
-									}}
-								>
-									{tx.error}
-								</div>
-							)}
-
-							{/* Explorer Links */}
-							<div
-								style={{
-									display: 'flex',
-									gap: 6,
-									flexWrap: 'wrap'
-								}}
-							>
-								<ExplorerLink
-									href={getSolanaExplorerUrl(tx.signature, { cluster: clusterName })}
-									icon="🔍"
-									label="Explorer"
-								/>
-								<ExplorerLink
-									href={getSolscanUrl(tx.signature, { cluster: clusterName })}
-									icon="📊"
-									label="Solscan"
-								/>
-								<ExplorerLink
-									href={getXrayUrl(tx.signature)}
-									icon="⚡"
-									label="XRAY"
-								/>
-							</div>
-						</div>
+							tx={tx}
+							clusterName={clusterName}
+						/>
 					))
 				)}
 			</div>
@@ -217,38 +119,411 @@ export function TransactionsTab({ client, cluster }: TransactionsTabProps) {
 	)
 }
 
+function TransactionItem({ 
+	tx, 
+	clusterName 
+}: { 
+	tx: TransactionActivity
+	clusterName: string 
+}) {
+	const [isExpanded, setIsExpanded] = useState(false)
+	const [isHovered, setIsHovered] = useState(false)
+	const [copySuccess, setCopySuccess] = useState(false)
+	
+	const handleCopySignature = async () => {
+		try {
+			await navigator.clipboard.writeText(tx.signature)
+			setCopySuccess(true)
+			setTimeout(() => setCopySuccess(false), 2000)
+		} catch (err) {
+			console.error('Failed to copy signature:', err)
+		}
+	}
+
+	// Extract metadata if available
+	const metadata = tx.metadata || {}
+	const hasMetadata = Object.keys(metadata).length > 0
+
+	return (
+		<div
+			style={{
+				border: '1px solid rgba(255, 255, 255, 0.1)',
+				borderRadius: 8,
+				marginBottom: 8,
+				overflow: 'hidden',
+				backgroundColor: isHovered ? 'rgba(255, 255, 255, 0.03)' : 'transparent',
+				transition: 'all 0.2s ease'
+			}}
+			onMouseEnter={() => setIsHovered(true)}
+			onMouseLeave={() => setIsHovered(false)}
+		>
+		{/* Header - Always visible */}
+		<div
+			style={{
+				padding: '10px 12px',
+				cursor: 'pointer',
+				display: 'flex',
+				alignItems: 'center',
+				justifyContent: 'space-between',
+				userSelect: 'none'
+			}}
+			onClick={() => setIsExpanded(!isExpanded)}
+		>
+			<div style={{ 
+				display: 'flex', 
+				alignItems: 'center', 
+				gap: 8,
+				flex: 1,
+				minWidth: 0
+			}}>
+				{/* Status Icon */}
+				<span style={{ fontSize: 14, flexShrink: 0 }}>
+					{getStatusIcon(tx.status)}
+				</span>
+				
+				{/* Method and Signature inline */}
+				<div style={{ 
+					minWidth: 0, 
+					flex: 1,
+					display: 'flex',
+					alignItems: 'baseline',
+					gap: 6,
+					flexWrap: 'wrap'
+				}}>
+					<span style={{ 
+						fontWeight: 600, 
+						fontSize: 11,
+						whiteSpace: 'nowrap'
+					}}>
+						{tx.method}
+					</span>
+					<span style={{ 
+						fontSize: 9, 
+						opacity: 0.6,
+						fontFamily: 'monospace'
+					}}>
+						{formatSignature(tx.signature, 6)}
+					</span>
+				</div>
+			</div>
+			
+			{/* Timestamp and Expand Arrow */}
+			<div style={{ 
+				display: 'flex', 
+				alignItems: 'center', 
+				gap: 8,
+				flexShrink: 0
+			}}>
+				<span style={{ fontSize: 9, opacity: 0.5 }}>
+					{getRelativeTime(tx.timestamp)}
+				</span>
+				<span style={{ fontSize: 10, opacity: 0.6 }}>
+					{isExpanded ? '▼' : '▶'}
+				</span>
+			</div>
+		</div>
+
+			{/* Expanded Details */}
+			{isExpanded && (
+				<div style={{ padding: 12 }}>
+					{/* Signature Section */}
+					<div style={{ marginBottom: 8 }}>
+						<div style={{ 
+							opacity: 0.6, 
+							fontSize: 9, 
+							marginBottom: 4,
+							textTransform: 'uppercase',
+							letterSpacing: 0.5
+						}}>
+							Signature
+						</div>
+						<div 
+							style={{ 
+								fontFamily: 'monospace',
+								wordBreak: 'break-all',
+								padding: '8px 10px',
+								backgroundColor: 'rgba(255, 255, 255, 0.05)',
+								borderRadius: 6,
+								fontSize: 9,
+								fontWeight: 500,
+								border: '1px solid rgba(255, 255, 255, 0.1)',
+								cursor: 'pointer',
+								transition: 'all 0.15s ease',
+								display: 'flex',
+								alignItems: 'center',
+								gap: 6
+							}}
+							onClick={handleCopySignature}
+							onMouseEnter={(e) => {
+								e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.08)'
+								e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)'
+							}}
+							onMouseLeave={(e) => {
+								e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)'
+								e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)'
+							}}
+							title="Click to copy signature"
+						>
+							<span style={{ flex: 1 }}>{tx.signature}</span>
+							{copySuccess ? (
+								<svg
+									width={14}
+									height={14}
+									viewBox="0 0 24 24"
+									fill="#0f0"
+									xmlns="http://www.w3.org/2000/svg"
+									style={{ flexShrink: 0 }}
+								>
+									<g><rect height="17.2363" opacity="0" width="17.1875" x="0" y="0"></rect><path d="M6.36719 17.2363C6.78711 17.2363 7.11914 17.0508 7.35352 16.6895L16.582 2.1582C16.7578 1.875 16.8262 1.66016 16.8262 1.43555C16.8262 0.898438 16.4746 0.546875 15.9375 0.546875C15.5469 0.546875 15.332 0.673828 15.0977 1.04492L6.32812 15.0195L1.77734 9.0625C1.5332 8.7207 1.28906 8.58398 0.9375 8.58398C0.380859 8.58398 0 8.96484 0 9.50195C0 9.72656 0.0976562 9.98047 0.283203 10.2148L5.35156 16.6699C5.64453 17.0508 5.94727 17.2363 6.36719 17.2363Z" fillOpacity="0.85"></path></g>
+								</svg>
+							) : (
+								<svg
+									width={14}
+									height={14}
+									viewBox="0 0 24 24"
+									fill="rgba(255, 255, 255, 0.5)"
+									xmlns="http://www.w3.org/2000/svg"
+									style={{ flexShrink: 0 }}
+								>
+									<g><rect height="21.2019" opacity="0" width="18.9705" x="0" y="0"></rect><path d="M15.9159 11.1918L8.73817 18.3695C6.87294 20.2445 4.36317 20.059 2.76161 18.4379C1.15028 16.8363 0.964737 14.3461 2.82997 12.4711L12.6249 2.68593C13.7479 1.56288 15.3983 1.40663 16.4725 2.47109C17.537 3.55507 17.3808 5.1957 16.2675 6.31874L6.69716 15.8891C6.21864 16.3871 5.63271 16.2406 5.30067 15.9086C4.96864 15.5668 4.83192 15.0004 5.31044 14.5023L11.9999 7.83241C12.2929 7.52968 12.3124 7.09999 12.0292 6.81679C11.746 6.54335 11.3163 6.56288 11.0233 6.85585L4.31435 13.5648C3.31825 14.5609 3.35732 16.0844 4.23622 16.9633C5.19325 17.9203 6.63857 17.9008 7.64442 16.8949L17.2538 7.28554C19.08 5.45937 19.0018 3.05702 17.41 1.46523C15.8573-0.0875075 13.4159-0.204695 11.5897 1.62148L1.74599 11.475C-0.666122 13.8871-0.480575 17.3344 1.69716 19.5121C3.87489 21.6801 7.32216 21.8656 9.73427 19.4633L16.9608 12.2367C17.244 11.9535 17.244 11.4359 16.9511 11.1723C16.6679 10.8695 16.2089 10.9086 15.9159 11.1918Z" fillOpacity="0.85"></path></g>
+								</svg>
+							)}
+						</div>
+					</div>
+					{/* Explorer Links */}
+					<Divider />
+					<div style={{ 
+						fontSize: 10, 
+						fontWeight: 600, 
+						marginBottom: 8,
+						opacity: 0.8
+					}}>
+						View on Explorer
+					</div>
+					<div
+						style={{
+							display: 'flex',
+							gap: 6,
+							flexWrap: 'wrap'
+						}}
+					>
+						<ExplorerLink
+							href={getSolanaExplorerUrl(tx.signature, { cluster: clusterName })}
+							label="Solana Explorer"
+						/>
+						<ExplorerLink
+							href={getSolscanUrl(tx.signature, { cluster: clusterName })}
+							label="Solscan"
+						/>
+						<ExplorerLink
+							href={getXrayUrl(tx.signature)}
+							label="XRAY"
+						/>
+					</div>
+					<Divider />
+
+					{/* Transaction Details */}
+					<div style={{ 
+						display: 'grid', 
+						gridTemplateColumns: '1fr 1fr',
+						gap: 8,
+						marginTop: 8
+					}}>
+						<DetailRow label="Status" value={tx.status.toUpperCase()} />
+						<DetailRow label="Cluster" value={tx.cluster} />
+						
+						{tx.feePayer && (
+							<DetailRow 
+								label="Fee Payer" 
+								value={<code style={{ fontSize: 9 }}>{formatSignature(tx.feePayer, 6)}</code>}
+							/>
+						)}
+						
+						<DetailRow 
+							label="Timestamp" 
+							value={new Date(tx.timestamp).toLocaleString()} 
+						/>
+					</div>
+
+					{/* Metadata Section */}
+					<>
+						<Divider />
+						<div style={{ 
+							fontSize: 10, 
+							fontWeight: 600, 
+							marginBottom: 8,
+							opacity: 0.8
+						}}>
+							Transaction Details
+						</div>
+						{hasMetadata ? (
+							<div style={{ 
+								display: 'grid', 
+								gridTemplateColumns: '1fr 1fr',
+								gap: 8
+							}}>
+								{metadata.fee !== undefined && (
+									<DetailRow 
+										label="Fee" 
+										value={`${(metadata.fee / 1_000_000_000).toFixed(6)} SOL`} 
+									/>
+								)}
+								{metadata.computeUnits !== undefined && (
+									<DetailRow 
+										label="Compute Units" 
+										value={metadata.computeUnits.toLocaleString()} 
+									/>
+								)}
+								{metadata.slot !== undefined && (
+									<DetailRow 
+										label="Slot" 
+										value={metadata.slot.toLocaleString()} 
+									/>
+								)}
+								{metadata.blockTime !== undefined && (
+									<DetailRow 
+										label="Block Time" 
+										value={new Date(metadata.blockTime * 1000).toLocaleString()} 
+									/>
+								)}
+								{metadata.numInstructions !== undefined && (
+									<DetailRow 
+										label="Instructions" 
+										value={metadata.numInstructions} 
+									/>
+								)}
+								{metadata.numSigners !== undefined && (
+									<DetailRow 
+										label="Signers" 
+										value={metadata.numSigners} 
+									/>
+								)}
+								{metadata.version !== undefined && (
+									<DetailRow 
+										label="Version" 
+										value={metadata.version === 'legacy' ? 'Legacy' : `v${metadata.version}`} 
+									/>
+								)}
+								{metadata.confirmationTime !== undefined && (
+									<DetailRow 
+										label="Confirmation Time" 
+										value={`${metadata.confirmationTime}ms`} 
+									/>
+								)}
+							</div>
+						) : (
+							<div style={{
+								padding: '12px',
+								backgroundColor: 'rgba(255, 255, 255, 0.02)',
+								borderRadius: 6,
+								border: '1px solid rgba(255, 255, 255, 0.05)',
+								textAlign: 'center'
+							}}>
+								<div style={{ fontSize: 9, opacity: 0.5 }}>
+									No additional transaction details available
+								</div>
+							</div>
+						)}
+					</>
+
+					{/* Error Message */}
+					{tx.error && (
+						<>
+							<Divider />
+							<div
+								style={{
+									fontSize: 9,
+									color: '#ff6b6b',
+									padding: 8,
+									backgroundColor: 'rgba(255, 107, 107, 0.1)',
+									borderRadius: 6,
+									border: '1px solid rgba(255, 107, 107, 0.3)',
+									fontFamily: 'monospace',
+									whiteSpace: 'pre-wrap',
+									wordBreak: 'break-word'
+								}}
+							>
+								<div style={{ fontWeight: 600, marginBottom: 4 }}>❌ Error</div>
+								{tx.error}
+							</div>
+						</>
+					)}
+
+				</div>
+			)}
+		</div>
+	)
+}
+
+function DetailRow({ 
+	label, 
+	value 
+}: { 
+	label: string
+	value: React.ReactNode 
+}) {
+	return (
+		<div style={{ fontSize: 10 }}>
+			<div style={{ 
+				opacity: 0.6, 
+				fontSize: 9, 
+				marginBottom: 2,
+				textTransform: 'uppercase',
+				letterSpacing: 0.5
+			}}>
+				{label}
+			</div>
+			<div style={{ fontWeight: 500 }}>
+				{value}
+			</div>
+		</div>
+	)
+}
+
+function Divider() {
+	return (
+		<div style={{ 
+			borderTop: '1px solid rgba(255, 255, 255, 0.1)', 
+			margin: '12px 0' 
+		}} />
+	)
+}
+
 function ExplorerLink({
 	href,
-	icon,
 	label
 }: {
 	href: string
-	icon: string
 	label: string
 }) {
+	const [isHovered, setIsHovered] = useState(false)
+	
 	return (
 		<a
 			href={href}
 			target="_blank"
 			rel="noopener noreferrer"
 			style={{
-				fontSize: 9,
-				color: '#00aaff',
+				fontSize: 10,
+				color: 'rgba(255, 255, 255, 0.9)',
 				textDecoration: 'none',
-				padding: '2px 6px',
-				backgroundColor: 'rgba(0, 170, 255, 0.1)',
-				borderRadius: 4,
-				border: '1px solid rgba(0, 170, 255, 0.3)',
-				transition: 'background-color 0.15s ease'
+				padding: '4px 10px',
+				backgroundColor: isHovered 
+					? 'rgba(255, 255, 255, 0.15)' 
+					: 'rgba(255, 255, 255, 0.1)',
+				borderRadius: 6,
+				border: `1px solid ${isHovered ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.2)'}`,
+				transition: 'all 0.2s ease',
+				display: 'inline-flex',
+				alignItems: 'center',
+				gap: 4,
+				fontWeight: 500
 			}}
-			onMouseEnter={e => {
-				e.currentTarget.style.backgroundColor = 'rgba(0, 170, 255, 0.2)'
-			}}
-			onMouseLeave={e => {
-				e.currentTarget.style.backgroundColor = 'rgba(0, 170, 255, 0.1)'
-			}}
+			onMouseEnter={() => setIsHovered(true)}
+			onMouseLeave={() => setIsHovered(false)}
 		>
-			{icon} {label}
+			{label}
+			<ExternalLinkIcon size={10} color="rgba(255, 255, 255, 0.6)" />
 		</a>
 	)
 }

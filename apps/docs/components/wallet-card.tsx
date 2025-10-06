@@ -12,6 +12,7 @@ import { CopyButton } from "./ui/copy-button";
     uniqueId?: string;
     address?: string;
     onDisconnect?: () => void;
+    walletIcon?: string;
 }
 
 export function WalletCard({
@@ -22,6 +23,7 @@ export function WalletCard({
     uniqueId = "1",
     address,
     onDisconnect,
+    walletIcon,
 }: WalletCardProps) {
     useEffect(() => {
         if (!onDisconnect) return
@@ -48,7 +50,7 @@ export function WalletCard({
                     velocity: 2       
                 }
             }}
-            className="flex cursor-crosshair flex-col items-start justify-between p-5 border-2 border-white/20"
+            className="flex cursor-crosshair flex-col items-start justify-between p-5 border-2 border-white/20 relative overflow-hidden"
             style={{
             height: "200px",
             width: "320px",
@@ -56,13 +58,39 @@ export function WalletCard({
             backgroundColor: bgColor,
             }}
         >
-        <motion.div className="flex w-full items-start justify-between">
+        {/* Repeating Logo Pattern Background */}
+        {walletIcon && (
+          <div 
+            className="absolute inset-0 opacity-[0.04] pointer-events-none"
+            style={{
+              backgroundImage: `url(${walletIcon})`,
+              backgroundSize: '28px 28px',
+              backgroundRepeat: 'repeat',
+              backgroundPosition: 'center',
+              mixBlendMode: 'luminosity',
+            }}
+          />
+        )}
+        
+        <motion.div className="flex w-full items-start justify-between relative z-10">
           <motion.div
             layoutId={`icon-${uniqueId}`}
-            className="flex items-center justify-center bg-white/10 rounded-full p-2"
+            className="flex items-center justify-center rounded-full h-10 w-10"
             onClick={onClick}
           >
-             <IconGamecontrollerFill className="h-10 w-10 translate-x-0 translate-y-0 fill-white" />
+            {walletIcon ? (
+              <img 
+                src={walletIcon} 
+                alt={walletName || 'wallet'} 
+                className="h-10 w-10 rounded-full"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none'
+                  e.currentTarget.parentElement!.innerHTML = '<div class="h-10 w-10 flex items-center justify-center"><svg class="h-10 w-10 fill-white" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg></div>'
+                }}
+              />
+            ) : (
+              <IconGamecontrollerFill className="h-10 w-10 translate-x-0 translate-y-0 fill-white" />
+            )}
           </motion.div>
           <motion.div
             initial={{ opacity: 0, scale: 0.5, filter: "blur(4px)" }}
@@ -75,7 +103,7 @@ export function WalletCard({
               <CopyButton
                 textToCopy={address}
                 displayText={`${address.slice(0, 6)}...${address.slice(-5)}`}
-                className="font-semibold text-white hover:text-white/80 gap-x-[6px] hover:scale-[0.95] transition-all duration-300 ease-in-out"
+                className="font-semibold text-white/80 hover:text-white gap-x-[6px] hover:scale-[0.95] transition-all duration-300 ease-in-out"
                 iconClassName="h-4 w-4 text-white/50 group-hover:text-white/70"
                 iconClassNameCheck="h-4 w-4 text-emerald-400"
               />
@@ -84,7 +112,7 @@ export function WalletCard({
             )}
           </motion.div>
         </motion.div>
-        <div className="flex w-full items-end justify-between">
+        <div className="flex w-full items-end justify-between relative z-10">
           <div className="flex flex-col items-start justify-center">
             <motion.span
               layoutId={`walletName-${uniqueId}`}

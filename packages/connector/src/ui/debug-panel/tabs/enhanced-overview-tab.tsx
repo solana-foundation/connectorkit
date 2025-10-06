@@ -6,7 +6,8 @@
 
 'use client'
 
-import { Section, Divider, EmptyState } from '../ui-components'
+import { useState, useMemo } from 'react'
+import { Section, Divider, EmptyState, Button, CollapsibleSection } from '../ui-components'
 
 interface EnhancedOverviewTabProps {
 	state: any
@@ -25,6 +26,7 @@ interface EnhancedOverviewTabProps {
 		canSignMessage: boolean
 		supportsBatchSigning: boolean
 	}
+	client: any
 }
 
 export function EnhancedOverviewTab({ 
@@ -37,7 +39,8 @@ export function EnhancedOverviewTab({
 	cluster, 
 	rpcUrl,
 	ready,
-	capabilities
+	capabilities,
+	client
 }: EnhancedOverviewTabProps) {
 	const wallet = state.selectedWallet
 	
@@ -46,10 +49,55 @@ export function EnhancedOverviewTab({
 	const walletWithIcon = wallet && state.wallets?.find((w: any) => w.name === wallet.name)
 	const walletIcon = walletWithIcon?.icon || wallet?.icon
 	
+	// Storage state
+	const [lastClear, setLastClear] = useState<string | null>(null)
+	
+	// Storage values
+	const storedWallet = useMemo(() => {
+		try {
+			return (client as any).walletStorage?.get() || null
+		} catch {
+			return null
+		}
+	}, [client, lastClear])
+	
+	const storedCluster = useMemo(() => {
+		try {
+			return (client as any).clusterStorage?.get() || null
+		} catch {
+			return null
+		}
+	}, [client, lastClear])
+	
+	// Storage handlers
+	const handleClearWallet = () => {
+		try {
+			(client as any).walletStorage?.set(undefined)
+			setLastClear(Date.now().toString())
+		} catch (error) {
+			console.error('Failed to clear wallet storage:', error)
+		}
+	}
+	
+	const handleClearCluster = () => {
+		try {
+			(client as any).clusterStorage?.set('solana:mainnet')
+			setLastClear(Date.now().toString())
+		} catch (error) {
+			console.error('Failed to clear cluster storage:', error)
+		}
+	}
+	
+	const handleClearAll = () => {
+		handleClearWallet()
+		handleClearCluster()
+	}
+	
+	// Check for health issues
+	const hasHealthIssues = health && (!health.initialized || !health.walletStandardAvailable || !health.storageAvailable || (health.errors && health.errors.length > 0))
+	
 	return (
 		<div style={{ height: '100%', overflowY: 'auto' }}>
-
-
 			{/* Connected Wallet */}
 			{wallet && address ? (
 				<>
@@ -157,28 +205,44 @@ export function EnhancedOverviewTab({
 							</div>
 						</div>
 						
-						{/* Feature counts */}
+						{/* Wallet Info */}
 						<div style={{ fontSize: 10, lineHeight: 1.6, opacity: 0.7 }}>
-							{(() => {
-								const features = wallet.features as any || {}
-								const featureKeys = Object.keys(features)
-								const standardFeatures = featureKeys.filter(k => k.startsWith('standard:'))
-								const solanaFeatures = featureKeys.filter(k => k.startsWith('solana:'))
-								
-								return (
-									<>
-										<div>Standard Features: {standardFeatures.length}</div>
-										<div>Solana Features: {solanaFeatures.length}</div>
-										{wallet.chains && <div>Chains: {wallet.chains.length}</div>}
-									</>
-								)
-							})()}
+							<div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+								<span style={{ color: '#ffffff'}}>Cluster: {cluster?.label || 'Unknown'}</span>
+								{cluster?.label && (
+									<span style={{ 
+										padding: '1px 4px', 
+										backgroundColor: cluster.label.includes('Mainnet') ? 'rgba(0, 255, 0, 0.15)' : 'rgba(255, 165, 0, 0.15)',
+										borderRadius: 3,
+										fontSize: 9,
+										fontWeight: 600
+									}}>
+                                        {ready ? <span style={{ fontSize: 9, color: '#0f0' }}>✓ Ready</span> : <span style={{ fontSize: 9, color: '#f00' }}>✗ Not Ready</span>}
+									</span>
+								)}
+							</div>
+							{wallet.version && (
+								<div>Version: {wallet.version}</div>
+							)}
+							<div style={{ 
+                                display: 'flex', 
+                                justifyContent: 'space-between', 
+                                alignItems: 'center', 
+                                gap: 4 
+                            }}>
+								Capabilities: 
+                                <div>
+                                    {ready && capabilities.canSign && <span style={{ color: '#0f0', padding: '1px 4px',  marginLeft: 4, borderRadius: 3, fontSize: 9, fontWeight: 600, backgroundColor: ready ? 'rgba(0, 255, 0, 0.15)' : 'rgba(255, 165, 0, 0.15)' }}>✓ Sign</span>}
+                                    {ready && capabilities.canSend && <span style={{ color: '#0f0', padding: '1px 4px',  marginLeft: 4, borderRadius: 3, fontSize: 9, fontWeight: 600, backgroundColor: ready ? 'rgba(0, 255, 0, 0.15)' : 'rgba(255, 165, 0, 0.15)' }}>✓ Send</span>}
+                                    {ready && capabilities.canSignMessage && <span style={{ color: '#0f0', padding: '1px 4px',  marginLeft: 4, borderRadius: 3, fontSize: 9, fontWeight: 600, backgroundColor: ready ? 'rgba(0, 255, 0, 0.15)' : 'rgba(255, 165, 0, 0.15)' }}>✓ Message</span>}
+                                    {!ready && <span style={{ opacity: 0.5, marginLeft: 4 }}>Not available</span>}
+                                </div>
+							</div>
 						</div>
 					</div>
 					
 					<Divider />
 				</>
-                
 			) : (
 				<>
 					<Section title="Connected Wallet">
@@ -217,8 +281,97 @@ export function EnhancedOverviewTab({
 				</>
 			)}
 
+			{/* Storage */}
+			<CollapsibleSection
+				icon="💾"
+				title="STORAGE"
+				defaultExpanded={true}
+			>
+				<Section title="Persisted State">
+					<div style={{ fontSize: 11, lineHeight: 1.8 }}>
+						<div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+							<span style={{ opacity: 0.7 }}>Wallet:</span>
+							{storedWallet ? (
+								<span style={{ color: '#0f0', fontFamily: 'monospace', fontSize: 10 }}>
+									"{storedWallet}" ✓
+								</span>
+							) : (
+								<span style={{ opacity: 0.5, fontSize: 10 }}>None</span>
+							)}
+						</div>
+						<div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+							<span style={{ opacity: 0.7 }}>Account:</span>
+							{state.selectedAccount ? (
+								<span style={{ color: '#0f0', fontFamily: 'monospace', fontSize: 9 }}>
+									{state.selectedAccount.slice(0, 6)}...{state.selectedAccount.slice(-4)} ✓
+								</span>
+							) : (
+								<span style={{ opacity: 0.5, fontSize: 10 }}>None</span>
+							)}
+						</div>
+						<div style={{ display: 'flex', justifyContent: 'space-between' }}>
+							<span style={{ opacity: 0.7 }}>Cluster:</span>
+							{storedCluster ? (
+								<span style={{ color: '#0f0', fontFamily: 'monospace', fontSize: 10 }}>
+									"{storedCluster}" ✓
+								</span>
+							) : (
+								<span style={{ opacity: 0.5, fontSize: 10 }}>None</span>
+							)}
+						</div>
+					</div>
+				</Section>
+				
+				<Divider />
+				
+				<Section title="Actions">
+					<div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+						<Button onClick={handleClearWallet} small>Clear Wallet</Button>
+						<Button onClick={handleClearCluster} small>Clear Cluster</Button>
+						<Button onClick={handleClearAll} small>Clear All</Button>
+					</div>
+				</Section>
+				
+				<div style={{ 
+					fontSize: 9, 
+					opacity: 0.5, 
+					marginTop: 8,
+					padding: 6,
+					backgroundColor: 'rgba(255, 255, 255, 0.02)',
+					borderRadius: 4
+				}}>
+					💡 Clearing storage resets auto-connect behavior
+				</div>
+			</CollapsibleSection>
+
+			{/* Network */}
+			<CollapsibleSection
+				icon="🌐"
+				title="NETWORK"
+				defaultExpanded={false}
+				badge={cluster?.label ? <span style={{ fontSize: 9, opacity: 0.6 }}>({cluster.label})</span> : undefined}
+			>
+				<div style={{ marginBottom: 6, fontWeight: 600, fontSize: 12 }}>
+					{cluster?.label || 'None'}
+				</div>
+				<div style={{ 
+					fontSize: 10, 
+					opacity: 0.6,
+					wordBreak: 'break-all',
+					fontFamily: 'monospace',
+					lineHeight: 1.4
+				}}>
+					{rpcUrl || 'No RPC URL'}
+				</div>
+			</CollapsibleSection>
+
 			{/* Signer Status */}
-			<Section title="🔐 Signer Status">
+			<CollapsibleSection
+				icon="🔐"
+				title="SIGNER STATUS"
+				defaultExpanded={false}
+				badge={ready ? <span style={{ fontSize: 9, color: '#0f0' }}>✓ Ready</span> : <span style={{ fontSize: 9, color: '#f00' }}>✗ Not Ready</span>}
+			>
 				<div style={{ fontSize: 11, marginBottom: 6 }}>
 					{ready ? (
 						<span style={{ color: '#0f0', fontWeight: 600 }}>✅ Ready to Sign</span>
@@ -251,53 +404,46 @@ export function EnhancedOverviewTab({
 						Connect a wallet to enable signing
 					</div>
 				)}
-			</Section>
-			
-			<Divider />
-			
-			{/* Network */}
-			<Section title="🌐 Network">
-				<div style={{ marginBottom: 6, fontWeight: 600, fontSize: 12 }}>
-					{cluster?.label || 'None'}
-				</div>
-				<div style={{ 
-					fontSize: 10, 
-					opacity: 0.6,
-					wordBreak: 'break-all',
-					fontFamily: 'monospace',
-					lineHeight: 1.4
-				}}>
-					{rpcUrl || 'No RPC URL'}
-				</div>
-			</Section>
-			
-			<Divider />
+			</CollapsibleSection>
 			
 			{/* Health Check */}
 			{health && (
-				<Section title="⚡ Health Check">
+				<CollapsibleSection
+					icon="⚡"
+					title="HEALTH CHECK"
+					defaultExpanded={false}
+					warning={hasHealthIssues}
+					badge={hasHealthIssues ? <span style={{ fontSize: 9, color: '#ffaa00' }}>⚠️</span> : <span style={{ fontSize: 9, color: '#0f0' }}>✓</span>}
+				>
 					<div style={{ 
 						fontSize: 10, 
 						lineHeight: 1.8,
-						display: 'grid',
-						gridTemplateColumns: 'auto 1fr',
-						gap: '4px 12px',
+                        width: '100%',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '4px',
 						alignItems: 'center'
 					}}>
-						<span style={{ opacity: 0.7 }}>Initialized:</span>
-						<span style={{ color: health.initialized ? '#0f0' : '#f00', fontWeight: 600 }}>
-							{health.initialized ? '✓' : '✗'}
-						</span>
-						
-						<span style={{ opacity: 0.7 }}>Wallet Standard:</span>
-						<span style={{ color: health.walletStandardAvailable ? '#0f0' : '#f00', fontWeight: 600 }}>
-							{health.walletStandardAvailable ? '✓' : '✗'}
-						</span>
-						
-						<span style={{ opacity: 0.7 }}>Storage:</span>
-						<span style={{ color: health.storageAvailable ? '#0f0' : '#f00', fontWeight: 600 }}>
-							{health.storageAvailable ? '✓' : '✗'}
-						</span>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                            <span style={{ opacity: 0.7 }}>Initialized:</span>
+                            <span style={{ color: health.initialized ? '#0f0' : '#f00', fontWeight: 600 }}>
+                                {health.initialized ? '✓' : '✗'}
+                            </span>
+                        </div>
+
+						<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                            <span style={{ opacity: 0.7 }}>Wallet Standard:</span>
+                            <span style={{ color: health.walletStandardAvailable ? '#0f0' : '#f00', fontWeight: 600 }}>
+                                {health.walletStandardAvailable ? '✓' : '✗'}
+                            </span>
+                        </div>
+
+						<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                            <span style={{ opacity: 0.7 }}>Storage:</span>
+                            <span style={{ color: health.storageAvailable ? '#0f0' : '#f00', fontWeight: 600 }}>
+                                {health.storageAvailable ? '✓' : '✗'}
+                            </span>                            
+                        </div>
 					</div>
 					
 					{health.errors && health.errors.length > 0 && (
@@ -318,19 +464,21 @@ export function EnhancedOverviewTab({
 							))}
 						</div>
 					)}
-				</Section>
+				</CollapsibleSection>
 			)}
 			
-			{/* Wallets Available */}
+			{/* Available Wallets */}
 			{state.wallets.length > 0 && (
-				<>
-					<Divider />
-					<Section title="Available Wallets">
-						<div style={{ fontSize: 10, opacity: 0.7 }}>
-							{state.wallets.length} wallet{state.wallets.length !== 1 ? 's' : ''} detected
-						</div>
-					</Section>
-				</>
+				<CollapsibleSection
+					icon="📦"
+					title="AVAILABLE WALLETS"
+					defaultExpanded={false}
+					badge={<span style={{ fontSize: 9, opacity: 0.6 }}>({state.wallets.length} detected)</span>}
+				>
+					<div style={{ fontSize: 10, opacity: 0.7 }}>
+						{state.wallets.length} wallet{state.wallets.length !== 1 ? 's' : ''} detected in your browser
+					</div>
+				</CollapsibleSection>
 			)}
 		</div>
 	)

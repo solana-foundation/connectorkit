@@ -5,7 +5,6 @@
 export { EnhancedOverviewTab } from './enhanced-overview-tab'
 export { TransactionsTab } from './transactions-tab'
 export { EventsTab } from './events-tab'
-export { InspectorTab } from './inspector-tab'
 
 // Legacy exports (kept for backward compatibility during migration)
 export { SignerTab } from './signer-tab'

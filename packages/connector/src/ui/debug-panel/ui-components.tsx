@@ -167,3 +167,67 @@ export function EmptyState({
 	)
 }
 
+export function CollapsibleSection({
+	icon,
+	title,
+	children,
+	defaultExpanded = false,
+	badge,
+	warning = false
+}: {
+	icon?: string
+	title: string
+	children: React.ReactNode
+	defaultExpanded?: boolean
+	badge?: React.ReactNode
+	warning?: boolean
+}) {
+	const [isExpanded, setIsExpanded] = useState(defaultExpanded)
+	
+	return (
+		<div style={{
+			border: '1px solid rgba(255, 255, 255, 0.1)',
+			borderRadius: 6,
+			marginBottom: 12,
+			overflow: 'hidden'
+		}}>
+			<div 
+				style={{
+					padding: '10px 12px',
+					backgroundColor: warning 
+						? 'rgba(255, 165, 0, 0.1)' 
+						: 'rgba(255, 255, 255, 0.05)',
+					cursor: 'pointer',
+					display: 'flex',
+					alignItems: 'center',
+					justifyContent: 'space-between',
+					userSelect: 'none',
+					border: warning ? '1px solid rgba(255, 165, 0, 0.3)' : 'none'
+				}}
+				onClick={() => setIsExpanded(!isExpanded)}
+			>
+				<div style={{ 
+					fontWeight: 600, 
+					fontSize: 11, 
+					display: 'flex', 
+					alignItems: 'center', 
+					gap: 6 
+				}}>
+					{icon && <span>{icon}</span>}
+					{title}
+					{badge && <span style={{ marginLeft: 4 }}>{badge}</span>}
+				</div>
+				<span style={{ fontSize: 10, opacity: 0.6 }}>
+					{isExpanded ? '▼' : '▶'}
+				</span>
+			</div>
+			
+			{isExpanded && (
+				<div style={{ padding: 12 }}>
+					{children}
+				</div>
+			)}
+		</div>
+	)
+}
+
