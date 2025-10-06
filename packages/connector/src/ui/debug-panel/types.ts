@@ -2,6 +2,8 @@
  * @connector-kit/connector - Debug Panel Types
  */
 
+import type React from 'react'
+
 export interface DebugPanelProps {
 	/** 
 	 * Position of the debug panel on screen
@@ -43,7 +45,7 @@ export type TabId = 'overview' | 'signer' | 'transactions' | 'events' | 'wallet'
 
 export interface TabConfig {
 	id: TabId
-	icon: string
+	icon: React.ReactNode
 	label: string
 }
 

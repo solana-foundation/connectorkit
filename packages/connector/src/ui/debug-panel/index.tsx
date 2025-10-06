@@ -23,7 +23,17 @@ import { getConnectionPool } from '../../lib/connection-pool'
 import type { ConnectorEvent } from '../../lib/connector-client'
 
 import type { DebugPanelProps, TabId, TabConfig } from './types'
-import { BugIcon } from './icons'
+import { 
+	BugIcon, 
+	CloseIcon,
+	OverviewIcon,
+	SignerIcon,
+	TransactionsIcon,
+	EventsIcon,
+	WalletIcon,
+	PerfIcon,
+	StorageIcon
+} from './icons'
 import { TabButton } from './ui-components'
 import { 
 	OverviewTab, 
@@ -37,13 +47,13 @@ import {
 
 // Tab configuration
 const TABS: TabConfig[] = [
-	{ id: 'overview', icon: '📊', label: 'Overview' },
-	{ id: 'signer', icon: '🔐', label: 'Signer' },
-	{ id: 'transactions', icon: '📝', label: 'Txs' },
-	{ id: 'events', icon: '📡', label: 'Events' },
-	{ id: 'wallet', icon: '💼', label: 'Wallet' },
-	{ id: 'perf', icon: '⚡', label: 'Perf' },
-	{ id: 'storage', icon: '💾', label: 'Storage' }
+	{ id: 'overview', icon: <OverviewIcon />, label: 'Overview' },
+	{ id: 'signer', icon: <SignerIcon />, label: 'Signer' },
+	{ id: 'transactions', icon: <TransactionsIcon />, label: 'Txs' },
+	{ id: 'events', icon: <EventsIcon />, label: 'Events' },
+	{ id: 'wallet', icon: <WalletIcon />, label: 'Wallet' },
+	{ id: 'perf', icon: <PerfIcon />, label: 'Perf' },
+	{ id: 'storage', icon: <StorageIcon />, label: 'Storage' }
 ]
 
 // Position styles mapping
@@ -162,11 +172,11 @@ export function ConnectorDebugPanel({
 				? 'rgba(40, 40, 40, 0.96)' 
 				: 'rgba(0, 0, 0, 0.94)',
 		color: '#fff',
-		borderRadius: 15,
+		borderRadius: 18,
 		padding: isOpen ? 0 : '10px 14px',
 		fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace',
 		fontSize: 12,
-		width: isOpen ? 420 : 'auto',
+		width: 'auto',
 		minHeight: isOpen ? 520 : 'auto',
 		maxHeight: isOpen ? 620 : 'auto',
 		boxShadow: '0 8px 32px rgba(0,0,0,0.7), 0 0 0 1px rgba(255, 255, 255, 0.1)',
@@ -216,26 +226,26 @@ export function ConnectorDebugPanel({
 					}
 				}}
 			>
-				<BugIcon size={isOpen ? 18 : 16} color="rgba(255, 255, 255, 0.85)" />
-				<span style={{ flex: 1 }}>
-					Connector Debug
+			<BugIcon size={isOpen ? 18 : 16} color="rgb(255, 136, 71)" />
+			<span style={{ flex: 1 }}>
+				Connector Debug
+			</span>
+			{isOpen && (
+				<span style={{ marginLeft: 'auto' }}>
+					<CloseIcon size={12} color="rgba(255, 255, 255, 0.7)" />
 				</span>
-				{isOpen && (
-					<span style={{ fontSize: 10, opacity: 0.5, marginLeft: 'auto' }}>
-						▼
-					</span>
-				)}
+			)}
 			</div>
 			
 			{isOpen && (
 				<>
-					{/* Tab Navigation */}
-					<div style={{ 
-						display: 'flex',
-						gap: 0,
-						borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
-						backgroundColor: 'rgba(255, 255, 255, 0.02)'
-					}}>
+				{/* Tab Navigation */}
+				<div style={{ 
+					display: 'flex',
+					padding: '8px',
+					gap: 0,
+					backgroundColor: 'rgba(0, 0, 0, 0.2)'
+				}}>
 						{TABS.map(tab => (
 							<TabButton
 								key={tab.id}
@@ -302,22 +312,77 @@ export function ConnectorDebugPanel({
 						</TabPanel>
 					</div>
 					
-					{/* Footer */}
-					<div style={{ 
-						padding: '8px 16px',
-						borderTop: '1px solid rgba(255, 255, 255, 0.1)',
-						fontSize: 9,
-						opacity: 0.5,
-						display: 'flex',
-						justifyContent: 'space-between',
+				{/* Footer */}
+				<div style={{ 
+					padding: '8px 16px',
+					borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+					fontSize: 9,
+					display: 'flex',
+					justifyContent: 'space-between',
+					alignItems: 'center',
+					backgroundColor: 'rgba(255, 255, 255, 0.02)'
+				}}>
+					<span style={{ fontFamily: 'monospace', fontSize: 10 }}>
+						<span style={{ opacity: 0.5 }}>Events</span>{' '}
+						<span style={{ opacity: 1, fontWeight: 600 }}>{events.length}</span>
+					</span>
+					<div style={{
+						display: 'inline-flex',
 						alignItems: 'center',
-						backgroundColor: 'rgba(255, 255, 255, 0.02)'
+						gap: 6,
+						fontSize: 9,
+						fontWeight: 400,
+						fontFamily: 'monospace',
+						padding: '2px 8px',
+						borderRadius: 6,
+						backgroundColor: state.connected 
+							? 'rgba(0, 255, 0, 0.12)' 
+							: state.connecting 
+								? 'rgba(255, 255, 0, 0.12)' 
+								: 'rgba(255, 0, 0, 0.12)',
+						border: `1px solid ${state.connected ? 'rgba(0, 255, 0, 0.1)' : state.connecting ? 'rgba(255, 255, 0, 0.1)' : 'rgba(255, 0, 0, 0.1)'}`
 					}}>
-						<span>@connector-kit/connector</span>
-						{events.length > 0 && (
-							<span>{events.length} events</span>
-						)}
+						<span style={{ 
+							position: 'relative',
+							display: 'inline-block'
+						}}>
+							<span style={{ 
+								width: 6, 
+								height: 6, 
+								borderRadius: '50%', 
+								backgroundColor: state.connected ? '#0f0' : state.connecting ? '#ff0' : '#f00',
+								display: 'inline-block'
+							}} />
+							<span style={{
+								position: 'absolute',
+								top: '50%',
+								left: '50%',
+								transform: 'translate(-50%, -50%)',
+								width: 6,
+								height: 6,
+								borderRadius: '50%',
+								backgroundColor: state.connected ? '#0f0' : state.connecting ? '#ff0' : '#f00',
+								animation: 'ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite'
+							}} />
+						</span>
+						<span style={{ 
+							color: state.connected ? '#0f0' : state.connecting ? '#ff0' : '#f00',
+							opacity: 0.9
+						}}>
+							{state.connected ? 'Connected' : state.connecting ? 'Connecting' : 'Disconnected'}
+						</span>
 					</div>
+				</div>
+				
+				{/* Inline ping animation */}
+				<style>{`
+					@keyframes ping {
+						75%, 100% {
+							transform: translate(-50%, -50%) scale(2);
+							opacity: 0;
+						}
+					}
+				`}</style>
 				</>
 			)}
 		</div>
@@ -336,8 +401,9 @@ function TabPanel({ isActive, children }: { isActive: boolean; children: React.R
 			right: 16,
 			bottom: 16,
 			opacity: isActive ? 1 : 0,
-			transform: isActive ? 'translateY(0)' : 'translateY(-8px)',
-			transition: 'opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1), transform 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+			transform: isActive ? 'scale(1)' : 'scale(0.95)',
+			filter: isActive ? 'blur(0)' : 'blur(5px)',
+			transition: 'opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1), transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), filter 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
 			pointerEvents: isActive ? 'auto' : 'none'
 		}}>
 			{children}

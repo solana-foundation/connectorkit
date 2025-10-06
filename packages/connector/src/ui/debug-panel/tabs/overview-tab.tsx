@@ -16,12 +16,6 @@ interface OverviewTabProps {
 	rpcUrl: string
 }
 
-function getStatusColor(state: any) {
-	if (state.connected) return '#0f0'
-	if (state.connecting) return '#ff0'
-	return '#f00'
-}
-
 export function OverviewTab({ 
 	state, 
 	health, 
@@ -33,30 +27,6 @@ export function OverviewTab({
 }: OverviewTabProps) {
 	return (
 		<div style={{ height: '100%', overflowY: 'auto' }}>
-			{/* Connection Status */}
-			<div style={{ marginBottom: 12 }}>
-				<div style={{ 
-					color: getStatusColor(state),
-					display: 'flex',
-					alignItems: 'center',
-					gap: 8,
-					fontSize: 13,
-					fontWeight: 600
-				}}>
-					<span style={{ 
-						width: 8, 
-						height: 8, 
-						borderRadius: '50%', 
-						backgroundColor: getStatusColor(state),
-						display: 'inline-block'
-					}} />
-					{state.connected ? 'Connected' : state.connecting ? 'Connecting...' : 'Disconnected'}
-				</div>
-			</div>
-			
-			<Divider />
-			
-			{/* Account */}
 			<Section title="Account">
 				{address ? (
 					<>

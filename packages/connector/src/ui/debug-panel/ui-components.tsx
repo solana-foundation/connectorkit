@@ -103,29 +103,29 @@ export function TabButton({
 			onMouseUp={() => setIsPressed(false)}
 			style={{
 				flex: 1,
-				padding: '10px 4px',
-				fontSize: 9,
-				border: 'none',
-				backgroundColor: isActive 
-					? 'rgba(255, 255, 255, 0.08)' 
+				padding: '4px 6px',
+				fontSize: 10,
+				borderRadius: 8,
+				margin: '4px 2px',
+				background: isActive 
+					? 'linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.08))' 
 					: isHovered 
 						? 'rgba(255, 255, 255, 0.05)'
 						: 'transparent',
-				color: isActive ? '#fff' : isHovered ? 'rgba(255, 255, 255, 0.8)' : 'rgba(255, 255, 255, 0.6)',
+				color: isActive ? 'rgba(255, 255, 255, 0.95)' : isHovered ? 'rgba(255, 255, 255, 0.9)' : 'rgba(255, 255, 255, 0.6)',
 				cursor: 'pointer',
-				fontWeight: isActive ? 600 : 400,
-				borderBottom: isActive 
-					? '2px solid #00aaff' 
-					: '2px solid transparent',
+				fontWeight: isActive ? 600 : 500,
 				transition: 'all 0.2s ease, transform 0.1s ease',
 				display: 'flex',
-				flexDirection: 'column',
+				flexDirection: 'row',
 				alignItems: 'center',
-				gap: 3,
-				transform: isPressed ? 'scale(0.98)' : 'scale(1)'
+				justifyContent: 'center',
+				gap: 6,
+				transform: isPressed ? 'scale(0.98)' : 'scale(1)',
+				border: isActive ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid transparent'
 			}}
 		>
-			<span style={{ fontSize: 14 }}>{tab.icon}</span>
+			{tab.icon}
 			<span>{tab.label}</span>
 		</button>
 	)
