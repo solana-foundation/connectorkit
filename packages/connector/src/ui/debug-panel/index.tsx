@@ -27,33 +27,24 @@ import {
 	BugIcon, 
 	CloseIcon,
 	OverviewIcon,
-	SignerIcon,
 	TransactionsIcon,
 	EventsIcon,
-	WalletIcon,
-	PerfIcon,
-	StorageIcon
+	InspectorIcon
 } from './icons'
 import { TabButton } from './ui-components'
 import { 
-	OverviewTab, 
-	SignerTab, 
+	EnhancedOverviewTab, 
 	TransactionsTab,
 	EventsTab, 
-	WalletTab, 
-	PerfTab, 
-	StorageTab 
+	InspectorTab
 } from './tabs'
 
-// Tab configuration
+// Tab configuration - Reduced from 7 to 4 for better UX
 const TABS: TabConfig[] = [
 	{ id: 'overview', icon: <OverviewIcon />, label: 'Overview' },
-	{ id: 'signer', icon: <SignerIcon />, label: 'Signer' },
-	{ id: 'transactions', icon: <TransactionsIcon />, label: 'Txs' },
+	{ id: 'transactions', icon: <TransactionsIcon />, label: 'Transactions' },
 	{ id: 'events', icon: <EventsIcon />, label: 'Events' },
-	{ id: 'wallet', icon: <WalletIcon />, label: 'Wallet' },
-	{ id: 'perf', icon: <PerfIcon />, label: 'Perf' },
-	{ id: 'storage', icon: <StorageIcon />, label: 'Storage' }
+	{ id: 'inspector', icon: <InspectorIcon />, label: 'Inspector' }
 ]
 
 // Position styles mapping
@@ -67,14 +58,11 @@ const POSITION_STYLES: Record<string, React.CSSProperties> = {
 /**
  * Enhanced development debug panel for connector
  * 
- * **Features**:
- * - 📊 Overview: Connection status, account, network, health
- * - 🔐 Signer: Transaction capabilities and activity
+ * **Features** (4 focused tabs):
+ * - 📊 Overview: Comprehensive status dashboard (connection, signer, account, network, wallet, health)
  * - 📝 Transactions: Real-time transaction tracking with explorer links
- * - 📡 Events: Real-time event stream with pause/clear
- * - 💼 Wallet: Features breakdown, chains, accounts
- * - ⚡ Perf: Performance metrics and optimization stats
- * - 💾 Storage: Persistence state with clear controls
+ * - 📡 Events: Real-time event stream with pause/clear controls
+ * - 🔍 Inspector: Advanced debugging (storage, performance metrics, resource monitoring)
  * 
  * **Important**: Only renders in development mode. Automatically excluded from production builds.
  * 
@@ -111,7 +99,7 @@ export function ConnectorDebugPanel({
 	// Hooks
 	const client = useConnectorClient()
 	const state = useConnector()
-	const { address, formatted, copied } = useAccount()
+	const { address, formatted, copied, copy } = useAccount()
 	const { cluster, rpcUrl } = useCluster()
 	const { signer, ready, capabilities } = useTransactionSigner()
 	
@@ -242,9 +230,10 @@ export function ConnectorDebugPanel({
 				{/* Tab Navigation */}
 				<div style={{ 
 					display: 'flex',
-					padding: '8px',
+					padding: '4px 8px',
 					gap: 0,
-					backgroundColor: 'rgba(0, 0, 0, 0.2)'
+					backgroundColor: 'rgba(0, 0, 0, 0.2)',
+					borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
 				}}>
 						{TABS.map(tab => (
 							<TabButton
@@ -266,31 +255,26 @@ export function ConnectorDebugPanel({
 						transition: 'min-height 0.3s ease'
 					}}>
 						<TabPanel isActive={activeTab === 'overview'}>
-							<OverviewTab 
+							<EnhancedOverviewTab 
 								state={state}
 								health={health}
 								address={address}
 								formatted={formatted}
 								copied={copied}
+								copy={copy}
 								cluster={cluster}
 								rpcUrl={rpcUrl}
+								signer={signer}
+								ready={ready}
+								capabilities={capabilities}
 							/>
 						</TabPanel>
 						
-					<TabPanel isActive={activeTab === 'signer'}>
-						<SignerTab
-							signer={signer}
-							ready={ready}
-							capabilities={capabilities}
-							address={address}
-						/>
-					</TabPanel>
-					
-					<TabPanel isActive={activeTab === 'transactions'}>
-						<TransactionsTab client={client} cluster={cluster} />
-					</TabPanel>
-					
-					<TabPanel isActive={activeTab === 'events'}>
+						<TabPanel isActive={activeTab === 'transactions'}>
+							<TransactionsTab client={client} cluster={cluster} />
+						</TabPanel>
+						
+						<TabPanel isActive={activeTab === 'events'}>
 							<EventsTab
 								events={events}
 								onClear={handleClearEvents}
@@ -299,16 +283,13 @@ export function ConnectorDebugPanel({
 							/>
 						</TabPanel>
 						
-						<TabPanel isActive={activeTab === 'wallet'}>
-							<WalletTab wallet={state.selectedWallet} />
-						</TabPanel>
-						
-						<TabPanel isActive={activeTab === 'perf'}>
-							{metrics && <PerfTab metrics={metrics} poolStats={poolStats} />}
-						</TabPanel>
-						
-						<TabPanel isActive={activeTab === 'storage'}>
-							<StorageTab client={client} state={state} />
+						<TabPanel isActive={activeTab === 'inspector'}>
+							<InspectorTab 
+								client={client} 
+								state={state}
+								metrics={metrics}
+								poolStats={poolStats}
+							/>
 						</TabPanel>
 					</div>
 					

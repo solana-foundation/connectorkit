@@ -41,7 +41,7 @@ export interface DebugPanelProps {
 	maxEvents?: number
 }
 
-export type TabId = 'overview' | 'signer' | 'transactions' | 'events' | 'wallet' | 'perf' | 'storage'
+export type TabId = 'overview' | 'transactions' | 'events' | 'inspector'
 
 export interface TabConfig {
 	id: TabId

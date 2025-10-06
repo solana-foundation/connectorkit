@@ -19,7 +19,7 @@ export function CloseIcon({ size = 20, color = 'currentColor' }: { size?: number
 	)
 }
 
-export function OverviewIcon({ size = 11, color = 'currentColor' }: { size?: number; color?: string }) {
+export function OverviewIcon({ size = 14, color = 'currentColor' }: { size?: number; color?: string }) {
 	return (
 		<svg width={size} height={size} viewBox="0 0 30 24" fill={color} xmlns="http://www.w3.org/2000/svg">
 			<g>
@@ -30,7 +30,7 @@ export function OverviewIcon({ size = 11, color = 'currentColor' }: { size?: num
 	)
 }
 
-export function SignerIcon({ size = 12, color = 'currentColor' }: { size?: number; color?: string }) {
+export function SignerIcon({ size = 14, color = 'currentColor' }: { size?: number; color?: string }) {
 	return (
 		<svg width={size} height={size} viewBox="0 0 30 30" fill={color} xmlns="http://www.w3.org/2000/svg">
 			<g>
@@ -42,7 +42,7 @@ export function SignerIcon({ size = 12, color = 'currentColor' }: { size?: numbe
 	)
 }
 
-export function TransactionsIcon({ size = 10, color = 'currentColor' }: { size?: number; color?: string }) {
+export function TransactionsIcon({ size = 14, color = 'currentColor' }: { size?: number; color?: string }) {
 	return (
 		<svg width={size} height={size} viewBox="0 0 24 24" fill={color} xmlns="http://www.w3.org/2000/svg">
 			<g>
@@ -54,7 +54,7 @@ export function TransactionsIcon({ size = 10, color = 'currentColor' }: { size?:
 	)
 }
 
-export function EventsIcon({ size = 10, color = 'currentColor' }: { size?: number; color?: string }) {
+export function EventsIcon({ size = 14, color = 'currentColor' }: { size?: number; color?: string }) {
 	return (
 		<svg width={size} height={size} viewBox="0 0 24 24" fill={color} xmlns="http://www.w3.org/2000/svg">
 			<g>
@@ -68,7 +68,7 @@ export function EventsIcon({ size = 10, color = 'currentColor' }: { size?: numbe
 	)
 }
 
-export function WalletIcon({ size = 10, color = 'currentColor' }: { size?: number; color?: string }) {
+export function WalletIcon({ size = 14, color = 'currentColor' }: { size?: number; color?: string }) {
 	return (
 		<svg width={size} height={size} viewBox="0 0 34 34" fill={color} xmlns="http://www.w3.org/2000/svg">
 			<g>
@@ -79,7 +79,7 @@ export function WalletIcon({ size = 10, color = 'currentColor' }: { size?: numbe
 	)
 }
 
-export function PerfIcon({ size = 11, color = 'currentColor' }: { size?: number; color?: string }) {
+export function PerfIcon({ size = 14, color = 'currentColor' }: { size?: number; color?: string }) {
 	return (
 		<svg width={size} height={size} viewBox="0 0 24 24" fill={color} xmlns="http://www.w3.org/2000/svg">
 			<g>
@@ -91,12 +91,74 @@ export function PerfIcon({ size = 11, color = 'currentColor' }: { size?: number;
 	)
 }
 
-export function StorageIcon({ size = 11, color = 'currentColor' }: { size?: number; color?: string }) {
+export function StorageIcon({ size = 14, color = 'currentColor' }: { size?: number; color?: string }) {
 	return (
 		<svg width={size} height={size} viewBox="0 0 24 24" fill={color} xmlns="http://www.w3.org/2000/svg">
 			<g>
 				<rect height="20.5957" opacity="0" width="17.1582" x="0" y="0" />
 				<path d="M0 12.0117L0 10.3125C2.06055 12.0605 4.77539 12.8809 8.39844 12.8809C12.0215 12.8809 14.7363 12.0605 16.7969 10.3125L16.7969 12.0117C14.6191 13.6133 11.9141 14.3555 8.39844 14.3555C4.88281 14.3555 2.17773 13.6133 0 12.0117ZM0 15.9766C0 18.6719 3.38867 20.5762 8.39844 20.5762C13.4082 20.5762 16.7969 18.6719 16.7969 15.9766L16.7969 4.16016C16.7969 1.69922 13.4375 0 8.39844 0C3.35938 0 0 1.69922 0 4.16016ZM1.57227 4.16016C1.57227 2.51953 4.30664 1.37695 8.39844 1.37695C12.4902 1.37695 15.2246 2.51953 15.2246 4.16016C15.2246 5.73242 12.4707 6.83594 8.39844 6.83594C4.32617 6.83594 1.57227 5.73242 1.57227 4.16016Z" fillOpacity="0.85" />
+			</g>
+		</svg>
+	)
+}
+
+export function InspectorIcon({ size = 14, color = 'currentColor' }: { size?: number; color?: string }) {
+	return (
+		<svg width={size} height={size} viewBox="0 0 24 24" fill={color} xmlns="http://www.w3.org/2000/svg">
+			<g>
+				<rect height="22" opacity="0" width="22" x="0" y="0" />
+				<path d="M9.5 16C13.0899 16 16 13.0899 16 9.5C16 5.91015 13.0899 3 9.5 3C5.91015 3 3 5.91015 3 9.5C3 13.0899 5.91015 16 9.5 16ZM9.5 14C6.98477 14 5 12.0152 5 9.5C5 6.98477 6.98477 5 9.5 5C12.0152 5 14 6.98477 14 9.5C14 12.0152 12.0152 14 9.5 14ZM19.7071 20.2929C20.0976 20.6834 20.0976 21.3166 19.7071 21.7071C19.3166 22.0976 18.6834 22.0976 18.2929 21.7071L14.8 18.2142C15.3905 17.8256 15.9256 17.3905 16.4142 16.8L19.7071 20.2929Z" fillOpacity="0.85" />
+			</g>
+		</svg>
+	)
+}
+
+export function PlayIcon({ size = 12, color = 'currentColor' }: { size?: number; color?: string }) {
+	return (
+		<svg
+			width={size}
+			height={size}
+			viewBox="0 0 20 20"
+			fill={color}
+			xmlns="http://www.w3.org/2000/svg"
+		>
+			<g>
+				<rect height="16.5527" opacity="0" width="16.6406" x="0" y="0" />
+				<path d="M3.04688 16.5527C3.4375 16.5527 3.76953 16.3965 4.16016 16.1719L15.5469 9.58984C16.3574 9.11133 16.6406 8.79883 16.6406 8.28125C16.6406 7.76367 16.3574 7.45117 15.5469 6.98242L4.16016 0.390625C3.76953 0.166016 3.4375 0.0195312 3.04688 0.0195312C2.32422 0.0195312 1.875 0.566406 1.875 1.41602L1.875 15.1465C1.875 15.9961 2.32422 16.5527 3.04688 16.5527Z" fillOpacity="0.85" />
+			</g>
+		</svg>
+	)
+}
+
+export function PauseIcon({ size = 12, color = 'currentColor' }: { size?: number; color?: string }) {
+	return (
+		<svg
+			width={size}
+			height={size}
+			viewBox="0 0 14 16"
+			fill={color}
+			xmlns="http://www.w3.org/2000/svg"
+		>
+			<g>
+				<rect height="15.9082" opacity="0" width="12.2754" x="0" y="0" />
+				<path d="M1.29883 15.9082L3.52539 15.9082C4.375 15.9082 4.82422 15.459 4.82422 14.5996L4.82422 1.29883C4.82422 0.410156 4.375 0 3.52539 0L1.29883 0C0.449219 0 0 0.449219 0 1.29883L0 14.5996C0 15.459 0.449219 15.9082 1.29883 15.9082ZM8.39844 15.9082L10.6152 15.9082C11.4746 15.9082 11.9141 15.459 11.9141 14.5996L11.9141 1.29883C11.9141 0.410156 11.4746 0 10.6152 0L8.39844 0C7.53906 0 7.08984 0.449219 7.08984 1.29883L7.08984 14.5996C7.08984 15.459 7.53906 15.9082 8.39844 15.9082Z" fillOpacity="0.85" />
+			</g>
+		</svg>
+	)
+}
+
+export function TrashIcon({ size = 12, color = 'currentColor' }: { size?: number; color?: string }) {
+	return (
+		<svg
+			width={size}
+			height={size}
+			viewBox="0 0 24 24"
+			fill={color}
+			xmlns="http://www.w3.org/2000/svg"
+		>
+			<g>
+				<rect height="23.4863" opacity="0" width="19.2676" x="0" y="0" />
+				<path d="M6.5625 18.6035C6.93359 18.6035 7.17773 18.3691 7.16797 18.0273L6.86523 7.57812C6.85547 7.23633 6.61133 7.01172 6.25977 7.01172C5.88867 7.01172 5.64453 7.24609 5.6543 7.58789L5.94727 18.0273C5.95703 18.3789 6.20117 18.6035 6.5625 18.6035ZM9.45312 18.6035C9.82422 18.6035 10.0879 18.3691 10.0879 18.0273L10.0879 7.58789C10.0879 7.24609 9.82422 7.01172 9.45312 7.01172C9.08203 7.01172 8.82812 7.24609 8.82812 7.58789L8.82812 18.0273C8.82812 18.3691 9.08203 18.6035 9.45312 18.6035ZM12.3535 18.6035C12.7051 18.6035 12.9492 18.3789 12.959 18.0273L13.252 7.58789C13.2617 7.24609 13.0176 7.01172 12.6465 7.01172C12.2949 7.01172 12.0508 7.23633 12.041 7.58789L11.748 18.0273C11.7383 18.3691 11.9824 18.6035 12.3535 18.6035ZM5.16602 4.46289L6.71875 4.46289L6.71875 2.37305C6.71875 1.81641 7.10938 1.45508 7.69531 1.45508L11.1914 1.45508C11.7773 1.45508 12.168 1.81641 12.168 2.37305L12.168 4.46289L13.7207 4.46289L13.7207 2.27539C13.7207 0.859375 12.8027 0 11.2988 0L7.58789 0C6.08398 0 5.16602 0.859375 5.16602 2.27539ZM0.732422 5.24414L18.1836 5.24414C18.584 5.24414 18.9062 4.90234 18.9062 4.50195C18.9062 4.10156 18.584 3.76953 18.1836 3.76953L0.732422 3.76953C0.341797 3.76953 0 4.10156 0 4.50195C0 4.91211 0.341797 5.24414 0.732422 5.24414ZM4.98047 21.748L13.9355 21.748C15.332 21.748 16.2695 20.8398 16.3379 19.4434L17.0215 5.05859L15.4492 5.05859L14.7949 19.2773C14.7754 19.8633 14.3555 20.2734 13.7793 20.2734L5.11719 20.2734C4.56055 20.2734 4.14062 19.8535 4.11133 19.2773L3.41797 5.05859L1.88477 5.05859L2.57812 19.4531C2.64648 20.8496 3.56445 21.748 4.98047 21.748Z" fillOpacity="0.85" />
 			</g>
 		</svg>
 	)

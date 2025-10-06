@@ -16,7 +16,7 @@ export function Section({ title, children }: { title: string; children: React.Re
 				textTransform: 'uppercase',
 				letterSpacing: 0.5,
 				marginBottom: 6,
-				fontWeight: 600
+				fontWeight: 400
 			}}>
 				{title}
 			</div>
@@ -47,7 +47,7 @@ export function Badge({ children, color = '#666' }: { children: React.ReactNode;
 	)
 }
 
-export function Button({ children, onClick, small }: { children: React.ReactNode; onClick: () => void; small?: boolean }) {
+export function Button({ children, onClick, small, icon }: { children: React.ReactNode; onClick: () => void; small?: boolean; icon?: boolean }) {
 	const [isHovered, setIsHovered] = useState(false)
 	const [isPressed, setIsPressed] = useState(false)
 	
@@ -62,7 +62,7 @@ export function Button({ children, onClick, small }: { children: React.ReactNode
 			onMouseDown={() => setIsPressed(true)}
 			onMouseUp={() => setIsPressed(false)}
 			style={{
-				padding: small ? '4px 8px' : '6px 12px',
+				padding: icon ? (small ? '6px' : '6px') : (small ? '4px 8px' : '6px 12px'),
 				fontSize: small ? 10 : 11,
 				borderRadius: 6,
 				border: `1px solid ${isHovered ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.2)'}`,
@@ -71,7 +71,10 @@ export function Button({ children, onClick, small }: { children: React.ReactNode
 				cursor: 'pointer',
 				fontWeight: 500,
 				transition: 'all 0.15s ease, transform 0.1s ease',
-				transform: isPressed ? 'scale(0.98)' : 'scale(1)'
+				transform: isPressed ? 'scale(0.98)' : 'scale(1)',
+				display: 'flex',
+				alignItems: 'center',
+				justifyContent: 'center'
 			}}
 		>
 			{children}
@@ -104,7 +107,7 @@ export function TabButton({
 			style={{
 				flex: 1,
 				padding: '4px 6px',
-				fontSize: 10,
+				fontSize: 12,
 				borderRadius: 8,
 				margin: '4px 2px',
 				background: isActive 
@@ -128,6 +131,39 @@ export function TabButton({
 			{tab.icon}
 			<span>{tab.label}</span>
 		</button>
+	)
+}
+
+export function EmptyState({ 
+	icon, 
+	title, 
+	description 
+}: { 
+	icon: React.ReactNode
+	title: string
+	description: string 
+}) {
+	return (
+		<div
+			style={{
+				textAlign: 'center',
+				padding: '40px 20px',
+				display: 'flex',
+				flexDirection: 'column',
+				alignItems: 'center',
+				gap: 8
+			}}
+		>
+			<div style={{ opacity: 0.5 }}>
+				{icon}
+			</div>
+			<div style={{ color: '#fff', fontSize: 12, fontWeight: 500 }}>
+				{title}
+			</div>
+			<div style={{ fontSize: 10, opacity: 0.5, maxWidth: 200 }}>
+				{description}
+			</div>
+		</div>
 	)
 }
 
