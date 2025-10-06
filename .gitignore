@@ -49,3 +49,5 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 /connectkit-main/
 /wallet-ui-main/
 /commerce-kit/
+/wallet-adapter-compat/
+/armadura/

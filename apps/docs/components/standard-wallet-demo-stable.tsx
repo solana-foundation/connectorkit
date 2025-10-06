@@ -15,9 +15,9 @@ import {
   useAccount,
   useCluster,
   useWalletInfo,
-  formatSOL,
   ConnectorErrorBoundary 
-} from '@connector-kit/connector'
+} from '@connector-kit/connector/react'
+import { formatSOL } from '@connector-kit/connector/headless'
 import { Button } from './ui/button'
 import { Alert, AlertDescription } from './ui/alert'
 import { Spinner } from './ui/spinner'
@@ -389,6 +389,7 @@ function StandardWalletDemoStableContent() {
                   bgColor={deferredConnected ? (isDevnet ? "#10b981" : isMainnet ? "#2d2d2d" : "#FFBE1A") : "#FFBE1A"}
                   address={deferredAddress || undefined}
                   onDisconnect={resetAnimation}
+                  walletIcon={walletIcon || selectedWallet?.icon}
                 />
               </motion.div>
 

@@ -25,7 +25,13 @@ export type {
   ConnectorConfig,
   ConnectorState,
   WalletInfo,
-  AccountInfo
+  AccountInfo,
+  ConnectorHealth,
+  ConnectorEvent,
+  ConnectorEventListener,
+  ConnectorDebugMetrics,
+  TransactionActivity,
+  ConnectorDebugState
 } from './lib/connector-client'
 
 export type {
@@ -36,6 +42,37 @@ export type {
 } from './lib/wallet-standard-shim'
 
 export type { MobileWalletAdapterConfig } from './ui/connector-provider'
+
+// ============================================================================
+// Transaction Signing
+// ============================================================================
+export {
+  createTransactionSigner,
+  TransactionSignerError,
+  isTransactionSignerError
+} from './lib/transaction-signer'
+
+export type {
+  TransactionSigner,
+  TransactionSignerConfig,
+  TransactionSignerCapabilities,
+  SignedTransaction
+} from './lib/transaction-signer'
+
+// ============================================================================
+// RPC Connection Pooling
+// ============================================================================
+export {
+  ConnectionPool,
+  getConnectionPool,
+  createConnectionPool
+} from './lib/connection-pool'
+
+export type {
+  ConnectionLike,
+  ConnectionPoolOptions,
+  ConnectionPoolStats
+} from './lib/connection-pool'
 
 // ============================================================================
 // Storage System
@@ -78,6 +115,16 @@ export {
 } from '@wallet-ui/core'
 
 // ============================================================================
+// Browser Compatibility
+// ============================================================================
+export { 
+  installPolyfills, 
+  isPolyfillInstalled, 
+  isCryptoAvailable, 
+  getPolyfillStatus 
+} from './lib/polyfills'
+
+// ============================================================================
 // Utility Functions
 // ============================================================================
 export * from './utils/clipboard'
@@ -85,3 +132,18 @@ export * from './utils/formatting'
 export * from './utils/formatting-light'
 export * from './utils/cluster'
 export * from './utils/network'
+
+// ============================================================================
+// Explorer URLs & Transaction Utilities
+// ============================================================================
+export {
+  getSolanaExplorerUrl,
+  getSolscanUrl,
+  getXrayUrl,
+  getSolanaFmUrl,
+  getAllExplorerUrls,
+  formatSignature,
+  copySignature
+} from './lib/explorer-urls'
+
+export type { ExplorerType, ExplorerOptions } from './lib/explorer-urls'

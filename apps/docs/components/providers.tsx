@@ -5,9 +5,10 @@ import { useMemo, useState} from 'react'
 import { createProvider, ArmaProvider } from '@armadura/sdk'
 import { createJupiter } from '@armadura/jupiter'
 import { 
-  AppProvider, 
-  createConfig,
-} from '@connector-kit/connector'
+  AppProvider,
+  ConnectorDebugPanel,
+} from '@connector-kit/connector/react'
+import { createConfig } from '@connector-kit/connector/headless'
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(() => new QueryClient({
@@ -53,18 +54,22 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AppProvider config={config}>
-        <ArmaProvider 
-        config={armaConfig} 
-        queryClient={queryClient}
-        useConnector="auto"
-        enhancedCluster={{
-          network: config.network as 'mainnet' | 'devnet' | 'testnet',
-          allowSwitching: true,
-          persistSelection: true
-        }}
+      <AppProvider 
+        connectorConfig={config.connectorConfig} 
+        mobile={config.mobile}
       >
+        <ArmaProvider 
+          config={armaConfig} 
+          queryClient={queryClient}
+          useConnector="auto"
+          enhancedCluster={{
+            network: config.network as 'mainnet' | 'devnet' | 'testnet',
+            allowSwitching: true,
+            persistSelection: true
+          }}
+        >
           {children}
+          {process.env.NODE_ENV === 'development' && <ConnectorDebugPanel />}
         </ArmaProvider>
       </AppProvider>
     </QueryClientProvider>

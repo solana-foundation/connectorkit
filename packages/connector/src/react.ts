@@ -12,14 +12,20 @@ export { UnifiedProvider, AppProvider } from './ui/unified-provider'
 // React-specific error boundaries
 export { ConnectorErrorBoundary, withErrorBoundary } from './ui/error-boundary'
 
+// Development tools
+export { ConnectorDebugPanel, DebugPanel } from './ui/debug-panel'
+export type { DebugPanelProps } from './ui/debug-panel'
+
 // Enhanced React hooks
 export { useCluster } from './hooks/use-cluster'
 export { useAccount } from './hooks/use-account'
 export { useWalletInfo } from './hooks/use-wallet-info'
+export { useTransactionSigner } from './hooks/use-transaction-signer'
 
 export type { UseClusterReturn } from './hooks/use-cluster'
 export type { UseAccountReturn } from './hooks/use-account'
 export type { UseWalletInfoReturn } from './hooks/use-wallet-info'
+export type { UseTransactionSignerReturn } from './hooks/use-transaction-signer'
 
 // React-specific types
 export type { 
@@ -52,3 +58,14 @@ export type {
   SolanaCluster,
   SolanaClusterId,
 } from '@wallet-ui/core'
+
+// Integration helpers for third-party transaction libraries
+export {
+  useArmaduraTransaction,
+  withTransactionTracking,
+  useTrackedTransactionFunction
+} from './integrations/armadura'
+
+export type {
+  ArmaduraUseTransactionReturn
+} from './integrations/armadura'

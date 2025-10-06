@@ -3,6 +3,7 @@
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useState } from "react";
 import { useTransaction, useBalance, useArmaClient } from '@armadura/sdk'
+import { useArmaduraTransaction, useConnectorClient } from '@connector-kit/connector/react'
 import { Button } from './ui/button'
 import { Alert, AlertDescription } from './ui/alert'
 import { Spinner } from './ui/spinner'
@@ -26,7 +27,11 @@ export function TransactionStandardDemo() {
     // 🎉 Shared wallet state through ArcClient context (replacement for deprecated useWallet)
     const { wallet: { connected, selectedAccount: walletAddress, signer } } = useArmaClient()
     const { balance, isLoading: balanceLoading, refetch: refetchBalance } = useBalance({ address: walletAddress || undefined }) // Explicit address from standard wallets
-    const { sendTransaction, isLoading, error } = useTransaction() // Automatically uses connected signer
+    
+    // 🔍 Wrap with auto-tracking for debug panel
+    const armaduraTx = useTransaction()
+    const { sendTransaction, isLoading, error } = useArmaduraTransaction(armaduraTx)
+    const connectorClient = useConnectorClient()
 
     useEffect(() => { setHasMounted(true) }, [])
 
@@ -159,13 +164,6 @@ export function TransactionStandardDemo() {
         setIsProcessing(true);
         
         try {
-            console.log('🚀 Starting SOL transfer with Standard Wallet...')
-            console.log('💰 Current balance:', balance ? formatBalance(balance) : 'Unknown')
-            console.log('💸 Transfer amount:', amount, 'SOL')
-            console.log('📍 Wallet address:', walletAddress)
-            console.log('🔑 Signer address:', signer?.address)
-            console.log('⚠️ ADDRESS MATCH:', walletAddress === signer?.address ? '✅ YES' : '❌ NO')
-            
             // Create transfer instruction
             const transferInstruction = getTransferSolInstruction({
                 source: signer,
@@ -173,24 +171,22 @@ export function TransactionStandardDemo() {
                 amount: lamports(transferAmountLamports),
             })
             
-            console.log('📝 Created transfer instruction')
-            
-            // 🎉 Explicit signer from standard wallets
-            const result = await sendTransaction({
+            const transactionConfig = {
                 instructions: [transferInstruction],
                 config: {
                     feePayer: signer || undefined
                 }
-            })
+            }
             
-            console.log('✅ Transaction successful!', result)
+            // 🎉 Explicit signer from standard wallets
+            const result = await sendTransaction(transactionConfig)
+            
             setTxResult(result)
             
             // Refresh balance after successful transaction
             setTimeout(() => refetchBalance(), 2000)
             
         } catch (error) {
-            console.error('❌ Transaction failed:', error)
             const errorMessage = error instanceof Error ? error.message : String(error)
             if (errorMessage.includes('simulation') || errorMessage.includes('no record of a prior credit')) {
                 alert(`Transaction failed: Account has no SOL!\n\nThis happened because the wallet address (${walletAddress ? truncateAddress(walletAddress) : 'Unknown'}) might not have enough SOL.\n\nPlease fund your wallet and try again.`)
