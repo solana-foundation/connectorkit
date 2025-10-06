@@ -6,9 +6,14 @@
 
 import { useState, useMemo } from 'react'
 import { Section, Divider, Button } from '../ui-components'
+import type { StorageAdapter } from '../../../lib/enhanced-storage'
+import type { SolanaClusterId } from '@wallet-ui/core'
 
 interface StorageTabProps {
-	client: any
+	client: {
+		walletStorage?: StorageAdapter<string | undefined>
+		clusterStorage?: StorageAdapter<SolanaClusterId>
+	}
 	state: any
 }
 
@@ -16,17 +21,19 @@ export function StorageTab({ client, state }: StorageTabProps) {
 	const [lastClear, setLastClear] = useState<string | null>(null)
 	
 	// Try to get storage values
-	const storedWallet = useMemo(() => {
+	const storedWallet = useMemo<string | null>(() => {
 		try {
-			return (client as any).walletStorage?.get() || null
+			const value = client.walletStorage?.get()
+			return value ?? null
 		} catch {
 			return null
 		}
 	}, [client, lastClear])
 	
-	const storedCluster = useMemo(() => {
+	const storedCluster = useMemo<string | null>(() => {
 		try {
-			return (client as any).clusterStorage?.get() || null
+			const value = client.clusterStorage?.get()
+			return value ?? null
 		} catch {
 			return null
 		}
@@ -34,7 +41,7 @@ export function StorageTab({ client, state }: StorageTabProps) {
 	
 	const handleClearWallet = () => {
 		try {
-			(client as any).walletStorage?.set(undefined)
+			client.walletStorage?.set(undefined)
 			setLastClear(Date.now().toString())
 		} catch (error) {
 			console.error('Failed to clear wallet storage:', error)
@@ -43,7 +50,7 @@ export function StorageTab({ client, state }: StorageTabProps) {
 	
 	const handleClearCluster = () => {
 		try {
-			(client as any).clusterStorage?.set('solana:mainnet')
+			client.clusterStorage?.set('solana:mainnet')
 			setLastClear(Date.now().toString())
 		} catch (error) {
 			console.error('Failed to clear cluster storage:', error)
@@ -69,7 +76,10 @@ export function StorageTab({ client, state }: StorageTabProps) {
 					<div>
 						Account: {state.selectedAccount ? (
 							<span style={{ color: '#0f0', fontFamily: 'monospace', fontSize: 9 }}>
-								{state.selectedAccount.slice(0, 8)}...{state.selectedAccount.slice(-6)} ✓
+								{state.selectedAccount.length >= 14 
+									? `${state.selectedAccount.slice(0, 8)}...${state.selectedAccount.slice(-6)}`
+									: state.selectedAccount
+								} ✓
 							</span>
 						) : (
 							<span style={{ opacity: 0.5 }}>None</span>

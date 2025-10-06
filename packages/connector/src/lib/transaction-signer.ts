@@ -343,13 +343,6 @@ export function createTransactionSigner(
 		// Optional: message signing
 		...(capabilities.canSignMessage && {
 			async signMessage(message: Uint8Array): Promise<Uint8Array> {
-				if (!capabilities.canSignMessage) {
-					throw new TransactionSignerError(
-						'Wallet does not support message signing',
-						'FEATURE_NOT_SUPPORTED'
-					)
-				}
-				
 				try {
 					const signFeature = features['solana:signMessage']
 					const result = await signFeature.signMessage(message)

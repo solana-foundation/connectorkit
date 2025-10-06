@@ -79,7 +79,7 @@ export function getSolanaFmUrl(
 		return `https://solana.fm/tx/${signature}`
 	}
 
-	return `https://solana.fm/tx/${signature}?cluster=${normalizedCluster}-solana`
+	return `https://solana.fm/tx/${signature}?cluster=${normalizedCluster}`
 }
 
 /**

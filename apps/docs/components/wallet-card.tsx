@@ -1,5 +1,5 @@
 import { motion } from "motion/react";
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { IconGamecontrollerFill } from "symbols-react";
 import { MousePointerClick } from 'lucide-react'
 import { CopyButton } from "./ui/copy-button";
@@ -25,6 +25,8 @@ export function WalletCard({
     onDisconnect,
     walletIcon,
 }: WalletCardProps) {
+    const [imageError, setImageError] = useState(false)
+
     useEffect(() => {
         if (!onDisconnect) return
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -78,18 +80,19 @@ export function WalletCard({
             className="flex items-center justify-center rounded-full h-10 w-10"
             onClick={onClick}
           >
-            {walletIcon ? (
+            {walletIcon && !imageError ? (
               <img 
                 src={walletIcon} 
                 alt={walletName || 'wallet'} 
                 className="h-10 w-10 rounded-full"
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none'
-                  e.currentTarget.parentElement!.innerHTML = '<div class="h-10 w-10 flex items-center justify-center"><svg class="h-10 w-10 fill-white" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg></div>'
-                }}
+                onError={() => setImageError(true)}
               />
             ) : (
-              <IconGamecontrollerFill className="h-10 w-10 translate-x-0 translate-y-0 fill-white" />
+              <div className="h-10 w-10 flex items-center justify-center">
+                <svg className="h-10 w-10 fill-white" viewBox="0 0 24 24">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>
+                </svg>
+              </div>
             )}
           </motion.div>
           <motion.div

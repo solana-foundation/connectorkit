@@ -33,39 +33,6 @@ export function TransactionStandardDemo() {
     const { sendTransaction, isLoading, error } = useArmaduraTransaction(armaduraTx)
     const connectorClient = useConnectorClient()
 
-    // Log the transaction hook objects
-    useEffect(() => {
-        console.log('📊 === TRANSACTION HOOKS INFO ===')
-        console.log('armaduraTx keys:', Object.keys(armaduraTx))
-        console.log('armaduraTx.data:', JSON.stringify(armaduraTx.data, null, 2))
-        console.log('armaduraTx.isLoading:', armaduraTx.isLoading)
-        console.log('armaduraTx.error:', armaduraTx.error)
-        console.log('isLoading:', isLoading)
-        console.log('error:', error)
-        console.log('================================')
-    }, [armaduraTx, sendTransaction, isLoading, error])
-
-    // Log connector client and its debug state
-    useEffect(() => {
-        if (connectorClient) {
-            console.log('🔌 === CONNECTOR CLIENT INFO ===')
-            console.log('Client keys:', Object.keys(connectorClient))
-            
-            // Try to get debug state
-            const debugState = (connectorClient as any).getDebugState?.()
-            if (debugState) {
-                console.log('🐛 Debug state keys:', Object.keys(debugState))
-                console.log('📝 Transactions tracked:', debugState.transactions?.length || 0)
-                console.log('📝 Total transactions:', debugState.totalTransactions || 0)
-                if (debugState.transactions?.length > 0) {
-                    console.log('📝 Latest transaction FULL DATA:')
-                    console.log(JSON.stringify(debugState.transactions[0], null, 2))
-                }
-            }
-            console.log('================================')
-        }
-    }, [connectorClient, txResult])
-
     useEffect(() => { setHasMounted(true) }, [])
 
     const formatBalance = (lamports: bigint) => {
@@ -197,25 +164,12 @@ export function TransactionStandardDemo() {
         setIsProcessing(true);
         
         try {
-            console.log('🚀 === STARTING TRANSACTION ===')
-            console.log('💰 Current balance:', balance ? formatBalance(balance) : 'Unknown')
-            console.log('💸 Transfer amount:', amount, 'SOL')
-            console.log('📍 Wallet address:', walletAddress)
-            console.log('🔑 Signer address:', signer?.address)
-            console.log('⚠️ ADDRESS MATCH:', walletAddress === signer?.address ? '✅ YES' : '❌ NO')
-            
             // Create transfer instruction
             const transferInstruction = getTransferSolInstruction({
                 source: signer,
                 destination: address(toAddress),
                 amount: lamports(transferAmountLamports),
             })
-            
-            console.log('📝 Transfer instruction keys:', Object.keys(transferInstruction))
-            console.log('📝 Transfer instruction details:')
-            console.log('  - programAddress:', transferInstruction.programAddress)
-            console.log('  - accounts:', transferInstruction.accounts?.length || 0, 'accounts')
-            console.log('  - data:', transferInstruction.data)
             
             const transactionConfig = {
                 instructions: [transferInstruction],
@@ -224,67 +178,15 @@ export function TransactionStandardDemo() {
                 }
             }
             
-            console.log('📦 Transaction config:')
-            console.log('  - instructions count:', transactionConfig.instructions.length)
-            console.log('  - feePayer address:', transactionConfig.config?.feePayer?.address || 'undefined')
-            console.log('  - config keys:', Object.keys(transactionConfig.config || {}))
-            
             // 🎉 Explicit signer from standard wallets
             const result = await sendTransaction(transactionConfig)
             
-            console.log('✅ === TRANSACTION RESULT ===')
-            console.log('Result keys:', Object.keys(result || {}))
-            console.log('Result.signature:', result?.signature)
-            console.log('Result.confirmed:', result?.confirmed)
-            console.log('')
-            console.log('📋 FULL RESULT AS JSON:')
-            console.log(JSON.stringify(result, null, 2))
-            console.log('')
-            console.log('🔍 RESULT PROPERTY BREAKDOWN:')
-            if (result && typeof result === 'object') {
-                for (const [key, value] of Object.entries(result)) {
-                    console.log(`  result.${key}:`, value, `(type: ${typeof value})`)
-                }
-            }
-            console.log('============================')
-            
             setTxResult(result)
-            
-            // Log what was tracked by the connector
-            setTimeout(() => {
-                console.log('🔍 === POST-TRANSACTION TRACKING CHECK ===')
-                const debugState = (connectorClient as any)?.getDebugState?.()
-                if (debugState) {
-                    console.log('Total transactions now:', debugState.totalTransactions)
-                    console.log('Transactions in history:', debugState.transactions?.length)
-                    
-                    // Find our transaction
-                    const ourTx = debugState.transactions?.find((tx: any) => tx.signature === result.signature)
-                    if (ourTx) {
-                        console.log('✅ Our transaction was tracked!')
-                        console.log('📊 TRACKED TRANSACTION FULL DATA:')
-                        console.log(JSON.stringify(ourTx, null, 2))
-                        console.log('')
-                        console.log('🏷️ METADATA BREAKDOWN:')
-                        if (ourTx.metadata) {
-                            Object.entries(ourTx.metadata).forEach(([key, value]) => {
-                                console.log(`  ${key}:`, value)
-                            })
-                        } else {
-                            console.log('  No metadata available')
-                        }
-                    } else {
-                        console.warn('⚠️ Transaction not found in tracking history')
-                    }
-                }
-                console.log('==========================================')
-            }, 100)
             
             // Refresh balance after successful transaction
             setTimeout(() => refetchBalance(), 2000)
             
         } catch (error) {
-            console.error('❌ Transaction failed:', error)
             const errorMessage = error instanceof Error ? error.message : String(error)
             if (errorMessage.includes('simulation') || errorMessage.includes('no record of a prior credit')) {
                 alert(`Transaction failed: Account has no SOL!\n\nThis happened because the wallet address (${walletAddress ? truncateAddress(walletAddress) : 'Unknown'}) might not have enough SOL.\n\nPlease fund your wallet and try again.`)

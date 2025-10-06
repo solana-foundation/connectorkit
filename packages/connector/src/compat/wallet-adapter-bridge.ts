@@ -8,6 +8,7 @@
  * wallet-adapter in existing codebases, facilitating gradual migration.
  */
 
+import React from 'react'
 import type { TransactionSigner } from '../lib/transaction-signer'
 
 /**
@@ -285,7 +286,7 @@ export function isWalletAdapterCompatible(obj: any): obj is WalletAdapterCompati
 	return (
 		obj &&
 		typeof obj === 'object' &&
-		('publicKey' in obj || obj.publicKey === null) &&
+		'publicKey' in obj &&
 		typeof obj.connected === 'boolean' &&
 		typeof obj.signTransaction === 'function' &&
 		typeof obj.signAllTransactions === 'function' &&
@@ -296,12 +297,15 @@ export function isWalletAdapterCompatible(obj: any): obj is WalletAdapterCompati
 
 /**
  * React hook that creates a wallet adapter compatible interface
- * Automatically recreates when signer changes
+ * Automatically recreates when signer, disconnect, or options change
+ * 
+ * This hook memoizes the adapter instance to ensure stability across renders,
+ * preventing unnecessary re-renders in components that consume the adapter.
  * 
  * @param signer - Transaction signer from useTransactionSigner()
  * @param disconnect - Disconnect function from useConnector()
  * @param options - Optional configuration
- * @returns Wallet adapter compatible interface
+ * @returns Wallet adapter compatible interface (stable across renders)
  * 
  * @example
  * ```tsx
@@ -324,11 +328,12 @@ export function useWalletAdapterCompat(
 	disconnect: () => Promise<void>,
 	options?: Omit<WalletAdapterCompatOptions, 'disconnect'>
 ): WalletAdapterCompatible {
-	// Note: This is intentionally not using React hooks (useMemo, etc.)
-	// to keep the compat layer framework-agnostic and reusable
-	return createWalletAdapterCompat(signer, {
-		disconnect,
-		...options
-	})
+	return React.useMemo(
+		() => createWalletAdapterCompat(signer, {
+			disconnect,
+			...options
+		}),
+		[signer, disconnect, options]
+	)
 }
 
