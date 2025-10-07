@@ -59,8 +59,8 @@ export function useWalletInfo(): UseWalletInfoReturn {
   // Map wallets once to avoid duplication and provide stable reference
   const mappedWallets = useMemo(
     () => wallets.map(w => ({
-      name: w.name,
-      icon: w.icon,
+      name: w.wallet.name,
+      icon: w.wallet.icon,
       installed: w.installed,
       connectable: w.connectable,
     })),
@@ -79,7 +79,7 @@ export function useWalletInfo(): UseWalletInfoReturn {
       }
     }
     
-    const info = wallets.find(w => w.name === selectedWallet.name)
+    const info = wallets.find(w => w.wallet.name === selectedWallet.name)
     
     return {
       name: selectedWallet.name,

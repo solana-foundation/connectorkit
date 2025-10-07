@@ -48,8 +48,6 @@ function hasFeature(wallet: Wallet, featureName: string): boolean {
 
 export interface WalletInfo {
 	wallet: Wallet
-	name: string
-	icon?: string
 	installed: boolean
 	/** Precomputed capability flag for UI convenience */
 	connectable?: boolean
@@ -364,8 +362,6 @@ export class ConnectorClient {
 
 		return {
 			wallet,
-			name: wallet.name,
-			icon: wallet.icon,
 			installed: true,
 			connectable
 		} satisfies WalletInfo
@@ -611,8 +607,6 @@ export class ConnectorClient {
 			this.updateState({
 				wallets: [{
 					wallet,
-					name: wallet.name,
-					icon: wallet.icon,
 					installed: true,
 					connectable: true
 				}]
@@ -747,11 +741,11 @@ export class ConnectorClient {
 			const last = this.getStoredWallet()
 			if (this.config.debug) {
 				console.log('🔄 Auto-connect: stored wallet =', last)
-				console.log('🔄 Auto-connect: available wallets =', this.state.wallets.map(w => w.name))
+				console.log('🔄 Auto-connect: available wallets =', this.state.wallets.map(w => w.wallet.name))
 			}
 			if (!last) return
 			
-			const walletFound = this.state.wallets.some(w => w.name === last)
+			const walletFound = this.state.wallets.some(w => w.wallet.name === last)
 			if (walletFound) {
 				if (this.config.debug) {
 					console.log('✅ Auto-connect: Found stored wallet, connecting')
@@ -760,7 +754,7 @@ export class ConnectorClient {
 			} else {
 				// Single shorter retry - wallets usually register within 1-2 seconds
 				setTimeout(() => {
-					if (this.state.wallets.some(w => w.name === last)) {
+					if (this.state.wallets.some(w => w.wallet.name === last)) {
 						if (this.config.debug) {
 							console.log('✅ Auto-connect: Retry successful')
 						}
@@ -883,7 +877,7 @@ export class ConnectorClient {
 
 	async select(walletName: string): Promise<void> {
 		if (typeof window === 'undefined') return
-		const w = this.state.wallets.find(x => x.name === walletName)
+		const w = this.state.wallets.find(x => x.wallet.name === walletName)
 		if (!w) throw new Error(`Wallet ${walletName} not found`)
 		
 		// Emit connecting event
