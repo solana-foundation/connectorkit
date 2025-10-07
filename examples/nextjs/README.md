@@ -1,6 +1,6 @@
-# ConnectorKit React Example
+# ConnectorKit Next.js Example
 
-Production-ready Solana wallet connection components built with shadcn/ui and Next.js. These components are designed to be copied into your project and customized to match your needs.
+Production-ready Solana wallet connection components built with shadcn/ui and Next.js App Router. These components are designed to be copied into your project and customized to match your needs.
 
 ## 🚀 Quick Start
 
@@ -9,7 +9,7 @@ Production-ready Solana wallet connection components built with shadcn/ui and Ne
 pnpm install
 
 # Run the example
-cd examples/react
+cd examples/nextjs
 pnpm dev
 ```
 

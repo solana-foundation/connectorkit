@@ -444,12 +444,32 @@ This connector implements the [Wallet Standard](https://github.com/wallet-standa
 ## Development
 
 ```bash
-pnpm install     # Install dependencies
-pnpm build       # Build package
-pnpm dev         # Development mode
+# First time setup
+pnpm install                                    # Install dependencies
+pnpm --filter @connector-kit/connector build    # Build connector package first
+
+# Development
+pnpm dev         # Run all examples in dev mode
+pnpm build       # Build all packages
 pnpm type-check  # TypeScript validation
 pnpm lint        # Lint code
 ```
+
+### Running Examples
+
+The monorepo includes three example projects:
+
+```bash
+# Run all examples at once (after initial build)
+pnpm dev
+
+# Or run individually
+cd examples/nextjs && pnpm dev  # Next.js example (port 3000)
+cd examples/vite && pnpm dev    # Vite example (port 5173)
+cd examples/vue && pnpm dev     # Vue example (port 5174)
+```
+
+**Note:** The connector package must be built at least once before running examples. This is done automatically with `pnpm dev` after the initial build.
 
 ---
 

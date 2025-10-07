@@ -1,53 +1,46 @@
-# dependencies (bun install)
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
 node_modules
+.pnp
+.pnp.js
 
-# output
-out
-dist
-*.tgz
-
-# code coverage
+# testing
 coverage
-*.lcov
 
-# logs
-logs
-_.log
-report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
+# next.js
+.next/
+out/
+build
+dist
 
-# dotenv environment variable files
-.env
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# local env files
+.env.local
 .env.development.local
 .env.test.local
 .env.production.local
-.env.local
 
-# caches
-.eslintcache
-.cache
-*.tsbuildinfo
+# turbo
 .turbo
-.next
 
-# IntelliJ based IDEs
-.idea
+# vercel
+.vercel
 
-# Finder (MacOS) folder config
-.DS_Store
+# typescript
+*.tsbuildinfo
 
-# Reference projects (local development only)
-/ai-main/
-/gill-master/
-/kit-main/
-/kite-main/
-/solana-docs/
-/wallet-standard-master/
-/viem-main/
-/wagmi-main/
-/mosaic-main/
-/mobile-wallet-adapter-main/
-/connectkit-main/
-/wallet-ui-main/
-/commerce-kit/
-/wallet-adapter-compat/
+# armadura
 /armadura/
+/wallet-adapter-compat/
+/connectkit-main/
+/mobile-wallet-adapter-main/
+/wallet-ui-main/

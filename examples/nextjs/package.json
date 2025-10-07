@@ -1,5 +1,5 @@
 {
-  "name": "@connectorkit-examples/react",
+  "name": "@connectorkit-examples/nextjs",
   "version": "0.1.0",
   "private": true,
   "scripts": {
