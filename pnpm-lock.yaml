@@ -310,9 +310,6 @@ importers:
       '@wallet-ui/core':
         specifier: ^2.0.0
         version: 2.0.0(@solana/kit@2.3.0(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.2)(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@5.0.10)))
-      nanostores:
-        specifier: ^1.0.1
-        version: 1.0.1
       react:
         specifier: '>=18.0.0'
         version: 19.1.1

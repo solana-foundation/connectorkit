@@ -5,7 +5,6 @@ export default defineConfig({
     index: 'src/index.ts',
     headless: 'src/headless.ts',
     react: 'src/react.ts',
-    compat: 'src/compat/index.ts'
   },
   format: ['esm', 'cjs'],
   dts: true,
@@ -24,8 +23,6 @@ export default defineConfig({
     '@wallet-ui/core',
     '@wallet-standard/app',
     '@solana-mobile/wallet-standard-mobile',
-    'nanostores',
-    '@nanostores/persistent'
   ],
   esbuildOptions: (options) => {
     // Aggressive tree-shaking optimizations
