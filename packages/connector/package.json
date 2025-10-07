@@ -51,17 +51,17 @@
     }
   },
   "dependencies": {
-    "@solana-mobile/wallet-standard-mobile": "^0.3.0",
+    "@nanostores/persistent": "^1.1.0",
+    "@solana-mobile/wallet-standard-mobile": "^0.4.1",
     "@solana/webcrypto-ed25519-polyfill": "^3.0.3",
-    "@wallet-standard/app": "^1.0.0",
+    "@wallet-standard/app": "^1.1.0",
     "@wallet-ui/core": "^2.0.0",
-    "nanostores": "^1.0.1",
-    "@nanostores/persistent": "^1.1.0"
+    "nanostores": "^1.0.1"
   },
   "devDependencies": {
+    "@size-limit/preset-big-lib": "^11.0.0",
     "@types/react": "^19.0.0",
     "size-limit": "^11.0.0",
-    "@size-limit/preset-big-lib": "^11.0.0",
     "tsup": "^8.0.0",
     "typescript": "^5.3.0"
   },
