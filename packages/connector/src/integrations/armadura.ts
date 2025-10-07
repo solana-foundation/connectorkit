@@ -16,8 +16,8 @@ import { assertIsSignature, Signature } from 'gill';
  * Armadura transaction types (generic for compatibility)
  */
 export interface ArmaduraUseTransactionReturn {
-  sendTransaction: (params: any) => Promise<{ signature: string; confirmed: boolean }>
-  sendPrebuilt: (tx: { wireTransaction: Uint8Array }, config?: any) => Promise<{ signature: string; confirmed: boolean }>
+  sendTransaction: (params: any) => Promise<{ signature: Signature; confirmed: boolean }>
+  sendPrebuilt: (tx: { wireTransaction: Uint8Array }, config?: any) => Promise<{ signature: Signature; confirmed: boolean }>
   buildTransaction: (instructions: any[], config?: any) => Promise<string>
   isLoading: boolean
   error: Error | null
