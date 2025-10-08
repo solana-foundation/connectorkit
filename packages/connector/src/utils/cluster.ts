@@ -6,7 +6,7 @@
 
 import type { SolanaCluster } from '@wallet-ui/core';
 import { getExplorerLink } from 'gill';
-import { RPC_ENDPOINTS } from './network';
+import { PUBLIC_RPC_ENDPOINTS } from './network';
 
 /**
  * Get the RPC endpoint URL for a cluster
@@ -25,10 +25,10 @@ export function getClusterRpcUrl(cluster: SolanaCluster): string {
         return url;
     }
 
-    // Use shared RPC endpoints with mainnet-beta alias
+    // Use shared public RPC endpoints with mainnet-beta alias
     const presets: Record<string, string> = {
-        ...RPC_ENDPOINTS,
-        'mainnet-beta': RPC_ENDPOINTS.mainnet,
+        ...PUBLIC_RPC_ENDPOINTS,
+        'mainnet-beta': PUBLIC_RPC_ENDPOINTS.mainnet,
     };
 
     // Check presets mapping first

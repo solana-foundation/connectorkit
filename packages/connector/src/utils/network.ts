@@ -1,29 +1,36 @@
 /**
  * @connector-kit/connector - Network utilities
  *
- * Utilities for translating between different Solana network naming conventions
- * Ensures compatibility with Armadura SDK and other Solana libraries
+ * Utilities for translating between different Solana network naming conventions.
+ * Ensures compatibility with WalletUI (SolanaClusterId) and Gill types.
+ *
+ * Primary type: SolanaNetwork - normalized network names
+ * External integration: Use WalletUI's SolanaClusterId for cluster operations
  */
 
 import type { SolanaClusterId } from '@wallet-ui/core';
 
 /**
- * Normalized network names (Armadura convention)
- * Used by most Solana developers
+ * Normalized Solana network names
+ * 
+ * This is the canonical network type used throughout the connector.
+ * Use `toClusterId()` to convert to WalletUI's SolanaClusterId format.
+ * Use `toRpcNetwork()` internally when constructing RPC URLs.
  */
 export type SolanaNetwork = 'mainnet' | 'devnet' | 'testnet' | 'localnet';
 
 /**
- * RPC network names (Official Solana RPC convention)
- * Used by RPC endpoints
+ * Public RPC endpoints for each Solana network
+ * 
+ * ⚠️ WARNING: These are public, rate-limited endpoints provided by Solana Labs.
+ * For production applications, use a dedicated RPC provider like:
+ * - Helius (https://helius.dev)
+ * - QuickNode (https://quicknode.com)
+ * - Alchemy (https://alchemy.com)
+ * 
+ * Single source of truth for default RPC URLs across the package.
  */
-export type SolanaNetworkRpc = 'mainnet-beta' | 'devnet' | 'testnet' | 'localnet';
-
-/**
- * Default RPC endpoints for each Solana network
- * Single source of truth for RPC URLs across the package
- */
-export const RPC_ENDPOINTS: Record<SolanaNetwork, string> = {
+export const PUBLIC_RPC_ENDPOINTS: Record<SolanaNetwork, string> = {
     mainnet: 'https://api.mainnet-beta.solana.com',
     devnet: 'https://api.devnet.solana.com',
     testnet: 'https://api.testnet.solana.com',
@@ -32,13 +39,14 @@ export const RPC_ENDPOINTS: Record<SolanaNetwork, string> = {
 
 /**
  * Normalize network name to standard format
- * Accepts both conventions and returns the normalized version
+ * Accepts various naming conventions and returns the canonical SolanaNetwork format
  *
  * @example
  * normalizeNetwork('mainnet-beta') // Returns: 'mainnet'
  * normalizeNetwork('mainnet') // Returns: 'mainnet'
+ * normalizeNetwork('MAINNET') // Returns: 'mainnet'
  */
-export function normalizeNetwork(network: SolanaNetwork | SolanaNetworkRpc | string): SolanaNetwork {
+export function normalizeNetwork(network: string): SolanaNetwork {
     const normalized = network.toLowerCase().replace('-beta', '');
 
     switch (normalized) {
@@ -57,49 +65,46 @@ export function normalizeNetwork(network: SolanaNetwork | SolanaNetworkRpc | str
 }
 
 /**
- * Convert normalized network name to RPC format
+ * Convert network name to RPC format (internal)
+ * 
+ * Mainnet uses 'mainnet-beta' in RPC URLs, while other networks don't have a suffix.
+ * This is an internal implementation detail - consumers should use SolanaNetwork.
  *
+ * @internal
  * @example
  * toRpcNetwork('mainnet') // Returns: 'mainnet-beta'
  * toRpcNetwork('devnet') // Returns: 'devnet'
  */
-export function toRpcNetwork(network: SolanaNetwork): SolanaNetworkRpc {
-    switch (network) {
-        case 'mainnet':
-            return 'mainnet-beta';
-        case 'devnet':
-            return 'devnet';
-        case 'testnet':
-            return 'testnet';
-        case 'localnet':
-            return 'localnet';
-        default:
-            return 'mainnet-beta';
-    }
+function toRpcNetwork(network: SolanaNetwork): string {
+    return network === 'mainnet' ? 'mainnet-beta' : network;
 }
 
 /**
- * Convert network name to wallet-ui cluster ID format
+ * Convert network name to WalletUI cluster ID format
+ * 
+ * WalletUI uses the 'solana:network' format for cluster identification.
  *
  * @example
  * toClusterId('mainnet') // Returns: 'solana:mainnet'
- * toClusterId('mainnet-beta') // Returns: 'solana:mainnet'
+ * toClusterId('mainnet-beta') // Returns: 'solana:mainnet' (normalized)
  */
-export function toClusterId(network: SolanaNetwork | SolanaNetworkRpc | string): SolanaClusterId {
+export function toClusterId(network: string): SolanaClusterId {
     const normalized = normalizeNetwork(network);
     return `solana:${normalized}` as SolanaClusterId;
 }
 
 /**
- * Get the default RPC URL for a network
+ * Get the public RPC URL for a network
+ * 
+ * ⚠️ Returns public, rate-limited endpoints. For production, use a dedicated RPC provider.
  *
  * @example
  * getDefaultRpcUrl('mainnet') // Returns: 'https://api.mainnet-beta.solana.com'
  * getDefaultRpcUrl('devnet') // Returns: 'https://api.devnet.solana.com'
  */
-export function getDefaultRpcUrl(network: SolanaNetwork | SolanaNetworkRpc | string): string {
+export function getDefaultRpcUrl(network: string): string {
     const normalized = normalizeNetwork(network);
-    return RPC_ENDPOINTS[normalized] ?? RPC_ENDPOINTS.mainnet;
+    return PUBLIC_RPC_ENDPOINTS[normalized] ?? PUBLIC_RPC_ENDPOINTS.mainnet;
 }
 
 /**
@@ -110,31 +115,43 @@ export function getDefaultRpcUrl(network: SolanaNetwork | SolanaNetworkRpc | str
  * isMainnet('mainnet-beta') // Returns: true
  * isMainnet('devnet') // Returns: false
  */
-export function isMainnet(network: SolanaNetwork | SolanaNetworkRpc | string): boolean {
+export function isMainnet(network: string): boolean {
     const normalized = normalizeNetwork(network);
     return normalized === 'mainnet';
 }
 
 /**
  * Check if a network is devnet
+ *
+ * @example
+ * isDevnet('devnet') // Returns: true
+ * isDevnet('mainnet') // Returns: false
  */
-export function isDevnet(network: SolanaNetwork | SolanaNetworkRpc | string): boolean {
+export function isDevnet(network: string): boolean {
     const normalized = normalizeNetwork(network);
     return normalized === 'devnet';
 }
 
 /**
  * Check if a network is testnet
+ *
+ * @example
+ * isTestnet('testnet') // Returns: true
+ * isTestnet('mainnet') // Returns: false
  */
-export function isTestnet(network: SolanaNetwork | SolanaNetworkRpc | string): boolean {
+export function isTestnet(network: string): boolean {
     const normalized = normalizeNetwork(network);
     return normalized === 'testnet';
 }
 
 /**
  * Check if a network is localnet
+ *
+ * @example
+ * isLocalnet('localnet') // Returns: true
+ * isLocalnet('mainnet') // Returns: false
  */
-export function isLocalnet(network: SolanaNetwork | SolanaNetworkRpc | string): boolean {
+export function isLocalnet(network: string): boolean {
     const normalized = normalizeNetwork(network);
     return normalized === 'localnet';
 }
@@ -146,7 +163,7 @@ export function isLocalnet(network: SolanaNetwork | SolanaNetworkRpc | string): 
  * getNetworkDisplayName('mainnet-beta') // Returns: 'Mainnet'
  * getNetworkDisplayName('devnet') // Returns: 'Devnet'
  */
-export function getNetworkDisplayName(network: SolanaNetwork | SolanaNetworkRpc | string): string {
+export function getNetworkDisplayName(network: string): string {
     const normalized = normalizeNetwork(network);
     return normalized.charAt(0).toUpperCase() + normalized.slice(1);
 }

@@ -1,20 +1,14 @@
 /**
  * @connector-kit/connector - Unified configuration
  *
- * Simplified configuration for apps using ConnectorKit with Armadura or standalone
+ * Simplified configuration for apps using ConnectorKit
  * Eliminates config duplication and provides a single source of truth
  */
 
 import type { ExtendedConnectorConfig, DefaultConfigOptions } from './default-config';
 import type { MobileWalletAdapterConfig } from '../ui/connector-provider';
 import { getDefaultConfig, getDefaultMobileConfig } from './default-config';
-import {
-    normalizeNetwork,
-    toRpcNetwork,
-    getDefaultRpcUrl,
-    type SolanaNetwork,
-    type SolanaNetworkRpc,
-} from '../utils/network';
+import { normalizeNetwork, getDefaultRpcUrl, type SolanaNetwork } from '../utils/network';
 
 /**
  * Options for creating a unified configuration
@@ -23,27 +17,24 @@ import {
 export interface UnifiedConfigOptions extends Omit<DefaultConfigOptions, 'network'> {
     /**
      * Solana network to connect to
-     * Accepts both conventions: 'mainnet' or 'mainnet-beta'
-     * More flexible than DefaultConfigOptions which only accepts RPC convention
+     * Accepts various naming conventions: 'mainnet', 'mainnet-beta', 'devnet', etc.
      */
-    network?: SolanaNetwork | SolanaNetworkRpc | string;
+    network?: string;
     /** Custom RPC URL (overrides default for network) */
     rpcUrl?: string;
 }
 
 /**
  * Unified configuration output
- * Contains all configs needed for both ConnectorKit and Armadura
+ * Contains all configs needed for ConnectorKit and integrations
  */
 export interface UnifiedConfig {
     /** ConnectorKit configuration */
     connectorConfig: ExtendedConnectorConfig;
     /** Mobile Wallet Adapter configuration (optional) */
     mobile?: MobileWalletAdapterConfig;
-    /** Normalized network name (for Armadura) */
+    /** Normalized network name ('mainnet', 'devnet', 'testnet', 'localnet') */
     network: SolanaNetwork;
-    /** RPC network name (for RPC endpoints) */
-    rpcNetwork: SolanaNetworkRpc;
     /** RPC endpoint URL */
     rpcUrl: string;
     /** Application metadata */
@@ -54,7 +45,7 @@ export interface UnifiedConfig {
 }
 
 /**
- * Create a unified configuration for ConnectorKit and Armadura
+ * Create a unified configuration for ConnectorKit
  *
  * This helper eliminates configuration duplication by creating all necessary
  * configs from a single source of truth. It automatically handles network
@@ -90,8 +81,10 @@ export function createConfig(options: UnifiedConfigOptions): UnifiedConfig {
 
     // Normalize network name and determine RPC URL
     const normalizedNetwork = normalizeNetwork(network);
-    const rpcNetwork = toRpcNetwork(normalizedNetwork);
     const rpcUrl = customRpcUrl || getDefaultRpcUrl(normalizedNetwork);
+
+    // Convert to RPC format for configs that expect it (mainnet -> mainnet-beta)
+    const rpcNetwork = normalizedNetwork === 'mainnet' ? 'mainnet-beta' : normalizedNetwork;
 
     // Create ConnectorKit config with all options
     const connectorConfig = getDefaultConfig({
@@ -113,7 +106,6 @@ export function createConfig(options: UnifiedConfigOptions): UnifiedConfig {
         connectorConfig,
         mobile,
         network: normalizedNetwork,
-        rpcNetwork,
         rpcUrl,
         app: {
             name: options.appName,

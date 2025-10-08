@@ -61,7 +61,6 @@ function ConnectorProviderInternal({
                 clientRef.current = new ConnectorClient(config);
 
                 // ✅ Set window.__connectorClient IMMEDIATELY for auto-detection
-                // This ensures Armadura's auto-detection can find it synchronously
                 if (typeof window !== 'undefined') {
                     window.__connectorClient = clientRef.current;
                 }
