@@ -1,9 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { address, type Address } from '@solana/addresses';
-import { createSolanaRpc } from '@solana/rpc';
-import { signature as createSignature } from '@solana/keys';
+import { address, createSolanaRpc, signature as createSignature, type Address, pipe, createTransactionMessage, setTransactionMessageFeePayerSigner, setTransactionMessageLifetimeUsingBlockhash, appendTransactionMessageInstructions, sendAndConfirmTransactionFactory,getSignatureFromTransaction, signTransactionMessageWithSigners, createSolanaRpcSubscriptions } from 'gill';
+import { getTransferSolInstruction } from 'gill/programs';
 import { useTransactionSigner, useCluster, useConnectorClient } from '@connector-kit/connector';
 import { TransactionForm } from './transaction-form';
 import { TransactionResult } from './transaction-result';
@@ -31,7 +30,9 @@ export function ModernSolTransfer() {
         }
 
         // Create RPC client using web3.js 2.0
+        // this shouldn't happen client-side
         const rpc = createSolanaRpc(rpcUrl);
+        const rpcSubscriptions = createSolanaRpcSubscriptions(rpcUrl.replace('http', 'ws'));
 
         // Create addresses using the new address() API
         const senderAddress = address(signer.address);
@@ -39,39 +40,45 @@ export function ModernSolTransfer() {
         // Get recent blockhash using web3.js 2.0 RPC
         const { value: latestBlockhash } = await rpc.getLatestBlockhash().send();
 
-        const { Transaction: LegacyTransaction, SystemProgram, PublicKey, LAMPORTS_PER_SOL: LEGACY_LAMPORTS } = await import('@solana/web3.js');
-        
-        const recipientPubkey = new PublicKey(recipientAddress);
-        const senderPubkey = new PublicKey(signer.address);
-        
-        const legacyInstruction = SystemProgram.transfer({
-            fromPubkey: senderPubkey,
-            toPubkey: recipientPubkey,
-            lamports: amount * LEGACY_LAMPORTS,
+        // Modern transfer instruction (not used in legacy transaction below, but shown for reference)
+        const transferInstruction = getTransferSolInstruction({
+            source: signer, // the upstream types are 'any' - need to fix.
+            // should we be using https://github.com/anza-xyz/kit/blob/369898c905f7cd9f715260c2c992cdd1c2946557/packages/react/README.md?plain=1#L96
+            destination: address(recipientAddress),
+            amount,
         });
-        
-        const legacyTransaction = new LegacyTransaction({
-            feePayer: senderPubkey,
-            blockhash: latestBlockhash.blockhash,
-            lastValidBlockHeight: Number(latestBlockhash.lastValidBlockHeight),
-        }).add(legacyInstruction);
-        
+
+        const transactionMessage = pipe(
+            createTransactionMessage({ version: 0 }),
+            (tx) => setTransactionMessageFeePayerSigner(signer, tx),
+            (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
+            (tx) => appendTransactionMessageInstructions([transferInstruction], tx)
+        );
+
+
+
         // Sign using the connector-kit signer
         const capabilities = signer.getCapabilities();
         if (!capabilities.canSign) {
             throw new Error('Wallet does not support transaction signing');
         }
-        
-        const signedTx = await signer.signTransaction(legacyTransaction);
-        
+
+        const signedTx = await signer.signTransaction(transactionMessage);
+
         // For sending, we'll use the legacy Connection for now since we have a legacy transaction
         // In a fully modern implementation, you'd compile the transaction message and use web3.js 2.0's sendTransaction
-        const { Connection } = await import('@solana/web3.js');
-        const connection = new Connection(rpcUrl, 'confirmed');
-        const sig = await connection.sendRawTransaction(signedTx.serialize());
-        
-        setSignature(sig);
-        
+
+        const signedTransaction =
+            await signTransactionMessageWithSigners(transactionMessage);
+        await sendAndConfirmTransactionFactory({ rpc, rpcSubscriptions })(
+            signedTransaction,
+            { commitment: "confirmed" }
+        );
+        const transactionSignature = getSignatureFromTransaction(signedTransaction);
+
+
+        setSignature(transactionSignature);
+
         // Track transaction in debugger
         if (client) {
             (client as unknown as {
@@ -83,7 +90,7 @@ export function ModernSolTransfer() {
                 }) => void;
                 updateTransactionStatus: (sig: string, status: string, error?: string) => void;
             }).trackTransaction({
-                signature: sig,
+                signature: transactionSignature,
                 status: 'pending',
                 method: '@solana/kit RPC with legacy signer',
                 feePayer: senderAddress,
@@ -96,36 +103,36 @@ export function ModernSolTransfer() {
             let confirmed = false;
             const maxAttempts = 30;
             let attempts = 0;
-            const signatureObj = createSignature(sig);
-            
+            const signatureObj = createSignature(transactionSignature);
+
             while (!confirmed && attempts < maxAttempts) {
                 const { value: statuses } = await rpc.getSignatureStatuses([signatureObj]).send();
-                
+
                 if (statuses[0]?.confirmationStatus === 'confirmed' || statuses[0]?.confirmationStatus === 'finalized') {
                     confirmed = true;
                     break;
                 }
-                
+
                 await new Promise(resolve => setTimeout(resolve, 1000));
                 attempts++;
             }
-            
+
             if (!confirmed) {
                 throw new Error('Transaction confirmation timeout');
             }
-            
+
             // Update status to confirmed
             if (client) {
                 (client as unknown as {
                     updateTransactionStatus: (sig: string, status: string, error?: string) => void;
-                }).updateTransactionStatus(sig, 'confirmed');
+                }).updateTransactionStatus(transactionSignature, 'confirmed');
             }
         } catch (confirmError) {
             // Update status to failed if confirmation fails
             if (client) {
                 (client as unknown as {
                     updateTransactionStatus: (sig: string, status: string, error?: string) => void;
-                }).updateTransactionStatus(sig, 'failed',
+                }).updateTransactionStatus(transactionSignature, 'failed',
                     confirmError instanceof Error ? confirmError.message : 'Confirmation failed'
                 );
             }
