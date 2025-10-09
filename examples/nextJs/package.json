@@ -16,6 +16,7 @@
         "@radix-ui/react-dropdown-menu": "^2.1.15",
         "@radix-ui/react-separator": "^1.1.7",
         "@radix-ui/react-slot": "^1.2.3",
+        "@solana/web3.js": "^1.98.4",
         "@tanstack/react-query": "^5.79.2",
         "@wallet-standard/app": "^1.0.0",
         "class-variance-authority": "^0.7.1",
