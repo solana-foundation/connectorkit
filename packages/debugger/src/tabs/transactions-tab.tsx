@@ -9,7 +9,7 @@ import type { TransactionActivity } from '@connector-kit/connector';
 import { Button, EmptyState } from '../ui-components';
 import { ExternalLinkIcon, PassedIcon, FailedIcon } from '../icons';
 import { Spinner } from './spinner';
-import { fetchTransactionDetails } from '../utils/fetch-transaction';
+import { fetchTransactionDetails, type FetchTransactionResponse } from '../utils/fetch-transaction';
 import { parseProgramLogs, getTotalComputeUnits, type InstructionLogs } from '../utils/program-logs';
 import { decodeInstruction, type DecodedInstruction } from '../utils/instruction-decoder';
 import { getSimpleErrorMessage } from '../utils/transaction-errors';
@@ -225,7 +225,7 @@ function TransactionItem({ tx, clusterName, rpcUrl }: { tx: TransactionActivity;
     // Transaction details state
     const [showLogs, setShowLogs] = useState(false);
     const [showInstructions, setShowInstructions] = useState(false);
-    const [transactionDetails, setTransactionDetails] = useState<any | null>(null);
+    const [transactionDetails, setTransactionDetails] = useState<FetchTransactionResponse | null>(null);
     const [isLoadingDetails, setIsLoadingDetails] = useState(false);
     const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -290,9 +290,11 @@ function TransactionItem({ tx, clusterName, rpcUrl }: { tx: TransactionActivity;
         const error = transactionDetails.meta?.err || null;
         programLogs = parseProgramLogs(logs, error, clusterName);
         
-        // Decode instructions
+        // Decode instructions - pass accountKeys to resolve indices
         const instructions = transactionDetails.transaction.message.instructions;
-        decodedInstructions = instructions.map((ix: any, idx: number) => decodeInstruction(ix, idx));
+        const accountKeys = transactionDetails.transaction.message.accountKeys;
+        decodedInstructions = instructions.map((ix, idx) => decodeInstruction(ix, accountKeys, idx));
+        console.log(decodedInstructions);
     }
 
     return (

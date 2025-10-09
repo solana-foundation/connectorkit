@@ -3,6 +3,7 @@
  * Decodes common instruction types for display
  */
 
+import type { Address, Base58EncodedBytes } from '@solana/kit';
 import { getShortProgramName } from './program-names';
 
 export interface DecodedInstruction {
@@ -14,91 +15,37 @@ export interface DecodedInstruction {
 }
 
 /**
- * Instruction type from Solana Kit getTransaction with jsonParsed encoding
+ * Instruction type from Solana Kit getTransaction with 'json' encoding (not exported from Solana Kit)
+ * Uses indices to reference accounts, not addresses directly
  */
-interface SolanaKitInstruction {
-    programId?: string;
-    program?: string;
-    parsed?: {
-        type?: string;
-        info?: any;
-    };
-    data?: string | number[];
-    accounts?: string[];
-}
+type TransactionInstruction = Readonly<{
+    accounts: readonly number[];
+    data: Base58EncodedBytes;
+    programIdIndex: number;
+    stackHeight?: number;
+}>;
 
 /**
  * Decode instruction to readable format
- * Works with Solana Kit transaction structure (jsonParsed encoding)
+ * Works with 'json' encoding where instructions use account indices
+ * @param instruction - The instruction from transaction.message.instructions
+ * @param accountKeys - The account keys array to resolve indices
+ * @param index - The instruction index
  */
 export function decodeInstruction(
-    instruction: SolanaKitInstruction | any,
+    instruction: TransactionInstruction,
+    accountKeys: readonly Address[],
     index: number
 ): DecodedInstruction {
-    // Extract programId - could be 'programId' or 'program' field
-    const programId = instruction.programId || instruction.program || 'unknown';
-    const programIdStr = typeof programId === 'string' ? programId : String(programId);
-    const programName = getShortProgramName(programIdStr);
-
-    // Handle parsed instructions (Token, System, etc.)
-    if ('parsed' in instruction && typeof instruction.parsed === 'object') {
-        const parsed = instruction.parsed as any;
-        const instructionType = parsed.type || 'Unknown';
-        
-        return {
-            index: index + 1,
-            programId: programIdStr,
-            programName,
-            instructionName: formatInstructionType(instructionType),
-        };
-    }
-
-    // Handle partially decoded instructions with data
-    if ('data' in instruction) {
-        const data = instruction.data;
-        const dataStr = typeof data === 'string' ? data : 
-                       Array.isArray(data) ? data.join(',') : 
-                       undefined;
-        
-        return {
-            index: index + 1,
-            programId: programIdStr,
-            programName,
-            instructionName: 'Unknown Instruction',
-            data: dataStr,
-        };
-    }
+    const programId = accountKeys[instruction.programIdIndex] || 'unknown';
+    const programName = getShortProgramName(programId);
+    const instructionName = instruction.stackHeight ? `Instruction (Stack Height: ${instruction.stackHeight})` : 'Instruction';
 
     return {
         index: index + 1,
-        programId: programIdStr,
+        programId,
         programName,
-        instructionName: 'Unknown',
+        instructionName,
+        data: instruction.data,
     };
 }
-
-/**
- * Format instruction type for display
- * Converts camelCase to Title Case
- */
-function formatInstructionType(type: string): string {
-    // Handle common patterns
-    const formatted = type
-        // Insert space before capital letters
-        .replace(/([A-Z])/g, ' $1')
-        // Capitalize first letter
-        .replace(/^./, str => str.toUpperCase())
-        // Clean up multiple spaces
-        .replace(/\s+/g, ' ')
-        .trim();
-
-    return formatted;
-}
-
-/**
- * Get instruction display name for UI
- */
-export function getInstructionDisplayName(instruction: DecodedInstruction): string {
-    return `${instruction.instructionName} (${instruction.programName})`;
-}
-

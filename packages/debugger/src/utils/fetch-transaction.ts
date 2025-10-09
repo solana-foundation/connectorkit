@@ -2,10 +2,12 @@
  * Fetch transaction details from RPC
  */
 
-import { createSolanaRpc, signature as createSignature } from '@solana/kit';
+import { createSolanaRpc, signature as createSignature, GetTransactionApi } from '@solana/kit';
+
+export type FetchTransactionResponse = ReturnType<GetTransactionApi["getTransaction"]>;
 
 export interface FetchTransactionResult {
-    transaction: any | null;
+    transaction: FetchTransactionResponse | null;
     error?: string;
 }
 
@@ -24,26 +26,14 @@ export async function fetchTransactionDetails(
         const txSignature = createSignature(signature);
         
         // Try with 'confirmed' commitment first
-        let transaction = await rpc
+        const transaction = await rpc
             .getTransaction(txSignature, {
-                encoding: 'jsonParsed',
+                encoding: 'json',
                 maxSupportedTransactionVersion: 0,
                 commitment: 'confirmed',
             })
             .send();
-        
-        // If not found with 'confirmed', try with 'finalized'
-        if (!transaction) {
-            console.log('Transaction not found with confirmed commitment, trying finalized...');
-            transaction = await rpc
-                .getTransaction(txSignature, {
-                    encoding: 'jsonParsed',
-                    maxSupportedTransactionVersion: 0,
-                    commitment: 'finalized',
-                })
-                .send();
-        }
-        
+                
         console.log('Transaction response for', signature.slice(0, 8) + '...:', transaction);
 
         if (!transaction) {
@@ -54,6 +44,7 @@ export async function fetchTransactionDetails(
             };
         }
 
+        // TypeScript needs help narrowing the union type here
         return { transaction };
     } catch (error) {
         console.error('Error fetching transaction:', error);
@@ -63,24 +54,3 @@ export async function fetchTransactionDetails(
         };
     }
 }
-
-/**
- * Extract basic instruction information from a transaction
- */
-export function getInstructionSummaries(transaction: any): Array<{
-    index: number;
-    programId: string;
-    programName?: string;
-}> {
-    const instructions = transaction.transaction?.message?.instructions || [];
-    
-    return instructions.map((ix: any, index: number) => {
-        // Handle both parsed and unparsed instructions
-        const programId = ix.programId || ix.program || 'unknown';
-        return {
-            index: index + 1,
-            programId: typeof programId === 'string' ? programId : programId.toString(),
-        };
-    });
-}
-

@@ -5,6 +5,7 @@
 
 import { getTransactionInstructionError, type TransactionErrorType } from './transaction-errors';
 import { getProgramName } from './program-names';
+import { TransactionError } from '@solana/kit';
 
 export interface LogMessage {
     text: string;
@@ -25,8 +26,8 @@ export interface InstructionLogs {
  * Works with both legacy web3.js and Solana Kit transaction structures
  */
 export function parseProgramLogs(
-    logs: string[],
-    error: TransactionErrorType,
+    logs: readonly string[],
+    error: TransactionError | null,
     cluster: string = 'mainnet'
 ): InstructionLogs[] {
     let depth = 0;
