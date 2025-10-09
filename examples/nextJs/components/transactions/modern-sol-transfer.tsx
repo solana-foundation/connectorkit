@@ -45,7 +45,6 @@ export function ModernSolTransfer() {
         // Get recent blockhash using web3.js 2.0 RPC
         const { value: latestBlockhash } = await rpc.getLatestBlockhash().send();
 
-        // Modern transfer instruction (not used in legacy transaction below, but shown for reference)
         const transferInstruction = getTransferSolInstruction({
             // @ts-expect-error TODO Need to fix the upstream any types
             source: signer, // the upstream types are 'any' - need to fix.
@@ -71,9 +70,6 @@ export function ModernSolTransfer() {
         }
 
         // const signedTx = await signer.signTransaction(transactionMessage);
-
-        // For sending, we'll use the legacy Connection for now since we have a legacy transaction
-        // In a fully modern implementation, you'd compile the transaction message and use web3.js 2.0's sendTransaction
 
         const signedTransaction =
             await signTransactionMessageWithSigners(transactionMessage);
