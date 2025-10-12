@@ -22,11 +22,13 @@ export { useCluster } from './hooks/use-cluster';
 export { useAccount } from './hooks/use-account';
 export { useWalletInfo } from './hooks/use-wallet-info';
 export { useTransactionSigner } from './hooks/use-transaction-signer';
+export { useGillTransactionSigner } from './hooks/use-gill-transaction-signer';
 
 export type { UseClusterReturn } from './hooks/use-cluster';
 export type { UseAccountReturn } from './hooks/use-account';
 export type { UseWalletInfoReturn } from './hooks/use-wallet-info';
 export type { UseTransactionSignerReturn } from './hooks/use-transaction-signer';
+export type { UseGillTransactionSignerReturn } from './hooks/use-gill-transaction-signer';
 
 // React-specific types
 export type { ConnectorSnapshot, MobileWalletAdapterConfig } from './ui/connector-provider';

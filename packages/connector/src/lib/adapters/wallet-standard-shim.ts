@@ -32,13 +32,13 @@ export type WalletStandardWallet = BaseWallet;
 export type WalletStandardAccount = BaseWalletAccount;
 
 // Simple registry reference
-let registry: any = null;
+let registry: WalletsRegistry | null = null;
 
-function normalizeWallet(wallet: any): BaseWallet {
+function normalizeWallet(wallet: Partial<BaseWallet>): BaseWallet {
     return {
         version: wallet?.version ?? ('1.0.0' as const),
         name: wallet?.name ?? 'Unknown Wallet',
-        icon: wallet?.icon,
+        icon: wallet?.icon as BaseWallet['icon'],
         chains: wallet?.chains ?? [],
         features: wallet?.features ?? {},
         accounts: wallet?.accounts ?? [],
@@ -58,7 +58,7 @@ export function getWalletsRegistry(): WalletsRegistry {
 
     // Initialize wallet standard if not available
     if (!registry) {
-        const nav = window.navigator as any;
+        const nav = window.navigator as Navigator & { wallets?: WalletsRegistry };
 
         // Try direct registry first
         if (nav.wallets && typeof nav.wallets.get === 'function') {
@@ -82,7 +82,7 @@ export function getWalletsRegistry(): WalletsRegistry {
     return {
         get: () => {
             try {
-                const nav = window.navigator as any;
+                const nav = window.navigator as Navigator & { wallets?: WalletsRegistry };
                 const activeRegistry = nav.wallets || registry;
                 if (activeRegistry && typeof activeRegistry.get === 'function') {
                     const wallets = activeRegistry.get();
@@ -95,10 +95,10 @@ export function getWalletsRegistry(): WalletsRegistry {
         },
         on: (event, callback) => {
             try {
-                const nav = window.navigator as any;
+                const nav = window.navigator as Navigator & { wallets?: WalletsRegistry };
                 const activeRegistry = nav.wallets || registry;
                 if (activeRegistry && typeof activeRegistry.on === 'function') {
-                    return activeRegistry.on(event, (wallet: any) => callback(normalizeWallet(wallet)));
+                    return activeRegistry.on(event, (wallet: BaseWallet) => callback(normalizeWallet(wallet)));
                 }
                 return () => {};
             } catch {

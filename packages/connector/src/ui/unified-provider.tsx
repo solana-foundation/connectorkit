@@ -1,6 +1,6 @@
 'use client';
 
-import type { ReactNode, ComponentType } from 'react';
+import type { ReactNode, ComponentType, PropsWithChildren } from 'react';
 import { ConnectorProvider } from './connector-provider';
 import type { MobileWalletAdapterConfig } from './connector-provider';
 import type { ConnectorConfig } from '../types/connector';
@@ -18,8 +18,8 @@ export interface UnifiedProviderProps {
 
     // Optional additional providers to wrap around children
     providers?: Array<{
-        component: ComponentType<any>;
-        props?: any;
+        component: ComponentType<PropsWithChildren>;
+        props?: Record<string, unknown>;
     }>;
 }
 

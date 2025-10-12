@@ -2,7 +2,7 @@ import type { ConnectorDebugMetrics } from '../types/connector';
 
 /**
  * DebugMetrics - Tracks performance and debug metrics
- * 
+ *
  * Provides insights into connector performance and optimization effectiveness.
  */
 export class DebugMetrics {
@@ -44,13 +44,10 @@ export class DebugMetrics {
      */
     getMetrics(): ConnectorDebugMetrics {
         const totalUpdates = this.stateUpdates + this.noopUpdates;
-        const optimizationRate =
-            totalUpdates > 0 ? Math.round((this.noopUpdates / totalUpdates) * 100) : 0;
+        const optimizationRate = totalUpdates > 0 ? Math.round((this.noopUpdates / totalUpdates) * 100) : 0;
 
         const avgUpdateTime =
-            this.updateTimes.length > 0
-                ? this.updateTimes.reduce((a, b) => a + b, 0) / this.updateTimes.length
-                : 0;
+            this.updateTimes.length > 0 ? this.updateTimes.reduce((a, b) => a + b, 0) / this.updateTimes.length : 0;
 
         return {
             stateUpdates: this.stateUpdates,
@@ -73,4 +70,3 @@ export class DebugMetrics {
         this.lastUpdateTime = 0;
     }
 }
-

@@ -34,6 +34,7 @@ export type {
 } from './types/connector';
 
 export type {
+    SolanaTransaction,
     TransactionSignerConfig,
     SignedTransaction,
     TransactionSignerCapabilities,
@@ -57,7 +58,12 @@ export type { MobileWalletAdapterConfig } from './ui/connector-provider';
 // ============================================================================
 // Transaction Signing
 // ============================================================================
-export { createTransactionSigner, TransactionSignerError, isTransactionSignerError } from './lib/transaction/transaction-signer';
+export {
+    createTransactionSigner,
+    TransactionSignerError,
+    isTransactionSignerError,
+} from './lib/transaction/transaction-signer';
+export { createGillTransactionSigner } from './lib/transaction/gill-transaction-signer';
 
 export type { TransactionSigner } from './lib/transaction/transaction-signer';
 

@@ -47,4 +47,3 @@ export function TransactionResult({ signature, cluster = 'devnet' }: Transaction
         </Card>
     );
 }
-

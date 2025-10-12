@@ -6,7 +6,7 @@ import type { EventEmitter } from '../core/event-emitter';
 
 /**
  * ClusterManager - Handles network/cluster management
- * 
+ *
  * Manages cluster selection, persistence, and state updates.
  */
 export class ClusterManager {
@@ -94,4 +94,3 @@ export class ClusterManager {
         return this.stateManager.getSnapshot().clusters;
     }
 }
-

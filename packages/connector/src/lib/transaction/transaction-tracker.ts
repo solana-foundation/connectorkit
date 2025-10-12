@@ -4,7 +4,7 @@ import type { EventEmitter } from '../core/event-emitter';
 
 /**
  * TransactionTracker - Tracks transaction history and status updates
- * 
+ *
  * Provides debugging and monitoring for transaction activity.
  */
 export class TransactionTracker {
@@ -100,4 +100,3 @@ export class TransactionTracker {
         this.transactions = [];
     }
 }
-

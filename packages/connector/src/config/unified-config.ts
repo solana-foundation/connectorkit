@@ -117,8 +117,12 @@ export function createConfig(options: UnifiedConfigOptions): UnifiedConfig {
 /**
  * Type guard to check if a config is a unified config
  */
-export function isUnifiedConfig(config: any): config is UnifiedConfig {
-    return (
-        config && typeof config === 'object' && 'connectorConfig' in config && 'network' in config && 'rpcUrl' in config
+export function isUnifiedConfig(config: unknown): config is UnifiedConfig {
+    return Boolean(
+        config &&
+            typeof config === 'object' &&
+            'connectorConfig' in config &&
+            'network' in config &&
+            'rpcUrl' in config,
     );
 }

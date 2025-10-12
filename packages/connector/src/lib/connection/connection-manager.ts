@@ -41,7 +41,7 @@ function getEventsFeature(wallet: Wallet): StandardEventsOnMethod | null {
 
 /**
  * ConnectionManager - Handles wallet connection lifecycle
- * 
+ *
  * Manages connecting, disconnecting, account selection, and wallet event subscriptions.
  */
 export class ConnectionManager {
@@ -344,4 +344,3 @@ export class ConnectionManager {
         return this.walletStorage?.get() ?? null;
     }
 }
-

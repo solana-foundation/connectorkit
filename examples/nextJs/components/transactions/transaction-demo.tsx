@@ -8,7 +8,7 @@ import { ModernSolTransfer } from './modern-sol-transfer';
 
 /**
  * Transaction Demo Container
- * 
+ *
  * Displays both legacy and modern transaction approaches side-by-side,
  * demonstrating how connector-kit's compat layer seamlessly bridges
  * the gap between old and new Solana development patterns.
@@ -36,7 +36,6 @@ export function TransactionDemo() {
 
     return (
         <div className="space-y-8">
-
             {/* Transaction Forms Grid */}
             <div className="grid gap-6 lg:grid-cols-2">
                 <LegacySolTransfer />
@@ -45,4 +44,3 @@ export function TransactionDemo() {
         </div>
     );
 }
-

@@ -12,7 +12,7 @@ import type { SolanaClusterId } from '@wallet-ui/core';
 
 /**
  * Normalized Solana network names
- * 
+ *
  * This is the canonical network type used throughout the connector.
  * Use `toClusterId()` to convert to WalletUI's SolanaClusterId format.
  * Use `toRpcNetwork()` internally when constructing RPC URLs.
@@ -21,13 +21,13 @@ export type SolanaNetwork = 'mainnet' | 'devnet' | 'testnet' | 'localnet';
 
 /**
  * Public RPC endpoints for each Solana network
- * 
+ *
  * ⚠️ WARNING: These are public, rate-limited endpoints provided by Solana Labs.
  * For production applications, use a dedicated RPC provider like:
  * - Helius (https://helius.dev)
  * - QuickNode (https://quicknode.com)
  * - Alchemy (https://alchemy.com)
- * 
+ *
  * Single source of truth for default RPC URLs across the package.
  */
 export const PUBLIC_RPC_ENDPOINTS: Record<SolanaNetwork, string> = {
@@ -66,7 +66,7 @@ export function normalizeNetwork(network: string): SolanaNetwork {
 
 /**
  * Convert network name to RPC format (internal)
- * 
+ *
  * Mainnet uses 'mainnet-beta' in RPC URLs, while other networks don't have a suffix.
  * This is an internal implementation detail - consumers should use SolanaNetwork.
  *
@@ -81,7 +81,7 @@ function toRpcNetwork(network: SolanaNetwork): string {
 
 /**
  * Convert network name to WalletUI cluster ID format
- * 
+ *
  * WalletUI uses the 'solana:network' format for cluster identification.
  *
  * @example
@@ -95,7 +95,7 @@ export function toClusterId(network: string): SolanaClusterId {
 
 /**
  * Get the public RPC URL for a network
- * 
+ *
  * ⚠️ Returns public, rate-limited endpoints. For production, use a dedicated RPC provider.
  *
  * @example

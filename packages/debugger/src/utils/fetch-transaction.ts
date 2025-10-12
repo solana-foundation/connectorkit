@@ -4,7 +4,7 @@
 
 import { createSolanaRpc, signature as createSignature, GetTransactionApi } from '@solana/kit';
 
-export type FetchTransactionResponse = ReturnType<GetTransactionApi["getTransaction"]>;
+export type FetchTransactionResponse = ReturnType<GetTransactionApi['getTransaction']>;
 
 export interface FetchTransactionResult {
     transaction: FetchTransactionResponse | null;
@@ -15,16 +15,13 @@ export interface FetchTransactionResult {
  * Fetch full transaction details from RPC
  * Returns parsed transaction with metadata including logs
  */
-export async function fetchTransactionDetails(
-    signature: string,
-    rpcUrl: string
-): Promise<FetchTransactionResult> {
+export async function fetchTransactionDetails(signature: string, rpcUrl: string): Promise<FetchTransactionResult> {
     try {
         const rpc = createSolanaRpc(rpcUrl);
-        
+
         // Convert signature string to Signature type
         const txSignature = createSignature(signature);
-        
+
         // Try with 'confirmed' commitment first
         const transaction = await rpc
             .getTransaction(txSignature, {
@@ -33,7 +30,7 @@ export async function fetchTransactionDetails(
                 commitment: 'confirmed',
             })
             .send();
-                
+
         console.log('Transaction response for', signature.slice(0, 8) + '...:', transaction);
 
         if (!transaction) {

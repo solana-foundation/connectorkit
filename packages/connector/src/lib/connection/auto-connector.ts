@@ -7,7 +7,7 @@ import { getWalletsRegistry } from '../adapters/wallet-standard-shim';
 
 /**
  * AutoConnector - Handles automatic wallet reconnection strategies
- * 
+ *
  * Implements instant reconnection via direct detection and fallback via standard detection.
  */
 export class AutoConnector {
@@ -61,12 +61,12 @@ export class AutoConnector {
 
         try {
             // Create proper features object for direct wallet
-            const features: any = {};
+            const features: Record<string, Record<string, (...args: unknown[]) => unknown>> = {};
 
             // Map direct wallet methods to wallet standard features
             if (directWallet.connect) {
                 features['standard:connect'] = {
-                    connect: async (options: any = {}) => {
+                    connect: async (options: Record<string, unknown> = {}) => {
                         const result = await directWallet.connect(options);
 
                         if (this.debug) {
@@ -167,7 +167,7 @@ export class AutoConnector {
                 directWallet._metadata?.icon ||
                 directWallet.adapter?.icon ||
                 directWallet.metadata?.icon ||
-                (directWallet as any).iconUrl ||
+                ('iconUrl' in directWallet ? (directWallet.iconUrl as string | undefined) : undefined) ||
                 undefined;
 
             const wallet: Wallet = {
@@ -254,9 +254,7 @@ export class AutoConnector {
                 console.log('🔄 Auto-connect: stored wallet =', storedWalletName);
                 console.log(
                     '🔄 Auto-connect: available wallets =',
-                    this.stateManager
-                        .getSnapshot()
-                        .wallets.map((w: WalletInfo) => w.wallet.name),
+                    this.stateManager.getSnapshot().wallets.map((w: WalletInfo) => w.wallet.name),
                 );
             }
 
@@ -292,4 +290,3 @@ export class AutoConnector {
         }
     }
 }
-

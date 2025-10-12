@@ -22,6 +22,7 @@ export type {
 
 // Transaction and signer types
 export type {
+    SolanaTransaction,
     TransactionSignerConfig,
     SignedTransaction,
     TransactionSignerCapabilities,

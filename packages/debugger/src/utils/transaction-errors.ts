@@ -3,7 +3,7 @@
  * Provides human-readable error messages
  */
 
-import { TransactionError } from "@solana/kit";
+import { TransactionError } from '@solana/kit';
 
 const instructionErrorMessage: Map<string, string> = new Map([
     ['GenericError', 'generic instruction error'],
@@ -67,7 +67,7 @@ export interface ProgramError {
  * Transaction error type compatible with both legacy web3.js and Solana Kit
  * Can be any error object structure or null/undefined
  */
-export type TransactionErrorType = Record<string, any> | null | undefined;
+export type TransactionErrorType = Record<string, unknown> | null | undefined;
 
 /**
  * Parse transaction error into readable error information
@@ -79,7 +79,7 @@ export function getTransactionInstructionError(error?: TransactionError): Progra
     }
 
     if (typeof error === 'object' && 'InstructionError' in error) {
-        const innerError = error['InstructionError'] as any;
+        const innerError = error['InstructionError'] as [number, unknown];
         const index = innerError[0] as number;
         const instructionError = innerError[1];
 
@@ -90,25 +90,27 @@ export function getTransactionInstructionError(error?: TransactionError): Progra
     }
 }
 
-function getInstructionError(error: any): string {
-    let out;
-    let value;
+function getInstructionError(error: unknown): string {
+    let out: string | undefined;
+    let value: unknown;
 
     if (typeof error === 'string') {
         const message = instructionErrorMessage.get(error);
         if (message) {
             return message;
         }
-    } else if ('Custom' in error) {
-        out = instructionErrorMessage.get('Custom');
-        value = error['Custom'];
-    } else if ('BorshIoError' in error) {
-        out = instructionErrorMessage.get('BorshIoError');
-        value = error['BorshIoError'];
+    } else if (error && typeof error === 'object') {
+        if ('Custom' in error) {
+            out = instructionErrorMessage.get('Custom');
+            value = (error as Record<string, unknown>)['Custom'];
+        } else if ('BorshIoError' in error) {
+            out = instructionErrorMessage.get('BorshIoError');
+            value = (error as Record<string, unknown>)['BorshIoError'];
+        }
     }
 
     if (out && value) {
-        return out.replace('{0}', value);
+        return out.replace('{0}', String(value));
     }
 
     return 'Unknown instruction error';
@@ -138,4 +140,3 @@ export function getSimpleErrorMessage(error?: TransactionError): string {
 
     return 'Unknown error';
 }
-

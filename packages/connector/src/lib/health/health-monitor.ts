@@ -6,7 +6,7 @@ import { getWalletsRegistry } from '../adapters/wallet-standard-shim';
 
 /**
  * HealthMonitor - Provides connector diagnostics and health checks
- * 
+ *
  * Useful for debugging, monitoring, and support.
  */
 export class HealthMonitor {
@@ -110,4 +110,3 @@ export class HealthMonitor {
         };
     }
 }
-

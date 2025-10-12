@@ -12,7 +12,7 @@ function hasFeature(wallet: Wallet, featureName: string): boolean {
 
 /**
  * WalletDetector - Handles wallet discovery and registry management
- * 
+ *
  * Integrates with Wallet Standard registry and provides direct wallet detection.
  */
 export class WalletDetector {
@@ -82,20 +82,23 @@ export class WalletDetector {
     /**
      * Check if a specific wallet is available immediately via direct window object detection
      */
-    detectDirectWallet(walletName: string): any {
+    detectDirectWallet(walletName: string): Record<string, unknown> | null {
         if (typeof window === 'undefined') return null;
 
         const name = walletName.toLowerCase();
 
+        // Use type-safe window access
+        const windowObj = window as Window & Record<string, unknown>;
+
         // Check common wallet injection patterns
         const checks = [
-            () => (window as any)[name], // window.phantom, window.backpack
-            () => (window as any)[`${name}Wallet`], // window.phantomWallet
-            () => (window as any).solana, // Legacy Phantom injection
+            () => windowObj[name], // window.phantom, window.backpack
+            () => windowObj[`${name}Wallet`], // window.phantomWallet
+            () => windowObj.solana, // Legacy Phantom injection
             () => {
                 // Check for wallet in window keys
                 const keys = Object.keys(window).filter(k => k.toLowerCase().includes(name));
-                return keys.length > 0 ? (window as any)[keys[0]] : null;
+                return keys.length > 0 ? (windowObj[keys[0]] as Record<string, unknown> | null) : null;
             },
         ];
 
@@ -167,4 +170,3 @@ export class WalletDetector {
         this.unsubscribers = [];
     }
 }
-

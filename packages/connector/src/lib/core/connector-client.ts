@@ -22,7 +22,7 @@ import { HealthMonitor } from '../health/health-monitor';
 
 /**
  * ConnectorClient - Lean coordinator that delegates to specialized collaborators
- * 
+ *
  * Orchestrates wallet connection, state management, and event handling by wiring
  * together focused collaborators, each with a single responsibility.
  */
@@ -61,20 +61,16 @@ export class ConnectorClient {
         this.stateManager = new StateManager(initialState);
         this.eventEmitter = new EventEmitter(config.debug);
         this.debugMetrics = new DebugMetrics();
-        
-        this.walletDetector = new WalletDetector(
-            this.stateManager,
-            this.eventEmitter,
-            config.debug ?? false,
-        );
-        
+
+        this.walletDetector = new WalletDetector(this.stateManager, this.eventEmitter, config.debug ?? false);
+
         this.connectionManager = new ConnectionManager(
             this.stateManager,
             this.eventEmitter,
             config.storage?.wallet,
             config.debug ?? false,
         );
-        
+
         this.autoConnector = new AutoConnector(
             this.walletDetector,
             this.connectionManager,
@@ -82,7 +78,7 @@ export class ConnectorClient {
             config.storage?.wallet,
             config.debug ?? false,
         );
-        
+
         this.clusterManager = new ClusterManager(
             this.stateManager,
             this.eventEmitter,
@@ -90,14 +86,14 @@ export class ConnectorClient {
             config.cluster,
             config.debug ?? false,
         );
-        
+
         this.transactionTracker = new TransactionTracker(
             this.stateManager,
             this.eventEmitter,
             20,
             config.debug ?? false,
         );
-        
+
         this.healthMonitor = new HealthMonitor(
             this.stateManager,
             config.storage?.wallet,

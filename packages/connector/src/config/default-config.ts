@@ -39,7 +39,7 @@ export interface DefaultConfigOptions {
     /** Maximum retry attempts for error recovery (default: 3) */
     maxRetries?: number;
     /** Custom error handler */
-    onError?: (error: Error, errorInfo: any) => void;
+    onError?: (error: Error, errorInfo: React.ErrorInfo) => void;
 }
 
 /** Extended ConnectorConfig with app metadata */
@@ -59,9 +59,9 @@ export interface ExtendedConnectorConfig extends ConnectorConfig {
         /** Maximum retry attempts (default: 3) */
         maxRetries?: number;
         /** Custom error handler */
-        onError?: (error: Error, errorInfo: any) => void;
+        onError?: (error: Error, errorInfo: React.ErrorInfo) => void;
         /** Custom fallback component */
-        fallback?: (error: any, retry: () => void) => React.ReactNode;
+        fallback?: (error: Error, retry: () => void) => React.ReactNode;
     };
 }
 
@@ -112,7 +112,9 @@ export function getDefaultConfig(options: DefaultConfigOptions): ExtendedConnect
                         console.error('[Account Storage]', error);
                     }
                     if (onError) {
-                        onError(error, { context: 'account-storage' });
+                        onError(error, {
+                            componentStack: 'account-storage',
+                        });
                     }
                 },
             }),
@@ -128,7 +130,9 @@ export function getDefaultConfig(options: DefaultConfigOptions): ExtendedConnect
                         console.error('[Cluster Storage]', error);
                     }
                     if (onError) {
-                        onError(error, { context: 'cluster-storage' });
+                        onError(error, {
+                            componentStack: 'cluster-storage',
+                        });
                     }
                 },
             }),
@@ -141,7 +145,9 @@ export function getDefaultConfig(options: DefaultConfigOptions): ExtendedConnect
                         console.error('[Wallet Storage]', error);
                     }
                     if (onError) {
-                        onError(error, { context: 'wallet-storage' });
+                        onError(error, {
+                            componentStack: 'wallet-storage',
+                        });
                     }
                 },
             }),

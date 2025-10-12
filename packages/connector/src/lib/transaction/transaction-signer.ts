@@ -9,9 +9,11 @@
  * and provides consistent error handling and capability detection.
  */
 
-import type { Wallet, WalletAccount } from '../../types/wallets';
-import type { SolanaCluster } from '@wallet-ui/core';
-import type { TransactionSignerConfig, SignedTransaction, TransactionSignerCapabilities } from '../../types/transactions';
+import type {
+    SolanaTransaction,
+    TransactionSignerConfig,
+    TransactionSignerCapabilities,
+} from '../../types/transactions';
 import { prepareTransactionForWallet, convertSignedTransaction } from '../../utils/transaction-format';
 
 /**
@@ -51,7 +53,7 @@ export interface TransactionSigner {
      * @returns The signed transaction
      * @throws {TransactionSignerError} If wallet doesn't support signing or user rejects
      */
-    signTransaction(transaction: any): Promise<any>;
+    signTransaction(transaction: SolanaTransaction): Promise<SolanaTransaction>;
 
     /**
      * Sign multiple transactions at once
@@ -62,7 +64,7 @@ export interface TransactionSigner {
      * @returns Array of signed transactions in the same order
      * @throws {TransactionSignerError} If signing fails for any transaction
      */
-    signAllTransactions(transactions: any[]): Promise<any[]>;
+    signAllTransactions(transactions: SolanaTransaction[]): Promise<SolanaTransaction[]>;
 
     /**
      * Sign and send a transaction in one operation
@@ -74,7 +76,7 @@ export interface TransactionSigner {
      * @throws {TransactionSignerError} If sending fails or user rejects
      */
     signAndSendTransaction(
-        transaction: any,
+        transaction: SolanaTransaction,
         options?: { skipPreflight?: boolean; maxRetries?: number },
     ): Promise<string>;
 
@@ -88,7 +90,7 @@ export interface TransactionSigner {
      * @throws {TransactionSignerError} If any transaction fails
      */
     signAndSendTransactions(
-        transactions: any[],
+        transactions: SolanaTransaction[],
         options?: { skipPreflight?: boolean; maxRetries?: number },
     ): Promise<string[]>;
 
@@ -152,7 +154,8 @@ export function createTransactionSigner(config: TransactionSignerConfig): Transa
         return null;
     }
 
-    const features = wallet.features as any;
+    // Type wallet.features properly - it's a record of Wallet Standard features
+    const features = wallet.features as Record<string, Record<string, (...args: unknown[]) => unknown>>;
     const address = account.address as string;
 
     // Detect wallet capabilities
@@ -167,7 +170,7 @@ export function createTransactionSigner(config: TransactionSignerConfig): Transa
     const signer: TransactionSigner = {
         address,
 
-        async signTransaction(transaction: any): Promise<any> {
+        async signTransaction(transaction: SolanaTransaction): Promise<SolanaTransaction> {
             if (!capabilities.canSign) {
                 throw new TransactionSignerError(
                     'Wallet does not support transaction signing',
@@ -177,61 +180,63 @@ export function createTransactionSigner(config: TransactionSignerConfig): Transa
 
             try {
                 const signFeature = features['solana:signTransaction'];
-                
+
                 // Convert transaction to Wallet Standard format (Uint8Array)
                 // and track if it was originally a web3.js object
                 const { serialized, wasWeb3js } = prepareTransactionForWallet(transaction);
-                
+
                 console.log('🔍 signTransaction input:', {
                     wasWeb3js,
                     serializedLength: serialized.length,
                     serializedType: serialized.constructor.name,
                     accountAddress: account?.address,
-                    hasAccount: !!account
+                    hasAccount: !!account,
                 });
-                
+
                 // Call Wallet Standard - try both formats to handle different wallet implementations
-                let result;
+                let result: Record<string, unknown>;
                 let usedFormat = '';
-                
+
                 try {
                     // Format 1: transactions array (some wallets)
                     console.log('🔍 Trying array format: transactions: [Uint8Array]');
-                    result = await signFeature.signTransaction({
+                    result = (await signFeature.signTransaction({
                         account,
                         transactions: [serialized],
                         ...(cluster ? { chain: cluster.id } : {}),
-                    });
+                    })) as Record<string, unknown>;
                     usedFormat = 'array';
-                } catch (err1: any) {
-                    console.log('⚠️ Array format failed:', err1.message);
+                } catch (err1: unknown) {
+                    const error1 = err1 instanceof Error ? err1 : new Error(String(err1));
+                    console.log('⚠️ Array format failed:', error1.message);
                     try {
                         // Format 2: singular transaction (other wallets)
                         console.log('🔍 Trying singular format: transaction: Uint8Array');
-                        result = await signFeature.signTransaction({
+                        result = (await signFeature.signTransaction({
                             account,
                             transaction: serialized,
                             ...(cluster ? { chain: cluster.id } : {}),
-                        });
+                        })) as Record<string, unknown>;
                         usedFormat = 'singular';
-                    } catch (err2: any) {
-                        console.log('⚠️ Singular format also failed:', err2.message);
+                    } catch (err2: unknown) {
+                        const error2 = err2 instanceof Error ? err2 : new Error(String(err2));
+                        console.log('⚠️ Singular format also failed:', error2.message);
                         // Both failed, throw the most recent error
-                        throw err2;
+                        throw error2;
                     }
                 }
-                
+
                 console.log('✅ Wallet signed successfully using format:', usedFormat, 'Result:', result);
-                
+
                 // Extract signed transaction - wallets return in different formats
                 let signedTx;
-                if (result.signedTransactions && result.signedTransactions[0]) {
+                if (Array.isArray(result.signedTransactions) && result.signedTransactions[0]) {
                     // Format: { signedTransactions: [Uint8Array] }
                     signedTx = result.signedTransactions[0];
                 } else if (result.signedTransaction) {
                     // Format: { signedTransaction: Uint8Array }
                     signedTx = result.signedTransaction;
-                } else if (result[0]) {
+                } else if (Array.isArray(result) && result[0]) {
                     // Format: Array-like with signed tx at index 0
                     signedTx = result[0];
                 } else if (result instanceof Uint8Array) {
@@ -240,7 +245,7 @@ export function createTransactionSigner(config: TransactionSignerConfig): Transa
                 } else {
                     throw new Error(`Unexpected wallet response format: ${JSON.stringify(Object.keys(result))}`);
                 }
-                
+
                 console.log('🔍 Extracted signed transaction:', {
                     hasSignedTx: !!signedTx,
                     signedTxType: signedTx?.constructor?.name,
@@ -248,15 +253,15 @@ export function createTransactionSigner(config: TransactionSignerConfig): Transa
                     isUint8Array: signedTx instanceof Uint8Array,
                     hasSerialize: typeof signedTx?.serialize === 'function',
                     objectKeys: signedTx ? Object.keys(signedTx) : [],
-                    signedTxValue: signedTx
+                    signedTxValue: signedTx,
                 });
-                
+
                 // Check if wallet already returned a web3.js object (some wallets do this)
                 if (signedTx && typeof signedTx.serialize === 'function') {
                     console.log('✅ Wallet returned web3.js object directly, no conversion needed');
                     return signedTx; // Already a Transaction/VersionedTransaction
                 }
-                
+
                 // Check if it's a result object with signedTransaction property (common format)
                 if (signedTx && signedTx.signedTransaction) {
                     console.log('✅ Found signedTransaction property');
@@ -265,20 +270,20 @@ export function createTransactionSigner(config: TransactionSignerConfig): Transa
                         return await convertSignedTransaction(bytes, wasWeb3js);
                     }
                 }
-                
+
                 // Convert from bytes if it's Uint8Array
                 if (signedTx instanceof Uint8Array) {
                     return await convertSignedTransaction(signedTx, wasWeb3js);
                 }
-                
+
                 // Last resort: log full object and throw
                 console.error('❌ Unexpected wallet response:', {
                     type: typeof signedTx,
                     constructor: signedTx?.constructor?.name,
                     keys: Object.keys(signedTx || {}),
-                    fullObject: signedTx
+                    fullObject: signedTx,
                 });
-                
+
                 throw new Error('Wallet returned unexpected format - not a Transaction or Uint8Array');
             } catch (error) {
                 throw new TransactionSignerError(
@@ -289,7 +294,7 @@ export function createTransactionSigner(config: TransactionSignerConfig): Transa
             }
         },
 
-        async signAllTransactions(transactions: any[]): Promise<any[]> {
+        async signAllTransactions(transactions: SolanaTransaction[]): Promise<SolanaTransaction[]> {
             if (transactions.length === 0) {
                 return [];
             }
@@ -298,24 +303,24 @@ export function createTransactionSigner(config: TransactionSignerConfig): Transa
             if (capabilities.supportsBatchSigning) {
                 try {
                     const signFeature = features['solana:signAllTransactions'];
-                    
+
                     // Convert all transactions to Wallet Standard format
                     const prepared = transactions.map(tx => prepareTransactionForWallet(tx));
                     const serializedTxs = prepared.map(p => p.serialized);
                     const wasWeb3js = prepared[0].wasWeb3js; // Assume all same format
-                    
+
                     // Call Wallet Standard with serialized transactions
-                    const result = await signFeature.signAllTransactions({
+                    const result = (await signFeature.signAllTransactions({
                         account,
                         transactions: serializedTxs,
                         ...(cluster ? { chain: cluster.id } : {}),
-                    });
-                    
+                    })) as { signedTransactions: Uint8Array[] };
+
                     // Convert all results back to original format
                     return await Promise.all(
-                        result.signedTransactions.map((signedBytes: Uint8Array) => 
-                            convertSignedTransaction(signedBytes, wasWeb3js)
-                        )
+                        result.signedTransactions.map((signedBytes: Uint8Array) =>
+                            convertSignedTransaction(signedBytes, wasWeb3js),
+                        ),
                     );
                 } catch (error) {
                     throw new TransactionSignerError(
@@ -334,7 +339,7 @@ export function createTransactionSigner(config: TransactionSignerConfig): Transa
                 );
             }
 
-            const signed: any[] = [];
+            const signed: SolanaTransaction[] = [];
             for (let i = 0; i < transactions.length; i++) {
                 try {
                     const signedTx = await signer.signTransaction(transactions[i]);
@@ -352,7 +357,7 @@ export function createTransactionSigner(config: TransactionSignerConfig): Transa
         },
 
         async signAndSendTransaction(
-            transaction: any,
+            transaction: SolanaTransaction,
             options?: { skipPreflight?: boolean; maxRetries?: number },
         ): Promise<string> {
             if (!capabilities.canSend) {
@@ -364,18 +369,20 @@ export function createTransactionSigner(config: TransactionSignerConfig): Transa
 
             try {
                 const sendFeature = features['solana:signAndSendTransaction'];
-                
+
                 // Wallet Standard features are already bound to the account context
                 // Just pass the transaction and optional chain
-                const sendOptions: any = {
+                const sendOptions: Record<string, unknown> = {
                     ...(options || {}),
                     ...(cluster ? { chain: cluster.id } : {}),
                 };
 
-                const result = await sendFeature.signAndSendTransaction(transaction, sendOptions);
+                const result = (await sendFeature.signAndSendTransaction(transaction, sendOptions)) as
+                    | { signature?: string }
+                    | string;
 
                 // Extract signature from result
-                return result.signature || result;
+                return typeof result === 'object' && result.signature ? result.signature : String(result);
             } catch (error) {
                 throw new TransactionSignerError(
                     `Failed to send transaction: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -386,7 +393,7 @@ export function createTransactionSigner(config: TransactionSignerConfig): Transa
         },
 
         async signAndSendTransactions(
-            transactions: any[],
+            transactions: SolanaTransaction[],
             options?: { skipPreflight?: boolean; maxRetries?: number },
         ): Promise<string[]> {
             if (transactions.length === 0) {
@@ -425,7 +432,7 @@ export function createTransactionSigner(config: TransactionSignerConfig): Transa
             async signMessage(message: Uint8Array): Promise<Uint8Array> {
                 try {
                     const signFeature = features['solana:signMessage'];
-                    const result = await signFeature.signMessage(message);
+                    const result = (await signFeature.signMessage(message)) as { signature: Uint8Array };
                     return result.signature;
                 } catch (error) {
                     throw new TransactionSignerError(

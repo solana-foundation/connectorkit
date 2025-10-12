@@ -5,11 +5,13 @@ Development debug panel for `@connector-kit/connector` with advanced transaction
 ## Features
 
 ### Core Debugging
+
 - 📊 **Overview Tab**: Comprehensive status dashboard
 - 📝 **Transactions Tab**: Real-time transaction tracking with explorer links
 - 📡 **Events Tab**: Real-time event stream with pause/clear controls
 
 ### Advanced Transaction Analysis
+
 - 🔍 **Program Logs**: View execution logs with syntax highlighting
 - 📋 **Instruction Decoder**: See decoded instruction types
 - ⚡ **Compute Units**: Track performance per instruction

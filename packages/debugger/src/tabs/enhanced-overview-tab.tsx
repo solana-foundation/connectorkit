@@ -7,27 +7,30 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import type { ConnectorState, ConnectorHealth, TransactionSignerCapabilities } from '@connector-kit/connector';
+import type { SolanaCluster } from '@wallet-ui/core';
+import type { ConnectorClient } from '@connector-kit/connector/headless';
 import { Section, Divider, EmptyState, Button, CollapsibleSection } from '../ui-components';
 import { StorageIcon, NetworkIcon, LockIcon, HealthIcon, WalletIcon } from '../icons';
 
 interface EnhancedOverviewTabProps {
-    state: any;
-    health: any;
+    state: ConnectorState;
+    health: ConnectorHealth | null;
     address: string | null;
     formatted: string;
     copied: boolean;
     copy: () => Promise<boolean>;
-    cluster: any;
+    cluster: SolanaCluster | null;
     rpcUrl: string;
-    signer: any;
     ready: boolean;
-    capabilities: {
-        canSign: boolean;
-        canSend: boolean;
-        canSignMessage: boolean;
-        supportsBatchSigning: boolean;
-    };
-    client: any;
+    capabilities: TransactionSignerCapabilities;
+    client: ConnectorClient;
+}
+
+// Type extension for client with storage access
+interface ConnectorClientWithStorage extends ConnectorClient {
+    walletStorage?: { get: () => string | undefined; set: (v: string | undefined) => void };
+    clusterStorage?: { get: () => string | undefined; set: (v: string) => void };
 }
 
 export function EnhancedOverviewTab({
@@ -47,33 +50,36 @@ export function EnhancedOverviewTab({
 
     // Get full wallet info including icon from wallets array
     // This ensures we have the icon even on auto-connect reload
-    const walletWithIcon = wallet && state.wallets?.find((w: any) => w.name === wallet.name);
-    const walletIcon = walletWithIcon?.icon || wallet?.icon;
+    const walletWithIcon = wallet && state.wallets?.find(w => w.wallet.name === wallet.name);
+    const walletIcon = walletWithIcon?.wallet.icon || wallet?.icon;
 
     // Storage state
     const [lastClear, setLastClear] = useState<string | null>(null);
 
+    // Cast client to access storage properties (these are internal/private)
+    const clientWithStorage = client as ConnectorClientWithStorage;
+
     // Storage values
     const storedWallet = useMemo(() => {
         try {
-            return (client as any).walletStorage?.get() || null;
+            return clientWithStorage.walletStorage?.get() || null;
         } catch {
             return null;
         }
-    }, [client, lastClear]);
+    }, [clientWithStorage, lastClear]);
 
     const storedCluster = useMemo(() => {
         try {
-            return (client as any).clusterStorage?.get() || null;
+            return clientWithStorage.clusterStorage?.get() || null;
         } catch {
             return null;
         }
-    }, [client, lastClear]);
+    }, [clientWithStorage, lastClear]);
 
     // Storage handlers
     const handleClearWallet = () => {
         try {
-            (client as any).walletStorage?.set(undefined);
+            clientWithStorage.walletStorage?.set(undefined);
             setLastClear(Date.now().toString());
         } catch (error) {
             console.error('Failed to clear wallet storage:', error);
@@ -82,7 +88,7 @@ export function EnhancedOverviewTab({
 
     const handleClearCluster = () => {
         try {
-            (client as any).clusterStorage?.set('solana:mainnet');
+            clientWithStorage.clusterStorage?.set('solana:mainnet');
             setLastClear(Date.now().toString());
         } catch (error) {
             console.error('Failed to clear cluster storage:', error);

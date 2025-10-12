@@ -6,6 +6,8 @@
 
 import { useState, useCallback } from 'react';
 import type { TransactionActivity } from '@connector-kit/connector';
+import type { ConnectorClient } from '@connector-kit/connector/headless';
+import type { SolanaCluster } from '@wallet-ui/core';
 import { Button, EmptyState } from '../ui-components';
 import { ExternalLinkIcon, PassedIcon, FailedIcon } from '../icons';
 import { Spinner } from './spinner';
@@ -15,8 +17,8 @@ import { decodeInstruction, type DecodedInstruction } from '../utils/instruction
 import { getSimpleErrorMessage } from '../utils/transaction-errors';
 
 interface TransactionsTabProps {
-    client: any;
-    cluster: any;
+    client: ConnectorClient;
+    cluster: SolanaCluster | null;
     rpcUrl?: string;
 }
 
@@ -82,7 +84,7 @@ function normalizeCluster(clusterLabel: string): string {
 
 function getRpcUrlFromCluster(clusterName: string): string {
     const normalized = clusterName.toLowerCase();
-    
+
     if (normalized.includes('mainnet')) {
         return 'https://api.mainnet-beta.solana.com';
     } else if (normalized.includes('devnet')) {
@@ -90,21 +92,21 @@ function getRpcUrlFromCluster(clusterName: string): string {
     } else if (normalized.includes('testnet')) {
         return 'https://api.testnet.solana.com';
     }
-    
+
     // Default to mainnet
     return 'https://api.mainnet-beta.solana.com';
 }
 
 export function TransactionsTab({ client, cluster, rpcUrl: customRpcUrl }: TransactionsTabProps) {
-    const debugState = (client as any).getDebugState?.();
+    const debugState = client.getDebugState();
     const transactions = debugState?.transactions || [];
 
     const handleClearHistory = () => {
-        (client as any).clearTransactionHistory?.();
+        client.clearTransactionHistory();
     };
 
     const clusterName = normalizeCluster(cluster?.label || 'mainnet');
-    
+
     // Use custom RPC URL from env if available, otherwise fall back to cluster default
     const effectiveRpcUrl = customRpcUrl || getRpcUrlFromCluster(clusterName);
 
@@ -204,10 +206,10 @@ export function TransactionsTab({ client, cluster, rpcUrl: customRpcUrl }: Trans
                     />
                 ) : (
                     transactions.map((tx: TransactionActivity, i: number) => (
-                        <TransactionItem 
-                            key={`${tx.signature}-${i}`} 
-                            tx={tx} 
-                            clusterName={clusterName} 
+                        <TransactionItem
+                            key={`${tx.signature}-${i}`}
+                            tx={tx}
+                            clusterName={clusterName}
                             rpcUrl={effectiveRpcUrl}
                         />
                     ))
@@ -217,11 +219,19 @@ export function TransactionsTab({ client, cluster, rpcUrl: customRpcUrl }: Trans
     );
 }
 
-function TransactionItem({ tx, clusterName, rpcUrl }: { tx: TransactionActivity; clusterName: string; rpcUrl: string }) {
+function TransactionItem({
+    tx,
+    clusterName,
+    rpcUrl,
+}: {
+    tx: TransactionActivity;
+    clusterName: string;
+    rpcUrl: string;
+}) {
     const [isExpanded, setIsExpanded] = useState(false);
     const [isHovered, setIsHovered] = useState(false);
     const [copySuccess, setCopySuccess] = useState(false);
-    
+
     // Transaction details state
     const [showLogs, setShowLogs] = useState(false);
     const [showInstructions, setShowInstructions] = useState(false);
@@ -238,39 +248,42 @@ function TransactionItem({ tx, clusterName, rpcUrl }: { tx: TransactionActivity;
             console.error('Failed to copy signature:', err);
         }
     };
-    
+
     // Fetch transaction details when user wants to view logs or instructions
-    const fetchDetails = useCallback(async (rpcUrl: string) => {
-        if (transactionDetails || isLoadingDetails) return;
-        
-        setIsLoadingDetails(true);
-        setLoadError(null);
-        
-        const result = await fetchTransactionDetails(tx.signature, rpcUrl);
-        
-        if (result.transaction) {
-            setTransactionDetails(result.transaction);
-        } else {
-            setLoadError(result.error || 'Failed to fetch transaction details');
-        }
-        
-        setIsLoadingDetails(false);
-    }, [tx.signature, transactionDetails, isLoadingDetails]);
-    
+    const fetchDetails = useCallback(
+        async (rpcUrl: string) => {
+            if (transactionDetails || isLoadingDetails) return;
+
+            setIsLoadingDetails(true);
+            setLoadError(null);
+
+            const result = await fetchTransactionDetails(tx.signature, rpcUrl);
+
+            if (result.transaction) {
+                setTransactionDetails(result.transaction);
+            } else {
+                setLoadError(result.error || 'Failed to fetch transaction details');
+            }
+
+            setIsLoadingDetails(false);
+        },
+        [tx.signature, transactionDetails, isLoadingDetails],
+    );
+
     const handleToggleLogs = async () => {
         const newShowLogs = !showLogs;
         setShowLogs(newShowLogs);
-        
+
         // Fetch details if needed using the provided RPC URL
         if (newShowLogs && !transactionDetails && !isLoadingDetails) {
             await fetchDetails(rpcUrl);
         }
     };
-    
+
     const handleToggleInstructions = async () => {
         const newShowInstructions = !showInstructions;
         setShowInstructions(newShowInstructions);
-        
+
         // Fetch details if needed using the provided RPC URL
         if (newShowInstructions && !transactionDetails && !isLoadingDetails) {
             await fetchDetails(rpcUrl);
@@ -280,16 +293,16 @@ function TransactionItem({ tx, clusterName, rpcUrl }: { tx: TransactionActivity;
     // Extract metadata if available
     const metadata = tx.metadata || {};
     const hasMetadata = Object.keys(metadata).length > 0;
-    
+
     // Parse logs if transaction details are available
     let programLogs: InstructionLogs[] | null = null;
     let decodedInstructions: DecodedInstruction[] | null = null;
-    
+
     if (transactionDetails) {
         const logs = transactionDetails.meta?.logMessages || [];
         const error = transactionDetails.meta?.err || null;
         programLogs = parseProgramLogs(logs, error, clusterName);
-        
+
         // Decode instructions - pass accountKeys to resolve indices
         const instructions = transactionDetails.transaction.message.instructions;
         const accountKeys = transactionDetails.transaction.message.accountKeys;
@@ -332,7 +345,9 @@ function TransactionItem({ tx, clusterName, rpcUrl }: { tx: TransactionActivity;
                     }}
                 >
                     {/* Status Icon */}
-                    <span style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>{getStatusIcon(tx.status)}</span>
+                    <span style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                        {getStatusIcon(tx.status)}
+                    </span>
 
                     {/* Method and Signature inline */}
                     <div
@@ -599,16 +614,24 @@ function TransactionItem({ tx, clusterName, rpcUrl }: { tx: TransactionActivity;
                                     wordBreak: 'break-word',
                                 }}
                             >
-                                <div style={{ fontWeight: 600, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
-                                <FailedIcon className="text-[#ff6b6b]" /> Error
-                            </div>
-                                {transactionDetails?.meta?.err 
-                                    ? getSimpleErrorMessage(transactionDetails.meta.err) 
+                                <div
+                                    style={{
+                                        fontWeight: 600,
+                                        marginBottom: 4,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 4,
+                                    }}
+                                >
+                                    <FailedIcon className="text-[#ff6b6b]" /> Error
+                                </div>
+                                {transactionDetails?.meta?.err
+                                    ? getSimpleErrorMessage(transactionDetails.meta.err)
                                     : tx.error}
                             </div>
                         </>
                     )}
-                    
+
                     {/* Program Logs Section */}
                     <>
                         <Divider />
@@ -629,10 +652,10 @@ function TransactionItem({ tx, clusterName, rpcUrl }: { tx: TransactionActivity;
                                     alignItems: 'center',
                                     transition: 'all 0.2s ease',
                                 }}
-                                onMouseEnter={(e) => {
+                                onMouseEnter={e => {
                                     e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.08)';
                                 }}
-                                onMouseLeave={(e) => {
+                                onMouseLeave={e => {
                                     e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
                                 }}
                             >
@@ -641,44 +664,48 @@ function TransactionItem({ tx, clusterName, rpcUrl }: { tx: TransactionActivity;
                                     {programLogs && ` (${getTotalComputeUnits(programLogs)} CU)`}
                                 </span>
                             </div>
-                            
+
                             {showLogs && (
                                 <div style={{ marginTop: 8 }}>
                                     {isLoadingDetails && (
-                                        <div style={{ 
-                                            padding: 12, 
-                                            textAlign: 'center', 
-                                            fontSize: 9, 
-                                            opacity: 0.6 
-                                        }}>
+                                        <div
+                                            style={{
+                                                padding: 12,
+                                                textAlign: 'center',
+                                                fontSize: 9,
+                                                opacity: 0.6,
+                                            }}
+                                        >
                                             Loading transaction details...
                                         </div>
                                     )}
-                                    
+
                                     {loadError && (
-                                        <div style={{
-                                            padding: 8,
-                                            backgroundColor: 'rgba(255, 165, 0, 0.1)',
-                                            borderRadius: 6,
-                                            border: '1px solid rgba(255, 165, 0, 0.3)',
-                                            fontSize: 9,
-                                            color: '#ffaa00',
-                                        }}>
+                                        <div
+                                            style={{
+                                                padding: 8,
+                                                backgroundColor: 'rgba(255, 165, 0, 0.1)',
+                                                borderRadius: 6,
+                                                border: '1px solid rgba(255, 165, 0, 0.3)',
+                                                fontSize: 9,
+                                                color: '#ffaa00',
+                                            }}
+                                        >
                                             ⚠️ {loadError}
                                         </div>
                                     )}
-                                    
-                                    {programLogs && programLogs.length > 0 && (
-                                        <ProgramLogsView logs={programLogs} />
-                                    )}
-                                    
+
+                                    {programLogs && programLogs.length > 0 && <ProgramLogsView logs={programLogs} />}
+
                                     {programLogs && programLogs.length === 0 && (
-                                        <div style={{ 
-                                            padding: 12, 
-                                            textAlign: 'center', 
-                                            fontSize: 9, 
-                                            opacity: 0.5 
-                                        }}>
+                                        <div
+                                            style={{
+                                                padding: 12,
+                                                textAlign: 'center',
+                                                fontSize: 9,
+                                                opacity: 0.5,
+                                            }}
+                                        >
                                             No logs available
                                         </div>
                                     )}
@@ -686,7 +713,7 @@ function TransactionItem({ tx, clusterName, rpcUrl }: { tx: TransactionActivity;
                             )}
                         </div>
                     </>
-                    
+
                     {/* Instructions Section */}
                     <>
                         <Divider />
@@ -707,10 +734,10 @@ function TransactionItem({ tx, clusterName, rpcUrl }: { tx: TransactionActivity;
                                     alignItems: 'center',
                                     transition: 'all 0.2s ease',
                                 }}
-                                onMouseEnter={(e) => {
+                                onMouseEnter={e => {
                                     e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.08)';
                                 }}
-                                onMouseLeave={(e) => {
+                                onMouseLeave={e => {
                                     e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
                                 }}
                             >
@@ -719,33 +746,37 @@ function TransactionItem({ tx, clusterName, rpcUrl }: { tx: TransactionActivity;
                                     {decodedInstructions && ` (${decodedInstructions.length})`}
                                 </span>
                             </div>
-                            
+
                             {showInstructions && (
                                 <div style={{ marginTop: 8 }}>
                                     {isLoadingDetails && (
-                                        <div style={{ 
-                                            padding: 12, 
-                                            textAlign: 'center', 
-                                            fontSize: 9, 
-                                            opacity: 0.6 
-                                        }}>
+                                        <div
+                                            style={{
+                                                padding: 12,
+                                                textAlign: 'center',
+                                                fontSize: 9,
+                                                opacity: 0.6,
+                                            }}
+                                        >
                                             Loading transaction details...
                                         </div>
                                     )}
-                                    
+
                                     {loadError && (
-                                        <div style={{
-                                            padding: 8,
-                                            backgroundColor: 'rgba(255, 165, 0, 0.1)',
-                                            borderRadius: 6,
-                                            border: '1px solid rgba(255, 165, 0, 0.3)',
-                                            fontSize: 9,
-                                            color: '#ffaa00',
-                                        }}>
+                                        <div
+                                            style={{
+                                                padding: 8,
+                                                backgroundColor: 'rgba(255, 165, 0, 0.1)',
+                                                borderRadius: 6,
+                                                border: '1px solid rgba(255, 165, 0, 0.3)',
+                                                fontSize: 9,
+                                                color: '#ffaa00',
+                                            }}
+                                        >
                                             ⚠️ {loadError}
                                         </div>
                                     )}
-                                    
+
                                     {decodedInstructions && decodedInstructions.length > 0 && (
                                         <InstructionsView instructions={decodedInstructions} />
                                     )}
@@ -859,7 +890,11 @@ function ProgramLogsView({ logs }: { logs: InstructionLogs[] }) {
                             }}
                         >
                             <span style={{ display: 'flex', alignItems: 'center' }}>
-                                {instructionLog.failed ? <FailedIcon className="text-[#ef4444]" /> : <PassedIcon className="text-[#22c55e]" />}
+                                {instructionLog.failed ? (
+                                    <FailedIcon className="text-[#ef4444]" />
+                                ) : (
+                                    <PassedIcon className="text-[#22c55e]" />
+                                )}
                             </span>
                             <span>
                                 Instruction #{idx + 1}
@@ -910,9 +945,7 @@ function ProgramLogsView({ logs }: { logs: InstructionLogs[] }) {
                     })}
 
                     {instructionLog.truncated && (
-                        <div style={{ color: '#ffaa00', marginTop: 4, fontStyle: 'italic' }}>
-                            ⚠️ Log truncated
-                        </div>
+                        <div style={{ color: '#ffaa00', marginTop: 4, fontStyle: 'italic' }}>⚠️ Log truncated</div>
                     )}
                 </div>
             ))}
@@ -955,9 +988,7 @@ function InstructionsView({ instructions }: { instructions: DecodedInstruction[]
                             #{instruction.index} {instruction.instructionName}
                         </div>
                     </div>
-                    <div style={{ fontSize: 9, opacity: 0.7 }}>
-                        {instruction.programName}
-                    </div>
+                    <div style={{ fontSize: 9, opacity: 0.7 }}>{instruction.programName}</div>
                     <div
                         style={{
                             fontSize: 8,

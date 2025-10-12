@@ -2,7 +2,7 @@ import type { ConnectorState, Listener } from '../types/connector';
 
 /**
  * StateManager - Handles state updates and notifications with structural sharing
- * 
+ *
  * Optimizes React re-renders by using deep equality checks for arrays and objects,
  * only updating state when values truly differ.
  */
@@ -30,20 +30,20 @@ export class StateManager {
             // Array comparison (wallets, accounts, clusters)
             if (Array.isArray(value) && Array.isArray(currentValue)) {
                 if (!this.arraysEqual(value as readonly unknown[], currentValue as readonly unknown[])) {
-                    (nextState as any)[stateKey] = value;
+                    (nextState as Record<string, unknown>)[stateKey] = value;
                     hasChanges = true;
                 }
             }
             // Object comparison (wallet, cluster)
             else if (value && typeof value === 'object' && currentValue && typeof currentValue === 'object') {
                 if (!this.objectsEqual(value, currentValue)) {
-                    (nextState as any)[stateKey] = value;
+                    (nextState as Record<string, unknown>)[stateKey] = value;
                     hasChanges = true;
                 }
             }
             // Primitive comparison (strings, booleans, numbers)
             else if (currentValue !== value) {
-                (nextState as any)[stateKey] = value;
+                (nextState as Record<string, unknown>)[stateKey] = value;
                 hasChanges = true;
             }
         }
@@ -154,4 +154,3 @@ export class StateManager {
         this.listeners.clear();
     }
 }
-

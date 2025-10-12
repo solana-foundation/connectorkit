@@ -4,7 +4,14 @@
 
 import type { Wallet, WalletAccount } from './wallets';
 import type { SolanaCluster } from '@wallet-ui/core';
-import type { Address, Signature } from 'gill';
+import type { Address, Signature, TransactionMessage } from 'gill';
+import type { Transaction, VersionedTransaction } from '@solana/web3.js';
+
+/**
+ * Union type for all supported Solana transaction formats
+ * Supports both legacy (@solana/web3.js) and modern (gill) transaction types
+ */
+export type SolanaTransaction = Transaction | VersionedTransaction | TransactionMessage | Uint8Array;
 
 /**
  * Configuration for creating a transaction signer
@@ -25,7 +32,7 @@ export interface SignedTransaction {
     /** The transaction signature/hash */
     signature: string;
     /** The signed transaction data */
-    transaction: any;
+    transaction: SolanaTransaction;
 }
 
 /**
@@ -62,5 +69,5 @@ export interface TransactionActivity {
     /** Method used (signAndSendTransaction, sendTransaction, etc) */
     method: string;
     /** Additional metadata */
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
 }

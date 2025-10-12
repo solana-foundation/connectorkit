@@ -35,11 +35,13 @@ type TransactionInstruction = Readonly<{
 export function decodeInstruction(
     instruction: TransactionInstruction,
     accountKeys: readonly Address[],
-    index: number
+    index: number,
 ): DecodedInstruction {
     const programId = accountKeys[instruction.programIdIndex] || 'unknown';
     const programName = getShortProgramName(programId);
-    const instructionName = instruction.stackHeight ? `Instruction (Stack Height: ${instruction.stackHeight})` : 'Instruction';
+    const instructionName = instruction.stackHeight
+        ? `Instruction (Stack Height: ${instruction.stackHeight})`
+        : 'Instruction';
 
     return {
         index: index + 1,

@@ -100,8 +100,8 @@ export function ConnectorDebugPanel({
     }
 
     // Get diagnostics
-    const health = (client as any).getHealth?.();
-    const metrics = (client as any).getDebugMetrics?.();
+    const health = client.getHealth();
+    const metrics = client.getDebugMetrics();
 
     // Subscribe to events
     useEffect(() => {
@@ -242,7 +242,6 @@ export function ConnectorDebugPanel({
                                 copy={copy}
                                 cluster={cluster}
                                 rpcUrl={rpcUrl}
-                                signer={signer}
                                 ready={ready}
                                 capabilities={capabilities}
                                 client={client}

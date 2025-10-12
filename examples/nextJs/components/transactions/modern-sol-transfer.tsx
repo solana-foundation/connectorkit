@@ -1,26 +1,35 @@
 'use client';
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-// @ts-nocheck
-// TODO FIX THESE ERRORS
-
-
 import { useState } from 'react';
-import { address, createSolanaRpc, signature as createSignature, type Address, pipe, createTransactionMessage, setTransactionMessageFeePayerSigner, setTransactionMessageLifetimeUsingBlockhash, appendTransactionMessageInstructions, sendAndConfirmTransactionFactory,getSignatureFromTransaction, signTransactionMessageWithSigners, createSolanaRpcSubscriptions } from 'gill';
+import {
+    address,
+    createSolanaRpc,
+    pipe,
+    createTransactionMessage,
+    setTransactionMessageFeePayerSigner,
+    setTransactionMessageLifetimeUsingBlockhash,
+    appendTransactionMessageInstructions,
+    sendAndConfirmTransactionFactory,
+    getSignatureFromTransaction,
+    signTransactionMessageWithSigners,
+    createSolanaRpcSubscriptions,
+    lamports,
+    LAMPORTS_PER_SOL,
+} from 'gill';
 import { getTransferSolInstruction } from 'gill/programs';
-import { useTransactionSigner, useCluster, useConnectorClient } from '@connector-kit/connector';
+import { useGillTransactionSigner, useCluster, useConnectorClient } from '@connector-kit/connector';
 import { TransactionForm } from './transaction-form';
 import { TransactionResult } from './transaction-result';
 
-
 /**
  * Modern SOL Transfer Component
- * 
+ *
  * Demonstrates using @solana/kit (web3.js 2.0) with modular packages.
- * This shows the modern, type-safe approach to Solana development.
+ * This shows the modern, type-safe approach to Solana development using
+ * connector-kit's gill-compatible TransactionSigner.
  */
 export function ModernSolTransfer() {
-    const { signer } = useTransactionSigner();
+    const { signer, ready } = useGillTransactionSigner();
     const { cluster, rpcUrl } = useCluster();
     const client = useConnectorClient();
     const [signature, setSignature] = useState<string | null>(null);
@@ -30,116 +39,72 @@ export function ModernSolTransfer() {
             throw new Error('Wallet not connected or cluster not selected');
         }
 
-        if (!signer.address) {
-            throw new Error('Wallet address not available');
-        }
-
         // Create RPC client using web3.js 2.0
         // this shouldn't happen client-side
         const rpc = createSolanaRpc(rpcUrl);
         const rpcSubscriptions = createSolanaRpcSubscriptions(rpcUrl.replace('http', 'ws'));
 
-        // Create addresses using the new address() API
-        const senderAddress = address(signer.address);
+        // Create addresses using gill's address() API
+        const senderAddress = signer.address;
 
         // Get recent blockhash using web3.js 2.0 RPC
         const { value: latestBlockhash } = await rpc.getLatestBlockhash().send();
 
+        // Convert SOL to lamports using gill's helper and constant
+        const amountInLamports = lamports(BigInt(Math.floor(amount * Number(LAMPORTS_PER_SOL))));
+
+        // Create transfer instruction using gill's modern API
+        // Now fully type-safe with gill-compatible signer!
         const transferInstruction = getTransferSolInstruction({
-            // @ts-expect-error TODO Need to fix the upstream any types
-            source: signer, // the upstream types are 'any' - need to fix.
-            // should we be using https://github.com/anza-xyz/kit/blob/369898c905f7cd9f715260c2c992cdd1c2946557/packages/react/README.md?plain=1#L96
+            source: signer,
             destination: address(recipientAddress),
-            amount,
+            amount: amountInLamports,
         });
 
+        // Build transaction message with fee payer and lifetime
         const transactionMessage = pipe(
             createTransactionMessage({ version: 0 }),
-            // @ts-expect-error TODO Need to fix the upstream any types
-            (tx) => setTransactionMessageFeePayerSigner(signer, tx),
-            (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
-            (tx) => appendTransactionMessageInstructions([transferInstruction], tx)
+            tx => setTransactionMessageFeePayerSigner(signer, tx),
+            tx => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
+            tx => appendTransactionMessageInstructions([transferInstruction], tx),
         );
 
-
-
-        // Sign using the connector-kit signer
-        const capabilities = signer.getCapabilities();
-        if (!capabilities.canSign) {
-            throw new Error('Wallet does not support transaction signing');
+        console.log('🚀 Modern SOL Transfer: Starting transaction signing');
+        
+        let signedTransaction;
+        try {
+            signedTransaction = await signTransactionMessageWithSigners(transactionMessage);
+            console.log('✅ Modern SOL Transfer: Transaction signed successfully', {
+                signatures: Object.keys(signedTransaction.signatures),
+            });
+        } catch (error) {
+            console.error('❌ Modern SOL Transfer: Signing failed', error);
+            throw new Error(`Failed to sign transaction: ${error instanceof Error ? error.message : String(error)}`);
         }
 
-        // const signedTx = await signer.signTransaction(transactionMessage);
+        console.log('📡 Modern SOL Transfer: Sending and confirming transaction');
+        try {
+            await sendAndConfirmTransactionFactory({ rpc, rpcSubscriptions })(signedTransaction, {
+                commitment: 'confirmed',
+            });
+            console.log('✅ Modern SOL Transfer: Transaction confirmed');
+        } catch (error) {
+            console.error('❌ Modern SOL Transfer: Send/confirm failed', error);
+            throw new Error(`Failed to send transaction: ${error instanceof Error ? error.message : String(error)}`);
+        }
 
-        const signedTransaction =
-            await signTransactionMessageWithSigners(transactionMessage);
-        await sendAndConfirmTransactionFactory({ rpc, rpcSubscriptions })(
-            signedTransaction,
-            { commitment: "confirmed" }
-        );
         const transactionSignature = getSignatureFromTransaction(signedTransaction);
-
-
         setSignature(transactionSignature);
+        console.log('🎉 Modern SOL Transfer: Transaction complete!', { signature: transactionSignature });
 
         // Track transaction in debugger
         if (client) {
-            (client as unknown as {
-                trackTransaction: (tx: {
-                    signature: string;
-                    status: 'pending';
-                    method: string;
-                    feePayer: Address;
-                }) => void;
-                updateTransactionStatus: (sig: string, status: string, error?: string) => void;
-            }).trackTransaction({
+            client.trackTransaction({
                 signature: transactionSignature,
-                status: 'pending',
-                method: '@solana/kit RPC with legacy signer',
+                status: 'confirmed',
+                method: '@solana/kit with gill-compatible signer',
                 feePayer: senderAddress,
             });
-        }
-
-        // Wait for confirmation using web3.js 2.0 RPC
-        try {
-            // Poll for confirmation using web3.js 2.0 APIs
-            let confirmed = false;
-            const maxAttempts = 30;
-            let attempts = 0;
-            const signatureObj = createSignature(transactionSignature);
-
-            while (!confirmed && attempts < maxAttempts) {
-                const { value: statuses } = await rpc.getSignatureStatuses([signatureObj]).send();
-
-                if (statuses[0]?.confirmationStatus === 'confirmed' || statuses[0]?.confirmationStatus === 'finalized') {
-                    confirmed = true;
-                    break;
-                }
-
-                await new Promise(resolve => setTimeout(resolve, 1000));
-                attempts++;
-            }
-
-            if (!confirmed) {
-                throw new Error('Transaction confirmation timeout');
-            }
-
-            // Update status to confirmed
-            if (client) {
-                (client as unknown as {
-                    updateTransactionStatus: (sig: string, status: string, error?: string) => void;
-                }).updateTransactionStatus(transactionSignature, 'confirmed');
-            }
-        } catch (confirmError) {
-            // Update status to failed if confirmation fails
-            if (client) {
-                (client as unknown as {
-                    updateTransactionStatus: (sig: string, status: string, error?: string) => void;
-                }).updateTransactionStatus(transactionSignature, 'failed',
-                    confirmError instanceof Error ? confirmError.message : 'Confirmation failed'
-                );
-            }
-            throw confirmError;
         }
     }
 
@@ -147,13 +112,12 @@ export function ModernSolTransfer() {
         <div className="space-y-4">
             <TransactionForm
                 title="Modern SOL Transfer"
-                description="Using modern @solana/kit"
+                description="Using modern @solana/kit with gill-compatible signer"
                 onSubmit={handleTransfer}
-                disabled={!signer}
+                disabled={!ready}
                 defaultRecipient="DemoWa11et1111111111111111111111111111111111"
             />
             {signature && <TransactionResult signature={signature} cluster={cluster?.id || 'devnet'} />}
         </div>
     );
 }
-

@@ -28,7 +28,7 @@ export interface InstructionLogs {
 export function parseProgramLogs(
     logs: readonly string[],
     error: TransactionError | null,
-    cluster: string = 'mainnet'
+    cluster: string = 'mainnet',
 ): InstructionLogs[] {
     let depth = 0;
     const prettyLogs: InstructionLogs[] = [];
@@ -173,4 +173,3 @@ export function parseProgramLogs(
 export function getTotalComputeUnits(logs: InstructionLogs[]): number {
     return logs.reduce((total, log) => total + log.computeUnits, 0);
 }
-
