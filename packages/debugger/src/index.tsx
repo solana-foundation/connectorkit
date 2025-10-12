@@ -141,7 +141,7 @@ export function ConnectorDebugPanel({
         padding: isOpen ? 0 : '10px 14px',
         fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace',
         fontSize: 12,
-        width: isOpen ? 400 : 'auto',
+        width: isOpen ? 480 : 'auto',
         minHeight: isOpen ? 520 : 'auto',
         maxHeight: isOpen ? 620 : 'auto',
         boxShadow: '0 8px 32px rgba(0,0,0,0.7), 0 0 0 1px rgba(255, 255, 255, 0.1)',

@@ -1,4 +1,4 @@
-import type { ConnectorEvent, ConnectorEventListener } from '../types/events';
+import type { ConnectorEvent, ConnectorEventListener } from '../../types/events';
 
 /**
  * EventEmitter - Handles event system for connector

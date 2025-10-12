@@ -1,4 +1,4 @@
-import type { ConnectorState, Listener } from '../types/connector';
+import type { ConnectorState, Listener } from '../../types/connector';
 
 /**
  * StateManager - Handles state updates and notifications with structural sharing
@@ -24,7 +24,7 @@ export class StateManager {
         const nextState = { ...this.state };
 
         for (const [key, value] of Object.entries(updates)) {
-            const stateKey = key as keyof ConnectorState;
+            const stateKey = key as keyof ConnectorState & string;
             const currentValue = nextState[stateKey];
 
             // Array comparison (wallets, accounts, clusters)

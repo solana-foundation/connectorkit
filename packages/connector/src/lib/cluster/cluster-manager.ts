@@ -47,11 +47,11 @@ export class ClusterManager {
     async setCluster(clusterId: SolanaClusterId): Promise<void> {
         const state = this.stateManager.getSnapshot();
         const previousClusterId = state.cluster?.id || null;
-        const cluster = state.clusters.find(c => c.id === clusterId);
+        const cluster = state.clusters.find((c: SolanaCluster) => c.id === clusterId);
 
         if (!cluster) {
             throw new Error(
-                `Cluster ${clusterId} not found. Available clusters: ${state.clusters.map(c => c.id).join(', ')}`,
+                `Cluster ${clusterId} not found. Available clusters: ${state.clusters.map((c: SolanaCluster) => c.id).join(', ')}`,
             );
         }
 

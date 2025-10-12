@@ -9,13 +9,14 @@
  */
 
 import type { SolanaClusterId } from '@wallet-ui/core';
+import { getPublicSolanaRpcUrl, type SolanaClusterMoniker } from 'gill';
 
 /**
  * Normalized Solana network names
  *
  * This is the canonical network type used throughout the connector.
  * Use `toClusterId()` to convert to WalletUI's SolanaClusterId format.
- * Use `toRpcNetwork()` internally when constructing RPC URLs.
+ * Aligned with Gill's SolanaClusterMoniker type.
  */
 export type SolanaNetwork = 'mainnet' | 'devnet' | 'testnet' | 'localnet';
 
@@ -24,11 +25,13 @@ export type SolanaNetwork = 'mainnet' | 'devnet' | 'testnet' | 'localnet';
  *
  * ⚠️ WARNING: These are public, rate-limited endpoints provided by Solana Labs.
  * For production applications, use a dedicated RPC provider like:
+ * - Triton (https://triton.one)
  * - Helius (https://helius.dev)
  * - QuickNode (https://quicknode.com)
  * - Alchemy (https://alchemy.com)
  *
- * Single source of truth for default RPC URLs across the package.
+ * Note: These values are now sourced from Gill's getPublicSolanaRpcUrl for consistency.
+ * Kept here for reference and backward compatibility.
  */
 export const PUBLIC_RPC_ENDPOINTS: Record<SolanaNetwork, string> = {
     mainnet: 'https://api.mainnet-beta.solana.com',
@@ -98,13 +101,24 @@ export function toClusterId(network: string): SolanaClusterId {
  *
  * ⚠️ Returns public, rate-limited endpoints. For production, use a dedicated RPC provider.
  *
+ * Now uses Gill's getPublicSolanaRpcUrl for consistency with the Gill ecosystem.
+ * Falls back to localnet URL for unknown networks.
+ *
  * @example
  * getDefaultRpcUrl('mainnet') // Returns: 'https://api.mainnet-beta.solana.com'
  * getDefaultRpcUrl('devnet') // Returns: 'https://api.devnet.solana.com'
  */
 export function getDefaultRpcUrl(network: string): string {
     const normalized = normalizeNetwork(network);
-    return PUBLIC_RPC_ENDPOINTS[normalized] ?? PUBLIC_RPC_ENDPOINTS.mainnet;
+    
+    // Use Gill's public RPC URL helper for standard clusters
+    // This ensures consistency with Gill and automatic updates when Gill updates endpoints
+    try {
+        return getPublicSolanaRpcUrl(normalized as SolanaClusterMoniker);
+    } catch {
+        // Fallback to our constant for localnet or if Gill doesn't recognize the network
+        return PUBLIC_RPC_ENDPOINTS[normalized] ?? PUBLIC_RPC_ENDPOINTS.localnet;
+    }
 }
 
 /**

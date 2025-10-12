@@ -8,7 +8,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import type { TransactionPartialSigner } from 'gill';
+import type { TransactionModifyingSigner } from 'gill';
 import { useTransactionSigner } from './use-transaction-signer';
 import { createGillTransactionSigner } from '../lib/transaction/gill-transaction-signer';
 
@@ -17,10 +17,10 @@ import { createGillTransactionSigner } from '../lib/transaction/gill-transaction
  */
 export interface UseGillTransactionSignerReturn {
     /**
-     * Gill-compatible TransactionPartialSigner instance (null if not connected)
+     * Gill-compatible TransactionModifyingSigner instance (null if not connected)
      * Use this with modern Solana libraries (@solana/kit, gill)
      */
-    signer: TransactionPartialSigner | null;
+    signer: TransactionModifyingSigner | null;
 
     /**
      * Whether a signer is available and ready to use

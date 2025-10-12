@@ -1,4 +1,4 @@
-import type { ConnectorDebugMetrics } from '../types/connector';
+import type { ConnectorDebugMetrics } from '../../types/connector';
 
 /**
  * DebugMetrics - Tracks performance and debug metrics
