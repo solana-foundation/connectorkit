@@ -144,4 +144,3 @@ export function useGillSolanaClient(): UseGillSolanaClientReturn {
         clusterType: type,
     };
 }
-

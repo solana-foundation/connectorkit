@@ -70,7 +70,7 @@ export function ModernSolTransfer() {
         );
 
         console.log('🚀 Modern SOL Transfer: Starting transaction signing');
-        
+
         let signedTransaction;
         try {
             signedTransaction = await signTransactionMessageWithSigners(transactionMessage);

@@ -110,7 +110,7 @@ export function toClusterId(network: string): SolanaClusterId {
  */
 export function getDefaultRpcUrl(network: string): string {
     const normalized = normalizeNetwork(network);
-    
+
     // Use Gill's public RPC URL helper for standard clusters
     // This ensures consistency with Gill and automatic updates when Gill updates endpoints
     try {

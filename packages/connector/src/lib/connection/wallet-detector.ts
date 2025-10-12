@@ -4,6 +4,33 @@ import type { StateManager } from '../core/state-manager';
 import type { EventEmitter } from '../core/event-emitter';
 
 /**
+ * Legacy wallet PublicKey interface
+ */
+export interface LegacyPublicKey {
+    toString(): string;
+    toBytes?(): Uint8Array;
+}
+
+/**
+ * Direct wallet interface for legacy wallets
+ */
+export interface DirectWallet {
+    connect?: (options?: Record<string, unknown>) => Promise<unknown>;
+    disconnect?: () => Promise<void> | void;
+    signTransaction?: (tx: unknown) => Promise<unknown>;
+    signMessage?: (msg: Uint8Array) => Promise<{ signature: Uint8Array }>;
+    publicKey?: LegacyPublicKey;
+    features?: Record<string, unknown>;
+    chains?: readonly string[];
+    accounts?: readonly unknown[];
+    icon?: string;
+    _metadata?: { icon?: string };
+    adapter?: { icon?: string };
+    metadata?: { icon?: string };
+    iconUrl?: string;
+}
+
+/**
  * Check if wallet has a specific feature
  */
 function hasFeature(wallet: Wallet, featureName: string): boolean {
@@ -82,13 +109,13 @@ export class WalletDetector {
     /**
      * Check if a specific wallet is available immediately via direct window object detection
      */
-    detectDirectWallet(walletName: string): Record<string, unknown> | null {
+    detectDirectWallet(walletName: string): DirectWallet | null {
         if (typeof window === 'undefined') return null;
 
         const name = walletName.toLowerCase();
 
         // Use type-safe window access
-        const windowObj = window as Window & Record<string, unknown>;
+        const windowObj = window as unknown as Record<string, unknown>;
 
         // Check common wallet injection patterns
         const checks = [
@@ -98,7 +125,7 @@ export class WalletDetector {
             () => {
                 // Check for wallet in window keys
                 const keys = Object.keys(window).filter(k => k.toLowerCase().includes(name));
-                return keys.length > 0 ? (windowObj[keys[0]] as Record<string, unknown> | null) : null;
+                return keys.length > 0 ? windowObj[keys[0]] : null;
             },
         ];
 
@@ -106,11 +133,14 @@ export class WalletDetector {
             try {
                 const result = check();
                 if (result && typeof result === 'object') {
+                    // Cast to DirectWallet for type-safe checks
+                    const wallet = result as DirectWallet;
+
                     // Verify it looks like a wallet
-                    const hasStandardConnect = result.features?.['standard:connect'];
-                    const hasLegacyConnect = typeof result.connect === 'function';
+                    const hasStandardConnect = wallet.features?.['standard:connect'];
+                    const hasLegacyConnect = typeof wallet.connect === 'function';
                     if (hasStandardConnect || hasLegacyConnect) {
-                        return result;
+                        return wallet;
                     }
                 }
             } catch (e) {

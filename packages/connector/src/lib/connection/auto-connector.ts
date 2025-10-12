@@ -1,9 +1,17 @@
 import type { Wallet, WalletInfo } from '../../types/wallets';
 import type { StorageAdapter } from '../../types/storage';
-import type { WalletDetector } from './wallet-detector';
+import type { WalletDetector, LegacyPublicKey } from './wallet-detector';
 import type { ConnectionManager } from './connection-manager';
 import type { StateManager } from '../core/state-manager';
 import { getWalletsRegistry } from '../adapters/wallet-standard-shim';
+
+/**
+ * Legacy wallet connect result
+ */
+interface LegacyConnectResult {
+    publicKey?: LegacyPublicKey;
+    accounts?: unknown[];
+}
 
 /**
  * AutoConnector - Handles automatic wallet reconnection strategies
@@ -66,8 +74,9 @@ export class AutoConnector {
             // Map direct wallet methods to wallet standard features
             if (directWallet.connect) {
                 features['standard:connect'] = {
-                    connect: async (options: Record<string, unknown> = {}) => {
-                        const result = await directWallet.connect(options);
+                    connect: async (...args: unknown[]) => {
+                        const options = args[0] as Record<string, unknown> | undefined;
+                        const result = await directWallet.connect!(options);
 
                         if (this.debug) {
                             console.log('🔍 Direct wallet connect result:', result);
@@ -75,20 +84,26 @@ export class AutoConnector {
                         }
 
                         // Strategy 1: Check if result has proper wallet standard format
-                        if (result && result.accounts && Array.isArray(result.accounts)) {
+                        if (
+                            result &&
+                            typeof result === 'object' &&
+                            'accounts' in result &&
+                            Array.isArray(result.accounts)
+                        ) {
                             return result;
                         }
 
                         // Strategy 2: Check if result has legacy publicKey format
-                        if (result && result.publicKey && typeof result.publicKey.toString === 'function') {
+                        const legacyResult = result as LegacyConnectResult | undefined;
+                        if (legacyResult?.publicKey && typeof legacyResult.publicKey.toString === 'function') {
                             return {
                                 accounts: [
                                     {
-                                        address: result.publicKey.toString(),
-                                        publicKey: result.publicKey.toBytes
-                                            ? result.publicKey.toBytes()
+                                        address: legacyResult.publicKey.toString(),
+                                        publicKey: legacyResult.publicKey.toBytes
+                                            ? legacyResult.publicKey.toBytes()
                                             : new Uint8Array(),
-                                        chains: ['solana:mainnet', 'solana:devnet', 'solana:testnet'],
+                                        chains: ['solana:mainnet', 'solana:devnet', 'solana:testnet'] as const,
                                         features: [],
                                     },
                                 ],
@@ -108,7 +123,7 @@ export class AutoConnector {
                                         publicKey: directWallet.publicKey.toBytes
                                             ? directWallet.publicKey.toBytes()
                                             : new Uint8Array(),
-                                        chains: ['solana:mainnet', 'solana:devnet', 'solana:testnet'],
+                                        chains: ['solana:mainnet', 'solana:devnet', 'solana:testnet'] as const,
                                         features: [],
                                     },
                                 ],
@@ -116,13 +131,20 @@ export class AutoConnector {
                         }
 
                         // Strategy 4: Check if result itself is a publicKey
-                        if (result && typeof result.toString === 'function' && result.toString().length > 30) {
+                        const publicKeyResult = result as LegacyPublicKey | undefined;
+                        if (
+                            publicKeyResult &&
+                            typeof publicKeyResult.toString === 'function' &&
+                            publicKeyResult.toString().length > 30
+                        ) {
                             return {
                                 accounts: [
                                     {
-                                        address: result.toString(),
-                                        publicKey: result.toBytes ? result.toBytes() : new Uint8Array(),
-                                        chains: ['solana:mainnet', 'solana:devnet', 'solana:testnet'],
+                                        address: publicKeyResult.toString(),
+                                        publicKey: publicKeyResult.toBytes
+                                            ? publicKeyResult.toBytes()
+                                            : new Uint8Array(),
+                                        chains: ['solana:mainnet', 'solana:devnet', 'solana:testnet'] as const,
                                         features: [],
                                     },
                                 ],
@@ -139,20 +161,26 @@ export class AutoConnector {
             }
 
             if (directWallet.disconnect) {
+                const disconnectFn = directWallet.disconnect;
                 features['standard:disconnect'] = {
-                    disconnect: directWallet.disconnect.bind(directWallet),
+                    disconnect: () => disconnectFn.call(directWallet),
                 };
             }
 
             if (directWallet.signTransaction) {
+                const signTransactionFn = directWallet.signTransaction;
                 features['standard:signTransaction'] = {
-                    signTransaction: directWallet.signTransaction.bind(directWallet),
+                    signTransaction: (tx: unknown) => signTransactionFn.call(directWallet, tx),
                 };
             }
 
             if (directWallet.signMessage) {
+                const signMessageFn = directWallet.signMessage;
                 features['standard:signMessage'] = {
-                    signMessage: directWallet.signMessage.bind(directWallet),
+                    signMessage: (...args: unknown[]) => {
+                        const msg = args[0] as Uint8Array;
+                        return signMessageFn.call(directWallet, msg);
+                    },
                 };
             }
 
@@ -167,16 +195,19 @@ export class AutoConnector {
                 directWallet._metadata?.icon ||
                 directWallet.adapter?.icon ||
                 directWallet.metadata?.icon ||
-                ('iconUrl' in directWallet ? (directWallet.iconUrl as string | undefined) : undefined) ||
-                undefined;
+                directWallet.iconUrl;
 
             const wallet: Wallet = {
                 version: '1.0.0' as const,
                 name: storedWalletName,
-                icon: walletIcon,
-                chains: directWallet.chains || ['solana:mainnet', 'solana:devnet', 'solana:testnet'],
+                icon: walletIcon as Wallet['icon'],
+                chains: (directWallet.chains || [
+                    'solana:mainnet',
+                    'solana:devnet',
+                    'solana:testnet',
+                ]) as readonly `${string}:${string}`[],
                 features,
-                accounts: directWallet.accounts || [],
+                accounts: [] as const,
             };
 
             // Add to state immediately for instant UI feedback
