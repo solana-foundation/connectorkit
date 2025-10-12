@@ -34,17 +34,6 @@ export type WalletStandardAccount = BaseWalletAccount;
 // Simple registry reference
 let registry: WalletsRegistry | null = null;
 
-function normalizeWallet(wallet: Partial<BaseWallet>): BaseWallet {
-    return {
-        version: wallet?.version ?? ('1.0.0' as const),
-        name: wallet?.name ?? 'Unknown Wallet',
-        icon: wallet?.icon as BaseWallet['icon'],
-        chains: wallet?.chains ?? [],
-        features: wallet?.features ?? {},
-        accounts: wallet?.accounts ?? [],
-    };
-}
-
 /**
  * Get the wallets registry - simplified approach
  */
@@ -86,7 +75,7 @@ export function getWalletsRegistry(): WalletsRegistry {
                 const activeRegistry = nav.wallets || registry;
                 if (activeRegistry && typeof activeRegistry.get === 'function') {
                     const wallets = activeRegistry.get();
-                    return Array.isArray(wallets) ? wallets.map(normalizeWallet) : [];
+                    return Array.isArray(wallets) ? wallets : [];
                 }
                 return [];
             } catch {
@@ -98,7 +87,7 @@ export function getWalletsRegistry(): WalletsRegistry {
                 const nav = window.navigator as Navigator & { wallets?: WalletsRegistry };
                 const activeRegistry = nav.wallets || registry;
                 if (activeRegistry && typeof activeRegistry.on === 'function') {
-                    return activeRegistry.on(event, (wallet: BaseWallet) => callback(normalizeWallet(wallet)));
+                    return activeRegistry.on(event, callback);
                 }
                 return () => {};
             } catch {

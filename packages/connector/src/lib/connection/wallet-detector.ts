@@ -34,7 +34,44 @@ export interface DirectWallet {
  * Check if wallet has a specific feature
  */
 function hasFeature(wallet: Wallet, featureName: string): boolean {
-    return featureName in wallet.features && (wallet.features as Record<string, unknown>)[featureName] !== undefined;
+    return wallet.features != null && (wallet.features as Record<string, unknown>)[featureName] !== undefined;
+}
+
+/**
+ * Verify if a wallet candidate matches the requested wallet name
+ */
+function verifyWalletName(wallet: DirectWallet | Record<string, unknown>, requestedName: string): boolean {
+    const name = requestedName.toLowerCase();
+    const walletObj = wallet as Record<string, unknown>;
+
+    // Check various name properties (case-insensitive)
+    const nameFields = [
+        walletObj.name,
+        walletObj.providerName,
+        (walletObj.metadata as Record<string, unknown>)?.name,
+    ].filter(Boolean) as string[];
+
+    for (const field of nameFields) {
+        if (typeof field === 'string' && field.toLowerCase().includes(name)) {
+            return true;
+        }
+    }
+
+    // Dynamically check for provider-specific flag pattern: is{WalletName}
+    // e.g., isPhantom, isBackpack, isSolflare, etc.
+    const capitalizedName = name.charAt(0).toUpperCase() + name.slice(1);
+    const commonFlagPatterns = [
+        `is${capitalizedName}`, // isPhantom, isBackpack
+        `is${capitalizedName}Wallet`, // isCoinbaseWallet, isBraveWallet
+    ];
+
+    for (const flagName of commonFlagPatterns) {
+        if (walletObj[flagName] === true) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 /**
@@ -136,7 +173,12 @@ export class WalletDetector {
                     // Cast to DirectWallet for type-safe checks
                     const wallet = result as DirectWallet;
 
-                    // Verify it looks like a wallet
+                    // First, verify the candidate matches the requested wallet name
+                    if (!verifyWalletName(wallet, walletName)) {
+                        continue;
+                    }
+
+                    // Then verify it looks like a wallet with connect capabilities
                     const hasStandardConnect = wallet.features?.['standard:connect'];
                     const hasLegacyConnect = typeof wallet.connect === 'function';
                     if (hasStandardConnect || hasLegacyConnect) {

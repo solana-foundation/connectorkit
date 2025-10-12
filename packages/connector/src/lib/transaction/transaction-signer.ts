@@ -370,16 +370,31 @@ export function createTransactionSigner(config: TransactionSignerConfig): Transa
             try {
                 const sendFeature = features['solana:signAndSendTransaction'];
 
-                // Wallet Standard features are already bound to the account context
-                // Just pass the transaction and optional chain
-                const sendOptions: Record<string, unknown> = {
-                    ...(options || {}),
+                // Serialize transaction to Wallet Standard format
+                const { serialized } = prepareTransactionForWallet(transaction);
+
+                // Build input object with account, chain, and options
+                const inputBase = {
+                    account,
                     ...(cluster ? { chain: cluster.id } : {}),
+                    ...(options ? { options } : {}),
                 };
 
-                const result = (await sendFeature.signAndSendTransaction(transaction, sendOptions)) as
-                    | { signature?: string }
-                    | string;
+                let result: { signature?: string } | string;
+
+                try {
+                    // Format 1: transactions array (some wallets)
+                    result = (await sendFeature.signAndSendTransaction({
+                        ...inputBase,
+                        transactions: [serialized],
+                    })) as { signature?: string } | string;
+                } catch (err1: unknown) {
+                    // Format 2: singular transaction (other wallets)
+                    result = (await sendFeature.signAndSendTransaction({
+                        ...inputBase,
+                        transaction: serialized,
+                    })) as { signature?: string } | string;
+                }
 
                 // Extract signature from result
                 return typeof result === 'object' && result.signature ? result.signature : String(result);
@@ -432,7 +447,11 @@ export function createTransactionSigner(config: TransactionSignerConfig): Transa
             async signMessage(message: Uint8Array): Promise<Uint8Array> {
                 try {
                     const signFeature = features['solana:signMessage'];
-                    const result = (await signFeature.signMessage(message)) as { signature: Uint8Array };
+                    const result = (await signFeature.signMessage({
+                        account,
+                        message,
+                        ...(cluster ? { chain: cluster.id } : {}),
+                    })) as { signature: Uint8Array };
                     return result.signature;
                 } catch (error) {
                     throw new TransactionSignerError(

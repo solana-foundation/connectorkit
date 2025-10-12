@@ -65,12 +65,18 @@ function decodeShortVecLength(data: Uint8Array): { length: number; bytesConsumed
     let size = 0;
 
     for (;;) {
+        if (size >= data.length) {
+            throw new Error('Invalid shortvec encoding: unexpected end of data');
+        }
         const byte = data[size];
         length |= (byte & 0x7f) << (size * 7);
         size += 1;
 
         if ((byte & 0x80) === 0) {
             break;
+        }
+        if (size > 10) {
+            throw new Error('Invalid shortvec encoding: length prefix too long');
         }
     }
 
@@ -88,12 +94,19 @@ function parseMessageSigners(messageBytes: Uint8Array): {
 } {
     let offset = 0;
 
+    if (messageBytes.length < 4) {
+        throw new Error('Invalid message: too short for header');
+    }
+
     // Check for version byte (0x80 = version 0)
     if (messageBytes[0] === 0x80) {
         offset = 1; // Skip version byte
     }
 
     // Read header (3 bytes)
+    if (offset + 3 > messageBytes.length) {
+        throw new Error('Invalid message: incomplete header');
+    }
     const numSignerAccounts = messageBytes[offset];
     const numReadonlySignerAccounts = messageBytes[offset + 1];
     const numReadonlyNonSignerAccounts = messageBytes[offset + 2];
@@ -101,6 +114,9 @@ function parseMessageSigners(messageBytes: Uint8Array): {
 
     // Read static accounts array
     // Format: shortvec(numAccounts), then 32 bytes per account
+    if (offset >= messageBytes.length) {
+        throw new Error('Invalid message: no static accounts section');
+    }
     const { length: numStaticAccounts, bytesConsumed } = decodeShortVecLength(messageBytes.subarray(offset));
     offset += bytesConsumed;
 
@@ -109,6 +125,9 @@ function parseMessageSigners(messageBytes: Uint8Array): {
     const base58Decoder = getBase58Decoder();
 
     for (let i = 0; i < numStaticAccounts && i < numSignerAccounts; i++) {
+        if (offset + 32 > messageBytes.length) {
+            throw new Error(`Invalid message: incomplete account ${i}`);
+        }
         // Each address is 32 bytes
         const accountBytes = messageBytes.subarray(offset, offset + 32);
         // Convert to base58 string using gill's decoder

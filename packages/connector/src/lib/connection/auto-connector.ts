@@ -6,6 +6,13 @@ import type { StateManager } from '../core/state-manager';
 import { getWalletsRegistry } from '../adapters/wallet-standard-shim';
 
 /**
+ * Minimum length for a valid Solana public key address string (base58 encoded).
+ * Typical Solana addresses are 32-44 characters. This threshold filters out
+ * obviously invalid or malformed address strings.
+ */
+const MIN_ADDRESS_LENGTH = 30;
+
+/**
  * Legacy wallet connect result
  */
 interface LegacyConnectResult {
@@ -135,7 +142,7 @@ export class AutoConnector {
                         if (
                             publicKeyResult &&
                             typeof publicKeyResult.toString === 'function' &&
-                            publicKeyResult.toString().length > 30
+                            publicKeyResult.toString().length > MIN_ADDRESS_LENGTH
                         ) {
                             return {
                                 accounts: [

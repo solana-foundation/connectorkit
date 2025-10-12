@@ -68,12 +68,24 @@ export class StateManager {
     private arraysEqual<T>(a: readonly T[], b: readonly T[]): boolean {
         if (a.length !== b.length) return false;
 
-        // For wallet arrays, compare by name
+        // For wallet arrays, perform shallow object comparison
         if (a[0] && typeof a[0] === 'object' && 'name' in a[0] && b[0] && typeof b[0] === 'object' && 'name' in b[0]) {
             return a.every((item, i) => {
-                const aItem = item as { name: string };
-                const bItem = b[i] as { name: string };
-                return aItem.name === bItem?.name;
+                const aItem = item as Record<string, unknown>;
+                const bItem = b[i] as Record<string, unknown> | undefined;
+
+                // Both items must be objects
+                if (!bItem || typeof bItem !== 'object') return false;
+
+                // Get all own enumerable keys from both objects
+                const keysA = Object.keys(aItem);
+                const keysB = Object.keys(bItem);
+
+                // Different number of keys means different objects
+                if (keysA.length !== keysB.length) return false;
+
+                // Compare all key-value pairs (shallow comparison)
+                return keysA.every(key => aItem[key] === bItem[key]);
             });
         }
 
