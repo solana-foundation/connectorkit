@@ -10,6 +10,7 @@
 
 import { useMemo } from 'react';
 import { useConnector } from '../ui/connector-provider';
+import { useConnectorClient } from '../ui/connector-provider';
 import { createTransactionSigner, type TransactionSigner } from '../lib/transaction/transaction-signer';
 import type { TransactionSignerCapabilities } from '../types/transactions';
 
@@ -168,6 +169,7 @@ export interface UseTransactionSignerReturn {
  */
 export function useTransactionSigner(): UseTransactionSignerReturn {
     const { selectedWallet, selectedAccount, accounts, cluster, connected } = useConnector();
+    const client = useConnectorClient();
 
     const account = useMemo(
         () => accounts.find(a => a.address === selectedAccount)?.raw ?? null,
@@ -183,8 +185,16 @@ export function useTransactionSigner(): UseTransactionSignerReturn {
             wallet: selectedWallet,
             account,
             cluster: cluster ?? undefined,
+            eventEmitter: client
+                ? {
+                      emit: (event: unknown) => {
+                          // Use the public emitEvent method
+                          client.emitEvent(event as import('../types/events').ConnectorEvent);
+                      },
+                  }
+                : undefined,
         });
-    }, [connected, selectedWallet, account, cluster]);
+    }, [connected, selectedWallet, account, cluster, client]);
 
     const capabilities = useMemo(
         () =>

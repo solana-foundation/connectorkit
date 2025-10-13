@@ -52,4 +52,5 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 /wallet-adapter-compat/
 /armadura/
 /explorer-master/
+/solana-transaction-optimizer-main/
 **/local/

@@ -23,6 +23,10 @@ export interface TransactionSignerConfig {
     account: WalletAccount;
     /** Optional cluster/network context for chain-specific operations */
     cluster?: SolanaCluster;
+    /** Optional event emitter for transaction lifecycle events */
+    eventEmitter?: {
+        emit: (event: unknown) => void;
+    };
 }
 
 /**

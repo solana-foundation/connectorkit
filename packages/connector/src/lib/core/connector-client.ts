@@ -7,7 +7,7 @@ import type {
     Listener,
 } from '../../types/connector';
 import type { TransactionActivity } from '../../types/transactions';
-import type { ConnectorEventListener } from '../../types/events';
+import type { ConnectorEvent, ConnectorEventListener } from '../../types/events';
 import type { SolanaClusterId, SolanaCluster } from '@wallet-ui/core';
 import type { WalletInfo } from '../../types/wallets';
 import { StateManager } from './state-manager';
@@ -213,6 +213,15 @@ export class ConnectorClient {
      */
     offAll(): void {
         this.eventEmitter.offAll();
+    }
+
+    /**
+     * Emit a connector event
+     * Internal method used by transaction signer and other components
+     * @internal
+     */
+    emitEvent(event: ConnectorEvent): void {
+        this.eventEmitter.emit(event);
     }
 
     /**

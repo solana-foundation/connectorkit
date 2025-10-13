@@ -147,7 +147,7 @@ export interface TransactionSigner {
  * ```
  */
 export function createTransactionSigner(config: TransactionSignerConfig): TransactionSigner | null {
-    const { wallet, account, cluster } = config;
+    const { wallet, account, cluster, eventEmitter } = config;
 
     if (!wallet || !account) {
         return null;
@@ -349,11 +349,29 @@ export function createTransactionSigner(config: TransactionSignerConfig): Transa
 
                 const { serialized } = prepareTransactionForWallet(transaction);
 
+                // Emit preparing event for debugger
+                if (eventEmitter) {
+                    eventEmitter.emit({
+                        type: 'transaction:preparing',
+                        transaction: serialized,
+                        size: serialized.length,
+                        timestamp: new Date().toISOString(),
+                    });
+                }
+
                 const inputBase = {
                     account,
                     ...(cluster ? { chain: cluster.id } : {}),
                     ...(options ? { options } : {}),
                 };
+
+                // Emit signing event
+                if (eventEmitter) {
+                    eventEmitter.emit({
+                        type: 'transaction:signing',
+                        timestamp: new Date().toISOString(),
+                    });
+                }
 
                 let result: { signature?: string } | string;
 
@@ -369,7 +387,18 @@ export function createTransactionSigner(config: TransactionSignerConfig): Transa
                     })) as { signature?: string } | string;
                 }
 
-                return typeof result === 'object' && result.signature ? result.signature : String(result);
+                const signature = typeof result === 'object' && result.signature ? result.signature : String(result);
+
+                // Emit sent event
+                if (eventEmitter) {
+                    eventEmitter.emit({
+                        type: 'transaction:sent',
+                        signature,
+                        timestamp: new Date().toISOString(),
+                    });
+                }
+
+                return signature;
             } catch (error) {
                 throw new TransactionSignerError(
                     `Failed to send transaction: ${error instanceof Error ? error.message : 'Unknown error'}`,

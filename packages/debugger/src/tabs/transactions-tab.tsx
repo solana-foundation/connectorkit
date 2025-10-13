@@ -5,9 +5,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import type { TransactionActivity } from '@connector-kit/connector';
-import type { ConnectorClient } from '@connector-kit/connector/headless';
-import type { SolanaCluster } from '@wallet-ui/core';
+import type { TransactionActivity, SolanaCluster, ConnectorClient } from '@connector-kit/connector';
 import { Button, EmptyState } from '../ui-components';
 import { ExternalLinkIcon, PassedIcon, FailedIcon } from '../icons';
 import { Spinner } from './spinner';
@@ -15,6 +13,13 @@ import { fetchTransactionDetails, type FetchTransactionResponse } from '../utils
 import { parseProgramLogs, getTotalComputeUnits, type InstructionLogs } from '../utils/program-logs';
 import { decodeInstruction, type DecodedInstruction } from '../utils/instruction-decoder';
 import { getSimpleErrorMessage } from '../utils/transaction-errors';
+import { analyzeTransactionSize, extractTransactionSize, formatTransactionSize } from '../utils/transaction-analyzer';
+import { AddressTracker, extractAccountAddresses } from '../utils/address-tracker';
+import { calculateALTSavings } from '../utils/alt-optimizer';
+import { detectALTUsage } from '../utils/alt-detector';
+import { SizeBadge } from '../components/size-badge';
+import { ALTSuggestionBadge } from '../components/alt-suggestion-card';
+import { OptimizationSection } from '../components/optimization-section';
 
 interface TransactionsTabProps {
     client: ConnectorClient;
@@ -298,6 +303,11 @@ function TransactionItem({
     let programLogs: InstructionLogs[] | null = null;
     let decodedInstructions: DecodedInstruction[] | null = null;
 
+    // Analyze transaction size and optimization opportunities
+    let sizeAnalysis: ReturnType<typeof analyzeTransactionSize> | null = null;
+    let altSavings: ReturnType<typeof calculateALTSavings> | null = null;
+    let altUsage: ReturnType<typeof detectALTUsage> | null = null;
+
     if (transactionDetails) {
         const logs = transactionDetails.meta?.logMessages || [];
         const error = transactionDetails.meta?.err || null;
@@ -308,6 +318,30 @@ function TransactionItem({
         const accountKeys = transactionDetails.transaction.message.accountKeys;
         decodedInstructions = instructions.map((ix, idx) => decodeInstruction(ix, accountKeys, idx));
         console.log(decodedInstructions);
+
+        // Extract and analyze transaction size
+        const txSize = extractTransactionSize(transactionDetails);
+        if (txSize !== null) {
+            sizeAnalysis = analyzeTransactionSize(txSize);
+        }
+
+        // Extract account addresses for tracking
+        const addresses = extractAccountAddresses(transactionDetails);
+        if (addresses.length > 0) {
+            // Track addresses globally for session-wide analysis
+            AddressTracker.trackTransaction(addresses);
+
+            // Calculate ALT savings potential
+            if (txSize !== null) {
+                // Get global frequency map for better recommendations
+                const allStats = AddressTracker.getAllAddresses();
+                const frequencyMap = new Map(allStats.map(s => [s.address, s.count]));
+                altSavings = calculateALTSavings(txSize, addresses, frequencyMap);
+            }
+        }
+
+        // Detect if transaction already uses ALT
+        altUsage = detectALTUsage(transactionDetails);
     }
 
     return (
@@ -378,6 +412,37 @@ function TransactionItem({
                         >
                             {formatSignature(tx.signature, 6)}
                         </span>
+                        {/* Size badge (if analysis available) */}
+                        {sizeAnalysis && (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                <SizeBadge analysis={sizeAnalysis} compact />
+                            </span>
+                        )}
+                        {/* ALT optimization badge (if worthwhile) */}
+                        {altSavings && altSavings.worthOptimizing && !altUsage?.usesALT && (
+                            <ALTSuggestionBadge analysis={altSavings} />
+                        )}
+                        {/* ALT usage badge */}
+                        {altUsage && altUsage.usesALT && (
+                            <span
+                                style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: 4,
+                                    padding: '2px 6px',
+                                    backgroundColor: 'rgba(34, 197, 94, 0.15)',
+                                    border: '1px solid rgba(34, 197, 94, 0.3)',
+                                    borderRadius: 4,
+                                    fontSize: 9,
+                                    fontWeight: 500,
+                                    color: '#22c55e',
+                                }}
+                                title={`Using ${altUsage.numAddressesFromALT} addresses from ALT`}
+                            >
+                                <span>🔧</span>
+                                <span>ALT</span>
+                            </span>
+                        )}
                     </div>
                 </div>
 
@@ -549,34 +614,34 @@ function TransactionItem({
                                     gap: 8,
                                 }}
                             >
-                                {metadata.fee !== undefined && (
-                                    <DetailRow label="Fee" value={`${(metadata.fee / 1_000_000_000).toFixed(6)} SOL`} />
+                                {metadata.fee !== undefined && metadata.fee !== null && (
+                                    <DetailRow label="Fee" value={`${((metadata.fee as number) / 1_000_000_000).toFixed(6)} SOL`} />
                                 )}
-                                {metadata.computeUnits !== undefined && (
-                                    <DetailRow label="Compute Units" value={metadata.computeUnits.toLocaleString()} />
+                                {metadata.computeUnits !== undefined && metadata.computeUnits !== null && (
+                                    <DetailRow label="Compute Units" value={(metadata.computeUnits as number).toLocaleString()} />
                                 )}
-                                {metadata.slot !== undefined && (
-                                    <DetailRow label="Slot" value={metadata.slot.toLocaleString()} />
+                                {metadata.slot !== undefined && metadata.slot !== null && (
+                                    <DetailRow label="Slot" value={(metadata.slot as number).toLocaleString()} />
                                 )}
-                                {metadata.blockTime !== undefined && (
+                                {metadata.blockTime !== undefined && metadata.blockTime !== null && (
                                     <DetailRow
                                         label="Block Time"
-                                        value={new Date(metadata.blockTime * 1000).toLocaleString()}
+                                        value={new Date((metadata.blockTime as number) * 1000).toLocaleString()}
                                     />
                                 )}
-                                {metadata.numInstructions !== undefined && (
-                                    <DetailRow label="Instructions" value={metadata.numInstructions} />
+                                {metadata.numInstructions !== undefined && metadata.numInstructions !== null && (
+                                    <DetailRow label="Instructions" value={String(metadata.numInstructions)} />
                                 )}
-                                {metadata.numSigners !== undefined && (
-                                    <DetailRow label="Signers" value={metadata.numSigners} />
+                                {metadata.numSigners !== undefined && metadata.numSigners !== null && (
+                                    <DetailRow label="Signers" value={String(metadata.numSigners)} />
                                 )}
-                                {metadata.version !== undefined && (
+                                {metadata.version !== undefined && metadata.version !== null && (
                                     <DetailRow
                                         label="Version"
-                                        value={metadata.version === 'legacy' ? 'Legacy' : `v${metadata.version}`}
+                                        value={String(metadata.version === 'legacy' ? 'Legacy' : `v${metadata.version}`)}
                                     />
                                 )}
-                                {metadata.confirmationTime !== undefined && (
+                                {metadata.confirmationTime !== undefined && metadata.confirmationTime !== null && (
                                     <DetailRow label="Confirmation Time" value={`${metadata.confirmationTime}ms`} />
                                 )}
                             </div>
@@ -784,6 +849,14 @@ function TransactionItem({
                             )}
                         </div>
                     </>
+
+                    {/* Optimization Section */}
+                    {(altSavings || altUsage) && (
+                        <>
+                            <Divider />
+                            <OptimizationSection altSavings={altSavings} altUsage={altUsage} />
+                        </>
+                    )}
                 </div>
             )}
         </div>

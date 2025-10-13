@@ -23,14 +23,14 @@
         "release": "turbo build && changeset publish"
     },
     "devDependencies": {
-        "@solana/prettier-config-solana": "0.0.5",
         "@changesets/cli": "^2.29.7",
+        "@solana/prettier-config-solana": "0.0.5",
         "@types/d3-path": "^3.1.1",
         "@types/js-cookie": "^3.0.6",
-        "@types/node": "^24.6.1",
-        "@typescript-eslint/eslint-plugin": "^8.45.0",
-        "@typescript-eslint/parser": "^8.45.0",
-        "eslint": "^9.36.0",
+        "@types/node": "^24.7.2",
+        "@typescript-eslint/eslint-plugin": "^8.46.0",
+        "@typescript-eslint/parser": "^8.46.0",
+        "eslint": "^9.37.0",
         "prettier": "^3.6.2",
         "turbo": "^2.5.8"
     },

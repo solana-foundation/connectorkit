@@ -25,12 +25,14 @@ import {
 import type { DebugPanelProps, TabId, TabConfig } from './types';
 import { BugIcon, CloseIcon, OverviewIcon, TransactionsIcon, EventsIcon } from './icons';
 import { TabButton } from './ui-components';
-import { EnhancedOverviewTab, TransactionsTab, EventsTab } from './tabs';
+import { EnhancedOverviewTab, LiveTab, TransactionsTab, EventsTab, OptimizationTab } from './tabs';
 
-// Tab configuration - Reduced to 3 tabs for better UX
+// Tab configuration - 5 tabs for comprehensive debugging
 const TABS: TabConfig[] = [
     { id: 'overview', icon: <OverviewIcon />, label: 'Overview' },
+    { id: 'live', icon: <span style={{ fontSize: 14 }}>🔴</span>, label: 'Live' },
     { id: 'transactions', icon: <TransactionsIcon />, label: 'Transactions' },
+    { id: 'optimization', icon: <span style={{ fontSize: 14 }}>💡</span>, label: 'Optimization' },
     { id: 'events', icon: <EventsIcon />, label: 'Events' },
 ];
 
@@ -89,21 +91,11 @@ export function ConnectorDebugPanel({
     const { cluster, rpcUrl } = useCluster();
     const { signer, ready, capabilities } = useTransactionSigner();
 
-    if (process.env.NODE_ENV !== 'development') {
-        return null;
-    }
-
-    if (!client) {
-        return null;
-    }
-
-    const health = client.getHealth();
-    const metrics = client.getDebugMetrics();
-
+    // Event subscription
     useEffect(() => {
         if (!client || isPaused) return;
 
-        const unsubscribe = client.on(event => {
+        const unsubscribe = client.on((event: import('@connector-kit/connector').ConnectorEvent) => {
             setEvents(prev => {
                 const newEvents = [event, ...prev];
                 return newEvents.slice(0, maxEvents);
@@ -112,6 +104,19 @@ export function ConnectorDebugPanel({
 
         return unsubscribe;
     }, [client, isPaused, maxEvents]);
+
+    // Early returns
+    if (process.env.NODE_ENV !== 'development') {
+        return null;
+    }
+
+    if (!client) {
+        return null;
+    }
+
+    // Now client is guaranteed to be non-null
+    const health = client.getHealth();
+    const metrics = client.getDebugMetrics();
 
     const handleClearEvents = useCallback(() => {
         setEvents([]);
@@ -239,8 +244,16 @@ export function ConnectorDebugPanel({
                             />
                         </TabPanel>
 
+                        <TabPanel isActive={activeTab === 'live'}>
+                            <LiveTab client={client} rpcUrl={rpcUrl || ''} />
+                        </TabPanel>
+
                         <TabPanel isActive={activeTab === 'transactions'}>
-                            <TransactionsTab client={client} cluster={cluster} rpcUrl={rpcUrl} />
+                            <TransactionsTab client={client as any} cluster={cluster} rpcUrl={rpcUrl} />
+                        </TabPanel>
+
+                        <TabPanel isActive={activeTab === 'optimization'}>
+                            <OptimizationTab />
                         </TabPanel>
 
                         <TabPanel isActive={activeTab === 'events'}>

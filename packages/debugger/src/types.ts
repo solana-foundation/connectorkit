@@ -41,7 +41,7 @@ export interface DebugPanelProps {
     maxEvents?: number;
 }
 
-export type TabId = 'overview' | 'transactions' | 'events';
+export type TabId = 'overview' | 'live' | 'transactions' | 'optimization' | 'events';
 
 export interface TabConfig {
     id: TabId;
