@@ -39,7 +39,7 @@ export interface DefaultConfigOptions {
     /** Maximum retry attempts for error recovery (default: 3) */
     maxRetries?: number;
     /** Custom error handler */
-    onError?: (error: Error, errorInfo: any) => void;
+    onError?: (error: Error, errorInfo: React.ErrorInfo) => void;
 }
 
 /** Extended ConnectorConfig with app metadata */
@@ -59,9 +59,9 @@ export interface ExtendedConnectorConfig extends ConnectorConfig {
         /** Maximum retry attempts (default: 3) */
         maxRetries?: number;
         /** Custom error handler */
-        onError?: (error: Error, errorInfo: any) => void;
+        onError?: (error: Error, errorInfo: React.ErrorInfo) => void;
         /** Custom fallback component */
-        fallback?: (error: any, retry: () => void) => React.ReactNode;
+        fallback?: (error: Error, retry: () => void) => React.ReactNode;
     };
 }
 
@@ -86,7 +86,6 @@ export function getDefaultConfig(options: DefaultConfigOptions): ExtendedConnect
         onError,
     } = options;
 
-    // Build cluster list using wallet-ui utilities
     const defaultClusters: SolanaCluster[] = clusters ?? [
         createSolanaMainnet(),
         createSolanaDevnet(),
@@ -95,15 +94,12 @@ export function getDefaultConfig(options: DefaultConfigOptions): ExtendedConnect
         ...(customClusters || []),
     ];
 
-    // Get valid cluster IDs for validation
     const validClusterIds = defaultClusters.map(c => c.id);
 
-    // Create enhanced storage with validation and error handling
     const defaultStorage: ConnectorConfig['storage'] = storage ?? {
         account: new EnhancedStorageAdapter(
             createEnhancedStorageAccount({
                 validator: address => {
-                    // Validate Solana address format
                     if (!address) return true;
                     return isAddress(address);
                 },
@@ -112,7 +108,9 @@ export function getDefaultConfig(options: DefaultConfigOptions): ExtendedConnect
                         console.error('[Account Storage]', error);
                     }
                     if (onError) {
-                        onError(error, { context: 'account-storage' });
+                        onError(error, {
+                            componentStack: 'account-storage',
+                        });
                     }
                 },
             }),
@@ -128,7 +126,9 @@ export function getDefaultConfig(options: DefaultConfigOptions): ExtendedConnect
                         console.error('[Cluster Storage]', error);
                     }
                     if (onError) {
-                        onError(error, { context: 'cluster-storage' });
+                        onError(error, {
+                            componentStack: 'cluster-storage',
+                        });
                     }
                 },
             }),
@@ -141,7 +141,9 @@ export function getDefaultConfig(options: DefaultConfigOptions): ExtendedConnect
                         console.error('[Wallet Storage]', error);
                     }
                     if (onError) {
-                        onError(error, { context: 'wallet-storage' });
+                        onError(error, {
+                            componentStack: 'wallet-storage',
+                        });
                     }
                 },
             }),
@@ -149,22 +151,18 @@ export function getDefaultConfig(options: DefaultConfigOptions): ExtendedConnect
     };
 
     const config: ExtendedConnectorConfig = {
-        // Core connector config
         autoConnect,
         debug: debug ?? process.env.NODE_ENV === 'development',
         storage: defaultStorage,
-        // App metadata (now actually stored and used)
         appName,
         appUrl,
         enableMobile,
         network,
-        // Cluster configuration using wallet-ui
         cluster: {
             clusters: defaultClusters,
             persistSelection: persistClusterSelection,
             initialCluster: getInitialCluster(network),
         },
-        // Error boundary configuration
         errorBoundary: {
             enabled: enableErrorBoundary,
             maxRetries,

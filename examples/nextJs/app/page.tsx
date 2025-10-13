@@ -146,7 +146,8 @@ export default function Home() {
                         <CardContent className="space-y-4">
                             <p className="text-sm text-muted-foreground">
                                 Try out our interactive transaction testing environment. Compare legacy @solana/web3.js
-                                with modern @solana/kit, test the wallet adapter compat layer, and see the debugger in action.
+                                with modern @solana/kit, test the wallet adapter compat layer, and see the debugger in
+                                action.
                             </p>
                             <Link href="/transactions">
                                 <Button className="w-full sm:w-auto">

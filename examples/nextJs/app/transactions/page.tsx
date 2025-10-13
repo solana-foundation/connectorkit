@@ -3,7 +3,7 @@
 import { TransactionDemo } from '@/components/transactions';
 import { ConnectButton, ClusterSelector, AccountSwitcher } from '@/components/connector';
 import { useConnector } from '@connector-kit/connector';
-import { ArrowLeft, TestTube2 } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
 export default function TransactionsPage() {
@@ -15,10 +15,7 @@ export default function TransactionsPage() {
             <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
                 <div className="container mx-auto px-4 h-16 flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                        <Link
-                            href="/"
-                            className="flex items-center gap-2 text-sm hover:text-primary transition-colors"
-                        >
+                        <Link href="/" className="flex items-center gap-2 text-sm hover:text-primary transition-colors">
                             <ArrowLeft className="h-4 w-4" />
                             Back to Home
                         </Link>
@@ -51,4 +48,3 @@ export default function TransactionsPage() {
         </div>
     );
 }
-

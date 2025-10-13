@@ -6,7 +6,7 @@ import { getWalletsRegistry } from '../adapters/wallet-standard-shim';
 
 /**
  * HealthMonitor - Provides connector diagnostics and health checks
- * 
+ *
  * Useful for debugging, monitoring, and support.
  */
 export class HealthMonitor {
@@ -33,7 +33,6 @@ export class HealthMonitor {
     getHealth(): ConnectorHealth {
         const errors: string[] = [];
 
-        // Check Wallet Standard availability
         let walletStandardAvailable = false;
         try {
             const registry = getWalletsRegistry();
@@ -47,19 +46,15 @@ export class HealthMonitor {
             walletStandardAvailable = false;
         }
 
-        // Check storage availability
         let storageAvailable = false;
         try {
-            // Check if storage adapters are configured
             if (!this.walletStorage || !this.clusterStorage) {
                 errors.push('Storage adapters not configured');
                 storageAvailable = false;
             } else {
-                // Check if the storage adapters have isAvailable method (EnhancedStorage)
                 if ('isAvailable' in this.walletStorage && typeof this.walletStorage.isAvailable === 'function') {
                     storageAvailable = this.walletStorage.isAvailable();
                 } else if (typeof window !== 'undefined') {
-                    // Fallback: check localStorage availability
                     try {
                         const testKey = '__connector_storage_test__';
                         window.localStorage.setItem(testKey, 'test');
@@ -79,7 +74,6 @@ export class HealthMonitor {
             storageAvailable = false;
         }
 
-        // Validate connection state consistency
         const state = this.stateManager.getSnapshot();
 
         if (state.connected && !state.selectedWallet) {
@@ -110,4 +104,3 @@ export class HealthMonitor {
         };
     }
 }
-

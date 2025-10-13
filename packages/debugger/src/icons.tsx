@@ -147,16 +147,7 @@ export const InProgressIcon = ({ className }: { className?: string }) => {
             xmlns="http://www.w3.org/2000/svg"
             className={className}
         >
-            <rect
-                x="1"
-                y="1"
-                width="12"
-                height="12"
-                rx="6"
-                strokeWidth="2"
-                fill="none"
-                className="stroke-current"
-            />
+            <rect x="1" y="1" width="12" height="12" rx="6" strokeWidth="2" fill="none" className="stroke-current" />
             <path
                 stroke="none"
                 d="M 3.5,3.5 L3.5,0 A3.5,3.5 0 0,1 3.5, 7 z"

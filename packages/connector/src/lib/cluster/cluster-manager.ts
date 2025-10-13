@@ -6,7 +6,7 @@ import type { EventEmitter } from '../core/event-emitter';
 
 /**
  * ClusterManager - Handles network/cluster management
- * 
+ *
  * Manages cluster selection, persistence, and state updates.
  */
 export class ClusterManager {
@@ -27,7 +27,6 @@ export class ClusterManager {
         this.clusterStorage = clusterStorage;
         this.debug = debug;
 
-        // Initialize cluster state if provided
         if (config) {
             const clusters = config.clusters ?? [];
             const storedClusterId = this.clusterStorage?.get();
@@ -47,22 +46,20 @@ export class ClusterManager {
     async setCluster(clusterId: SolanaClusterId): Promise<void> {
         const state = this.stateManager.getSnapshot();
         const previousClusterId = state.cluster?.id || null;
-        const cluster = state.clusters.find(c => c.id === clusterId);
+        const cluster = state.clusters.find((c: SolanaCluster) => c.id === clusterId);
 
         if (!cluster) {
             throw new Error(
-                `Cluster ${clusterId} not found. Available clusters: ${state.clusters.map(c => c.id).join(', ')}`,
+                `Cluster ${clusterId} not found. Available clusters: ${state.clusters.map((c: SolanaCluster) => c.id).join(', ')}`,
             );
         }
 
         this.stateManager.updateState({ cluster }, true);
 
-        // Persist cluster selection if storage is configured
         if (this.clusterStorage) {
             this.clusterStorage.set(clusterId);
         }
 
-        // Emit cluster change event (only if actually changed)
         if (previousClusterId !== clusterId) {
             this.eventEmitter.emit({
                 type: 'cluster:changed',
@@ -94,4 +91,3 @@ export class ClusterManager {
         return this.stateManager.getSnapshot().clusters;
     }
 }
-

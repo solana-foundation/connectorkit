@@ -17,8 +17,7 @@ import { PUBLIC_RPC_ENDPOINTS } from './network';
  */
 export function getClusterRpcUrl(cluster: SolanaCluster): string {
     // Safely extract url property with type validation
-    const rawUrl = (cluster as any)?.url;
-    const url = typeof rawUrl === 'string' ? rawUrl : String(cluster ?? '');
+    const url = 'url' in cluster && typeof cluster.url === 'string' ? cluster.url : String(cluster ?? '');
 
     // If it's already a full URL, return it
     if (url?.startsWith('http://') || url?.startsWith('https://')) {
@@ -149,8 +148,7 @@ export function isTestnetCluster(cluster: SolanaCluster): boolean {
  */
 export function isLocalCluster(cluster: SolanaCluster): boolean {
     // Safely extract url property with type validation
-    const rawUrl = (cluster as any)?.url;
-    const url = typeof rawUrl === 'string' ? rawUrl : '';
+    const url = 'url' in cluster && typeof cluster.url === 'string' ? cluster.url : '';
 
     return cluster.id === 'solana:localnet' || url.includes('localhost') || url.includes('127.0.0.1');
 }

@@ -36,9 +36,9 @@ export interface MobileWalletAdapterConfig {
     };
     remoteHostAuthority?: string;
     chains?: readonly string[];
-    authorizationCache?: any;
-    chainSelector?: any;
-    onWalletNotFound?: (wallet: any) => Promise<void>;
+    authorizationCache?: unknown;
+    chainSelector?: unknown;
+    onWalletNotFound?: (wallet: unknown) => Promise<void>;
 }
 
 // Internal provider without error boundary
@@ -77,9 +77,8 @@ function ConnectorProviderInternal({
                 const extendedConfig = config as ExtendedConnectorConfig;
                 if (extendedConfig?.errorBoundary?.onError) {
                     extendedConfig.errorBoundary.onError(err, {
-                        context: 'client-initialization',
-                        phase: 'constructor',
-                        timestamp: new Date().toISOString(),
+                        componentStack: 'client-initialization',
+                        digest: `constructor-${new Date().toISOString()}`,
                     });
                 }
 
@@ -101,7 +100,7 @@ function ConnectorProviderInternal({
         if (currentClient) {
             // Force re-initialization if client was created during SSR
             // This ensures wallets are detected even if client was created before window existed
-            const privateClient = currentClient as any;
+            const privateClient = currentClient as unknown as { initialize?: () => void };
             if (privateClient.initialize && typeof privateClient.initialize === 'function') {
                 privateClient.initialize();
             }
@@ -124,7 +123,9 @@ function ConnectorProviderInternal({
         let cancelled = false;
         (async () => {
             try {
-                const mod = await import('@solana-mobile/wallet-standard-mobile');
+                const mod = (await import(
+                    '@solana-mobile/wallet-standard-mobile'
+                )) as typeof import('@solana-mobile/wallet-standard-mobile');
                 if (cancelled) return;
                 const {
                     registerMwa,
@@ -132,11 +133,11 @@ function ConnectorProviderInternal({
                     createDefaultChainSelector,
                     createDefaultWalletNotFoundHandler,
                     MWA_SOLANA_CHAINS,
-                } = mod as any;
+                } = mod;
                 registerMwa({
                     appIdentity: mobile.appIdentity,
                     authorizationCache: mobile.authorizationCache ?? createDefaultAuthorizationCache(),
-                    chains: (mobile.chains ?? MWA_SOLANA_CHAINS) as any,
+                    chains: (mobile.chains ?? MWA_SOLANA_CHAINS) as readonly string[],
                     chainSelector: mobile.chainSelector ?? createDefaultChainSelector(),
                     remoteHostAuthority: mobile.remoteHostAuthority,
                     onWalletNotFound: mobile.onWalletNotFound ?? createDefaultWalletNotFoundHandler(),

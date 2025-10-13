@@ -14,13 +14,18 @@
                     <div class="space-y-2">
                         <button
                             v-for="wallet in state.wallets"
-                            :key="wallet.name"
-                            @click="connect(wallet.name)"
+                            :key="wallet.wallet.name"
+                            @click="connect(wallet.wallet.name)"
                             :disabled="state.connecting"
                             class="w-full p-3 text-left border rounded-lg hover:bg-gray-50 disabled:opacity-50 flex items-center space-x-3"
                         >
-                            <img v-if="wallet.icon" :src="wallet.icon" :alt="wallet.name" class="w-6 h-6" />
-                            <span>{{ wallet.name }}</span>
+                            <img
+                                v-if="wallet.wallet.icon"
+                                :src="wallet.wallet.icon"
+                                :alt="wallet.wallet.name"
+                                class="w-6 h-6"
+                            />
+                            <span>{{ wallet.wallet.name }}</span>
                             <span v-if="!wallet.installed" class="text-xs text-gray-500"> (Not Installed) </span>
                         </button>
                     </div>
@@ -41,12 +46,17 @@
                 <div class="grid gap-3">
                     <div
                         v-for="wallet in state.wallets"
-                        :key="wallet.name"
+                        :key="wallet.wallet.name"
                         class="flex items-center justify-between p-3 border rounded-lg"
                     >
                         <div class="flex items-center space-x-3">
-                            <img v-if="wallet.icon" :src="wallet.icon" :alt="wallet.name" class="w-6 h-6" />
-                            <span class="font-medium">{{ wallet.name }}</span>
+                            <img
+                                v-if="wallet.wallet.icon"
+                                :src="wallet.wallet.icon"
+                                :alt="wallet.wallet.name"
+                                class="w-6 h-6"
+                            />
+                            <span class="font-medium">{{ wallet.wallet.name }}</span>
                         </div>
                         <span
                             :class="[
@@ -66,13 +76,14 @@
 <script setup lang="ts">
 import { reactive, onMounted, onUnmounted } from 'vue';
 import { ConnectorClient, getDefaultConfig } from '@connector-kit/connector/headless';
+import type { ConnectorState, WalletInfo } from '@connector-kit/connector';
 
 // Reactive state
 const state = reactive({
-    wallets: [] as any[],
+    wallets: [] as WalletInfo[],
     connected: false,
     connecting: false,
-    account: null as any,
+    account: null as { address: string; formatted: string } | null,
     cluster: 'devnet',
 });
 
@@ -91,7 +102,7 @@ let unsubscribers: Array<() => void> = [];
 async function connect(walletName: string) {
     try {
         state.connecting = true;
-        await (client as any).connect(walletName);
+        await client.select(walletName);
     } catch (error) {
         console.error('Connection failed:', error);
     } finally {
@@ -102,7 +113,7 @@ async function connect(walletName: string) {
 // Disconnect wallet
 async function disconnect() {
     try {
-        await (client as any).disconnect();
+        await client.disconnect();
     } catch (error) {
         console.error('Disconnect failed:', error);
     }
@@ -111,7 +122,7 @@ async function disconnect() {
 // Subscribe to state changes
 onMounted(() => {
     // Get initial state
-    const currentState = (client as any).getSnapshot();
+    const currentState: ConnectorState = client.getSnapshot();
     Object.assign(state, {
         wallets: currentState.wallets,
         connected: currentState.connected,
@@ -127,7 +138,7 @@ onMounted(() => {
 
     // Subscribe to all state changes
     unsubscribers.push(
-        (client as any).subscribe((newState: any) => {
+        client.subscribe((newState: ConnectorState) => {
             state.wallets = newState.wallets;
             state.connected = newState.connected;
             state.account = newState.selectedAccount
@@ -143,11 +154,11 @@ onMounted(() => {
 
 // Cleanup
 onUnmounted(() => {
-    unsubscribers.forEach((unsubscribe: any) => {
+    unsubscribers.forEach((unsubscribe: () => void) => {
         if (typeof unsubscribe === 'function') {
             unsubscribe();
         }
     });
-    (client as any).destroy();
+    client.destroy();
 });
 </script>

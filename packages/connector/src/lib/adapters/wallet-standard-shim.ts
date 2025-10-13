@@ -32,18 +32,7 @@ export type WalletStandardWallet = BaseWallet;
 export type WalletStandardAccount = BaseWalletAccount;
 
 // Simple registry reference
-let registry: any = null;
-
-function normalizeWallet(wallet: any): BaseWallet {
-    return {
-        version: wallet?.version ?? ('1.0.0' as const),
-        name: wallet?.name ?? 'Unknown Wallet',
-        icon: wallet?.icon,
-        chains: wallet?.chains ?? [],
-        features: wallet?.features ?? {},
-        accounts: wallet?.accounts ?? [],
-    };
-}
+let registry: WalletsRegistry | null = null;
 
 /**
  * Get the wallets registry - simplified approach
@@ -56,15 +45,12 @@ export function getWalletsRegistry(): WalletsRegistry {
         };
     }
 
-    // Initialize wallet standard if not available
     if (!registry) {
-        const nav = window.navigator as any;
+        const nav = window.navigator as Navigator & { wallets?: WalletsRegistry };
 
-        // Try direct registry first
         if (nav.wallets && typeof nav.wallets.get === 'function') {
             registry = nav.wallets;
         } else {
-            // Initialize wallet standard
             import('@wallet-standard/app')
                 .then(mod => {
                     const walletStandardRegistry = mod.getWallets?.();
@@ -72,21 +58,18 @@ export function getWalletsRegistry(): WalletsRegistry {
                         registry = walletStandardRegistry;
                     }
                 })
-                .catch(() => {
-                    // Wallet standard unavailable - not critical since we have instant auto-connect
-                });
+                .catch(() => {});
         }
     }
 
-    // Return simplified registry interface
     return {
         get: () => {
             try {
-                const nav = window.navigator as any;
+                const nav = window.navigator as Navigator & { wallets?: WalletsRegistry };
                 const activeRegistry = nav.wallets || registry;
                 if (activeRegistry && typeof activeRegistry.get === 'function') {
                     const wallets = activeRegistry.get();
-                    return Array.isArray(wallets) ? wallets.map(normalizeWallet) : [];
+                    return Array.isArray(wallets) ? wallets : [];
                 }
                 return [];
             } catch {
@@ -95,10 +78,10 @@ export function getWalletsRegistry(): WalletsRegistry {
         },
         on: (event, callback) => {
             try {
-                const nav = window.navigator as any;
+                const nav = window.navigator as Navigator & { wallets?: WalletsRegistry };
                 const activeRegistry = nav.wallets || registry;
                 if (activeRegistry && typeof activeRegistry.on === 'function') {
-                    return activeRegistry.on(event, (wallet: any) => callback(normalizeWallet(wallet)));
+                    return activeRegistry.on(event, callback);
                 }
                 return () => {};
             } catch {

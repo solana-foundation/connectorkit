@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Connection, Transaction, SystemProgram, PublicKey, LAMPORTS_PER_SOL } from '@solana/web3.js';
+import { signature as createSignature, address } from 'gill';
 import { useWalletAdapterCompat } from '@connector-kit/connector/compat';
 import { useTransactionSigner, useConnector, useCluster, useConnectorClient } from '@connector-kit/connector';
 import { TransactionForm } from './transaction-form';
@@ -9,7 +10,7 @@ import { TransactionResult } from './transaction-result';
 
 /**
  * Legacy SOL Transfer Component
- * 
+ *
  * Demonstrates using @solana/web3.js (v1) with the wallet adapter compat layer.
  * This shows how connector-kit can seamlessly integrate with existing code
  * that was written for @solana/wallet-adapter.
@@ -59,16 +60,16 @@ export function LegacySolTransfer() {
 
         // Sign and send using wallet adapter compat layer
         const sig = await walletAdapter.sendTransaction(transaction, connection);
-        
+
         setSignature(sig);
-        
+
         // Track transaction in debugger
         if (client) {
-            (client as any).trackTransaction({
-                signature: sig,
+            client.trackTransaction({
+                signature: createSignature(sig),
                 status: 'pending' as const,
                 method: 'walletAdapter.sendTransaction',
-                feePayer: walletAdapter.publicKey,
+                feePayer: address(walletAdapter.publicKey),
             });
         }
 
@@ -79,16 +80,18 @@ export function LegacySolTransfer() {
                 blockhash,
                 lastValidBlockHeight,
             });
-            
+
             // Update status to confirmed
             if (client) {
-                (client as any).updateTransactionStatus(sig, 'confirmed');
+                client.updateTransactionStatus(createSignature(sig), 'confirmed');
             }
         } catch (confirmError) {
             // Update status to failed if confirmation fails
             if (client) {
-                (client as any).updateTransactionStatus(sig, 'failed', 
-                    confirmError instanceof Error ? confirmError.message : 'Confirmation failed'
+                client.updateTransactionStatus(
+                    createSignature(sig),
+                    'failed',
+                    confirmError instanceof Error ? confirmError.message : 'Confirmation failed',
                 );
             }
             throw confirmError;
@@ -108,4 +111,3 @@ export function LegacySolTransfer() {
         </div>
     );
 }
-

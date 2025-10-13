@@ -1,8 +1,8 @@
-import type { ConnectorDebugMetrics } from '../types/connector';
+import type { ConnectorDebugMetrics } from '../../types/connector';
 
 /**
  * DebugMetrics - Tracks performance and debug metrics
- * 
+ *
  * Provides insights into connector performance and optimization effectiveness.
  */
 export class DebugMetrics {
@@ -24,7 +24,6 @@ export class DebugMetrics {
         }
 
         this.updateTimes.push(duration);
-        // Keep last 100 update times for average calculation
         if (this.updateTimes.length > 100) {
             this.updateTimes.shift();
         }
@@ -44,13 +43,10 @@ export class DebugMetrics {
      */
     getMetrics(): ConnectorDebugMetrics {
         const totalUpdates = this.stateUpdates + this.noopUpdates;
-        const optimizationRate =
-            totalUpdates > 0 ? Math.round((this.noopUpdates / totalUpdates) * 100) : 0;
+        const optimizationRate = totalUpdates > 0 ? Math.round((this.noopUpdates / totalUpdates) * 100) : 0;
 
         const avgUpdateTime =
-            this.updateTimes.length > 0
-                ? this.updateTimes.reduce((a, b) => a + b, 0) / this.updateTimes.length
-                : 0;
+            this.updateTimes.length > 0 ? this.updateTimes.reduce((a, b) => a + b, 0) / this.updateTimes.length : 0;
 
         return {
             stateUpdates: this.stateUpdates,
@@ -58,7 +54,7 @@ export class DebugMetrics {
             optimizationRate,
             eventListenerCount: this.eventListenerCount,
             subscriptionCount: this.subscriptionCount,
-            avgUpdateTimeMs: Math.round(avgUpdateTime * 100) / 100, // 2 decimal places
+            avgUpdateTimeMs: Math.round(avgUpdateTime * 100) / 100,
             lastUpdateTime: this.lastUpdateTime,
         };
     }
@@ -73,4 +69,3 @@ export class DebugMetrics {
         this.lastUpdateTime = 0;
     }
 }
-

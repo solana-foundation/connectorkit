@@ -7,27 +7,30 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import type { ConnectorState, ConnectorHealth, TransactionSignerCapabilities } from '@connector-kit/connector';
+import type { SolanaCluster } from '@wallet-ui/core';
+import type { ConnectorClient } from '@connector-kit/connector/headless';
 import { Section, Divider, EmptyState, Button, CollapsibleSection } from '../ui-components';
 import { StorageIcon, NetworkIcon, LockIcon, HealthIcon, WalletIcon } from '../icons';
 
 interface EnhancedOverviewTabProps {
-    state: any;
-    health: any;
+    state: ConnectorState;
+    health: ConnectorHealth | null;
     address: string | null;
     formatted: string;
     copied: boolean;
     copy: () => Promise<boolean>;
-    cluster: any;
+    cluster: SolanaCluster | null;
     rpcUrl: string;
-    signer: any;
     ready: boolean;
-    capabilities: {
-        canSign: boolean;
-        canSend: boolean;
-        canSignMessage: boolean;
-        supportsBatchSigning: boolean;
-    };
-    client: any;
+    capabilities: TransactionSignerCapabilities;
+    client: ConnectorClient;
+}
+
+// Type extension for client with storage access
+interface ConnectorClientWithStorage extends ConnectorClient {
+    walletStorage?: { get: () => string | undefined; set: (v: string | undefined) => void };
+    clusterStorage?: { get: () => string | undefined; set: (v: string) => void };
 }
 
 export function EnhancedOverviewTab({
@@ -45,35 +48,32 @@ export function EnhancedOverviewTab({
 }: EnhancedOverviewTabProps) {
     const wallet = state.selectedWallet;
 
-    // Get full wallet info including icon from wallets array
-    // This ensures we have the icon even on auto-connect reload
-    const walletWithIcon = wallet && state.wallets?.find((w: any) => w.name === wallet.name);
-    const walletIcon = walletWithIcon?.icon || wallet?.icon;
+    const walletWithIcon = wallet && state.wallets?.find(w => w.wallet.name === wallet.name);
+    const walletIcon = walletWithIcon?.wallet.icon || wallet?.icon;
 
-    // Storage state
     const [lastClear, setLastClear] = useState<string | null>(null);
 
-    // Storage values
+    const clientWithStorage = client as ConnectorClientWithStorage;
+
     const storedWallet = useMemo(() => {
         try {
-            return (client as any).walletStorage?.get() || null;
+            return clientWithStorage.walletStorage?.get() || null;
         } catch {
             return null;
         }
-    }, [client, lastClear]);
+    }, [clientWithStorage, lastClear]);
 
     const storedCluster = useMemo(() => {
         try {
-            return (client as any).clusterStorage?.get() || null;
+            return clientWithStorage.clusterStorage?.get() || null;
         } catch {
             return null;
         }
-    }, [client, lastClear]);
+    }, [clientWithStorage, lastClear]);
 
-    // Storage handlers
     const handleClearWallet = () => {
         try {
-            (client as any).walletStorage?.set(undefined);
+            clientWithStorage.walletStorage?.set(undefined);
             setLastClear(Date.now().toString());
         } catch (error) {
             console.error('Failed to clear wallet storage:', error);
@@ -82,7 +82,7 @@ export function EnhancedOverviewTab({
 
     const handleClearCluster = () => {
         try {
-            (client as any).clusterStorage?.set('solana:mainnet');
+            clientWithStorage.clusterStorage?.set('solana:mainnet');
             setLastClear(Date.now().toString());
         } catch (error) {
             console.error('Failed to clear cluster storage:', error);
@@ -94,7 +94,6 @@ export function EnhancedOverviewTab({
         handleClearCluster();
     };
 
-    // Check for health issues
     const hasHealthIssues =
         health &&
         (!health.initialized ||
@@ -104,7 +103,6 @@ export function EnhancedOverviewTab({
 
     return (
         <div style={{ height: '100%', overflowY: 'auto' }}>
-            {/* Connected Wallet */}
             {wallet && address ? (
                 <>
                     <div style={{ marginBottom: 12 }}>
@@ -243,7 +241,6 @@ export function EnhancedOverviewTab({
                             </div>
                         </div>
 
-                        {/* Wallet Info */}
                         <div style={{ fontSize: 10, lineHeight: 1.6, opacity: 0.7 }}>
                             <div
                                 style={{
@@ -433,7 +430,6 @@ export function EnhancedOverviewTab({
                 </>
             )}
 
-            {/* Storage */}
             <CollapsibleSection icon={<StorageIcon />} title="STORAGE" defaultExpanded={true}>
                 <Section title="Persisted State">
                     <div style={{ fontSize: 11, lineHeight: 1.8 }}>
@@ -531,7 +527,6 @@ export function EnhancedOverviewTab({
                 </div>
             </CollapsibleSection>
 
-            {/* Network */}
             <CollapsibleSection
                 icon={<NetworkIcon />}
                 title="NETWORK"
@@ -554,7 +549,6 @@ export function EnhancedOverviewTab({
                 </div>
             </CollapsibleSection>
 
-            {/* Signer Status */}
             <CollapsibleSection
                 icon={<LockIcon />}
                 title="SIGNER STATUS"
@@ -605,7 +599,6 @@ export function EnhancedOverviewTab({
                 )}
             </CollapsibleSection>
 
-            {/* Health Check */}
             {health && (
                 <CollapsibleSection
                     icon={<HealthIcon />}
@@ -719,7 +712,6 @@ export function EnhancedOverviewTab({
                 </CollapsibleSection>
             )}
 
-            {/* Available Wallets */}
             {state.wallets.length > 0 && (
                 <CollapsibleSection
                     icon={<WalletIcon />}

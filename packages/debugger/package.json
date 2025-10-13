@@ -29,12 +29,11 @@
         "clean": "rm -rf dist"
     },
     "dependencies": {
-        "@solana/kit": "^4.0.0",
-        "bs58": "^5.0.0"
+        "@solana/kit": "^4.0.0"
     },
     "peerDependencies": {
-        "react": ">=18.0.0",
-        "@connector-kit/connector": "workspace:*"
+        "@connector-kit/connector": "workspace:*",
+        "react": ">=18.0.0"
     },
     "devDependencies": {
         "@types/react": "^19.2.1",

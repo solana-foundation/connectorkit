@@ -64,8 +64,6 @@ export interface UseClusterReturn {
  * ```
  */
 export function useCluster(): UseClusterReturn {
-    // ✅ Use useConnector (already subscribes via useSyncExternalStore)
-    // No need to re-subscribe - consistent with useAccount and useWalletInfo
     const { cluster, clusters } = useConnector();
     const client = useConnectorClient();
 
@@ -73,7 +71,6 @@ export function useCluster(): UseClusterReturn {
         throw new Error('useCluster must be used within ConnectorProvider');
     }
 
-    // Memoize the setCluster function only
     const setCluster = useMemo(
         () => async (id: SolanaClusterId) => {
             await client.setCluster(id);
@@ -81,8 +78,6 @@ export function useCluster(): UseClusterReturn {
         [client],
     );
 
-    // Optimized: Compute derived values only when cluster changes
-    // No need for excessive useMemo on every boolean
     return useMemo(() => {
         const isMainnet = cluster ? isMainnetCluster(cluster) : false;
         const isDevnet = cluster ? isDevnetCluster(cluster) : false;

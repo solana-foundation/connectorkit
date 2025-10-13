@@ -22,7 +22,7 @@ import { HealthMonitor } from '../health/health-monitor';
 
 /**
  * ConnectorClient - Lean coordinator that delegates to specialized collaborators
- * 
+ *
  * Orchestrates wallet connection, state management, and event handling by wiring
  * together focused collaborators, each with a single responsibility.
  */
@@ -42,7 +42,6 @@ export class ConnectorClient {
     constructor(config: ConnectorConfig = {}) {
         this.config = config;
 
-        // Build initial state
         const clusterConfig = config.cluster;
         const clusters = clusterConfig?.clusters ?? [];
 
@@ -53,28 +52,23 @@ export class ConnectorClient {
             connecting: false,
             accounts: [],
             selectedAccount: null,
-            cluster: null, // Will be set by ClusterManager
+            cluster: null,
             clusters: [],
         };
 
-        // Instantiate collaborators with dependency injection
         this.stateManager = new StateManager(initialState);
         this.eventEmitter = new EventEmitter(config.debug);
         this.debugMetrics = new DebugMetrics();
-        
-        this.walletDetector = new WalletDetector(
-            this.stateManager,
-            this.eventEmitter,
-            config.debug ?? false,
-        );
-        
+
+        this.walletDetector = new WalletDetector(this.stateManager, this.eventEmitter, config.debug ?? false);
+
         this.connectionManager = new ConnectionManager(
             this.stateManager,
             this.eventEmitter,
             config.storage?.wallet,
             config.debug ?? false,
         );
-        
+
         this.autoConnector = new AutoConnector(
             this.walletDetector,
             this.connectionManager,
@@ -82,7 +76,7 @@ export class ConnectorClient {
             config.storage?.wallet,
             config.debug ?? false,
         );
-        
+
         this.clusterManager = new ClusterManager(
             this.stateManager,
             this.eventEmitter,
@@ -90,14 +84,14 @@ export class ConnectorClient {
             config.cluster,
             config.debug ?? false,
         );
-        
+
         this.transactionTracker = new TransactionTracker(
             this.stateManager,
             this.eventEmitter,
             20,
             config.debug ?? false,
         );
-        
+
         this.healthMonitor = new HealthMonitor(
             this.stateManager,
             config.storage?.wallet,
@@ -128,9 +122,8 @@ export class ConnectorClient {
                 }, 100);
             }
 
-            this.initialized = true; // ✅ Fixed: inside try block at end
+            this.initialized = true;
         } catch (e) {
-            // Init failed, initialized remains false
             if (this.config.debug) {
                 console.error('Connector initialization failed:', e);
             }
@@ -254,12 +247,10 @@ export class ConnectorClient {
      * Get performance and debug metrics
      */
     getDebugMetrics(): ConnectorDebugMetrics {
-        // Update listener counts before returning metrics
         const snapshot = this.stateManager.getSnapshot();
         this.debugMetrics.updateListenerCounts(
             this.eventEmitter.getListenerCount(),
-            // Count state subscribers by checking listeners size (internal detail)
-            0, // We don't expose this from StateManager anymore
+            0,
         );
         return this.debugMetrics.getMetrics();
     }
@@ -286,9 +277,7 @@ export class ConnectorClient {
      * Cleanup resources
      */
     destroy(): void {
-        this.connectionManager.disconnect().catch(() => {
-            // Ignore disconnect errors during cleanup
-        });
+        this.connectionManager.disconnect().catch(() => {});
         this.walletDetector.destroy();
         this.eventEmitter.offAll();
         this.stateManager.clear();

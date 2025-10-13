@@ -41,7 +41,7 @@ function getEventsFeature(wallet: Wallet): StandardEventsOnMethod | null {
 
 /**
  * ConnectionManager - Handles wallet connection lifecycle
- * 
+ *
  * Manages connecting, disconnecting, account selection, and wallet event subscriptions.
  */
 export class ConnectionManager {
@@ -72,7 +72,6 @@ export class ConnectionManager {
 
         const name = walletName || wallet.name;
 
-        // Emit connecting event
         this.eventEmitter.emit({
             type: 'connecting',
             wallet: name,
@@ -85,23 +84,19 @@ export class ConnectionManager {
             const connect = getConnectFeature(wallet);
             if (!connect) throw new Error(`Wallet ${name} does not support standard connect`);
 
-            // Force non-silent connection to ensure wallet prompts for account selection
             const result = await connect({ silent: false });
 
-            // Aggregate accounts from result and wallet.accounts
             const walletAccounts = wallet.accounts;
             const accountMap = new Map<string, WalletAccount>();
             for (const a of [...walletAccounts, ...result.accounts]) accountMap.set(a.address, a);
             const accounts = Array.from(accountMap.values()).map(a => this.toAccountInfo(a));
 
-            // Prefer a never-before-seen account when reconnecting
             const state = this.stateManager.getSnapshot();
             const previouslySelected = state.selectedAccount;
             const previousAddresses = new Set(state.accounts.map((a: AccountInfo) => a.address));
             const firstNew = accounts.find(a => !previousAddresses.has(a.address));
             const selected = firstNew?.address ?? previouslySelected ?? accounts[0]?.address ?? null;
 
-            // Successfully connected to wallet
             this.stateManager.updateState(
                 {
                     selectedWallet: wallet,
@@ -122,7 +117,6 @@ export class ConnectionManager {
                 });
             }
 
-            // Emit connection success event
             this.eventEmitter.emit({
                 type: 'wallet:connected',
                 wallet: name,
@@ -130,15 +124,12 @@ export class ConnectionManager {
                 timestamp: new Date().toISOString(),
             });
 
-            // Store wallet for auto-reconnect
             this.walletStorage?.set(name);
 
-            // Subscribe to wallet change events
             this.subscribeToWalletEvents();
         } catch (e) {
             const errorMessage = e instanceof Error ? e.message : String(e);
 
-            // Emit connection failure event
             this.eventEmitter.emit({
                 type: 'connection:failed',
                 wallet: name,
@@ -146,7 +137,6 @@ export class ConnectionManager {
                 timestamp: new Date().toISOString(),
             });
 
-            // Also emit generic error event
             this.eventEmitter.emit({
                 type: 'error',
                 error: e instanceof Error ? e : new Error(errorMessage),
@@ -173,7 +163,6 @@ export class ConnectionManager {
      * Disconnect from wallet
      */
     async disconnect(): Promise<void> {
-        // Cleanup wallet event listener
         if (this.walletChangeUnsub) {
             try {
                 this.walletChangeUnsub();
@@ -182,16 +171,13 @@ export class ConnectionManager {
         }
         this.stopPollingWalletAccounts();
 
-        // Call wallet's disconnect feature if available
         const wallet = this.stateManager.getSnapshot().selectedWallet;
         if (wallet) {
             const disconnect = getDisconnectFeature(wallet);
             if (disconnect) {
                 try {
                     await disconnect();
-                } catch (error) {
-                    // Wallet disconnect failed silently
-                }
+                } catch (error) {}
             }
         }
 
@@ -205,13 +191,11 @@ export class ConnectionManager {
             true,
         );
 
-        // Emit disconnection event
         this.eventEmitter.emit({
             type: 'wallet:disconnected',
             timestamp: new Date().toISOString(),
         });
 
-        // Remove stored wallet
         this.walletStorage?.set(undefined);
     }
 
@@ -258,7 +242,6 @@ export class ConnectionManager {
      * Subscribe to wallet change events
      */
     private subscribeToWalletEvents(): void {
-        // Cleanup existing subscription if present
         if (this.walletChangeUnsub) {
             try {
                 this.walletChangeUnsub();
@@ -270,24 +253,19 @@ export class ConnectionManager {
         const wallet = this.stateManager.getSnapshot().selectedWallet;
         if (!wallet) return;
 
-        // Check if wallet supports standard:events feature
         const eventsOn = getEventsFeature(wallet);
         if (!eventsOn) {
-            // Fallback: start polling wallet.accounts when events are not available
             this.startPollingWalletAccounts();
             return;
         }
 
         try {
-            // Subscribe to change events
             this.walletChangeUnsub = eventsOn('change', properties => {
-                // Only handle actual account changes
                 const changeAccounts = properties?.accounts ?? [];
                 if (changeAccounts.length === 0) return;
 
                 const nextAccounts = changeAccounts.map(a => this.toAccountInfo(a));
 
-                // Only update accounts, preserve selected account
                 if (nextAccounts.length > 0) {
                     this.stateManager.updateState({
                         accounts: nextAccounts,
@@ -295,7 +273,6 @@ export class ConnectionManager {
                 }
             });
         } catch (error) {
-            // Fallback to polling when event subscription fails
             this.startPollingWalletAccounts();
         }
     }
@@ -314,16 +291,13 @@ export class ConnectionManager {
                 const walletAccounts = wallet.accounts;
                 const nextAccounts = walletAccounts.map((a: WalletAccount) => this.toAccountInfo(a));
 
-                // Only update if we don't have accounts yet or they actually changed
                 if (state.accounts.length === 0 && nextAccounts.length > 0) {
                     this.stateManager.updateState({
                         accounts: nextAccounts,
                         selectedAccount: state.selectedAccount || nextAccounts[0]?.address || null,
                     });
                 }
-            } catch (error) {
-                // Error during account polling - ignore
-            }
+            } catch (error) {}
         }, 3000);
     }
 
@@ -344,4 +318,3 @@ export class ConnectionManager {
         return this.walletStorage?.get() ?? null;
     }
 }
-

@@ -169,15 +169,11 @@ export interface UseTransactionSignerReturn {
 export function useTransactionSigner(): UseTransactionSignerReturn {
     const { selectedWallet, selectedAccount, accounts, cluster, connected } = useConnector();
 
-    // Find the raw account object for the selected account
-    // We need this to pass to createTransactionSigner
     const account = useMemo(
         () => accounts.find(a => a.address === selectedAccount)?.raw ?? null,
         [accounts, selectedAccount],
     );
 
-    // Create signer when wallet and account are available
-    // Automatically recreates when dependencies change
     const signer = useMemo(() => {
         if (!connected || !selectedWallet || !account) {
             return null;
@@ -190,7 +186,6 @@ export function useTransactionSigner(): UseTransactionSignerReturn {
         });
     }, [connected, selectedWallet, account, cluster]);
 
-    // Extract capabilities (or provide defaults if no signer)
     const capabilities = useMemo(
         () =>
             signer?.getCapabilities() ?? {

@@ -57,7 +57,7 @@ class ErrorLogger {
             // Example: Send to Sentry, LogRocket, etc.
             try {
                 // Type-safe Google Analytics reporting
-                const gtag = (window as any).gtag;
+                const gtag = (window as Window & { gtag?: (...args: unknown[]) => void }).gtag;
                 if (typeof gtag === 'function') {
                     gtag('event', 'exception', {
                         description: error.message,

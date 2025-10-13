@@ -1,8 +1,8 @@
-import type { ConnectorEvent, ConnectorEventListener } from '../types/events';
+import type { ConnectorEvent, ConnectorEventListener } from '../../types/events';
 
 /**
  * EventEmitter - Handles event system for connector
- * 
+ *
  * Provides event listener management and emission with error handling.
  * Used for analytics, logging, monitoring, and custom behavior.
  */
@@ -63,4 +63,3 @@ export class EventEmitter {
         return this.listeners.size;
     }
 }
-

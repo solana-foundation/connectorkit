@@ -4,15 +4,76 @@ import type { StateManager } from '../core/state-manager';
 import type { EventEmitter } from '../core/event-emitter';
 
 /**
+ * Legacy wallet PublicKey interface
+ */
+export interface LegacyPublicKey {
+    toString(): string;
+    toBytes?(): Uint8Array;
+}
+
+/**
+ * Direct wallet interface for legacy wallets
+ */
+export interface DirectWallet {
+    connect?: (options?: Record<string, unknown>) => Promise<unknown>;
+    disconnect?: () => Promise<void> | void;
+    signTransaction?: (tx: unknown) => Promise<unknown>;
+    signMessage?: (msg: Uint8Array) => Promise<{ signature: Uint8Array }>;
+    publicKey?: LegacyPublicKey;
+    features?: Record<string, unknown>;
+    chains?: readonly string[];
+    accounts?: readonly unknown[];
+    icon?: string;
+    _metadata?: { icon?: string };
+    adapter?: { icon?: string };
+    metadata?: { icon?: string };
+    iconUrl?: string;
+}
+
+/**
  * Check if wallet has a specific feature
  */
 function hasFeature(wallet: Wallet, featureName: string): boolean {
-    return featureName in wallet.features && (wallet.features as Record<string, unknown>)[featureName] !== undefined;
+    return wallet.features != null && (wallet.features as Record<string, unknown>)[featureName] !== undefined;
+}
+
+/**
+ * Verify if a wallet candidate matches the requested wallet name
+ */
+function verifyWalletName(wallet: DirectWallet | Record<string, unknown>, requestedName: string): boolean {
+    const name = requestedName.toLowerCase();
+    const walletObj = wallet as Record<string, unknown>;
+
+    const nameFields = [
+        walletObj.name,
+        walletObj.providerName,
+        (walletObj.metadata as Record<string, unknown>)?.name,
+    ].filter(Boolean) as string[];
+
+    for (const field of nameFields) {
+        if (typeof field === 'string' && field.toLowerCase().includes(name)) {
+            return true;
+        }
+    }
+
+    const capitalizedName = name.charAt(0).toUpperCase() + name.slice(1);
+    const commonFlagPatterns = [
+        `is${capitalizedName}`,
+        `is${capitalizedName}Wallet`,
+    ];
+
+    for (const flagName of commonFlagPatterns) {
+        if (walletObj[flagName] === true) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 /**
  * WalletDetector - Handles wallet discovery and registry management
- * 
+ *
  * Integrates with Wallet Standard registry and provides direct wallet detection.
  */
 export class WalletDetector {
@@ -35,7 +96,7 @@ export class WalletDetector {
 
         try {
             const walletsApi = getWalletsRegistry();
-            const update = () => {
+                const update = () => {
                 const ws = walletsApi.get();
                 const previousCount = this.stateManager.getSnapshot().wallets.length;
                 const newCount = ws.length;
@@ -46,12 +107,10 @@ export class WalletDetector {
 
                 const unique = this.deduplicateWallets(ws);
 
-                // Update wallet list for UI
                 this.stateManager.updateState({
                     wallets: unique.map(w => this.mapToWalletInfo(w)),
                 });
 
-                // Emit wallet detection event if count changed
                 if (newCount !== previousCount && newCount > 0) {
                     this.eventEmitter.emit({
                         type: 'wallets:detected',
@@ -61,41 +120,35 @@ export class WalletDetector {
                 }
             };
 
-            // Initial update for wallet discovery
             update();
 
-            // Subscribe to wallet changes for discovery
             this.unsubscribers.push(walletsApi.on('register', update));
             this.unsubscribers.push(walletsApi.on('unregister', update));
 
-            // Additional discovery pass after delay
             setTimeout(() => {
                 if (!this.stateManager.getSnapshot().connected) {
                     update();
                 }
             }, 1000);
-        } catch (e) {
-            // Init failed silently
-        }
+        } catch (e) {}
     }
 
     /**
      * Check if a specific wallet is available immediately via direct window object detection
      */
-    detectDirectWallet(walletName: string): any {
+    detectDirectWallet(walletName: string): DirectWallet | null {
         if (typeof window === 'undefined') return null;
 
         const name = walletName.toLowerCase();
+        const windowObj = window as unknown as Record<string, unknown>;
 
-        // Check common wallet injection patterns
         const checks = [
-            () => (window as any)[name], // window.phantom, window.backpack
-            () => (window as any)[`${name}Wallet`], // window.phantomWallet
-            () => (window as any).solana, // Legacy Phantom injection
+            () => windowObj[name],
+            () => windowObj[`${name}Wallet`],
+            () => windowObj.solana,
             () => {
-                // Check for wallet in window keys
                 const keys = Object.keys(window).filter(k => k.toLowerCase().includes(name));
-                return keys.length > 0 ? (window as any)[keys[0]] : null;
+                return keys.length > 0 ? windowObj[keys[0]] : null;
             },
         ];
 
@@ -103,11 +156,16 @@ export class WalletDetector {
             try {
                 const result = check();
                 if (result && typeof result === 'object') {
-                    // Verify it looks like a wallet
-                    const hasStandardConnect = result.features?.['standard:connect'];
-                    const hasLegacyConnect = typeof result.connect === 'function';
+                    const wallet = result as DirectWallet;
+
+                    if (!verifyWalletName(wallet, walletName)) {
+                        continue;
+                    }
+
+                    const hasStandardConnect = wallet.features?.['standard:connect'];
+                    const hasLegacyConnect = typeof wallet.connect === 'function';
                     if (hasStandardConnect || hasLegacyConnect) {
-                        return result;
+                        return wallet;
                     }
                 }
             } catch (e) {
@@ -167,4 +225,3 @@ export class WalletDetector {
         this.unsubscribers = [];
     }
 }
-

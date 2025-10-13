@@ -31,7 +31,7 @@ export function getSolanaExplorerUrl(signature: string, options: ExplorerOptions
 
     // Map to valid gill cluster types (custom clusters default to devnet)
     const validClusters = ['mainnet', 'devnet', 'testnet'] as const;
-    const explorerCluster = validClusters.includes(normalizedCluster as any)
+    const explorerCluster = validClusters.includes(normalizedCluster as 'mainnet' | 'devnet' | 'testnet')
         ? (normalizedCluster as 'mainnet' | 'devnet' | 'testnet')
         : 'devnet';
 
