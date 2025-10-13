@@ -86,7 +86,6 @@ export interface UseGillTransactionSignerReturn {
 export function useGillTransactionSigner(): UseGillTransactionSignerReturn {
     const { signer: connectorSigner, ready } = useTransactionSigner();
 
-    // Memoize the gill-compatible signer to prevent unnecessary recreations
     const gillSigner = useMemo(() => {
         if (!connectorSigner) return null;
         return createGillTransactionSigner(connectorSigner);

@@ -45,15 +45,12 @@ export function getWalletsRegistry(): WalletsRegistry {
         };
     }
 
-    // Initialize wallet standard if not available
     if (!registry) {
         const nav = window.navigator as Navigator & { wallets?: WalletsRegistry };
 
-        // Try direct registry first
         if (nav.wallets && typeof nav.wallets.get === 'function') {
             registry = nav.wallets;
         } else {
-            // Initialize wallet standard
             import('@wallet-standard/app')
                 .then(mod => {
                     const walletStandardRegistry = mod.getWallets?.();
@@ -61,13 +58,10 @@ export function getWalletsRegistry(): WalletsRegistry {
                         registry = walletStandardRegistry;
                     }
                 })
-                .catch(() => {
-                    // Wallet standard unavailable - not critical since we have instant auto-connect
-                });
+                .catch(() => {});
         }
     }
 
-    // Return simplified registry interface
     return {
         get: () => {
             try {

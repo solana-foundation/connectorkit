@@ -44,7 +44,6 @@ function verifyWalletName(wallet: DirectWallet | Record<string, unknown>, reques
     const name = requestedName.toLowerCase();
     const walletObj = wallet as Record<string, unknown>;
 
-    // Check various name properties (case-insensitive)
     const nameFields = [
         walletObj.name,
         walletObj.providerName,
@@ -57,12 +56,10 @@ function verifyWalletName(wallet: DirectWallet | Record<string, unknown>, reques
         }
     }
 
-    // Dynamically check for provider-specific flag pattern: is{WalletName}
-    // e.g., isPhantom, isBackpack, isSolflare, etc.
     const capitalizedName = name.charAt(0).toUpperCase() + name.slice(1);
     const commonFlagPatterns = [
-        `is${capitalizedName}`, // isPhantom, isBackpack
-        `is${capitalizedName}Wallet`, // isCoinbaseWallet, isBraveWallet
+        `is${capitalizedName}`,
+        `is${capitalizedName}Wallet`,
     ];
 
     for (const flagName of commonFlagPatterns) {
@@ -99,7 +96,7 @@ export class WalletDetector {
 
         try {
             const walletsApi = getWalletsRegistry();
-            const update = () => {
+                const update = () => {
                 const ws = walletsApi.get();
                 const previousCount = this.stateManager.getSnapshot().wallets.length;
                 const newCount = ws.length;
@@ -110,12 +107,10 @@ export class WalletDetector {
 
                 const unique = this.deduplicateWallets(ws);
 
-                // Update wallet list for UI
                 this.stateManager.updateState({
                     wallets: unique.map(w => this.mapToWalletInfo(w)),
                 });
 
-                // Emit wallet detection event if count changed
                 if (newCount !== previousCount && newCount > 0) {
                     this.eventEmitter.emit({
                         type: 'wallets:detected',
@@ -125,22 +120,17 @@ export class WalletDetector {
                 }
             };
 
-            // Initial update for wallet discovery
             update();
 
-            // Subscribe to wallet changes for discovery
             this.unsubscribers.push(walletsApi.on('register', update));
             this.unsubscribers.push(walletsApi.on('unregister', update));
 
-            // Additional discovery pass after delay
             setTimeout(() => {
                 if (!this.stateManager.getSnapshot().connected) {
                     update();
                 }
             }, 1000);
-        } catch (e) {
-            // Init failed silently
-        }
+        } catch (e) {}
     }
 
     /**
@@ -150,17 +140,13 @@ export class WalletDetector {
         if (typeof window === 'undefined') return null;
 
         const name = walletName.toLowerCase();
-
-        // Use type-safe window access
         const windowObj = window as unknown as Record<string, unknown>;
 
-        // Check common wallet injection patterns
         const checks = [
-            () => windowObj[name], // window.phantom, window.backpack
-            () => windowObj[`${name}Wallet`], // window.phantomWallet
-            () => windowObj.solana, // Legacy Phantom injection
+            () => windowObj[name],
+            () => windowObj[`${name}Wallet`],
+            () => windowObj.solana,
             () => {
-                // Check for wallet in window keys
                 const keys = Object.keys(window).filter(k => k.toLowerCase().includes(name));
                 return keys.length > 0 ? windowObj[keys[0]] : null;
             },
@@ -170,15 +156,12 @@ export class WalletDetector {
             try {
                 const result = check();
                 if (result && typeof result === 'object') {
-                    // Cast to DirectWallet for type-safe checks
                     const wallet = result as DirectWallet;
 
-                    // First, verify the candidate matches the requested wallet name
                     if (!verifyWalletName(wallet, walletName)) {
                         continue;
                     }
 
-                    // Then verify it looks like a wallet with connect capabilities
                     const hasStandardConnect = wallet.features?.['standard:connect'];
                     const hasLegacyConnect = typeof wallet.connect === 'function';
                     if (hasStandardConnect || hasLegacyConnect) {

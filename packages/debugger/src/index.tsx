@@ -89,21 +89,17 @@ export function ConnectorDebugPanel({
     const { cluster, rpcUrl } = useCluster();
     const { signer, ready, capabilities } = useTransactionSigner();
 
-    // Only render in development mode
     if (process.env.NODE_ENV !== 'development') {
         return null;
     }
 
-    // Don't render if client is not available
     if (!client) {
         return null;
     }
 
-    // Get diagnostics
     const health = client.getHealth();
     const metrics = client.getDebugMetrics();
 
-    // Subscribe to events
     useEffect(() => {
         if (!client || isPaused) return;
 
@@ -117,7 +113,6 @@ export function ConnectorDebugPanel({
         return unsubscribe;
     }, [client, isPaused, maxEvents]);
 
-    // Event handlers
     const handleClearEvents = useCallback(() => {
         setEvents([]);
     }, []);
@@ -126,7 +121,6 @@ export function ConnectorDebugPanel({
         setIsPaused(prev => !prev);
     }, []);
 
-    // Styles
     const containerStyle: React.CSSProperties = {
         position: 'fixed',
         ...POSITION_STYLES[position],
@@ -180,7 +174,6 @@ export function ConnectorDebugPanel({
             onMouseDown={() => !isOpen && setIsHeaderPressed(true)}
             onMouseUp={() => setIsHeaderPressed(false)}
         >
-            {/* Header */}
             <div
                 style={headerStyle}
                 onClick={e => {
@@ -201,7 +194,6 @@ export function ConnectorDebugPanel({
 
             {isOpen && (
                 <>
-                    {/* Tab Navigation */}
                     <div
                         style={{
                             display: 'flex',
@@ -221,7 +213,6 @@ export function ConnectorDebugPanel({
                         ))}
                     </div>
 
-                    {/* Tab Content */}
                     <div
                         style={{
                             padding: 16,
@@ -262,7 +253,6 @@ export function ConnectorDebugPanel({
                         </TabPanel>
                     </div>
 
-                    {/* Footer */}
                     <div
                         style={{
                             padding: '8px 16px',
@@ -336,7 +326,6 @@ export function ConnectorDebugPanel({
                         </div>
                     </div>
 
-                    {/* Inline ping animation */}
                     <style>{`
 					@keyframes ping {
 						75%, 100% {

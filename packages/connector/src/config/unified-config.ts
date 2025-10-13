@@ -79,20 +79,16 @@ export interface UnifiedConfig {
 export function createConfig(options: UnifiedConfigOptions): UnifiedConfig {
     const { network = 'mainnet', rpcUrl: customRpcUrl, ...restOptions } = options;
 
-    // Normalize network name and determine RPC URL
     const normalizedNetwork = normalizeNetwork(network);
     const rpcUrl = customRpcUrl || getDefaultRpcUrl(normalizedNetwork);
 
-    // Convert to RPC format for configs that expect it (mainnet -> mainnet-beta)
     const rpcNetwork = normalizedNetwork === 'mainnet' ? 'mainnet-beta' : normalizedNetwork;
 
-    // Create ConnectorKit config with all options
     const connectorConfig = getDefaultConfig({
         ...restOptions,
-        network: rpcNetwork, // Use RPC convention for internal consistency
+        network: rpcNetwork,
     });
 
-    // Create mobile config if enabled (mobile doesn't support localnet)
     const mobile =
         options.enableMobile !== false && normalizedNetwork !== 'localnet'
             ? getDefaultMobileConfig({

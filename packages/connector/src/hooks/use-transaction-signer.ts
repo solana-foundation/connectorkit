@@ -186,7 +186,6 @@ export function useTransactionSigner(): UseTransactionSignerReturn {
         });
     }, [connected, selectedWallet, account, cluster]);
 
-    // Extract capabilities (or provide defaults if no signer)
     const capabilities = useMemo(
         () =>
             signer?.getCapabilities() ?? {

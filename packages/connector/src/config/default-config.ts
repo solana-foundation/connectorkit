@@ -86,7 +86,6 @@ export function getDefaultConfig(options: DefaultConfigOptions): ExtendedConnect
         onError,
     } = options;
 
-    // Build cluster list using wallet-ui utilities
     const defaultClusters: SolanaCluster[] = clusters ?? [
         createSolanaMainnet(),
         createSolanaDevnet(),
@@ -95,15 +94,12 @@ export function getDefaultConfig(options: DefaultConfigOptions): ExtendedConnect
         ...(customClusters || []),
     ];
 
-    // Get valid cluster IDs for validation
     const validClusterIds = defaultClusters.map(c => c.id);
 
-    // Create enhanced storage with validation and error handling
     const defaultStorage: ConnectorConfig['storage'] = storage ?? {
         account: new EnhancedStorageAdapter(
             createEnhancedStorageAccount({
                 validator: address => {
-                    // Validate Solana address format
                     if (!address) return true;
                     return isAddress(address);
                 },
@@ -155,22 +151,18 @@ export function getDefaultConfig(options: DefaultConfigOptions): ExtendedConnect
     };
 
     const config: ExtendedConnectorConfig = {
-        // Core connector config
         autoConnect,
         debug: debug ?? process.env.NODE_ENV === 'development',
         storage: defaultStorage,
-        // App metadata (now actually stored and used)
         appName,
         appUrl,
         enableMobile,
         network,
-        // Cluster configuration using wallet-ui
         cluster: {
             clusters: defaultClusters,
             persistSelection: persistClusterSelection,
             initialCluster: getInitialCluster(network),
         },
-        // Error boundary configuration
         errorBoundary: {
             enabled: enableErrorBoundary,
             maxRetries,

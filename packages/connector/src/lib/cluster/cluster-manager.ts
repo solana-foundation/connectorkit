@@ -27,7 +27,6 @@ export class ClusterManager {
         this.clusterStorage = clusterStorage;
         this.debug = debug;
 
-        // Initialize cluster state if provided
         if (config) {
             const clusters = config.clusters ?? [];
             const storedClusterId = this.clusterStorage?.get();
@@ -57,12 +56,10 @@ export class ClusterManager {
 
         this.stateManager.updateState({ cluster }, true);
 
-        // Persist cluster selection if storage is configured
         if (this.clusterStorage) {
             this.clusterStorage.set(clusterId);
         }
 
-        // Emit cluster change event (only if actually changed)
         if (previousClusterId !== clusterId) {
             this.eventEmitter.emit({
                 type: 'cluster:changed',

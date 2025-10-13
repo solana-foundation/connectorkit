@@ -19,10 +19,8 @@ export async function fetchTransactionDetails(signature: string, rpcUrl: string)
     try {
         const rpc = createSolanaRpc(rpcUrl);
 
-        // Convert signature string to Signature type
         const txSignature = createSignature(signature);
 
-        // Try with 'confirmed' commitment first
         const transaction = await rpc
             .getTransaction(txSignature, {
                 encoding: 'json',
@@ -41,7 +39,6 @@ export async function fetchTransactionDetails(signature: string, rpcUrl: string)
             };
         }
 
-        // TypeScript needs help narrowing the union type here
         return { transaction };
     } catch (error) {
         console.error('Error fetching transaction:', error);

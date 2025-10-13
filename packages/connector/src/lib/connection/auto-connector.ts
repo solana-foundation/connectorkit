@@ -50,11 +50,9 @@ export class AutoConnector {
      * Attempt auto-connection using both instant and fallback strategies
      */
     async attemptAutoConnect(): Promise<boolean> {
-        // Try instant connect first
         const instantSuccess = await this.attemptInstantConnect();
         if (instantSuccess) return true;
 
-        // Fallback to standard detection
         await this.attemptStandardConnect();
         return this.stateManager.getSnapshot().connected;
     }
@@ -75,10 +73,8 @@ export class AutoConnector {
         }
 
         try {
-            // Create proper features object for direct wallet
             const features: Record<string, Record<string, (...args: unknown[]) => unknown>> = {};
 
-            // Map direct wallet methods to wallet standard features
             if (directWallet.connect) {
                 features['standard:connect'] = {
                     connect: async (...args: unknown[]) => {
@@ -158,7 +154,6 @@ export class AutoConnector {
                             };
                         }
 
-                        // No valid account found
                         if (this.debug) {
                             console.error('❌ Legacy wallet: No valid publicKey found in any expected location');
                         }
@@ -191,12 +186,10 @@ export class AutoConnector {
                 };
             }
 
-            // If wallet already has proper features, use them
             if (directWallet.features) {
                 Object.assign(features, directWallet.features);
             }
 
-            // Create a minimal wallet object for immediate connection
             const walletIcon =
                 directWallet.icon ||
                 directWallet._metadata?.icon ||
@@ -217,7 +210,6 @@ export class AutoConnector {
                 accounts: [] as const,
             };
 
-            // Add to state immediately for instant UI feedback
             this.stateManager.updateState(
                 {
                     wallets: [
@@ -231,7 +223,6 @@ export class AutoConnector {
                 true,
             );
 
-            // Connect immediately
             if (this.debug) {
                 console.log('🔄 Attempting to connect to', storedWalletName, 'via instant auto-connect');
             }
@@ -242,7 +233,6 @@ export class AutoConnector {
                 console.log('✅ Instant auto-connect successful for', storedWalletName);
             }
 
-            // Force wallet list update after successful connection to get proper icons
             setTimeout(() => {
                 const walletsApi = getWalletsRegistry();
                 const ws = walletsApi.get();
@@ -256,7 +246,6 @@ export class AutoConnector {
                 }
 
                 if (ws.length > 1) {
-                    // Trigger detector update
                     this.walletDetector.initialize();
                 }
             }, 500);
@@ -279,7 +268,6 @@ export class AutoConnector {
      */
     private async attemptStandardConnect(): Promise<void> {
         try {
-            // Skip if already connected (e.g., via instant auto-connect)
             if (this.stateManager.getSnapshot().connected) {
                 if (this.debug) {
                     console.log('🔄 Auto-connect: Already connected, skipping fallback auto-connect');
@@ -307,7 +295,6 @@ export class AutoConnector {
                 }
                 await this.connectionManager.connect(walletInfo.wallet, storedWalletName);
             } else {
-                // Single shorter retry - wallets usually register within 1-2 seconds
                 setTimeout(() => {
                     const retryWallets = this.stateManager.getSnapshot().wallets;
                     const retryWallet = retryWallets.find((w: WalletInfo) => w.wallet.name === storedWalletName);
@@ -323,7 +310,6 @@ export class AutoConnector {
             if (this.debug) {
                 console.error('❌ Auto-connect failed:', e);
             }
-            // Remove stored wallet on failure
             this.walletStorage?.set(undefined);
         }
     }

@@ -114,20 +114,16 @@ export interface UseGillSolanaClientReturn {
 export function useGillSolanaClient(): UseGillSolanaClientReturn {
     const { rpcUrl, type } = useCluster();
 
-    // Memoize the client to prevent unnecessary recreations
     const client = useMemo(() => {
         if (!rpcUrl || !type) return null;
 
         try {
-            // For standard clusters (mainnet, devnet, testnet, localnet), use the moniker
-            // This allows Gill to properly type the client
             if (type !== 'custom') {
                 return createSolanaClient({
                     urlOrMoniker: type,
                 });
             }
 
-            // For custom RPC URLs, pass the URL directly
             return createSolanaClient({
                 urlOrMoniker: rpcUrl as ModifiedClusterUrl,
             });

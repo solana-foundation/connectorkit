@@ -39,7 +39,6 @@ export class TransactionTracker {
         }
         this.totalTransactions++;
 
-        // Emit event
         this.eventEmitter.emit({
             type: 'transaction:tracked',
             signature: fullActivity.signature,
@@ -61,7 +60,6 @@ export class TransactionTracker {
             tx.status = status;
             if (error) tx.error = error;
 
-            // Emit event
             this.eventEmitter.emit({
                 type: 'transaction:updated',
                 signature,

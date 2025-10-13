@@ -104,7 +104,6 @@ export function getProgramName(address: string, cluster: string = 'mainnet'): st
         return name;
     }
 
-    // Return shortened address if unknown
     return `Unknown (${address.slice(0, 4)}...${address.slice(-4)})`;
 }
 
@@ -121,6 +120,5 @@ export function isKnownProgram(address: string): boolean {
 export function getShortProgramName(address: string): string {
     const fullName = getProgramName(address);
 
-    // Remove "Program" suffix for brevity
     return fullName.replace(/ Program$/, '').replace(/ v\d+$/, '');
 }

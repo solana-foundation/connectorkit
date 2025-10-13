@@ -71,7 +71,6 @@ export function useCluster(): UseClusterReturn {
         throw new Error('useCluster must be used within ConnectorProvider');
     }
 
-    // Memoize the setCluster function only
     const setCluster = useMemo(
         () => async (id: SolanaClusterId) => {
             await client.setCluster(id);

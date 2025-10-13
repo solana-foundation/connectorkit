@@ -24,7 +24,6 @@ export class DebugMetrics {
         }
 
         this.updateTimes.push(duration);
-        // Keep last 100 update times for average calculation
         if (this.updateTimes.length > 100) {
             this.updateTimes.shift();
         }
@@ -55,7 +54,7 @@ export class DebugMetrics {
             optimizationRate,
             eventListenerCount: this.eventListenerCount,
             subscriptionCount: this.subscriptionCount,
-            avgUpdateTimeMs: Math.round(avgUpdateTime * 100) / 100, // 2 decimal places
+            avgUpdateTimeMs: Math.round(avgUpdateTime * 100) / 100,
             lastUpdateTime: this.lastUpdateTime,
         };
     }

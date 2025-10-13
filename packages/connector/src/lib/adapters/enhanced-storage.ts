@@ -51,25 +51,21 @@ export class EnhancedStorage<T> extends WalletUiStorage<T> {
      */
     override set(value: T): boolean {
         try {
-            // Run validators
             if (!this.validate(value)) {
                 console.warn(`[EnhancedStorage] Validation failed for key: ${this.key}`);
                 return false;
             }
 
-            // Call parent (wallet-ui's Storage.set) - it returns void
             super.set(value);
 
-            // Update memory fallback on success
             this.memoryFallback = value;
             return true;
         } catch (error) {
             this.handleError(error as Error);
 
-            // Fallback to memory storage on error
             if (this.options?.useMemoryFallback) {
                 this.memoryFallback = value;
-                return true; // Successfully stored in memory fallback
+                return true;
             }
 
             return false;
@@ -85,7 +81,6 @@ export class EnhancedStorage<T> extends WalletUiStorage<T> {
         } catch (error) {
             this.handleError(error as Error);
 
-            // Return memory fallback if enabled
             if (this.options?.useMemoryFallback) {
                 return this.memoryFallback;
             }
@@ -260,7 +255,6 @@ export function createEnhancedStorageCluster(
         useMemoryFallback: true,
     });
 
-    // Add cluster validation if provided
     if (options?.validClusters) {
         storage.addValidator(clusterId => options.validClusters!.includes(clusterId));
     }
@@ -303,16 +297,13 @@ export class EnhancedStorageAdapter<T> implements StorageAdapter<T> {
     }
 
     set(value: T): void {
-        // Enhanced storage returns boolean, but StorageAdapter interface expects void
         this.storage.set(value);
     }
 
     subscribe(callback: (value: T) => void): () => void {
-        // Use nanostores subscription from the inherited Storage's value computed store
         return this.storage.value.subscribe(callback);
     }
 
-    // Expose enhanced methods
     validate(value: T): boolean {
         return this.storage.validate(value);
     }

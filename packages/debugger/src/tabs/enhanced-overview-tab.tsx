@@ -48,18 +48,13 @@ export function EnhancedOverviewTab({
 }: EnhancedOverviewTabProps) {
     const wallet = state.selectedWallet;
 
-    // Get full wallet info including icon from wallets array
-    // This ensures we have the icon even on auto-connect reload
     const walletWithIcon = wallet && state.wallets?.find(w => w.wallet.name === wallet.name);
     const walletIcon = walletWithIcon?.wallet.icon || wallet?.icon;
 
-    // Storage state
     const [lastClear, setLastClear] = useState<string | null>(null);
 
-    // Cast client to access storage properties (these are internal/private)
     const clientWithStorage = client as ConnectorClientWithStorage;
 
-    // Storage values
     const storedWallet = useMemo(() => {
         try {
             return clientWithStorage.walletStorage?.get() || null;
@@ -76,7 +71,6 @@ export function EnhancedOverviewTab({
         }
     }, [clientWithStorage, lastClear]);
 
-    // Storage handlers
     const handleClearWallet = () => {
         try {
             clientWithStorage.walletStorage?.set(undefined);
@@ -100,7 +94,6 @@ export function EnhancedOverviewTab({
         handleClearCluster();
     };
 
-    // Check for health issues
     const hasHealthIssues =
         health &&
         (!health.initialized ||
@@ -110,7 +103,6 @@ export function EnhancedOverviewTab({
 
     return (
         <div style={{ height: '100%', overflowY: 'auto' }}>
-            {/* Connected Wallet */}
             {wallet && address ? (
                 <>
                     <div style={{ marginBottom: 12 }}>
@@ -249,7 +241,6 @@ export function EnhancedOverviewTab({
                             </div>
                         </div>
 
-                        {/* Wallet Info */}
                         <div style={{ fontSize: 10, lineHeight: 1.6, opacity: 0.7 }}>
                             <div
                                 style={{
@@ -439,7 +430,6 @@ export function EnhancedOverviewTab({
                 </>
             )}
 
-            {/* Storage */}
             <CollapsibleSection icon={<StorageIcon />} title="STORAGE" defaultExpanded={true}>
                 <Section title="Persisted State">
                     <div style={{ fontSize: 11, lineHeight: 1.8 }}>
@@ -537,7 +527,6 @@ export function EnhancedOverviewTab({
                 </div>
             </CollapsibleSection>
 
-            {/* Network */}
             <CollapsibleSection
                 icon={<NetworkIcon />}
                 title="NETWORK"
@@ -560,7 +549,6 @@ export function EnhancedOverviewTab({
                 </div>
             </CollapsibleSection>
 
-            {/* Signer Status */}
             <CollapsibleSection
                 icon={<LockIcon />}
                 title="SIGNER STATUS"
@@ -611,7 +599,6 @@ export function EnhancedOverviewTab({
                 )}
             </CollapsibleSection>
 
-            {/* Health Check */}
             {health && (
                 <CollapsibleSection
                     icon={<HealthIcon />}
@@ -725,7 +712,6 @@ export function EnhancedOverviewTab({
                 </CollapsibleSection>
             )}
 
-            {/* Available Wallets */}
             {state.wallets.length > 0 && (
                 <CollapsibleSection
                     icon={<WalletIcon />}

@@ -42,7 +42,6 @@ export class ConnectorClient {
     constructor(config: ConnectorConfig = {}) {
         this.config = config;
 
-        // Build initial state
         const clusterConfig = config.cluster;
         const clusters = clusterConfig?.clusters ?? [];
 
@@ -53,11 +52,10 @@ export class ConnectorClient {
             connecting: false,
             accounts: [],
             selectedAccount: null,
-            cluster: null, // Will be set by ClusterManager
+            cluster: null,
             clusters: [],
         };
 
-        // Instantiate collaborators with dependency injection
         this.stateManager = new StateManager(initialState);
         this.eventEmitter = new EventEmitter(config.debug);
         this.debugMetrics = new DebugMetrics();
@@ -124,9 +122,8 @@ export class ConnectorClient {
                 }, 100);
             }
 
-            this.initialized = true; // ✅ Fixed: inside try block at end
+            this.initialized = true;
         } catch (e) {
-            // Init failed, initialized remains false
             if (this.config.debug) {
                 console.error('Connector initialization failed:', e);
             }
@@ -250,12 +247,10 @@ export class ConnectorClient {
      * Get performance and debug metrics
      */
     getDebugMetrics(): ConnectorDebugMetrics {
-        // Update listener counts before returning metrics
         const snapshot = this.stateManager.getSnapshot();
         this.debugMetrics.updateListenerCounts(
             this.eventEmitter.getListenerCount(),
-            // Count state subscribers by checking listeners size (internal detail)
-            0, // We don't expose this from StateManager anymore
+            0,
         );
         return this.debugMetrics.getMetrics();
     }
@@ -282,9 +277,7 @@ export class ConnectorClient {
      * Cleanup resources
      */
     destroy(): void {
-        this.connectionManager.disconnect().catch(() => {
-            // Ignore disconnect errors during cleanup
-        });
+        this.connectionManager.disconnect().catch(() => {});
         this.walletDetector.destroy();
         this.eventEmitter.offAll();
         this.stateManager.clear();
