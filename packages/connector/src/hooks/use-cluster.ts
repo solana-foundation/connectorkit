@@ -10,13 +10,13 @@ import { useMemo } from 'react';
 import type { SolanaCluster, SolanaClusterId } from '@wallet-ui/core';
 import { useConnector, useConnectorClient } from '../ui/connector-provider';
 import {
-    getClusterRpcUrl,
     getClusterExplorerUrl,
     isMainnetCluster,
     isDevnetCluster,
     isTestnetCluster,
     isLocalCluster,
     getClusterType,
+    type ClusterType,
 } from '../utils/cluster';
 
 export interface UseClusterReturn {
@@ -34,12 +34,10 @@ export interface UseClusterReturn {
     isTestnet: boolean;
     /** Whether the current cluster is running locally */
     isLocal: boolean;
-    /** RPC endpoint URL for the current cluster */
-    rpcUrl: string;
     /** Solana Explorer base URL for the current cluster */
     explorerUrl: string;
     /** Cluster type (mainnet, devnet, testnet, localnet, custom) */
-    type: 'mainnet' | 'devnet' | 'testnet' | 'localnet' | 'custom' | null;
+    type: ClusterType | null;
 }
 
 /**
@@ -83,7 +81,6 @@ export function useCluster(): UseClusterReturn {
         const isDevnet = cluster ? isDevnetCluster(cluster) : false;
         const isTestnet = cluster ? isTestnetCluster(cluster) : false;
         const isLocal = cluster ? isLocalCluster(cluster) : false;
-        const rpcUrl = cluster ? getClusterRpcUrl(cluster) : '';
         const explorerUrl = cluster ? getClusterExplorerUrl(cluster) : '';
         const type = cluster ? getClusterType(cluster) : null;
 
@@ -95,7 +92,6 @@ export function useCluster(): UseClusterReturn {
             isDevnet,
             isTestnet,
             isLocal,
-            rpcUrl,
             explorerUrl,
             type,
         };

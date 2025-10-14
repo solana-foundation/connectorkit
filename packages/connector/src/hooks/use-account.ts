@@ -8,8 +8,7 @@
 
 import React, { useState, useCallback, useMemo } from 'react';
 import { useConnector } from '../ui/connector-provider';
-import { copyAddressToClipboard } from '../utils';
-import { formatAddressSimple } from '../utils/formatting-light';
+import { copyAddressToClipboard, formatAddress } from '../utils';
 import type { AccountInfo } from '../types/accounts';
 
 export interface UseAccountReturn {
@@ -60,7 +59,7 @@ export function useAccount(): UseAccountReturn {
         [accounts, selectedAccount],
     );
 
-    const formatted = useMemo(() => (selectedAccount ? formatAddressSimple(selectedAccount) : ''), [selectedAccount]);
+    const formatted = useMemo(() => (selectedAccount ? formatAddress(selectedAccount) : ''), [selectedAccount]);
 
     const copy = useCallback(async () => {
         if (!selectedAccount) return false;

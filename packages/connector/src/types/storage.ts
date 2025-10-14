@@ -14,11 +14,21 @@ export interface StorageAdapter<T> {
 }
 
 /**
- * Options for creating enhanced storage instances
+ * Base options for enhanced storage instances
  */
-export interface StorageOptions<T> {
+export interface BaseEnhancedStorageOptions<T> {
+    /** Storage key */
+    key?: string;
+    /** Initial value */
+    initial?: T;
     /** Custom error handler for storage failures */
     onError?: (error: Error) => void;
+}
+
+/**
+ * Options for creating enhanced storage instances with validation
+ */
+export interface StorageOptions<T> extends BaseEnhancedStorageOptions<T> {
     /** Validate before setting values */
     validator?: (value: T) => boolean;
     /** Use memory storage if localStorage unavailable (SSR) */
@@ -28,28 +38,18 @@ export interface StorageOptions<T> {
 /**
  * Options for account storage
  */
-export interface EnhancedStorageAccountOptions {
-    key?: string;
-    initial?: string | undefined;
+export interface EnhancedStorageAccountOptions extends BaseEnhancedStorageOptions<string | undefined> {
     validator?: (value: string | undefined) => boolean;
-    onError?: (error: Error) => void;
 }
 
 /**
  * Options for cluster storage
  */
-export interface EnhancedStorageClusterOptions {
-    key?: string;
-    initial?: SolanaClusterId;
+export interface EnhancedStorageClusterOptions extends BaseEnhancedStorageOptions<SolanaClusterId> {
     validClusters?: SolanaClusterId[];
-    onError?: (error: Error) => void;
 }
 
 /**
  * Options for wallet storage
  */
-export interface EnhancedStorageWalletOptions {
-    key?: string;
-    initial?: string | undefined;
-    onError?: (error: Error) => void;
-}
+export interface EnhancedStorageWalletOptions extends BaseEnhancedStorageOptions<string | undefined> {}

@@ -1,8 +1,7 @@
 import type { Wallet, WalletAccount } from '../../types/wallets';
 import type { AccountInfo } from '../../types/accounts';
 import type { StorageAdapter } from '../../types/storage';
-import type { StateManager } from '../core/state-manager';
-import type { EventEmitter } from '../core/event-emitter';
+import { BaseCollaborator } from '../core/base-collaborator';
 import type {
     StandardConnectFeature,
     StandardConnectMethod,
@@ -44,24 +43,19 @@ function getEventsFeature(wallet: Wallet): StandardEventsOnMethod | null {
  *
  * Manages connecting, disconnecting, account selection, and wallet event subscriptions.
  */
-export class ConnectionManager {
-    private stateManager: StateManager;
-    private eventEmitter: EventEmitter;
+export class ConnectionManager extends BaseCollaborator {
     private walletStorage?: StorageAdapter<string | undefined>;
-    private debug: boolean;
     private walletChangeUnsub: (() => void) | null = null;
     private pollTimer: ReturnType<typeof setInterval> | null = null;
 
     constructor(
-        stateManager: StateManager,
-        eventEmitter: EventEmitter,
+        stateManager: import('../core/state-manager').StateManager,
+        eventEmitter: import('../core/event-emitter').EventEmitter,
         walletStorage?: StorageAdapter<string | undefined>,
         debug = false,
     ) {
-        this.stateManager = stateManager;
-        this.eventEmitter = eventEmitter;
+        super({ stateManager, eventEmitter, debug });
         this.walletStorage = walletStorage;
-        this.debug = debug;
     }
 
     /**
@@ -91,7 +85,7 @@ export class ConnectionManager {
             for (const a of [...walletAccounts, ...result.accounts]) accountMap.set(a.address, a);
             const accounts = Array.from(accountMap.values()).map(a => this.toAccountInfo(a));
 
-            const state = this.stateManager.getSnapshot();
+            const state = this.getState();
             const previouslySelected = state.selectedAccount;
             const previousAddresses = new Set(state.accounts.map((a: AccountInfo) => a.address));
             const firstNew = accounts.find(a => !previousAddresses.has(a.address));
@@ -108,14 +102,12 @@ export class ConnectionManager {
                 true,
             );
 
-            if (this.debug) {
-                console.log('✅ Connection successful - state updated:', {
-                    connected: true,
-                    selectedWallet: wallet.name,
-                    selectedAccount: selected,
-                    accountsCount: accounts.length,
-                });
-            }
+            this.log('✅ Connection successful - state updated:', {
+                connected: true,
+                selectedWallet: wallet.name,
+                selectedAccount: selected,
+                accountsCount: accounts.length,
+            });
 
             this.eventEmitter.emit({
                 type: 'wallet:connected',
@@ -171,7 +163,7 @@ export class ConnectionManager {
         }
         this.stopPollingWalletAccounts();
 
-        const wallet = this.stateManager.getSnapshot().selectedWallet;
+        const wallet = this.getState().selectedWallet;
         if (wallet) {
             const disconnect = getDisconnectFeature(wallet);
             if (disconnect) {
@@ -203,7 +195,7 @@ export class ConnectionManager {
      * Select a different account
      */
     async selectAccount(address: string): Promise<void> {
-        const state = this.stateManager.getSnapshot();
+        const state = this.getState();
         const current = state.selectedWallet;
         if (!current) throw new Error('No wallet connected');
 
@@ -250,7 +242,7 @@ export class ConnectionManager {
         }
         this.stopPollingWalletAccounts();
 
-        const wallet = this.stateManager.getSnapshot().selectedWallet;
+        const wallet = this.getState().selectedWallet;
         if (!wallet) return;
 
         const eventsOn = getEventsFeature(wallet);
@@ -282,12 +274,12 @@ export class ConnectionManager {
      */
     private startPollingWalletAccounts(): void {
         if (this.pollTimer) return;
-        const wallet = this.stateManager.getSnapshot().selectedWallet;
+        const wallet = this.getState().selectedWallet;
         if (!wallet) return;
 
         this.pollTimer = setInterval(() => {
             try {
-                const state = this.stateManager.getSnapshot();
+                const state = this.getState();
                 const walletAccounts = wallet.accounts;
                 const nextAccounts = walletAccounts.map((a: WalletAccount) => this.toAccountInfo(a));
 

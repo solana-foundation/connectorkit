@@ -101,7 +101,6 @@ export { installPolyfills, isPolyfillInstalled, isCryptoAvailable, getPolyfillSt
 // ============================================================================
 export * from './utils/clipboard';
 export * from './utils/formatting';
-export * from './utils/formatting-light';
 export * from './utils/cluster';
 export * from './utils/network';
 

@@ -1,32 +1,26 @@
 import type { TransactionActivity } from '../../types/transactions';
-import type { StateManager } from '../core/state-manager';
-import type { EventEmitter } from '../core/event-emitter';
+import { BaseCollaborator } from '../core/base-collaborator';
 
 /**
  * TransactionTracker - Tracks transaction history and status updates
  *
  * Provides debugging and monitoring for transaction activity.
  */
-export class TransactionTracker {
-    private stateManager: StateManager;
-    private eventEmitter: EventEmitter;
-    private debug: boolean;
+export class TransactionTracker extends BaseCollaborator {
     private transactions: TransactionActivity[] = [];
     private totalTransactions = 0;
     private maxTransactions: number;
 
-    constructor(stateManager: StateManager, eventEmitter: EventEmitter, maxTransactions = 20, debug = false) {
-        this.stateManager = stateManager;
-        this.eventEmitter = eventEmitter;
+    constructor(stateManager: import('../core/state-manager').StateManager, eventEmitter: import('../core/event-emitter').EventEmitter, maxTransactions = 20, debug = false) {
+        super({ stateManager, eventEmitter, debug });
         this.maxTransactions = maxTransactions;
-        this.debug = debug;
     }
 
     /**
      * Track a transaction for debugging and monitoring
      */
     trackTransaction(activity: Omit<TransactionActivity, 'timestamp' | 'cluster'>): void {
-        const state = this.stateManager.getSnapshot();
+        const state = this.getState();
         const fullActivity: TransactionActivity = {
             ...activity,
             timestamp: new Date().toISOString(),
@@ -46,9 +40,7 @@ export class TransactionTracker {
             timestamp: fullActivity.timestamp,
         });
 
-        if (this.debug) {
-            console.log('[Connector] Transaction tracked:', fullActivity);
-        }
+        this.log('[Connector] Transaction tracked:', fullActivity);
     }
 
     /**
@@ -67,13 +59,7 @@ export class TransactionTracker {
                 timestamp: new Date().toISOString(),
             });
 
-            if (this.debug) {
-                console.log('[Connector] Transaction updated:', {
-                    signature,
-                    status,
-                    error,
-                });
-            }
+            this.log('[Connector] Transaction updated:', { signature, status, error });
         }
     }
 

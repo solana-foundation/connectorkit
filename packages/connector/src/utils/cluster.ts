@@ -9,6 +9,11 @@ import { getExplorerLink } from 'gill';
 import { PUBLIC_RPC_ENDPOINTS } from './network';
 
 /**
+ * Cluster type enum for all supported Solana cluster types
+ */
+export type ClusterType = 'mainnet' | 'devnet' | 'testnet' | 'localnet' | 'custom';
+
+/**
  * Get the RPC endpoint URL for a cluster
  * Handles both string cluster names and full URLs
  *
@@ -167,7 +172,7 @@ export function getClusterName(cluster: SolanaCluster): string {
 /**
  * Get the cluster type (mainnet, devnet, testnet, localnet, custom)
  */
-export function getClusterType(cluster: SolanaCluster): 'mainnet' | 'devnet' | 'testnet' | 'localnet' | 'custom' {
+export function getClusterType(cluster: SolanaCluster): ClusterType {
     if (isMainnetCluster(cluster)) return 'mainnet';
     if (isDevnetCluster(cluster)) return 'devnet';
     if (isTestnetCluster(cluster)) return 'testnet';

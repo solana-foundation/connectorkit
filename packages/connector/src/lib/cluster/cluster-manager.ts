@@ -1,31 +1,25 @@
 import type { SolanaCluster, SolanaClusterId } from '@wallet-ui/core';
 import type { StorageAdapter } from '../../types/storage';
 import type { ConnectorConfig } from '../../types/connector';
-import type { StateManager } from '../core/state-manager';
-import type { EventEmitter } from '../core/event-emitter';
+import { BaseCollaborator } from '../core/base-collaborator';
 
 /**
  * ClusterManager - Handles network/cluster management
  *
  * Manages cluster selection, persistence, and state updates.
  */
-export class ClusterManager {
-    private stateManager: StateManager;
-    private eventEmitter: EventEmitter;
+export class ClusterManager extends BaseCollaborator {
     private clusterStorage?: StorageAdapter<SolanaClusterId>;
-    private debug: boolean;
 
     constructor(
-        stateManager: StateManager,
-        eventEmitter: EventEmitter,
+        stateManager: import('../core/state-manager').StateManager,
+        eventEmitter: import('../core/event-emitter').EventEmitter,
         clusterStorage?: StorageAdapter<SolanaClusterId>,
         config?: ConnectorConfig['cluster'],
         debug = false,
     ) {
-        this.stateManager = stateManager;
-        this.eventEmitter = eventEmitter;
+        super({ stateManager, eventEmitter, debug });
         this.clusterStorage = clusterStorage;
-        this.debug = debug;
 
         if (config) {
             const clusters = config.clusters ?? [];
@@ -44,7 +38,7 @@ export class ClusterManager {
      * Set the active cluster (network)
      */
     async setCluster(clusterId: SolanaClusterId): Promise<void> {
-        const state = this.stateManager.getSnapshot();
+        const state = this.getState();
         const previousClusterId = state.cluster?.id || null;
         const cluster = state.clusters.find((c: SolanaCluster) => c.id === clusterId);
 
@@ -69,25 +63,20 @@ export class ClusterManager {
             });
         }
 
-        if (this.debug) {
-            console.log('🌐 Cluster changed:', {
-                from: previousClusterId,
-                to: clusterId,
-            });
-        }
+        this.log('🌐 Cluster changed:', { from: previousClusterId, to: clusterId });
     }
 
     /**
      * Get the currently active cluster
      */
     getCluster(): SolanaCluster | null {
-        return this.stateManager.getSnapshot().cluster;
+        return this.getState().cluster;
     }
 
     /**
      * Get all available clusters
      */
     getClusters(): SolanaCluster[] {
-        return this.stateManager.getSnapshot().clusters;
+        return this.getState().clusters;
     }
 }

@@ -53,3 +53,6 @@ export type { DefaultConfigOptions, ExtendedConnectorConfig, UnifiedConfigOption
 
 // Re-export wallet-ui types for React components
 export type { SolanaCluster, SolanaClusterId } from '@wallet-ui/core';
+
+// Cluster utilities and types
+export type { ClusterType } from './utils/cluster';

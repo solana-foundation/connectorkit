@@ -30,17 +30,22 @@ import { TransactionResult } from './transaction-result';
  */
 export function ModernSolTransfer() {
     const { signer, ready } = useGillTransactionSigner();
-    const { cluster, rpcUrl } = useCluster();
+    const { cluster } = useCluster();
     const client = useConnectorClient();
     const [signature, setSignature] = useState<string | null>(null);
 
     async function handleTransfer(recipientAddress: string, amount: number) {
-        if (!signer || !rpcUrl) {
-            throw new Error('Wallet not connected or cluster not selected');
+        if (!signer || !client) {
+            throw new Error('Wallet not connected or client not available');
+        }
+
+        // Get RPC URL from connector client
+        const rpcUrl = client.getRpcUrl();
+        if (!rpcUrl) {
+            throw new Error('No RPC endpoint configured');
         }
 
         // Create RPC client using web3.js 2.0
-        // this shouldn't happen client-side
         const rpc = createSolanaRpc(rpcUrl);
         const rpcSubscriptions = createSolanaRpcSubscriptions(rpcUrl.replace('http', 'ws'));
 

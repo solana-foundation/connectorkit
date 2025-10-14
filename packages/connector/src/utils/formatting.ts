@@ -1,10 +1,11 @@
 /**
  * @connector-kit/connector - Formatting utilities
  *
- * Utility functions for formatting addresses, amounts, and other display values
+ * Unified utility functions for formatting addresses, amounts, and other display values
+ * Consolidates both fast (number-based) and precise (bigint-based) formatting options
  */
 
-import { lamportsToSol } from 'gill';
+import { lamportsToSol, LAMPORTS_PER_SOL } from 'gill';
 
 /**
  * Format a Solana address for display
@@ -12,6 +13,10 @@ import { lamportsToSol } from 'gill';
  * @example
  * formatAddress('7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU')
  * // Returns: '7xKX...gAsU'
+ *
+ * @example
+ * formatAddress('7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU', { length: 6 })
+ * // Returns: '7xKXtg...osgAsU'
  */
 export function formatAddress(
     address: string,
@@ -31,11 +36,17 @@ export function formatAddress(
 
 /**
  * Format SOL amount for display
- * Converts lamports to SOL with proper decimal places
- * Uses gill's lamportsToSol for accurate conversion
+ * Supports both precise bigint and fast number arithmetic
+ *
+ * @param lamports - Amount in lamports (number or bigint)
+ * @param options - Formatting options
+ * @param options.decimals - Number of decimal places (default: 4)
+ * @param options.suffix - Add 'SOL' suffix (default: true)
+ * @param options.fast - Use fast number arithmetic for amounts < 9000 SOL (default: false)
  *
  * @example
- * formatSOL(1000000000) // Returns: '1.0000 SOL'
+ * formatSOL(1000000000n) // Returns: '1.0000 SOL' (precise)
+ * formatSOL(1000000000, { fast: true }) // Returns: '1.0000 SOL' (fast)
  * formatSOL(1500000000, { decimals: 2 }) // Returns: '1.50 SOL'
  */
 export function formatSOL(
@@ -43,13 +54,20 @@ export function formatSOL(
     options: {
         decimals?: number;
         suffix?: boolean;
+        fast?: boolean;
     } = {},
 ): string {
-    const { decimals = 4, suffix = true } = options;
+    const { decimals = 4, suffix = true, fast = false } = options;
 
-    // Use gill's lamportsToSol for the conversion
+    // Fast path for small numbers (< 2^53 lamports ~9000 SOL)
+    if (fast && typeof lamports === 'number') {
+        const sol = lamports / LAMPORTS_PER_SOL;
+        const formatted = sol.toFixed(decimals);
+        return suffix ? `${formatted} SOL` : formatted;
+    }
+
+    // Precise path using gill's lamportsToSol
     const solString = lamportsToSol(lamports, decimals);
-
     return suffix ? `${solString} SOL` : solString;
 }
 
@@ -77,9 +95,14 @@ export function formatNumber(
 /**
  * Truncate text with ellipsis
  *
+ * @param text - Text to truncate
+ * @param maxLength - Maximum length including ellipsis
+ * @param position - Where to truncate: 'middle' or 'end' (default: 'middle')
+ *
  * @example
  * truncate('Hello World', 8) // Returns: 'He...ld'
  * truncate('Hello World', 8, 'end') // Returns: 'Hello...'
+ * truncate('Short', 10) // Returns: 'Short' (no truncation needed)
  */
 export function truncate(text: string, maxLength: number, position: 'middle' | 'end' = 'middle'): string {
     if (!text || text.length <= maxLength) return text;

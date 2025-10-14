@@ -1,7 +1,6 @@
 import { getWalletsRegistry } from '../adapters/wallet-standard-shim';
 import type { Wallet, WalletInfo } from '../../types/wallets';
-import type { StateManager } from '../core/state-manager';
-import type { EventEmitter } from '../core/event-emitter';
+import { BaseCollaborator } from '../core/base-collaborator';
 
 /**
  * Legacy wallet PublicKey interface
@@ -76,16 +75,11 @@ function verifyWalletName(wallet: DirectWallet | Record<string, unknown>, reques
  *
  * Integrates with Wallet Standard registry and provides direct wallet detection.
  */
-export class WalletDetector {
-    private stateManager: StateManager;
-    private eventEmitter: EventEmitter;
-    private debug: boolean;
+export class WalletDetector extends BaseCollaborator {
     private unsubscribers: Array<() => void> = [];
 
-    constructor(stateManager: StateManager, eventEmitter: EventEmitter, debug = false) {
-        this.stateManager = stateManager;
-        this.eventEmitter = eventEmitter;
-        this.debug = debug;
+    constructor(stateManager: import('../core/state-manager').StateManager, eventEmitter: import('../core/event-emitter').EventEmitter, debug = false) {
+        super({ stateManager, eventEmitter, debug });
     }
 
     /**
@@ -98,11 +92,11 @@ export class WalletDetector {
             const walletsApi = getWalletsRegistry();
                 const update = () => {
                 const ws = walletsApi.get();
-                const previousCount = this.stateManager.getSnapshot().wallets.length;
+                const previousCount = this.getState().wallets.length;
                 const newCount = ws.length;
 
-                if (this.debug && newCount !== previousCount) {
-                    console.log('🔍 WalletDetector: found wallets:', newCount);
+                if (newCount !== previousCount) {
+                    this.log('🔍 WalletDetector: found wallets:', newCount);
                 }
 
                 const unique = this.deduplicateWallets(ws);
@@ -126,7 +120,7 @@ export class WalletDetector {
             this.unsubscribers.push(walletsApi.on('unregister', update));
 
             setTimeout(() => {
-                if (!this.stateManager.getSnapshot().connected) {
+                if (!this.getState().connected) {
                     update();
                 }
             }, 1000);
@@ -180,7 +174,7 @@ export class WalletDetector {
      * Get currently detected wallets
      */
     getDetectedWallets(): WalletInfo[] {
-        return this.stateManager.getSnapshot().wallets;
+        return this.getState().wallets;
     }
 
     /**

@@ -18,7 +18,7 @@ import { TransactionResult } from './transaction-result';
 export function LegacySolTransfer() {
     const { signer } = useTransactionSigner();
     const { disconnect } = useConnector();
-    const { cluster, rpcUrl } = useCluster();
+    const { cluster } = useCluster();
     const client = useConnectorClient();
     const [signature, setSignature] = useState<string | null>(null);
 
@@ -26,12 +26,18 @@ export function LegacySolTransfer() {
     const walletAdapter = useWalletAdapterCompat(signer, disconnect);
 
     async function handleTransfer(recipientAddress: string, amount: number) {
-        if (!signer || !rpcUrl) {
-            throw new Error('Wallet not connected or cluster not selected');
+        if (!signer || !client) {
+            throw new Error('Wallet not connected or client not available');
         }
 
         if (!walletAdapter.publicKey) {
             throw new Error('Wallet address not available');
+        }
+
+        // Get RPC URL from connector client
+        const rpcUrl = client.getRpcUrl();
+        if (!rpcUrl) {
+            throw new Error('No RPC endpoint configured');
         }
 
         // Create connection to Solana network

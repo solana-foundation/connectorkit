@@ -88,8 +88,11 @@ export function ConnectorDebugPanel({
     const client = useConnectorClient();
     const state = useConnector();
     const { address, formatted, copied, copy } = useAccount();
-    const { cluster, rpcUrl } = useCluster();
+    const { cluster } = useCluster();
     const { signer, ready, capabilities } = useTransactionSigner();
+
+    // Get RPC URL from client
+    const rpcUrl = client?.getRpcUrl() || '';
 
     // Event subscription
     useEffect(() => {

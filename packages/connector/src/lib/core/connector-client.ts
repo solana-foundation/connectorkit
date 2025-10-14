@@ -19,6 +19,7 @@ import { AutoConnector } from '../connection/auto-connector';
 import { ClusterManager } from '../cluster/cluster-manager';
 import { TransactionTracker } from '../transaction/transaction-tracker';
 import { HealthMonitor } from '../health/health-monitor';
+import { getClusterRpcUrl } from '../../utils/cluster';
 
 /**
  * ConnectorClient - Lean coordinator that delegates to specialized collaborators
@@ -178,6 +179,23 @@ export class ConnectorClient {
      */
     getClusters(): SolanaCluster[] {
         return this.clusterManager.getClusters();
+    }
+
+    /**
+     * Get the RPC URL for the current cluster
+     * @returns RPC URL or null if no cluster is selected
+     */
+    getRpcUrl(): string | null {
+        const cluster = this.clusterManager.getCluster();
+        if (!cluster) return null;
+        try {
+            return getClusterRpcUrl(cluster);
+        } catch (error) {
+            if (this.config.debug) {
+                console.error('Failed to get RPC URL:', error);
+            }
+            return null;
+        }
     }
 
     /**

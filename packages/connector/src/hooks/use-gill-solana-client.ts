@@ -10,6 +10,8 @@
 import { useMemo } from 'react';
 import { createSolanaClient, type SolanaClient, type ModifiedClusterUrl } from 'gill';
 import { useCluster } from './use-cluster';
+import { useConnectorClient } from '../ui/connector-provider';
+import type { ClusterType } from '../utils/cluster';
 
 /**
  * Return value from useGillSolanaClient hook
@@ -27,14 +29,9 @@ export interface UseGillSolanaClientReturn {
     ready: boolean;
 
     /**
-     * RPC endpoint URL
-     */
-    rpcUrl: string;
-
-    /**
      * Cluster type (mainnet, devnet, testnet, localnet, custom)
      */
-    clusterType: 'mainnet' | 'devnet' | 'testnet' | 'localnet' | 'custom' | null;
+    clusterType: ClusterType | null;
 }
 
 /**
@@ -112,17 +109,23 @@ export interface UseGillSolanaClientReturn {
  * ```
  */
 export function useGillSolanaClient(): UseGillSolanaClientReturn {
-    const { rpcUrl, type } = useCluster();
+    const { type } = useCluster();
+    const connectorClient = useConnectorClient();
 
     const client = useMemo(() => {
-        if (!rpcUrl || !type) return null;
+        if (!type || !connectorClient) return null;
 
         try {
+            // For non-custom clusters, use moniker
             if (type !== 'custom') {
                 return createSolanaClient({
                     urlOrMoniker: type,
                 });
             }
+
+            // For custom clusters, get RPC URL from connector client
+            const rpcUrl = connectorClient.getRpcUrl();
+            if (!rpcUrl) return null;
 
             return createSolanaClient({
                 urlOrMoniker: rpcUrl as ModifiedClusterUrl,
@@ -131,12 +134,11 @@ export function useGillSolanaClient(): UseGillSolanaClientReturn {
             console.error('Failed to create Gill Solana client:', error);
             return null;
         }
-    }, [rpcUrl, type]);
+    }, [type, connectorClient]);
 
     return {
         client,
         ready: Boolean(client),
-        rpcUrl,
         clusterType: type,
     };
 }
