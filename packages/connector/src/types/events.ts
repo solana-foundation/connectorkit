@@ -65,6 +65,10 @@ export type ConnectorEvent =
           type: 'transaction:sent';
           signature: string;
           timestamp: string;
+      }
+    | {
+          type: 'storage:reset';
+          timestamp: string;
       };
 
 /**

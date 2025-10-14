@@ -20,6 +20,7 @@ import { ClusterManager } from '../cluster/cluster-manager';
 import { TransactionTracker } from '../transaction/transaction-tracker';
 import { HealthMonitor } from '../health/health-monitor';
 import { getClusterRpcUrl } from '../../utils/cluster';
+import { AUTO_CONNECT_DELAY_MS, DEFAULT_MAX_TRACKED_TRANSACTIONS } from '../constants';
 
 /**
  * ConnectorClient - Lean coordinator that delegates to specialized collaborators
@@ -89,7 +90,7 @@ export class ConnectorClient {
         this.transactionTracker = new TransactionTracker(
             this.stateManager,
             this.eventEmitter,
-            20,
+            DEFAULT_MAX_TRACKED_TRANSACTIONS,
             config.debug ?? false,
         );
 
@@ -120,7 +121,7 @@ export class ConnectorClient {
                             console.error('Auto-connect error:', err);
                         }
                     });
-                }, 100);
+                }, AUTO_CONNECT_DELAY_MS);
             }
 
             this.initialized = true;
@@ -210,6 +211,55 @@ export class ConnectorClient {
      */
     getSnapshot(): ConnectorState {
         return this.stateManager.getSnapshot();
+    }
+
+    /**
+     * Reset all storage to initial values
+     * Useful for "logout", "forget this device", or clearing user data
+     *
+     * This will:
+     * - Clear saved wallet name
+     * - Clear saved account address
+     * - Reset cluster to initial value (does not clear)
+     *
+     * Note: This does NOT disconnect the wallet. Call disconnect() separately if needed.
+     *
+     * @example
+     * ```ts
+     * // Complete logout flow
+     * await client.disconnect();
+     * client.resetStorage();
+     * ```
+     */
+    resetStorage(): void {
+        if (this.config.debug) {
+            console.log('[Connector] Resetting all storage to initial values');
+        }
+
+        // Reset each storage adapter
+        const storageKeys = ['account', 'wallet', 'cluster'] as const;
+
+        for (const key of storageKeys) {
+            const storage = this.config.storage?.[key];
+
+            if (storage && 'reset' in storage && typeof storage.reset === 'function') {
+                try {
+                    storage.reset();
+                    if (this.config.debug) {
+                        console.log(`[Connector] Reset ${key} storage`);
+                    }
+                } catch (error) {
+                    if (this.config.debug) {
+                        console.error(`[Connector] Failed to reset ${key} storage:`, error);
+                    }
+                }
+            }
+        }
+
+        this.eventEmitter.emit({
+            type: 'storage:reset',
+            timestamp: new Date().toISOString(),
+        });
     }
 
     /**

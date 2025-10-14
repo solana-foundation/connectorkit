@@ -8,8 +8,9 @@
 
 import React, { useState, useCallback, useMemo } from 'react';
 import { useConnector } from '../ui/connector-provider';
-import { copyAddressToClipboard, formatAddress } from '../utils';
+import { copyAddressToClipboard, formatAddress, ClipboardErrorType, type ClipboardResult } from '../utils';
 import type { AccountInfo } from '../types/accounts';
+import { COPY_FEEDBACK_DURATION_MS } from '../lib/constants';
 
 export interface UseAccountReturn {
     /** The connected wallet address */
@@ -20,8 +21,8 @@ export interface UseAccountReturn {
     connected: boolean;
     /** Shortened formatted address for display */
     formatted: string;
-    /** Copy the address to clipboard */
-    copy: () => Promise<boolean>;
+    /** Copy the address to clipboard with enhanced result */
+    copy: () => Promise<ClipboardResult>;
     /** Whether the address was recently copied */
     copied: boolean;
     /** All available accounts from the connected wallet */
@@ -61,19 +62,27 @@ export function useAccount(): UseAccountReturn {
 
     const formatted = useMemo(() => (selectedAccount ? formatAddress(selectedAccount) : ''), [selectedAccount]);
 
-    const copy = useCallback(async () => {
-        if (!selectedAccount) return false;
+    const copy = useCallback(async (): Promise<ClipboardResult> => {
+        if (!selectedAccount) {
+            return {
+                success: false,
+                error: ClipboardErrorType.EMPTY_VALUE,
+                errorMessage: 'No account selected',
+            };
+        }
 
         if (copyTimeoutRef.current) {
             clearTimeout(copyTimeoutRef.current);
         }
 
-        const success = await copyAddressToClipboard(selectedAccount);
-        if (success) {
-            setCopied(true);
-            copyTimeoutRef.current = setTimeout(() => setCopied(false), 2000);
-        }
-        return success;
+        const result = await copyAddressToClipboard(selectedAccount, {
+            onSuccess: () => {
+                setCopied(true);
+                copyTimeoutRef.current = setTimeout(() => setCopied(false), COPY_FEEDBACK_DURATION_MS);
+            },
+        });
+
+        return result;
     }, [selectedAccount]);
 
     React.useEffect(() => {

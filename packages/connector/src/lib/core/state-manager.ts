@@ -1,4 +1,5 @@
 import type { ConnectorState, Listener } from '../../types/connector';
+import { STATE_NOTIFY_DEBOUNCE_MS } from '../constants';
 
 /**
  * StateManager - Handles state updates and notifications with structural sharing
@@ -133,7 +134,7 @@ export class StateManager {
         this.notifyTimeout = setTimeout(() => {
             this.listeners.forEach(l => l(this.state));
             this.notifyTimeout = undefined;
-        }, 16);
+        }, STATE_NOTIFY_DEBOUNCE_MS);
     }
 
     private notifyImmediate(): void {

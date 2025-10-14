@@ -103,7 +103,10 @@ export function formatSignature(signature: string, chars = 8): string {
 }
 
 /**
- * Copy signature to clipboard
+ * Copy signature to clipboard with enhanced error handling
+ *
+ * @deprecated Use copySignatureToClipboard from utils/clipboard instead
+ * This is maintained for backwards compatibility but will be removed in a future version
  */
 export async function copySignature(signature: string): Promise<boolean> {
     try {

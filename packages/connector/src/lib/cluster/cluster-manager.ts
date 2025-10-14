@@ -50,8 +50,18 @@ export class ClusterManager extends BaseCollaborator {
 
         this.stateManager.updateState({ cluster }, true);
 
+        // Save cluster to storage (if available)
         if (this.clusterStorage) {
-            this.clusterStorage.set(clusterId);
+            const isAvailable =
+                !('isAvailable' in this.clusterStorage) ||
+                typeof this.clusterStorage.isAvailable !== 'function' ||
+                this.clusterStorage.isAvailable();
+
+            if (isAvailable) {
+                this.clusterStorage.set(clusterId);
+            } else {
+                this.log('Storage not available (private browsing?), skipping cluster persistence');
+            }
         }
 
         if (previousClusterId !== clusterId) {

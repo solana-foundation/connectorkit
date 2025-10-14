@@ -6,10 +6,12 @@ import {
     createEnhancedStorageCluster,
     createEnhancedStorageWallet,
     EnhancedStorageAdapter,
+    EnhancedStorage,
 } from '../lib/adapters/enhanced-storage';
 import { toClusterId } from '../utils/network';
 import type React from 'react';
 import { isAddress } from 'gill';
+import { DEFAULT_MAX_RETRIES } from '../lib/constants';
 
 export interface DefaultConfigOptions {
     /** Application name shown in wallet connection prompts */
@@ -82,7 +84,7 @@ export function getDefaultConfig(options: DefaultConfigOptions): ExtendedConnect
         persistClusterSelection = true,
         clusterStorageKey,
         enableErrorBoundary = true,
-        maxRetries = 3,
+        maxRetries = DEFAULT_MAX_RETRIES,
         onError,
     } = options;
 
@@ -96,58 +98,70 @@ export function getDefaultConfig(options: DefaultConfigOptions): ExtendedConnect
 
     const validClusterIds = defaultClusters.map(c => c.id);
 
+    const accountStorage = createEnhancedStorageAccount({
+        validator: address => {
+            if (!address) return true;
+            return isAddress(address);
+        },
+        onError: error => {
+            if (debug) {
+                console.error('[Account Storage]', error);
+            }
+            if (onError) {
+                onError(error, {
+                    componentStack: 'account-storage',
+                });
+            }
+        },
+    });
+
+    const clusterStorage = createEnhancedStorageCluster({
+        key: clusterStorageKey,
+        initial: getInitialCluster(network),
+        validClusters: persistClusterSelection ? validClusterIds : undefined,
+        onError: error => {
+            if (debug) {
+                console.error('[Cluster Storage]', error);
+            }
+            if (onError) {
+                onError(error, {
+                    componentStack: 'cluster-storage',
+                });
+            }
+        },
+    });
+
+    const walletStorage = createEnhancedStorageWallet({
+        onError: error => {
+            if (debug) {
+                console.error('[Wallet Storage]', error);
+            }
+            if (onError) {
+                onError(error, {
+                    componentStack: 'wallet-storage',
+                });
+            }
+        },
+    });
+
+    // Migrate old storage keys to new versioned format (v1)
+    // This allows seamless upgrades from old versions without losing user data
+    if (typeof window !== 'undefined') {
+        // Old keys (pre-v1): 'connector-kit:account', 'connector-kit:wallet', 'connector-kit:cluster'
+        // New keys (v1):     'connector-kit:v1:account', 'connector-kit:v1:wallet', 'connector-kit:v1:cluster'
+        const oldAccountKey = 'connector-kit:account';
+        const oldWalletKey = 'connector-kit:wallet';
+        const oldClusterKey = clusterStorageKey || 'connector-kit:cluster';
+
+        EnhancedStorage.migrate(oldAccountKey, accountStorage);
+        EnhancedStorage.migrate(oldWalletKey, walletStorage);
+        EnhancedStorage.migrate(oldClusterKey, clusterStorage);
+    }
+
     const defaultStorage: ConnectorConfig['storage'] = storage ?? {
-        account: new EnhancedStorageAdapter(
-            createEnhancedStorageAccount({
-                validator: address => {
-                    if (!address) return true;
-                    return isAddress(address);
-                },
-                onError: error => {
-                    if (debug) {
-                        console.error('[Account Storage]', error);
-                    }
-                    if (onError) {
-                        onError(error, {
-                            componentStack: 'account-storage',
-                        });
-                    }
-                },
-            }),
-        ),
-
-        cluster: new EnhancedStorageAdapter(
-            createEnhancedStorageCluster({
-                key: clusterStorageKey,
-                initial: getInitialCluster(network),
-                validClusters: persistClusterSelection ? validClusterIds : undefined,
-                onError: error => {
-                    if (debug) {
-                        console.error('[Cluster Storage]', error);
-                    }
-                    if (onError) {
-                        onError(error, {
-                            componentStack: 'cluster-storage',
-                        });
-                    }
-                },
-            }),
-        ),
-
-        wallet: new EnhancedStorageAdapter(
-            createEnhancedStorageWallet({
-                onError: error => {
-                    if (debug) {
-                        console.error('[Wallet Storage]', error);
-                    }
-                    if (onError) {
-                        onError(error, {
-                            componentStack: 'wallet-storage',
-                        });
-                    }
-                },
-            }),
-        ),
+        account: new EnhancedStorageAdapter(accountStorage),
+        cluster: new EnhancedStorageAdapter(clusterStorage),
+        wallet: new EnhancedStorageAdapter(walletStorage),
     };
 
     const config: ExtendedConnectorConfig = {

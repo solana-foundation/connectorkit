@@ -11,6 +11,7 @@ import type {
     StandardEventsOnMethod,
 } from '@wallet-standard/features';
 import { Address } from 'gill';
+import { MAX_POLL_ATTEMPTS, POLL_INTERVALS_MS } from '../constants';
 
 /**
  * Type-safe accessor for standard:connect feature
@@ -48,8 +49,6 @@ export class ConnectionManager extends BaseCollaborator {
     private walletChangeUnsub: (() => void) | null = null;
     private pollTimer: ReturnType<typeof setTimeout> | null = null;
     private pollAttempts = 0;
-    private readonly MAX_POLL_ATTEMPTS = 20; // Stop after 1 minute
-    private readonly POLL_INTERVALS = [1000, 2000, 3000, 5000, 5000]; // Backoff pattern
 
     constructor(
         stateManager: import('../core/state-manager').StateManager,
@@ -119,7 +118,19 @@ export class ConnectionManager extends BaseCollaborator {
                 timestamp: new Date().toISOString(),
             });
 
-            this.walletStorage?.set(name);
+            // Save wallet name to storage (if available)
+            if (this.walletStorage) {
+                const isAvailable =
+                    !('isAvailable' in this.walletStorage) ||
+                    typeof this.walletStorage.isAvailable !== 'function' ||
+                    this.walletStorage.isAvailable();
+
+                if (isAvailable) {
+                    this.walletStorage.set(name);
+                } else {
+                    this.log('Storage not available (private browsing?), skipping wallet persistence');
+                }
+            }
 
             this.subscribeToWalletEvents();
         } catch (e) {
@@ -191,7 +202,13 @@ export class ConnectionManager extends BaseCollaborator {
             timestamp: new Date().toISOString(),
         });
 
-        this.walletStorage?.set(undefined);
+        // Clear wallet from storage (remove key entirely)
+        if (this.walletStorage && 'clear' in this.walletStorage && typeof this.walletStorage.clear === 'function') {
+            this.walletStorage.clear();
+        } else {
+            // Fallback for storage adapters without clear()
+            this.walletStorage?.set(undefined);
+        }
     }
 
     /**
@@ -285,7 +302,7 @@ export class ConnectionManager extends BaseCollaborator {
 
         const poll = () => {
             // Stop polling after max attempts
-            if (this.pollAttempts >= this.MAX_POLL_ATTEMPTS) {
+            if (this.pollAttempts >= MAX_POLL_ATTEMPTS) {
                 this.stopPollingWalletAccounts();
                 this.log('Stopped wallet polling after max attempts');
                 return;
@@ -312,8 +329,8 @@ export class ConnectionManager extends BaseCollaborator {
             this.pollAttempts++;
 
             // Get interval with exponential backoff
-            const intervalIndex = Math.min(this.pollAttempts, this.POLL_INTERVALS.length - 1);
-            const interval = this.POLL_INTERVALS[intervalIndex];
+            const intervalIndex = Math.min(this.pollAttempts, POLL_INTERVALS_MS.length - 1);
+            const interval = POLL_INTERVALS_MS[intervalIndex];
 
             this.pollTimer = setTimeout(poll, interval);
         };

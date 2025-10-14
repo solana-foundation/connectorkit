@@ -12,21 +12,28 @@ import { normalizeNetwork, getDefaultRpcUrl, type SolanaNetwork } from '../utils
 
 /**
  * Options for creating a unified configuration
- * Extends DefaultConfigOptions with network translation support
+ * Maintains type safety while providing flexibility
  */
-export interface UnifiedConfigOptions extends Omit<DefaultConfigOptions, 'network'> {
+export interface UnifiedConfigOptions extends DefaultConfigOptions {
     /**
-     * Solana network to connect to
-     * Accepts various naming conventions: 'mainnet', 'mainnet-beta', 'devnet', etc.
+     * Custom RPC URL (optional - overrides default for network)
+     * Note: For production apps, use environment variables to avoid exposing API keys
+     * @see packages/connector/src/utils/cluster.ts for secure RPC URL patterns
      */
-    network?: string;
-    /** Custom RPC URL (overrides default for network) */
     rpcUrl?: string;
 }
 
 /**
  * Unified configuration output
  * Contains all configs needed for ConnectorKit and integrations
+ *
+ * Important: The `rpcUrl` property is intended for:
+ * 1. Server-side rendering (SSR) setup
+ * 2. Passing to external libraries that need RPC configuration
+ * 3. Development/testing environments
+ *
+ * For production client-side code, use the connector client's `getRpcUrl()` method
+ * which supports environment variable patterns and proxy configurations.
  */
 export interface UnifiedConfig {
     /** ConnectorKit configuration */
@@ -35,7 +42,11 @@ export interface UnifiedConfig {
     mobile?: MobileWalletAdapterConfig;
     /** Normalized network name ('mainnet', 'devnet', 'testnet', 'localnet') */
     network: SolanaNetwork;
-    /** RPC endpoint URL */
+    /**
+     * RPC endpoint URL
+     * For external library integration only - client code should use connector client
+     * @deprecated in client components - use `useConnectorClient().getRpcUrl()` instead
+     */
     rpcUrl: string;
     /** Application metadata */
     app: {
@@ -51,22 +62,36 @@ export interface UnifiedConfig {
  * configs from a single source of truth. It automatically handles network
  * name translation between different conventions.
  *
- * @example
+ * @example Basic usage
  * ```tsx
- * import { createConfig, AppProvider } from '@connector-kit/connector'
- * import { ArmaProvider } from '@armadura/sdk'
+ * import { createConfig, AppProvider } from '@connector-kit/connector';
  *
  * const config = createConfig({
  *   appName: 'My App',
  *   network: 'mainnet', // Works with 'mainnet' or 'mainnet-beta'
  *   enableMobile: true
- * })
+ * });
  *
- * <AppProvider connectorConfig={config.connectorConfig} mobile={config.mobile}>
+ * <AppProvider config={config}>
+ *   {children}
+ * </AppProvider>
+ * ```
+ *
+ * @example Integration with external libraries
+ * ```tsx
+ * import { createConfig, AppProvider } from '@connector-kit/connector';
+ * import { ArmaProvider } from '@armadura/sdk';
+ *
+ * const config = createConfig({
+ *   appName: 'My App',
+ *   network: 'mainnet',
+ * });
+ *
+ * <AppProvider config={config}>
  *   <ArmaProvider
  *     config={{
  *       network: config.network,
- *       rpcUrl: config.rpcUrl,
+ *       rpcUrl: config.rpcUrl, // Safe - for external library initialization
  *       providers: [...]
  *     }}
  *     useConnector="auto"
@@ -75,20 +100,53 @@ export interface UnifiedConfig {
  *   </ArmaProvider>
  * </AppProvider>
  * ```
+ *
+ * @example Production with environment variables
+ * ```tsx
+ * // Use environment variables to avoid exposing API keys
+ * const config = createConfig({
+ *   appName: 'My App',
+ *   network: 'mainnet',
+ *   // RPC URL comes from process.env on server
+ *   // Client-side code should use connector client's getRpcUrl()
+ * });
+ * ```
+ *
+ * @example Custom clusters
+ * ```tsx
+ * const config = createConfig({
+ *   appName: 'My App',
+ *   network: 'mainnet',
+ *   customClusters: [
+ *     {
+ *       id: 'solana:custom',
+ *       label: 'Custom RPC',
+ *       url: process.env.CUSTOM_RPC_URL || 'https://...'
+ *     }
+ *   ]
+ * });
+ * ```
  */
 export function createConfig(options: UnifiedConfigOptions): UnifiedConfig {
-    const { network = 'mainnet', rpcUrl: customRpcUrl, ...restOptions } = options;
+    // Extract network and rpcUrl, use remaining options for connector config
+    const { network = 'mainnet-beta', rpcUrl: customRpcUrl, ...connectorOptions } = options;
 
-    const normalizedNetwork = normalizeNetwork(network);
+    // Normalize network name for consistency
+    const normalizedNetwork = normalizeNetwork(typeof network === 'string' ? network : 'mainnet-beta');
+
+    // Get RPC URL (custom or default)
     const rpcUrl = customRpcUrl || getDefaultRpcUrl(normalizedNetwork);
 
+    // Convert normalized network to RPC format (mainnet -> mainnet-beta)
     const rpcNetwork = normalizedNetwork === 'mainnet' ? 'mainnet-beta' : normalizedNetwork;
 
+    // Create connector configuration
     const connectorConfig = getDefaultConfig({
-        ...restOptions,
+        ...connectorOptions,
         network: rpcNetwork,
     });
 
+    // Create mobile configuration (if enabled)
     const mobile =
         options.enableMobile !== false && normalizedNetwork !== 'localnet'
             ? getDefaultMobileConfig({
@@ -105,13 +163,21 @@ export function createConfig(options: UnifiedConfigOptions): UnifiedConfig {
         rpcUrl,
         app: {
             name: options.appName,
-            url: connectorConfig.appUrl || 'https://localhost:3000',
+            url: connectorConfig.appUrl || (typeof window !== 'undefined' ? window.location.origin : 'https://localhost:3000'),
         },
     };
 }
 
 /**
  * Type guard to check if a config is a unified config
+ *
+ * @example
+ * ```ts
+ * if (isUnifiedConfig(someConfig)) {
+ *   // TypeScript knows this is UnifiedConfig
+ *   console.log(someConfig.network, someConfig.rpcUrl);
+ * }
+ * ```
  */
 export function isUnifiedConfig(config: unknown): config is UnifiedConfig {
     return Boolean(
@@ -119,6 +185,7 @@ export function isUnifiedConfig(config: unknown): config is UnifiedConfig {
             typeof config === 'object' &&
             'connectorConfig' in config &&
             'network' in config &&
-            'rpcUrl' in config,
+            'rpcUrl' in config &&
+            'app' in config,
     );
 }
