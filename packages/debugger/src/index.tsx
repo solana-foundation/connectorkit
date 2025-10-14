@@ -30,9 +30,9 @@ import { EnhancedOverviewTab, LiveTab, TransactionsTab, EventsTab, OptimizationT
 // Tab configuration - 5 tabs for comprehensive debugging
 const TABS: TabConfig[] = [
     { id: 'overview', icon: <OverviewIcon />, label: 'Overview' },
-    { id: 'live', icon: <span style={{ fontSize: 14 }}>🔴</span>, label: 'Live' },
+    // { id: 'live', icon: <span style={{ fontSize: 14 }}>🔴</span>, label: 'Live' },
     { id: 'transactions', icon: <TransactionsIcon />, label: 'Transactions' },
-    { id: 'optimization', icon: <span style={{ fontSize: 14 }}>💡</span>, label: 'Optimization' },
+    // { id: 'optimization', icon: <span style={{ fontSize: 14 }}>💡</span>, label: 'Optimization' },
     { id: 'events', icon: <EventsIcon />, label: 'Events' },
 ];
 
@@ -87,12 +87,18 @@ export function ConnectorDebugPanel({
     // Hooks
     const client = useConnectorClient();
     const state = useConnector();
-    const { address, formatted, copied, copy } = useAccount();
+    const { address, formatted, copied, copy: accountCopy } = useAccount();
     const { cluster } = useCluster();
     const { signer, ready, capabilities } = useTransactionSigner();
 
     // Get RPC URL from client
     const rpcUrl = client?.getRpcUrl() || '';
+
+    // Wrap copy function to adapt return type
+    const copy = useCallback(async () => {
+        const result = await accountCopy();
+        return result.success;
+    }, [accountCopy]);
 
     // Event subscription
     useEffect(() => {
@@ -247,17 +253,17 @@ export function ConnectorDebugPanel({
                             />
                         </TabPanel>
 
-                        <TabPanel isActive={activeTab === 'live'}>
+                        {/* <TabPanel isActive={activeTab === 'live'}>
                             <LiveTab client={client} rpcUrl={rpcUrl || ''} />
-                        </TabPanel>
+                        </TabPanel> */}
 
                         <TabPanel isActive={activeTab === 'transactions'}>
                             <TransactionsTab client={client as any} cluster={cluster} rpcUrl={rpcUrl} />
                         </TabPanel>
 
-                        <TabPanel isActive={activeTab === 'optimization'}>
+                        {/* <TabPanel isActive={activeTab === 'optimization'}>
                             <OptimizationTab />
-                        </TabPanel>
+                        </TabPanel> */}
 
                         <TabPanel isActive={activeTab === 'events'}>
                             <EventsTab
