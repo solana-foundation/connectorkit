@@ -8,8 +8,25 @@
 
 import { useMemo } from 'react';
 import { useConnector } from '../ui/connector-provider';
-import { WalletInfo } from '../types/wallets';
+import type { WalletInfo } from '../types/wallets';
 
+/**
+ * Simplified wallet information for display purposes
+ */
+export interface WalletDisplayInfo {
+    /** Wallet name */
+    name: string;
+    /** Wallet icon/logo URL if available */
+    icon?: string;
+    /** Whether the wallet extension is installed */
+    installed: boolean;
+    /** Whether the wallet supports Solana connections */
+    connectable?: boolean;
+}
+
+/**
+ * Return value from useWalletInfo hook
+ */
 export interface UseWalletInfoReturn {
     /** Name of the connected wallet (e.g., 'Phantom', 'Solflare') */
     name: string | null;
@@ -24,12 +41,7 @@ export interface UseWalletInfoReturn {
     /** Whether a connection attempt is in progress */
     connecting: boolean;
     /** All available wallets */
-    wallets: Array<{
-        name: string;
-        icon?: string;
-        installed: boolean;
-        connectable?: boolean;
-    }>;
+    wallets: WalletDisplayInfo[];
 }
 
 /**
@@ -56,18 +68,20 @@ export interface UseWalletInfoReturn {
 export function useWalletInfo(): UseWalletInfoReturn {
     const { selectedWallet, wallets, connected, connecting } = useConnector();
 
-    const mappedWallets = useMemo(
+    // Map WalletInfo[] to WalletDisplayInfo[] for simplified consumption
+    const mappedWallets = useMemo<WalletDisplayInfo[]>(
         () =>
-            wallets.map((w: WalletInfo) => ({
-                name: w.wallet.name,
-                icon: w.wallet.icon,
-                installed: w.installed,
-                connectable: w.connectable,
+            wallets.map((walletInfo: WalletInfo): WalletDisplayInfo => ({
+                name: walletInfo.wallet.name,
+                icon: walletInfo.wallet.icon,
+                installed: walletInfo.installed,
+                connectable: walletInfo.connectable,
             })),
         [wallets],
     );
 
-    const walletInfo = useMemo(() => {
+    // Extract information about the currently selected wallet
+    const selectedWalletInfo = useMemo(() => {
         if (!selectedWallet) {
             return {
                 name: null,
@@ -77,23 +91,24 @@ export function useWalletInfo(): UseWalletInfoReturn {
             };
         }
 
-        const info = wallets.find((w: WalletInfo) => w.wallet.name === selectedWallet.name);
+        // Find the WalletInfo for the selected wallet
+        const walletInfo = wallets.find((w: WalletInfo) => w.wallet.name === selectedWallet.name);
 
         return {
             name: selectedWallet.name,
             icon: selectedWallet.icon ?? null,
-            installed: info?.installed ?? false,
-            connectable: info?.connectable ?? false,
+            installed: walletInfo?.installed ?? false,
+            connectable: walletInfo?.connectable ?? false,
         };
     }, [selectedWallet, wallets]);
 
     return useMemo(
         () => ({
-            ...walletInfo,
+            ...selectedWalletInfo,
             connected,
             connecting,
             wallets: mappedWallets,
         }),
-        [walletInfo, connected, connecting, mappedWallets],
+        [selectedWalletInfo, connected, connecting, mappedWallets],
     );
 }
