@@ -21,6 +21,12 @@ import type {
 } from '../../types/storage';
 
 /**
+ * Storage version for migration support
+ * Increment when making breaking changes to storage format
+ */
+export const STORAGE_VERSION = 'v1';
+
+/**
  * Enhanced version of wallet-ui's Storage class
  * Extends the base Storage with validation, error handling, and SSR support
  */
@@ -229,7 +235,8 @@ export class EnhancedStorage<T> extends WalletUiStorage<T> {
 export function createEnhancedStorageAccount(
     options?: EnhancedStorageAccountOptions,
 ): EnhancedStorage<string | undefined> {
-    return new EnhancedStorage(options?.key ?? 'connector-kit:account', options?.initial, {
+    const key = options?.key ?? `connector-kit:${STORAGE_VERSION}:account`;
+    return new EnhancedStorage(key, options?.initial, {
         validator: options?.validator,
         onError: options?.onError,
         useMemoryFallback: true, // Always fallback for SSR
@@ -250,7 +257,8 @@ export function createEnhancedStorageAccount(
 export function createEnhancedStorageCluster(
     options?: EnhancedStorageClusterOptions,
 ): EnhancedStorage<SolanaClusterId> {
-    const storage = new EnhancedStorage(options?.key ?? 'connector-kit:cluster', options?.initial ?? 'solana:mainnet', {
+    const key = options?.key ?? `connector-kit:${STORAGE_VERSION}:cluster`;
+    const storage = new EnhancedStorage(key, options?.initial ?? 'solana:mainnet', {
         onError: options?.onError,
         useMemoryFallback: true,
     });
@@ -275,7 +283,8 @@ export function createEnhancedStorageCluster(
 export function createEnhancedStorageWallet(
     options?: EnhancedStorageWalletOptions,
 ): EnhancedStorage<string | undefined> {
-    return new EnhancedStorage(options?.key ?? 'connector-kit:wallet', options?.initial, {
+    const key = options?.key ?? `connector-kit:${STORAGE_VERSION}:wallet`;
+    return new EnhancedStorage(key, options?.initial, {
         onError: options?.onError,
         useMemoryFallback: true,
     });

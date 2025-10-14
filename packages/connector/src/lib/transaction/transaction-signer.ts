@@ -15,6 +15,10 @@ import type {
     TransactionSignerCapabilities,
 } from '../../types/transactions';
 import { prepareTransactionForWallet, convertSignedTransaction } from '../../utils/transaction-format';
+import { TransactionValidator } from './transaction-validator';
+import { createLogger } from '../utils/secure-logger';
+
+const logger = createLogger('TransactionSigner');
 
 /**
  * Unified transaction signer interface
@@ -175,12 +179,26 @@ export function createTransactionSigner(config: TransactionSignerConfig): Transa
                 );
             }
 
+            // Validate transaction before signing
+            const validation = TransactionValidator.validate(transaction);
+            if (!validation.valid) {
+                logger.error('Transaction validation failed', { errors: validation.errors });
+                throw new TransactionSignerError(
+                    `Invalid transaction: ${validation.errors.join(', ')}`,
+                    'SIGNING_FAILED',
+                );
+            }
+
+            if (validation.warnings.length > 0) {
+                logger.warn('Transaction validation warnings', { warnings: validation.warnings });
+            }
+
             try {
                 const signFeature = features['solana:signTransaction'];
 
                 const { serialized, wasWeb3js } = prepareTransactionForWallet(transaction);
 
-                console.log('🔍 signTransaction input:', {
+                logger.debug('Signing transaction', {
                     wasWeb3js,
                     serializedLength: serialized.length,
                     serializedType: serialized.constructor.name,
@@ -192,7 +210,7 @@ export function createTransactionSigner(config: TransactionSignerConfig): Transa
                 let usedFormat = '';
 
                 try {
-                    console.log('🔍 Trying array format: transactions: [Uint8Array]');
+                    logger.debug('Trying array format: transactions: [Uint8Array]');
                     result = (await signFeature.signTransaction({
                         account,
                         transactions: [serialized],
@@ -201,9 +219,9 @@ export function createTransactionSigner(config: TransactionSignerConfig): Transa
                     usedFormat = 'array';
                 } catch (err1: unknown) {
                     const error1 = err1 instanceof Error ? err1 : new Error(String(err1));
-                    console.log('⚠️ Array format failed:', error1.message);
+                    logger.debug('Array format failed, trying singular format', { error: error1.message });
                     try {
-                        console.log('🔍 Trying singular format: transaction: Uint8Array');
+                        logger.debug('Trying singular format: transaction: Uint8Array');
                         result = (await signFeature.signTransaction({
                             account,
                             transaction: serialized,
@@ -212,12 +230,12 @@ export function createTransactionSigner(config: TransactionSignerConfig): Transa
                         usedFormat = 'singular';
                     } catch (err2: unknown) {
                         const error2 = err2 instanceof Error ? err2 : new Error(String(err2));
-                        console.log('⚠️ Singular format also failed:', error2.message);
+                        logger.error('Both array and singular formats failed', { error: error2.message });
                         throw error2;
                     }
                 }
 
-                console.log('✅ Wallet signed successfully using format:', usedFormat, 'Result:', result);
+                logger.debug('Wallet signed successfully', { format: usedFormat });
 
                 let signedTx;
                 if (Array.isArray(result.signedTransactions) && result.signedTransactions[0]) {
@@ -232,23 +250,21 @@ export function createTransactionSigner(config: TransactionSignerConfig): Transa
                     throw new Error(`Unexpected wallet response format: ${JSON.stringify(Object.keys(result))}`);
                 }
 
-                console.log('🔍 Extracted signed transaction:', {
+                logger.debug('Extracted signed transaction', {
                     hasSignedTx: !!signedTx,
                     signedTxType: signedTx?.constructor?.name,
                     signedTxLength: signedTx?.length,
                     isUint8Array: signedTx instanceof Uint8Array,
                     hasSerialize: typeof signedTx?.serialize === 'function',
-                    objectKeys: signedTx ? Object.keys(signedTx) : [],
-                    signedTxValue: signedTx,
                 });
 
                 if (signedTx && typeof signedTx.serialize === 'function') {
-                    console.log('✅ Wallet returned web3.js object directly, no conversion needed');
+                    logger.debug('Wallet returned web3.js object directly, no conversion needed');
                     return signedTx;
                 }
 
                 if (signedTx && signedTx.signedTransaction) {
-                    console.log('✅ Found signedTransaction property');
+                    logger.debug('Found signedTransaction property');
                     const bytes = signedTx.signedTransaction;
                     if (bytes instanceof Uint8Array) {
                         return await convertSignedTransaction(bytes, wasWeb3js);
@@ -259,11 +275,9 @@ export function createTransactionSigner(config: TransactionSignerConfig): Transa
                     return await convertSignedTransaction(signedTx, wasWeb3js);
                 }
 
-                console.error('❌ Unexpected wallet response:', {
+                logger.error('Unexpected wallet response format', {
                     type: typeof signedTx,
                     constructor: signedTx?.constructor?.name,
-                    keys: Object.keys(signedTx || {}),
-                    fullObject: signedTx,
                 });
 
                 throw new Error('Wallet returned unexpected format - not a Transaction or Uint8Array');

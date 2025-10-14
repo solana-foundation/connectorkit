@@ -1,6 +1,10 @@
 import { getWalletsRegistry } from '../adapters/wallet-standard-shim';
 import type { Wallet, WalletInfo } from '../../types/wallets';
 import { BaseCollaborator } from '../core/base-collaborator';
+import { WalletAuthenticityVerifier } from './wallet-authenticity-verifier';
+import { createLogger } from '../utils/secure-logger';
+
+const logger = createLogger('WalletDetector');
 
 /**
  * Legacy wallet PublicKey interface
@@ -156,9 +160,32 @@ export class WalletDetector extends BaseCollaborator {
                         continue;
                     }
 
+                    // Verify wallet authenticity before returning
+                    const verification = WalletAuthenticityVerifier.verify(wallet, walletName);
+
+                    if (!verification.authentic) {
+                        logger.warn('Rejecting potentially malicious wallet', {
+                            name: walletName,
+                            reason: verification.reason,
+                            confidence: verification.confidence,
+                        });
+                        continue;
+                    }
+
+                    if (verification.warnings.length > 0) {
+                        logger.warn('Wallet verification warnings', {
+                            name: walletName,
+                            warnings: verification.warnings,
+                        });
+                    }
+
                     const hasStandardConnect = wallet.features?.['standard:connect'];
                     const hasLegacyConnect = typeof wallet.connect === 'function';
                     if (hasStandardConnect || hasLegacyConnect) {
+                        logger.debug('Authentic wallet detected', {
+                            name: walletName,
+                            confidence: verification.confidence,
+                        });
                         return wallet;
                     }
                 }

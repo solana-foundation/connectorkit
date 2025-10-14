@@ -46,7 +46,10 @@ function getEventsFeature(wallet: Wallet): StandardEventsOnMethod | null {
 export class ConnectionManager extends BaseCollaborator {
     private walletStorage?: StorageAdapter<string | undefined>;
     private walletChangeUnsub: (() => void) | null = null;
-    private pollTimer: ReturnType<typeof setInterval> | null = null;
+    private pollTimer: ReturnType<typeof setTimeout> | null = null;
+    private pollAttempts = 0;
+    private readonly MAX_POLL_ATTEMPTS = 20; // Stop after 1 minute
+    private readonly POLL_INTERVALS = [1000, 2000, 3000, 5000, 5000]; // Backoff pattern
 
     constructor(
         stateManager: import('../core/state-manager').StateManager,
@@ -271,13 +274,23 @@ export class ConnectionManager extends BaseCollaborator {
 
     /**
      * Start polling wallet accounts (fallback when events not available)
+     * Uses exponential backoff to reduce polling frequency over time
      */
     private startPollingWalletAccounts(): void {
         if (this.pollTimer) return;
         const wallet = this.getState().selectedWallet;
         if (!wallet) return;
 
-        this.pollTimer = setInterval(() => {
+        this.pollAttempts = 0;
+
+        const poll = () => {
+            // Stop polling after max attempts
+            if (this.pollAttempts >= this.MAX_POLL_ATTEMPTS) {
+                this.stopPollingWalletAccounts();
+                this.log('Stopped wallet polling after max attempts');
+                return;
+            }
+
             try {
                 const state = this.getState();
                 const walletAccounts = wallet.accounts;
@@ -288,9 +301,25 @@ export class ConnectionManager extends BaseCollaborator {
                         accounts: nextAccounts,
                         selectedAccount: state.selectedAccount || nextAccounts[0]?.address || null,
                     });
+
+                    // Reset poll attempts on success
+                    this.pollAttempts = 0;
                 }
-            } catch (error) {}
-        }, 3000);
+            } catch (error) {
+                this.log('Wallet polling error:', error);
+            }
+
+            this.pollAttempts++;
+
+            // Get interval with exponential backoff
+            const intervalIndex = Math.min(this.pollAttempts, this.POLL_INTERVALS.length - 1);
+            const interval = this.POLL_INTERVALS[intervalIndex];
+
+            this.pollTimer = setTimeout(poll, interval);
+        };
+
+        // Start polling
+        poll();
     }
 
     /**
@@ -298,8 +327,9 @@ export class ConnectionManager extends BaseCollaborator {
      */
     private stopPollingWalletAccounts(): void {
         if (this.pollTimer) {
-            clearInterval(this.pollTimer);
+            clearTimeout(this.pollTimer);
             this.pollTimer = null;
+            this.pollAttempts = 0;
         }
     }
 
