@@ -1,6 +1,6 @@
 /**
  * Event test fixtures
- * 
+ *
  * Pre-configured event payloads for testing
  */
 
@@ -101,4 +101,3 @@ export function createErrorEvent(error: Error = new Error('Test error'), context
         timestamp: new Date().toISOString(),
     };
 }
-

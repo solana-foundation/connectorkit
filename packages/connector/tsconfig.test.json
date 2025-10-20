@@ -1,12 +1,7 @@
 {
-  "extends": "./tsconfig.json",
-  "compilerOptions": {
-    "skipLibCheck": true
-  },
-  "include": [
-    "src/**/*.test.ts",
-    "src/**/*.test.tsx",
-    "src/__tests__/**/*"
-  ]
+    "extends": "./tsconfig.json",
+    "compilerOptions": {
+        "skipLibCheck": true
+    },
+    "include": ["src/**/*.test.ts", "src/**/*.test.tsx", "src/__tests__/**/*"]
 }
-

@@ -23,7 +23,7 @@ describe('GillTransactionSigner', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
-        
+
         mockAddress = 'HMJfh9P8FEF5eVHp3XypYWThUYCQ9sWNZZQQxVP2jjr1';
 
         mockConnectorSigner = {
@@ -41,7 +41,7 @@ describe('GillTransactionSigner', () => {
     describe('createGillTransactionSigner', () => {
         it('should create gill transaction signer', () => {
             const signer = createGillTransactionSigner(mockConnectorSigner);
-            
+
             expect(signer).toHaveProperty('address');
             expect(signer).toHaveProperty('modifyAndSignTransactions');
             expect(typeof signer.modifyAndSignTransactions).toBe('function');

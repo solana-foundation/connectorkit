@@ -14,22 +14,22 @@ describe('useWalletInfo', () => {
     );
 
     it.skip('should return wallet info structure with all required fields', () => {
-            const { result } = renderHook(() => useWalletInfo(), { wrapper });
+        const { result } = renderHook(() => useWalletInfo(), { wrapper });
 
         // Check individual wallet info fields
-            expect(result.current).toHaveProperty('name');
-            expect(result.current).toHaveProperty('icon');
-            expect(result.current).toHaveProperty('installed');
-            expect(result.current).toHaveProperty('connectable');
-            expect(result.current).toHaveProperty('connected');
-        
+        expect(result.current).toHaveProperty('name');
+        expect(result.current).toHaveProperty('icon');
+        expect(result.current).toHaveProperty('installed');
+        expect(result.current).toHaveProperty('connectable');
+        expect(result.current).toHaveProperty('connected');
+
         // Check wallets array
-            expect(result.current).toHaveProperty('wallets');
-            expect(Array.isArray(result.current.wallets)).toBe(true);
-        });
+        expect(result.current).toHaveProperty('wallets');
+        expect(Array.isArray(result.current.wallets)).toBe(true);
+    });
 
     it.skip('should return empty wallets array when no wallets detected', () => {
-            const { result } = renderHook(() => useWalletInfo(), { wrapper });
+        const { result } = renderHook(() => useWalletInfo(), { wrapper });
 
         expect(result.current.wallets).toEqual([]);
     });
@@ -45,7 +45,7 @@ describe('useWalletInfo', () => {
     });
 
     it.skip('should map wallet info to display format', () => {
-            const { result } = renderHook(() => useWalletInfo(), { wrapper });
+        const { result } = renderHook(() => useWalletInfo(), { wrapper });
 
         // Verify the wallets array structure (even if empty)
         result.current.wallets.forEach(wallet => {

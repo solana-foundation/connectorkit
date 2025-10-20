@@ -1,6 +1,6 @@
 /**
  * Mock storage adapter for testing
- * 
+ *
  * Provides an in-memory implementation of the StorageAdapter interface
  */
 
@@ -67,7 +67,7 @@ export function createMockStorageFactory() {
             return adapters.get(key) as MockStorageAdapter<T>;
         },
         clear: () => {
-            adapters.forEach((adapter) => adapter.reset());
+            adapters.forEach(adapter => adapter.reset());
         },
         getAll: () => adapters,
     };
@@ -103,4 +103,3 @@ export class MockLocalStorage implements Storage {
         this.storage.set(key, value);
     }
 }
-

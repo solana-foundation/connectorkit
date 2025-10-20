@@ -1,6 +1,6 @@
 /**
  * React testing helpers
- * 
+ *
  * Utilities for testing React components and hooks
  */
 
@@ -70,7 +70,7 @@ export function setupTestEnvironment(options: { walletCount?: number; config?: C
  * Wait for React state updates to complete
  */
 export async function waitForReactUpdates() {
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await new Promise(resolve => setTimeout(resolve, 0));
 }
 
 /**
@@ -81,4 +81,3 @@ export function createHookWrapper(config?: ConnectorConfig) {
         return <ConnectorProvider config={config}>{children}</ConnectorProvider>;
     };
 }
-

@@ -1,6 +1,6 @@
 /**
  * Tests for Explorer URL Utilities
- * 
+ *
  * Comprehensive tests for generating block explorer URLs
  */
 
@@ -159,7 +159,7 @@ describe('Explorer URL Utilities', () => {
     describe('getAllExplorerUrls', () => {
         it('should return all explorer URLs', () => {
             const urls = getAllExplorerUrls(mockSignature);
-            
+
             expect(urls).toHaveProperty('solana-explorer');
             expect(urls).toHaveProperty('solscan');
             expect(urls).toHaveProperty('xray');
@@ -168,7 +168,7 @@ describe('Explorer URL Utilities', () => {
 
         it('should generate URLs for mainnet by default', () => {
             const urls = getAllExplorerUrls(mockSignature);
-            
+
             expect(urls['solana-explorer']).toContain(mockSignature);
             expect(urls['solscan']).toContain('solscan.io');
             expect(urls['xray']).toContain('xray.helius.xyz');
@@ -177,7 +177,7 @@ describe('Explorer URL Utilities', () => {
 
         it('should respect cluster option for all explorers', () => {
             const urls = getAllExplorerUrls(mockSignature, { cluster: 'devnet' });
-            
+
             expect(urls['solana-explorer']).toContain('devnet');
             expect(urls['solscan']).toContain('cluster=devnet');
             expect(urls['solana-fm']).toContain('cluster=devnet');
@@ -186,7 +186,7 @@ describe('Explorer URL Utilities', () => {
         it('should include all 4 explorer types', () => {
             const urls = getAllExplorerUrls(mockSignature);
             const keys = Object.keys(urls);
-            
+
             expect(keys).toHaveLength(4);
             expect(keys).toContain('solana-explorer');
             expect(keys).toContain('solscan');
@@ -239,12 +239,12 @@ describe('Explorer URL Utilities', () => {
         beforeEach(() => {
             // Save original clipboard
             originalClipboard = navigator.clipboard;
-            
+
             // Mock clipboard with a simple object
             const mockClipboard = {
                 writeText: vi.fn().mockResolvedValue(undefined),
             } as unknown as Clipboard;
-            
+
             Object.defineProperty(navigator, 'clipboard', {
                 value: mockClipboard,
                 writable: true,
@@ -264,30 +264,30 @@ describe('Explorer URL Utilities', () => {
 
         it('should copy signature to clipboard', async () => {
             const result = await copySignature(mockSignature);
-            
+
             expect(result).toBe(true);
             expect(navigator.clipboard.writeText).toHaveBeenCalledWith(mockSignature);
         });
 
         it('should return true on success', async () => {
             const result = await copySignature(mockSignature);
-            
+
             expect(result).toBe(true);
         });
 
         it('should return false on error', async () => {
             vi.mocked(navigator.clipboard.writeText).mockRejectedValue(new Error('Clipboard error'));
-            
+
             const result = await copySignature(mockSignature);
-            
+
             expect(result).toBe(false);
         });
 
         it('should handle clipboard permission denial', async () => {
             vi.mocked(navigator.clipboard.writeText).mockRejectedValue(new DOMException('Permission denied'));
-            
+
             const result = await copySignature(mockSignature);
-            
+
             expect(result).toBe(false);
         });
 
@@ -297,9 +297,9 @@ describe('Explorer URL Utilities', () => {
                 writable: true,
                 configurable: true,
             });
-            
+
             const result = await copySignature(mockSignature);
-            
+
             expect(result).toBe(false);
         });
     });
@@ -341,4 +341,3 @@ describe('Explorer URL Utilities', () => {
         });
     });
 });
-

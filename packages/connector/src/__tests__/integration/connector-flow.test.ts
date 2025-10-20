@@ -1,6 +1,6 @@
 /**
  * Connector flow integration tests
- * 
+ *
  * Tests complete connection workflows from wallet detection to disconnection
  */
 
@@ -219,10 +219,9 @@ describe('Connector Flow Integration', () => {
 
             await client.selectAccount(TEST_ADDRESSES.ACCOUNT_2);
 
-            await waitForCondition(
-                () => client.getSnapshot().selectedAccount === TEST_ADDRESSES.ACCOUNT_2,
-                { timeout: 2000 }
-            );
+            await waitForCondition(() => client.getSnapshot().selectedAccount === TEST_ADDRESSES.ACCOUNT_2, {
+                timeout: 2000,
+            });
 
             const finalState = client.getSnapshot();
             expect(finalState.selectedAccount).toBe(TEST_ADDRESSES.ACCOUNT_2);
@@ -231,10 +230,9 @@ describe('Connector Flow Integration', () => {
         it('should emit account-changed event', async () => {
             await client.selectAccount(TEST_ADDRESSES.ACCOUNT_2);
 
-            await waitForCondition(
-                () => eventCollector.getEventsByType('account-changed').length > 0,
-                { timeout: 2000 }
-            );
+            await waitForCondition(() => eventCollector.getEventsByType('account-changed').length > 0, {
+                timeout: 2000,
+            });
 
             eventCollector.assertEventEmitted('account-changed');
         });
@@ -303,4 +301,3 @@ describe('Connector Flow Integration', () => {
         });
     });
 });
-

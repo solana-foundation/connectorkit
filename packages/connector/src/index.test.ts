@@ -1,6 +1,6 @@
 /**
  * Tests for main entry point (index.ts)
- * 
+ *
  * Verifies that all exports are correctly exposed from both React and headless modes
  */
 
@@ -147,9 +147,8 @@ describe('Main Entry Point (index.ts)', () => {
             const typeTest = (value: unknown): value is ConnectorKit.ConnectorConfig => {
                 return typeof value === 'object' && value !== null;
             };
-            
+
             expect(typeTest).toBeDefined();
         });
     });
 });
-

@@ -717,6 +717,7 @@ pnpm test:coverage
 ### Test Coverage
 
 The package maintains high test coverage:
+
 - **Lines**: 80%+
 - **Functions**: 80%+
 - **Branches**: 75%+
@@ -766,7 +767,7 @@ describe('StateManager', () => {
     it('should update state correctly', () => {
         const manager = new StateManager(initialState);
         manager.updateState({ connected: true });
-        
+
         expect(manager.getSnapshot().connected).toBe(true);
     });
 });
@@ -784,7 +785,7 @@ describe('useAccount', () => {
         const { result } = renderHook(() => useAccount(), {
             wrapper: createHookWrapper(),
         });
-        
+
         expect(result.current.address).toBeDefined();
     });
 });
@@ -795,6 +796,7 @@ describe('useAccount', () => {
 The package provides comprehensive test utilities:
 
 **Mock Wallets:**
+
 ```typescript
 import { createMockPhantomWallet, createMockSolflareWallet } from '../mocks/wallet-standard-mock';
 
@@ -804,6 +806,7 @@ const wallet = createMockPhantomWallet({
 ```
 
 **Test Fixtures:**
+
 ```typescript
 import { createTestAccounts, TEST_ADDRESSES } from '../fixtures/accounts';
 import { createTestWallets } from '../fixtures/wallets';
@@ -813,6 +816,7 @@ const wallets = createTestWallets();
 ```
 
 **Test Helpers:**
+
 ```typescript
 import { waitForCondition, createEventCollector } from '../utils/test-helpers';
 

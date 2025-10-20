@@ -1,6 +1,6 @@
 /**
  * Network utilities tests
- * 
+ *
  * Tests network name normalization and RPC URL functions
  */
 
@@ -249,7 +249,7 @@ describe('PUBLIC_RPC_ENDPOINTS', () => {
     });
 
     it('should have valid URLs', () => {
-        Object.values(PUBLIC_RPC_ENDPOINTS).forEach((url) => {
+        Object.values(PUBLIC_RPC_ENDPOINTS).forEach(url => {
             expect(url).toMatch(/^https?:\/\//);
         });
     });
@@ -258,4 +258,3 @@ describe('PUBLIC_RPC_ENDPOINTS', () => {
         expect(PUBLIC_RPC_ENDPOINTS.localnet).toBe('http://localhost:8899');
     });
 });
-

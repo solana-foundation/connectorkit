@@ -1,11 +1,15 @@
 /**
  * Mock implementation of Wallet Standard API
- * 
+ *
  * Provides configurable mock wallets for testing wallet connection flows
  */
 
 import type { Wallet as StandardWallet, WalletAccount } from '@wallet-standard/base';
-import type { StandardConnectFeature, StandardDisconnectFeature, StandardEventsFeature } from '@wallet-standard/features';
+import type {
+    StandardConnectFeature,
+    StandardDisconnectFeature,
+    StandardEventsFeature,
+} from '@wallet-standard/features';
 import { vi } from 'vitest';
 
 export interface MockWalletOptions {
@@ -36,7 +40,7 @@ export function createMockWallet(options: MockWalletOptions): StandardWallet {
         if (connectBehavior === 'timeout') {
             return new Promise(() => {}); // Never resolves
         }
-        
+
         if (connectBehavior === 'error') {
             throw new Error(`Failed to connect to ${name}`);
         }
@@ -56,7 +60,7 @@ export function createMockWallet(options: MockWalletOptions): StandardWallet {
         // Emit change event
         const changeListeners = eventListeners.get('change');
         if (changeListeners) {
-            changeListeners.forEach((listener) => {
+            changeListeners.forEach(listener => {
                 listener({ accounts: currentAccounts });
             });
         }
@@ -70,11 +74,11 @@ export function createMockWallet(options: MockWalletOptions): StandardWallet {
         }
 
         currentAccounts = [];
-        
+
         // Emit change event
         const changeListeners = eventListeners.get('change');
         if (changeListeners) {
-            changeListeners.forEach((listener) => {
+            changeListeners.forEach(listener => {
                 listener({ accounts: [] });
             });
         }
@@ -110,7 +114,7 @@ export function createMockWallet(options: MockWalletOptions): StandardWallet {
                 version: '1.0.0',
                 on: onMock,
             } as StandardEventsFeature['standard:events'],
-            ...Object.fromEntries(additionalFeatures.map((feature) => [feature, { version: '1.0.0' }])),
+            ...Object.fromEntries(additionalFeatures.map(feature => [feature, { version: '1.0.0' }])),
         },
         accounts: currentAccounts,
     };
@@ -153,7 +157,7 @@ export function createMockBackpackWallet(overrides?: Partial<MockWalletOptions>)
  */
 export function mockWalletRegistry(wallets: StandardWallet[]) {
     const listeners = new Set<() => void>();
-    
+
     const mockRegistry = {
         get: () => wallets,
         on: (event: string, listener: () => void) => {
@@ -164,17 +168,16 @@ export function mockWalletRegistry(wallets: StandardWallet[]) {
         },
         register: (wallet: StandardWallet) => {
             wallets.push(wallet);
-            listeners.forEach((listener) => listener());
+            listeners.forEach(listener => listener());
         },
         unregister: (wallet: StandardWallet) => {
             const index = wallets.indexOf(wallet);
             if (index > -1) {
                 wallets.splice(index, 1);
-                listeners.forEach((listener) => listener());
+                listeners.forEach(listener => listener());
             }
         },
     };
 
     return mockRegistry;
 }
-

@@ -105,7 +105,7 @@ describe('StateManager', () => {
     it('should update state correctly', () => {
         const manager = new StateManager(initialState);
         manager.updateState({ connected: true });
-        
+
         expect(manager.getSnapshot().connected).toBe(true);
     });
 });
@@ -126,7 +126,7 @@ describe('useAccount', () => {
         const { result } = renderHook(() => useAccount(), {
             wrapper: createHookWrapper(),
         });
-        
+
         expect(result.current.address).toBeDefined();
     });
 });
@@ -145,7 +145,7 @@ describe('Connector Flow', () => {
         const client = new ConnectorClient();
         await client.init();
         await client.select('Phantom');
-        
+
         const state = client.getSnapshot();
         expect(state.connected).toBe(true);
     });
@@ -238,10 +238,10 @@ it('should update state when wallet connects successfully', async () => {
     // Arrange
     const client = new ConnectorClient();
     const wallet = createMockPhantomWallet();
-    
+
     // Act
     await client.select(wallet.name);
-    
+
     // Assert
     expect(client.getSnapshot().connected).toBe(true);
 });
@@ -293,14 +293,13 @@ describe('connect', () => {
     it('should connect successfully', async () => {
         // Test success case
     });
-    
+
     it('should handle connection errors', async () => {
         const failingWallet = createMockWallet({
             connectBehavior: 'error',
         });
-        
-        await expect(client.select(failingWallet.name))
-            .rejects.toThrow();
+
+        await expect(client.select(failingWallet.name)).rejects.toThrow();
     });
 });
 ```
@@ -355,7 +354,7 @@ it('should update state', () => {
     const initialState = manager.getSnapshot();
     manager.updateState({ connected: true });
     const newState = manager.getSnapshot();
-    
+
     expect(newState).not.toBe(initialState);
     expect(newState.connected).toBe(true);
 });
@@ -367,9 +366,9 @@ it('should update state', () => {
 it('should emit events', () => {
     const collector = createEventCollector();
     emitter.on(collector.collect);
-    
+
     emitter.emit(createConnectedEvent());
-    
+
     collector.assertEventEmitted('connected');
 });
 ```
@@ -381,12 +380,12 @@ it('should update on state change', async () => {
     const { result, rerender } = renderHook(() => useAccount(), {
         wrapper: createHookWrapper(),
     });
-    
+
     // Trigger state change
     await act(async () => {
         await client.select('Phantom');
     });
-    
+
     expect(result.current.connected).toBe(true);
 });
 ```
@@ -422,4 +421,3 @@ it('should update on state change', async () => {
 - Check existing tests for examples
 - Review this guide for patterns
 - Ask in team discussions for guidance
-

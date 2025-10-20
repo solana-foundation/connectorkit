@@ -1,6 +1,6 @@
 /**
  * Tests for Headless entry point (headless.ts)
- * 
+ *
  * Verifies framework-agnostic core exports without React dependencies
  */
 
@@ -213,7 +213,7 @@ describe('Headless Entry Point (headless.ts)', () => {
         it('should be usable in non-React environments', () => {
             // Verify we can access core functionality without React
             const { ConnectorClient, createTransactionSigner, getDefaultConfig } = ConnectorKitHeadless;
-            
+
             expect(ConnectorClient).toBeDefined();
             expect(createTransactionSigner).toBeDefined();
             expect(getDefaultConfig).toBeDefined();
@@ -237,12 +237,8 @@ describe('Headless Entry Point (headless.ts)', () => {
         });
 
         it('should allow selective imports', () => {
-            const {
-                ConnectorClient,
-                createTransactionSigner,
-                getDefaultConfig,
-                EnhancedStorage,
-            } = ConnectorKitHeadless;
+            const { ConnectorClient, createTransactionSigner, getDefaultConfig, EnhancedStorage } =
+                ConnectorKitHeadless;
 
             expect(ConnectorClient).toBeDefined();
             expect(createTransactionSigner).toBeDefined();
@@ -251,4 +247,3 @@ describe('Headless Entry Point (headless.ts)', () => {
         });
     });
 });
-

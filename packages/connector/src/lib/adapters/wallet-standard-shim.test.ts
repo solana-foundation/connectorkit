@@ -9,7 +9,7 @@ vi.mock('@wallet-standard/app', () => ({
 describe('Wallet Standard Shim', () => {
     it('should get wallets registry', () => {
         const registry = getWalletsRegistry();
-        
+
         expect(registry).toHaveProperty('get');
         expect(registry).toHaveProperty('on');
         expect(typeof registry.get).toBe('function');
@@ -19,10 +19,10 @@ describe('Wallet Standard Shim', () => {
     it('should return fallback registry in SSR', () => {
         const originalWindow = globalThis.window;
         Object.defineProperty(globalThis, 'window', { value: undefined, configurable: true });
-        
+
         const registry = getWalletsRegistry();
         expect(registry.get()).toEqual([]);
-        
+
         Object.defineProperty(globalThis, 'window', { value: originalWindow, configurable: true });
     });
 });

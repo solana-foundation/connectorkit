@@ -35,7 +35,11 @@ export function LiveTab({ client, rpcUrl }: LiveTabProps) {
         }
     });
 
-    const { liveTransactions, clearTransaction, clearAll, activeCount } = useAutoSimulation(client as any, rpcUrl, config);
+    const { liveTransactions, clearTransaction, clearAll, activeCount } = useAutoSimulation(
+        client as any,
+        rpcUrl,
+        config,
+    );
 
     return (
         <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>

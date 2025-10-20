@@ -13,7 +13,7 @@ export default defineConfig({
     },
     define: {
         'import.meta.vitest': undefined,
-        'globalThis': 'globalThis',
+        globalThis: 'globalThis',
     },
     test: {
         // Environment configuration
@@ -57,7 +57,7 @@ export default defineConfig({
                 },
             },
         },
-        
+
         // Coverage configuration
         coverage: {
             provider: 'v8',
@@ -78,16 +78,15 @@ export default defineConfig({
                 statements: 60,
             },
         },
-        
+
         // File patterns
         include: ['**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
         exclude: ['node_modules/', 'dist/', '.git/', '.turbo/'],
-        
+
         // Reporter configuration
         reporters: ['verbose'],
-        
+
         // Retry configuration for flaky async tests
         retry: 1,
     },
 });
-

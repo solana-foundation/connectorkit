@@ -99,7 +99,9 @@ export function getClusterExplorerUrl(cluster: SolanaCluster, path?: string): st
 
     // Handle path properly - if mainnet, no cluster param; otherwise include cluster in path
     if (path) {
-        return isMainnet ? `https://explorer.solana.com/${path}` : `https://explorer.solana.com/${path}?cluster=${clusterSegment}`;
+        return isMainnet
+            ? `https://explorer.solana.com/${path}`
+            : `https://explorer.solana.com/${path}?cluster=${clusterSegment}`;
     }
 
     return base;

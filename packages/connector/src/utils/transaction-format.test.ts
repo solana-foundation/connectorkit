@@ -1,6 +1,6 @@
 /**
  * Tests for Transaction Format Utilities
- * 
+ *
  * Comprehensive tests for transaction format detection and conversion
  */
 
@@ -18,15 +18,39 @@ describe('Transaction Format Utilities', () => {
     // Mock transaction bytes (legacy format - first byte high bit = 0)
     const mockLegacyTxBytes = new Uint8Array([
         0x01, // Legacy transaction (high bit = 0)
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x01,
+        0x02,
+        0x03,
+        0x04,
+        0x05,
+        0x06,
+        0x07,
     ]);
 
     // Mock versioned transaction bytes (first byte high bit = 1)
     const mockVersionedTxBytes = new Uint8Array([
         0x80, // Versioned transaction (high bit = 1)
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x01,
+        0x02,
+        0x03,
+        0x04,
+        0x05,
+        0x06,
+        0x07,
     ]);
 
     describe('isWeb3jsTransaction', () => {
@@ -130,7 +154,7 @@ describe('Transaction Format Utilities', () => {
 
             expect(result).toBeInstanceOf(Uint8Array);
             expect(result.length).toBe(5);
-            expect(result.every((byte) => byte === 42)).toBe(true);
+            expect(result.every(byte => byte === 42)).toBe(true);
         });
     });
 
@@ -150,7 +174,7 @@ describe('Transaction Format Utilities', () => {
         it('should detect legacy vs versioned by first byte', async () => {
             // We can't fully test deserialization with mock bytes, but we can verify
             // the function attempts to deserialize (and fails predictably)
-            
+
             // Both should fail, but through different code paths
             await expect(deserializeToWeb3jsTransaction(mockLegacyTxBytes)).rejects.toThrow();
             await expect(deserializeToWeb3jsTransaction(mockVersionedTxBytes)).rejects.toThrow();
@@ -158,7 +182,7 @@ describe('Transaction Format Utilities', () => {
 
         it('should handle empty bytes', async () => {
             const empty = new Uint8Array();
-            
+
             // Empty array is treated as legacy (high bit check returns false) and will fail
             await expect(deserializeToWeb3jsTransaction(empty)).rejects.toThrow();
         });
@@ -230,7 +254,7 @@ describe('Transaction Format Utilities', () => {
         it('should preserve Uint8Array when not converting', async () => {
             const originalBytes = new Uint8Array([1, 2, 3, 4, 5]);
             const result = await convertSignedTransaction(originalBytes, false);
-            
+
             expect(result).toBe(originalBytes);
         });
     });
@@ -324,11 +348,10 @@ describe('Transaction Format Utilities', () => {
             const buffer = new ArrayBuffer(8);
             const view = new DataView(buffer);
             view.setUint8(0, 42);
-            
+
             const result = serializeTransaction(view as any);
             expect(result).toBeInstanceOf(Uint8Array);
             expect(result[0]).toBe(42);
         });
     });
 });
-

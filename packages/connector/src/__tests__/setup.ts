@@ -34,7 +34,7 @@ beforeAll(() => {
         }
         originalConsoleError(...args);
     };
-    
+
     console.warn = (...args: unknown[]) => {
         const message = args[0]?.toString() || '';
         if (message.includes('Not implemented')) {
@@ -48,12 +48,12 @@ beforeAll(() => {
 afterEach(() => {
     // Clear all mocks
     vi.clearAllMocks();
-    
+
     // Clear all timers
     vi.clearAllTimers();
 });
 
 // Global test utilities
-export const flushPromises = () => new Promise((resolve) => setImmediate(resolve));
+export const flushPromises = () => new Promise(resolve => setImmediate(resolve));
 
-export const waitFor = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+export const waitFor = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));

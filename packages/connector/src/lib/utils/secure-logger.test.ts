@@ -35,12 +35,12 @@ describe('SecureLogger', () => {
     });
 
     it('should get and update config', () => {
-            const config = testLogger.getConfig();
+        const config = testLogger.getConfig();
         expect(config).toHaveProperty('enabled');
         expect(config).toHaveProperty('level');
         expect(config).toHaveProperty('prefix');
 
-            testLogger.updateConfig({ level: 'error' });
-            expect(testLogger.getConfig().level).toBe('error');
+        testLogger.updateConfig({ level: 'error' });
+        expect(testLogger.getConfig().level).toBe('error');
     });
 });

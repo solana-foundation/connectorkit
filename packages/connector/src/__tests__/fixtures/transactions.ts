@@ -1,6 +1,6 @@
 /**
  * Transaction test fixtures
- * 
+ *
  * Pre-configured transaction data for testing
  */
 
@@ -69,11 +69,10 @@ export function createFailedTransaction(signature?: string, error?: string): Tra
 export function createTestTransactions(count: number = 3): TransactionActivity[] {
     const signatures = Object.values(TEST_SIGNATURES);
     const statuses: Array<'pending' | 'confirmed' | 'failed'> = ['pending', 'confirmed', 'failed'];
-    
+
     return Array.from({ length: Math.min(count, signatures.length) }, (_, i) =>
         createMockTransaction(signatures[i], {
             status: statuses[i % statuses.length],
         }),
     );
 }
-

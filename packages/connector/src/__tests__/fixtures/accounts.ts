@@ -1,6 +1,6 @@
 /**
  * Account test fixtures
- * 
+ *
  * Pre-configured account data for testing
  */
 
@@ -76,4 +76,3 @@ export function createTestWalletAccounts(count: number = 3): WalletAccount[] {
         }),
     );
 }
-

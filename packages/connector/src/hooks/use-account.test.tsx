@@ -6,11 +6,11 @@ import type { ReactNode } from 'react';
 
 // Mock dependencies
 vi.mock('../utils', () => ({
-    copyAddressToClipboard: vi.fn(async (addr) => ({ 
-        success: true, 
-        copiedValue: addr 
+    copyAddressToClipboard: vi.fn(async addr => ({
+        success: true,
+        copiedValue: addr,
     })),
-    formatAddress: vi.fn((addr) => addr ? `${addr.slice(0, 4)}...${addr.slice(-4)}` : ''),
+    formatAddress: vi.fn(addr => (addr ? `${addr.slice(0, 4)}...${addr.slice(-4)}` : '')),
     ClipboardErrorType: { EMPTY_VALUE: 'empty_value' },
 }));
 
@@ -34,7 +34,7 @@ describe('useAccount', () => {
         expect(result.current).toHaveProperty('copied');
         expect(result.current).toHaveProperty('accounts');
         expect(result.current).toHaveProperty('selectAccount');
-        
+
         // Check types
         expect(typeof result.current.copy).toBe('function');
         expect(typeof result.current.selectAccount).toBe('function');
@@ -56,7 +56,7 @@ describe('useAccount', () => {
         const { result } = renderHook(() => useAccount(), { wrapper });
 
         const copyResult = await result.current.copy();
-        
+
         expect(copyResult).toHaveProperty('success');
         // When not connected, should fail with EMPTY_VALUE
         expect(copyResult.success).toBe(false);
@@ -66,14 +66,14 @@ describe('useAccount', () => {
         const { result } = renderHook(() => useAccount(), { wrapper });
 
         expect(result.current.copied).toBe(false);
-        
+
         // Note: This test would need a connected wallet to test the success path
         // For now we verify the API exists and handles the disconnected case
     });
 
     it('should cleanup timers on unmount', () => {
         const { unmount } = renderHook(() => useAccount(), { wrapper });
-        
+
         expect(() => unmount()).not.toThrow();
     });
 });

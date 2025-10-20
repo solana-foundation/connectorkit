@@ -1,9 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { 
-    ConnectorErrorBoundary, 
-    withErrorBoundary,
-    WalletErrorType
-} from './error-boundary';
+import { ConnectorErrorBoundary, withErrorBoundary, WalletErrorType } from './error-boundary';
 
 // Mock logger
 vi.mock('../lib/utils/secure-logger', () => ({
@@ -13,7 +9,7 @@ vi.mock('../lib/utils/secure-logger', () => ({
 // Mock error utilities
 vi.mock('../lib/errors', () => ({
     isConnectorError: vi.fn(() => false),
-    getUserFriendlyMessage: vi.fn((error) => error.message),
+    getUserFriendlyMessage: vi.fn(error => error.message),
 }));
 
 describe('Error Boundary', () => {
@@ -21,7 +17,6 @@ describe('Error Boundary', () => {
         it('should export ConnectorErrorBoundary', () => {
             expect(typeof ConnectorErrorBoundary).toBe('function');
         });
-
 
         it('should export withErrorBoundary HOC', () => {
             expect(typeof withErrorBoundary).toBe('function');
@@ -44,7 +39,7 @@ describe('Error Boundary', () => {
         it('should create wrapped component with withErrorBoundary', () => {
             const TestComponent = () => null;
             const WrappedComponent = withErrorBoundary(TestComponent);
-            
+
             expect(WrappedComponent).toBeTruthy();
             expect(typeof WrappedComponent).toBe('function');
         });

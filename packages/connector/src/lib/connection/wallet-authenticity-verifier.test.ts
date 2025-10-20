@@ -28,7 +28,7 @@ describe('WalletAuthenticityVerifier', () => {
     describe('verify', () => {
         it('should verify authentic wallet', () => {
             const result = WalletAuthenticityVerifier.verify(mockWallet, 'Phantom');
-            
+
             expect(result).toHaveProperty('authentic');
             expect(result).toHaveProperty('confidence');
             expect(result).toHaveProperty('reason');
@@ -42,7 +42,7 @@ describe('WalletAuthenticityVerifier', () => {
         it('should handle missing wallet methods', () => {
             const incompleteWallet = { publicKey: mockWallet.publicKey };
             const result = WalletAuthenticityVerifier.verify(incompleteWallet, 'Test');
-            
+
             expect(result.authentic).toBe(false);
             expect(result.confidence).toBeLessThan(1);
         });
@@ -55,7 +55,7 @@ describe('WalletAuthenticityVerifier', () => {
         it('should verify batch of wallets', () => {
             const wallets = [{ wallet: mockWallet, name: 'Phantom' }];
             const results = WalletAuthenticityVerifier.verifyBatch(wallets);
-            
+
             expect(results instanceof Map).toBe(true);
             expect(results.has('Phantom')).toBe(true);
         });
@@ -63,7 +63,7 @@ describe('WalletAuthenticityVerifier', () => {
         it('should generate security report', () => {
             const result = WalletAuthenticityVerifier.verify(mockWallet, 'Phantom');
             const report = WalletAuthenticityVerifier.getSecurityReport(result);
-            
+
             expect(typeof report).toBe('string');
             expect(report.length).toBeGreaterThan(0);
         });

@@ -1,6 +1,6 @@
 /**
  * TransactionTracker unit tests
- * 
+ *
  * Tests transaction tracking, status updates, and history management
  */
 
@@ -303,4 +303,3 @@ describe('TransactionTracker', () => {
         });
     });
 });
-

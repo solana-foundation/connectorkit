@@ -48,12 +48,12 @@ describe('WalletDetector', () => {
     });
 
     it('should get detected wallets', () => {
-            const wallets = detector.getDetectedWallets();
+        const wallets = detector.getDetectedWallets();
         expect(Array.isArray(wallets)).toBe(true);
     });
 
     it('should have destroy method for cleanup', () => {
         expect(typeof detector.destroy).toBe('function');
-            expect(() => detector.destroy()).not.toThrow();
+        expect(() => detector.destroy()).not.toThrow();
     });
 });

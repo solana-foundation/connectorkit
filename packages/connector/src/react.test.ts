@@ -1,6 +1,6 @@
 /**
  * Tests for React entry point (react.ts)
- * 
+ *
  * Verifies that React-specific exports are correctly exposed
  */
 
@@ -82,7 +82,7 @@ describe('React Entry Point (react.ts)', () => {
     describe('exports structure', () => {
         it('should only export React-specific functionality', () => {
             const exports = Object.keys(ConnectorKitReact);
-            
+
             // Should have all the React hooks and components
             expect(exports).toContain('ConnectorProvider');
             expect(exports).toContain('useConnector');
@@ -92,13 +92,11 @@ describe('React Entry Point (react.ts)', () => {
 
         it('should not export headless-only functionality', () => {
             const exports = Object.keys(ConnectorKitReact);
-            
+
             // These are headless-specific, shouldn't be in React entry
             // (though types might be re-exported)
-            const reactExports = exports.filter(name => 
-                typeof (ConnectorKitReact as any)[name] === 'function'
-            );
-            
+            const reactExports = exports.filter(name => typeof (ConnectorKitReact as any)[name] === 'function');
+
             expect(reactExports.length).toBeGreaterThan(0);
         });
 
@@ -120,13 +118,8 @@ describe('React Entry Point (react.ts)', () => {
 
     describe('selective imports', () => {
         it('should allow importing specific exports', () => {
-            const {
-                ConnectorProvider,
-                useConnector,
-                useAccount,
-                useCluster,
-                ConnectorErrorBoundary,
-            } = ConnectorKitReact;
+            const { ConnectorProvider, useConnector, useAccount, useCluster, ConnectorErrorBoundary } =
+                ConnectorKitReact;
 
             expect(ConnectorProvider).toBeDefined();
             expect(useConnector).toBeDefined();
@@ -145,4 +138,3 @@ describe('React Entry Point (react.ts)', () => {
         });
     });
 });
-

@@ -1,6 +1,6 @@
 /**
  * State waiting utilities
- * 
+ *
  * Helpers for waiting for state changes in tests
  */
 
@@ -50,14 +50,14 @@ export async function waitForStateChange(
  * Wait for connection state
  */
 export function waitForConnection(client: ConnectorClient, timeout = 5000): Promise<ConnectorState> {
-    return waitForStateChange(client, (state) => state.connected === true, { timeout });
+    return waitForStateChange(client, state => state.connected === true, { timeout });
 }
 
 /**
  * Wait for disconnection state
  */
 export function waitForDisconnection(client: ConnectorClient, timeout = 5000): Promise<ConnectorState> {
-    return waitForStateChange(client, (state) => state.connected === false, { timeout });
+    return waitForStateChange(client, state => state.connected === false, { timeout });
 }
 
 /**
@@ -68,7 +68,7 @@ export function waitForWalletSelection(
     walletName: string,
     timeout = 5000,
 ): Promise<ConnectorState> {
-    return waitForStateChange(client, (state) => state.selectedWallet === walletName, { timeout });
+    return waitForStateChange(client, state => state.selectedWallet === walletName, { timeout });
 }
 
 /**
@@ -79,6 +79,5 @@ export function waitForAccountSelection(
     address: string,
     timeout = 5000,
 ): Promise<ConnectorState> {
-    return waitForStateChange(client, (state) => state.selectedAccount === address, { timeout });
+    return waitForStateChange(client, state => state.selectedAccount === address, { timeout });
 }
-

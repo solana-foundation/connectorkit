@@ -7,20 +7,20 @@ describe('UnifiedProvider', () => {
         render(
             <UnifiedProvider>
                 <div>Test Child</div>
-            </UnifiedProvider>
+            </UnifiedProvider>,
         );
-        
+
         expect(screen.getByText('Test Child')).toBeInTheDocument();
     });
 
     it('should accept config prop', () => {
         const config = { clusters: [] };
-        
+
         expect(() => {
             render(
                 <UnifiedProvider config={config}>
                     <div>Test</div>
-                </UnifiedProvider>
+                </UnifiedProvider>,
             );
         }).not.toThrow();
     });

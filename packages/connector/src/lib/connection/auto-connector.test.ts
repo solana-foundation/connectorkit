@@ -27,12 +27,7 @@ describe('AutoConnector', () => {
         mockStateManager = { getSnapshot: vi.fn(() => ({ wallets: [] })) } as any;
         mockStorage = { get: vi.fn(async () => undefined), set: vi.fn() } as any;
 
-        autoConnector = new AutoConnector(
-            mockWalletDetector,
-            mockConnectionManager,
-            mockStateManager,
-            mockStorage,
-        );
+        autoConnector = new AutoConnector(mockWalletDetector, mockConnectionManager, mockStateManager, mockStorage);
     });
 
     it('should initialize successfully', () => {

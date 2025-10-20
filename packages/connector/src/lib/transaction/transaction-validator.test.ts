@@ -1,6 +1,6 @@
 /**
  * Tests for Transaction Validator
- * 
+ *
  * Comprehensive tests for transaction validation logic
  */
 
@@ -45,7 +45,7 @@ describe('TransactionValidator', () => {
             const tooSmall = new Uint8Array(10);
             const result = TransactionValidator.validate(tooSmall);
 
-            // May be valid or invalid depending on implementation  
+            // May be valid or invalid depending on implementation
             expect(result).toBeDefined();
             expect(result.valid).toBeDefined();
         });
@@ -200,7 +200,7 @@ describe('TransactionValidator', () => {
         it('should handle legacy transaction format', () => {
             const legacyTx = new Uint8Array(100);
             legacyTx[0] = 0x01; // Legacy marker (high bit = 0)
-            
+
             const result = TransactionValidator.validate(legacyTx);
 
             expect(result.valid).toBe(true);
@@ -209,7 +209,7 @@ describe('TransactionValidator', () => {
         it('should handle versioned transaction format', () => {
             const versionedTx = new Uint8Array(100);
             versionedTx[0] = 0x80; // Versioned marker (high bit = 1)
-            
+
             const result = TransactionValidator.validate(versionedTx);
 
             expect(result.valid).toBe(true);
@@ -229,11 +229,7 @@ describe('TransactionValidator', () => {
     describe('warning thresholds', () => {
         it('should warn when approaching size limit', () => {
             // Test various sizes near the limit
-            const sizes = [
-                MAX_TRANSACTION_SIZE - 50,
-                MAX_TRANSACTION_SIZE - 100,
-                MAX_TRANSACTION_SIZE - 200,
-            ];
+            const sizes = [MAX_TRANSACTION_SIZE - 50, MAX_TRANSACTION_SIZE - 100, MAX_TRANSACTION_SIZE - 200];
 
             for (const size of sizes) {
                 const tx = new Uint8Array(size);
@@ -257,4 +253,3 @@ describe('TransactionValidator', () => {
         });
     });
 });
-

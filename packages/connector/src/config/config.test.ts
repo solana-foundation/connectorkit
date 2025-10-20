@@ -1,6 +1,6 @@
 /**
  * Tests for Configuration System
- * 
+ *
  * Comprehensive tests for default and unified configuration creation
  */
 
@@ -18,37 +18,37 @@ describe('Configuration System', () => {
 
         it('should create config with required appName', () => {
             const config = getDefaultConfig(baseOptions);
-            
+
             expect(config.appName).toBe('Test App');
         });
 
         it('should default to mainnet-beta network', () => {
             const config = getDefaultConfig(baseOptions);
-            
+
             expect(config.network).toBe('mainnet-beta');
         });
 
         it('should enable autoConnect by default', () => {
             const config = getDefaultConfig(baseOptions);
-            
+
             expect(config.autoConnect).toBe(true);
         });
 
         it('should enable mobile by default', () => {
             const config = getDefaultConfig(baseOptions);
-            
+
             expect(config.enableMobile).toBe(true);
         });
 
         it('should enable error boundary by default', () => {
             const config = getDefaultConfig(baseOptions);
-            
+
             expect(config.errorBoundary?.enabled).toBe(true);
         });
 
         it('should default to 3 max retries', () => {
             const config = getDefaultConfig(baseOptions);
-            
+
             expect(config.errorBoundary?.maxRetries).toBe(3);
         });
 
@@ -57,7 +57,7 @@ describe('Configuration System', () => {
                 ...baseOptions,
                 network: 'devnet',
             });
-            
+
             expect(config.network).toBe('devnet');
         });
 
@@ -66,7 +66,7 @@ describe('Configuration System', () => {
                 ...baseOptions,
                 network: 'mainnet-beta',
             });
-            
+
             expect(config.network).toBe('mainnet-beta');
         });
 
@@ -75,7 +75,7 @@ describe('Configuration System', () => {
                 ...baseOptions,
                 autoConnect: false,
             });
-            
+
             expect(config.autoConnect).toBe(false);
         });
 
@@ -84,7 +84,7 @@ describe('Configuration System', () => {
                 ...baseOptions,
                 enableMobile: false,
             });
-            
+
             expect(config.enableMobile).toBe(false);
         });
 
@@ -93,7 +93,7 @@ describe('Configuration System', () => {
                 ...baseOptions,
                 appUrl: 'https://test.com',
             });
-            
+
             expect(config.appUrl).toBe('https://test.com');
         });
 
@@ -102,13 +102,13 @@ describe('Configuration System', () => {
                 ...baseOptions,
                 debug: true,
             });
-            
+
             expect(config.debug).toBe(true);
         });
 
         it('should have default clusters', () => {
             const config = getDefaultConfig(baseOptions);
-            
+
             expect(config.cluster).toBeDefined();
             expect(config.cluster?.clusters).toBeDefined();
             expect(Array.isArray(config.cluster?.clusters)).toBe(true);
@@ -120,8 +120,8 @@ describe('Configuration System', () => {
                 ...baseOptions,
                 network: 'localnet',
             });
-            
-            const clusterIds = config.cluster!.clusters.map((c) => c.id);
+
+            const clusterIds = config.cluster!.clusters.map(c => c.id);
             expect(clusterIds).toContain('solana:localnet');
         });
 
@@ -136,13 +136,13 @@ describe('Configuration System', () => {
                 ...baseOptions,
                 customClusters: [customCluster],
             });
-            
-            expect(config.cluster!.clusters.some((c) => c.id === 'custom')).toBe(true);
+
+            expect(config.cluster!.clusters.some(c => c.id === 'custom')).toBe(true);
         });
 
         it('should persist cluster selection by default', () => {
             const config = getDefaultConfig(baseOptions);
-            
+
             expect(config.cluster?.persistSelection).toBe(true);
         });
 
@@ -151,7 +151,7 @@ describe('Configuration System', () => {
                 ...baseOptions,
                 persistClusterSelection: false,
             });
-            
+
             expect(config.cluster?.persistSelection).toBe(false);
         });
 
@@ -163,7 +163,7 @@ describe('Configuration System', () => {
                 maxRetries: 5,
                 onError,
             });
-            
+
             expect(config.errorBoundary?.enabled).toBe(false);
             expect(config.errorBoundary?.maxRetries).toBe(5);
             expect(config.errorBoundary?.onError).toBe(onError);
@@ -171,7 +171,7 @@ describe('Configuration System', () => {
 
         it('should have storage configuration', () => {
             const config = getDefaultConfig(baseOptions);
-            
+
             expect(config.storage).toBeDefined();
         });
     });
@@ -183,7 +183,7 @@ describe('Configuration System', () => {
 
         it('should create mobile config', () => {
             const config = getDefaultMobileConfig(baseOptions);
-            
+
             expect(config).toBeDefined();
             expect(config.appIdentity).toBeDefined();
             expect(config.appIdentity.name).toBe('Test App');
@@ -191,7 +191,7 @@ describe('Configuration System', () => {
 
         it('should have cluster configuration', () => {
             const config = getDefaultMobileConfig(baseOptions);
-            
+
             expect(config.cluster).toBeDefined();
             expect(config.cluster).toBe('mainnet-beta');
         });
@@ -201,7 +201,7 @@ describe('Configuration System', () => {
                 ...baseOptions,
                 appUrl: 'https://test.com',
             });
-            
+
             expect(config.appIdentity.uri).toBe('https://test.com');
         });
 
@@ -210,7 +210,7 @@ describe('Configuration System', () => {
                 ...baseOptions,
                 appUrl: 'https://test.com',
             });
-            
+
             expect(config.appIdentity.icon).toContain('favicon.ico');
         });
     });
@@ -222,7 +222,7 @@ describe('Configuration System', () => {
 
         it('should create unified config with required fields', () => {
             const config = createConfig(baseOptions);
-            
+
             expect(config.connectorConfig).toBeDefined();
             expect(config.network).toBeDefined();
             expect(config.rpcUrl).toBeDefined();
@@ -234,7 +234,7 @@ describe('Configuration System', () => {
                 appName: 'Test App',
                 appUrl: 'https://test.com',
             });
-            
+
             expect(config.app.name).toBe('Test App');
             expect(config.app.url).toBe('https://test.com');
         });
@@ -244,7 +244,7 @@ describe('Configuration System', () => {
                 ...baseOptions,
                 network: 'mainnet-beta',
             });
-            
+
             expect(config.network).toBe('mainnet');
         });
 
@@ -253,7 +253,7 @@ describe('Configuration System', () => {
                 ...baseOptions,
                 network: 'mainnet',
             });
-            
+
             expect(config.network).toBe('mainnet');
         });
 
@@ -262,7 +262,7 @@ describe('Configuration System', () => {
                 ...baseOptions,
                 network: 'devnet',
             });
-            
+
             expect(config.network).toBe('devnet');
         });
 
@@ -271,7 +271,7 @@ describe('Configuration System', () => {
                 ...baseOptions,
                 network: 'testnet',
             });
-            
+
             expect(config.network).toBe('testnet');
         });
 
@@ -280,13 +280,13 @@ describe('Configuration System', () => {
                 ...baseOptions,
                 network: 'localnet',
             });
-            
+
             expect(config.network).toBe('localnet');
         });
 
         it('should generate default RPC URL', () => {
             const config = createConfig(baseOptions);
-            
+
             expect(config.rpcUrl).toBeDefined();
             expect(typeof config.rpcUrl).toBe('string');
             expect(config.rpcUrl.length).toBeGreaterThan(0);
@@ -298,7 +298,7 @@ describe('Configuration System', () => {
                 ...baseOptions,
                 rpcUrl: customRpcUrl,
             });
-            
+
             expect(config.rpcUrl).toBe(customRpcUrl);
         });
 
@@ -309,7 +309,7 @@ describe('Configuration System', () => {
                 debug: true,
                 enableMobile: false,
             });
-            
+
             expect(config.connectorConfig.autoConnect).toBe(false);
             expect(config.connectorConfig.debug).toBe(true);
             expect(config.connectorConfig.enableMobile).toBe(false);
@@ -321,7 +321,7 @@ describe('Configuration System', () => {
                 enableMobile: true,
                 appUrl: 'https://test.com',
             });
-            
+
             expect(config.mobile).toBeDefined();
         });
 
@@ -330,13 +330,13 @@ describe('Configuration System', () => {
                 ...baseOptions,
                 enableMobile: false,
             });
-            
+
             expect(config.mobile).toBeUndefined();
         });
 
         it('should default appUrl to window.location.origin in browser', () => {
             const config = createConfig(baseOptions);
-            
+
             expect(config.app.url).toBeDefined();
             expect(typeof config.app.url).toBe('string');
         });
@@ -345,13 +345,13 @@ describe('Configuration System', () => {
     describe('isUnifiedConfig', () => {
         it('should return true for unified config', () => {
             const config = createConfig({ appName: 'Test' });
-            
+
             expect(isUnifiedConfig(config)).toBe(true);
         });
 
         it('should return false for plain connector config', () => {
             const config = getDefaultConfig({ appName: 'Test' });
-            
+
             expect(isUnifiedConfig(config)).toBe(false);
         });
 
@@ -418,7 +418,7 @@ describe('Configuration System', () => {
             });
 
             expect(config.cluster!.clusters.length).toBeGreaterThan(1);
-            expect(config.cluster!.clusters.some((c) => c.id === 'custom')).toBe(true);
+            expect(config.cluster!.clusters.some(c => c.id === 'custom')).toBe(true);
         });
 
         it('should override defaults with explicit values', () => {
@@ -459,7 +459,7 @@ describe('Configuration System', () => {
                 'localnet',
             ];
 
-            networks.forEach((network) => {
+            networks.forEach(network => {
                 const config = getDefaultConfig({
                     appName: 'Test',
                     network,
@@ -509,4 +509,3 @@ describe('Configuration System', () => {
         });
     });
 });
-

@@ -1,6 +1,6 @@
 /**
  * Tests for Transaction Signer
- * 
+ *
  * Comprehensive tests for the transaction signing abstraction layer
  */
 
@@ -13,10 +13,10 @@ describe('Transaction Signer', () => {
     let mockWallet: WalletStandardWallet;
     let mockAccount: WalletStandardAccount;
     let mockTransaction: Uint8Array;
-    
+
     beforeEach(() => {
         mockTransaction = new Uint8Array([1, 2, 3, 4, 5]);
-        
+
         mockAccount = {
             address: '5VERv8NMvzbJMEkV8xnrLkEaWRtSz9CosKDYjCJjBRnbJLgp8uirBgmQpjKhoR4tjF3ZpRzrFmBV6UjKdiSZkQUW',
             publicKey: new Uint8Array(32),
@@ -38,10 +38,7 @@ describe('Transaction Signer', () => {
                 },
                 'solana:signAllTransactions': {
                     signAllTransactions: vi.fn().mockResolvedValue({
-                        signedTransactions: [
-                            new Uint8Array([6, 7, 8, 9, 10]),
-                            new Uint8Array([11, 12, 13, 14, 15]),
-                        ],
+                        signedTransactions: [new Uint8Array([6, 7, 8, 9, 10]), new Uint8Array([11, 12, 13, 14, 15])],
                     }),
                 },
                 'solana:signAndSendTransaction': {
@@ -285,7 +282,7 @@ describe('Transaction Signer', () => {
 
             const signer = createTransactionSigner(config)!;
             const transactions = [mockTransaction, new Uint8Array([2, 3, 4, 5, 6])];
-            
+
             const signedTxs = await signer.signAllTransactions(transactions);
 
             expect(signedTxs).toBeDefined();
@@ -309,7 +306,7 @@ describe('Transaction Signer', () => {
 
             const signer = createTransactionSigner(config)!;
             const transactions = [mockTransaction, new Uint8Array([2, 3, 4, 5, 6])];
-            
+
             const signedTxs = await signer.signAllTransactions(transactions);
 
             expect(signedTxs).toBeDefined();
@@ -371,7 +368,7 @@ describe('Transaction Signer', () => {
 
             const signer = createTransactionSigner(config)!;
             const options = { skipPreflight: true, maxRetries: 5 };
-            
+
             await signer.signAndSendTransaction(mockTransaction, options);
 
             expect(mockWallet.features['solana:signAndSendTransaction'].signAndSendTransaction).toHaveBeenCalled();
@@ -387,7 +384,7 @@ describe('Transaction Signer', () => {
 
             const signer = createTransactionSigner(config)!;
             const transactions = [mockTransaction, new Uint8Array([2, 3, 4, 5, 6])];
-            
+
             const signatures = await signer.signAndSendTransactions(transactions);
 
             expect(signatures).toBeDefined();
@@ -430,7 +427,7 @@ describe('Transaction Signer', () => {
 
             const signer = createTransactionSigner(config)!;
             const message = new Uint8Array([1, 2, 3]);
-            
+
             const signature = await signer.signMessage!(message);
 
             expect(signature).toBeDefined();
@@ -574,4 +571,3 @@ describe('Transaction Signer', () => {
         });
     });
 });
-

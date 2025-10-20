@@ -1,6 +1,6 @@
 /**
  * Formatting utilities tests
- * 
+ *
  * Tests address, SOL amount, and number formatting functions
  */
 
@@ -212,4 +212,3 @@ describe('formatTokenAmount', () => {
         expect(formatted).toBe('100');
     });
 });
-

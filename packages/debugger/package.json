@@ -1,6 +1,6 @@
 {
     "name": "@connector-kit/debugger",
-    "version": "0.0.1",
+    "version": "0.1.0",
     "description": "Development debug panel for @connector-kit/connector",
     "main": "./dist/index.js",
     "module": "./dist/index.mjs",

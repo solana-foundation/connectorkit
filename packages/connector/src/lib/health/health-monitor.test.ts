@@ -25,7 +25,7 @@ describe('HealthMonitor', () => {
 
     it('should get health status', () => {
         const health = healthMonitor.getHealth();
-        
+
         expect(health).toHaveProperty('initialized');
         expect(health).toHaveProperty('walletStandardAvailable');
         expect(health).toHaveProperty('storageAvailable');
@@ -33,7 +33,7 @@ describe('HealthMonitor', () => {
     });
 
     it('should return errors array', () => {
-            const health = healthMonitor.getHealth();
+        const health = healthMonitor.getHealth();
         expect(Array.isArray(health.errors)).toBe(true);
     });
 });

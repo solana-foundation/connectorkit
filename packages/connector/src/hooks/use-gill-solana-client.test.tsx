@@ -14,15 +14,15 @@ describe('useGillSolanaClient', () => {
     );
 
     it.skip('should return client and ready status', () => {
-            const { result } = renderHook(() => useGillSolanaClient(), { wrapper });
+        const { result } = renderHook(() => useGillSolanaClient(), { wrapper });
 
-            expect(result.current).toHaveProperty('client');
-            expect(result.current).toHaveProperty('ready');
-            expect(typeof result.current.ready).toBe('boolean');
-        });
+        expect(result.current).toHaveProperty('client');
+        expect(result.current).toHaveProperty('ready');
+        expect(typeof result.current.ready).toBe('boolean');
+    });
 
     it.skip('should return null client when not ready', () => {
-            const { result } = renderHook(() => useGillSolanaClient(), { wrapper });
+        const { result } = renderHook(() => useGillSolanaClient(), { wrapper });
 
         // Without a cluster selected, client should be null and ready should be false
         expect(result.current.client).toBeNull();

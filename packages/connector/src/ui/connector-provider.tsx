@@ -136,7 +136,11 @@ function ConnectorProviderInternal({
                     createDefaultChainSelector,
                     createDefaultWalletNotFoundHandler,
                 } = mod;
-                const defaultChains: readonly `${string}:${string}`[] = ['solana:mainnet', 'solana:devnet', 'solana:testnet'];
+                const defaultChains: readonly `${string}:${string}`[] = [
+                    'solana:mainnet',
+                    'solana:devnet',
+                    'solana:testnet',
+                ];
                 registerMwa({
                     appIdentity: mobile.appIdentity,
                     authorizationCache: mobile.authorizationCache ?? (createDefaultAuthorizationCache() as any),

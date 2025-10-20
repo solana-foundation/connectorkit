@@ -14,18 +14,18 @@ describe('useTransactionSigner', () => {
     );
 
     it.skip('should return signer, capabilities, and ready status', () => {
-            const { result } = renderHook(() => useTransactionSigner(), { wrapper });
+        const { result } = renderHook(() => useTransactionSigner(), { wrapper });
 
         expect(result.current).toHaveProperty('signer');
         expect(result.current).toHaveProperty('ready');
         expect(result.current).toHaveProperty('capabilities');
-        
+
         // Check capabilities structure
         expect(result.current.capabilities).toHaveProperty('canSign');
         expect(result.current.capabilities).toHaveProperty('canSend');
         expect(result.current.capabilities).toHaveProperty('canSignMessage');
         expect(result.current.capabilities).toHaveProperty('supportsBatchSigning');
-        
+
         // All should be booleans
         expect(typeof result.current.capabilities.canSign).toBe('boolean');
         expect(typeof result.current.capabilities.canSend).toBe('boolean');
@@ -34,14 +34,14 @@ describe('useTransactionSigner', () => {
     });
 
     it.skip('should return null signer when not connected', () => {
-            const { result } = renderHook(() => useTransactionSigner(), { wrapper });
+        const { result } = renderHook(() => useTransactionSigner(), { wrapper });
 
         expect(result.current.signer).toBeNull();
         expect(result.current.ready).toBe(false);
     });
 
     it.skip('should return default capabilities when no signer', () => {
-            const { result } = renderHook(() => useTransactionSigner(), { wrapper });
+        const { result } = renderHook(() => useTransactionSigner(), { wrapper });
 
         // When not connected, capabilities should all be false
         expect(result.current.capabilities.canSign).toBe(false);

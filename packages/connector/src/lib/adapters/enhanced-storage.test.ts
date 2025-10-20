@@ -4,9 +4,14 @@ import { EnhancedStorage, createEnhancedStorageWallet } from './enhanced-storage
 // Mock dependencies
 vi.mock('@wallet-ui/core', () => ({
     Storage: class {
-        constructor(public key: string, public initial: any) {}
+        constructor(
+            public key: string,
+            public initial: any,
+        ) {}
         set(value: any) {}
-        get() { return this.initial; }
+        get() {
+            return this.initial;
+        }
         value = { subscribe: vi.fn(() => vi.fn()) };
     },
 }));
@@ -17,18 +22,18 @@ vi.mock('../utils/secure-logger', () => ({
 
 describe('EnhancedStorage', () => {
     it('should create enhanced storage instance', () => {
-            const storage = new EnhancedStorage('test-key', 'initial-value');
-            expect(storage).toBeInstanceOf(EnhancedStorage);
+        const storage = new EnhancedStorage('test-key', 'initial-value');
+        expect(storage).toBeInstanceOf(EnhancedStorage);
     });
 
     it('should have set and get methods', () => {
-            const storage = new EnhancedStorage('test-key', 'initial');
+        const storage = new EnhancedStorage('test-key', 'initial');
         expect(typeof storage.set).toBe('function');
         expect(typeof storage.get).toBe('function');
     });
 
     it('should create wallet storage with factory', () => {
-            const storage = createEnhancedStorageWallet();
-            expect(storage).toBeInstanceOf(EnhancedStorage);
+        const storage = createEnhancedStorageWallet();
+        expect(storage).toBeInstanceOf(EnhancedStorage);
     });
 });

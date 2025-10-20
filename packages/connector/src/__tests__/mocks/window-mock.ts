@@ -1,6 +1,6 @@
 /**
  * Mock browser APIs for testing
- * 
+ *
  * Provides mock implementations of window APIs used by the connector
  */
 
@@ -42,10 +42,12 @@ export function createMockClipboard(behavior: 'success' | 'error' = 'success'): 
 /**
  * Create a mock navigator object
  */
-export function createMockNavigator(options: {
-    clipboard?: MockClipboard;
-    userAgent?: string;
-} = {}): MockNavigator {
+export function createMockNavigator(
+    options: {
+        clipboard?: MockClipboard;
+        userAgent?: string;
+    } = {},
+): MockNavigator {
     return {
         clipboard: options.clipboard ?? createMockClipboard('success'),
         userAgent: options.userAgent ?? 'Mozilla/5.0 (Test Environment)',
@@ -55,10 +57,12 @@ export function createMockNavigator(options: {
 /**
  * Setup a mock window environment for tests
  */
-export function setupMockWindow(options: {
-    localStorage?: MockLocalStorage;
-    navigator?: MockNavigator;
-} = {}) {
+export function setupMockWindow(
+    options: {
+        localStorage?: MockLocalStorage;
+        navigator?: MockNavigator;
+    } = {},
+) {
     const mockLocalStorage = options.localStorage ?? new MockLocalStorage();
     const mockNavigator = options.navigator ?? createMockNavigator();
 
@@ -121,4 +125,3 @@ export function cleanupMockWindow() {
     // @ts-expect-error - Deleting global properties for cleanup
     delete global.crypto;
 }
-

@@ -1,6 +1,6 @@
 /**
  * Test helper utilities
- * 
+ *
  * Common test utilities and assertions
  */
 
@@ -22,12 +22,12 @@ export async function waitForCondition(
     const { timeout = 5000, interval = 50, timeoutMessage = 'Condition not met within timeout' } = options;
 
     const startTime = Date.now();
-    
+
     while (!condition()) {
         if (Date.now() - startTime > timeout) {
             throw new Error(timeoutMessage);
         }
-        await new Promise((resolve) => setTimeout(resolve, interval));
+        await new Promise(resolve => setTimeout(resolve, interval));
     }
 }
 
@@ -68,19 +68,19 @@ export function createEventCollector() {
             events.push(event);
         },
         getEvents: () => events,
-        getEventsByType: (type: string) => events.filter((e) => e.type === type),
+        getEventsByType: (type: string) => events.filter(e => e.type === type),
         clear: () => {
             events.length = 0;
         },
         assertEventEmitted: (type: string) => {
-            expect(events.some((e) => e.type === type)).toBe(true);
+            expect(events.some(e => e.type === type)).toBe(true);
         },
         assertEventNotEmitted: (type: string) => {
-            expect(events.some((e) => e.type === type)).toBe(false);
+            expect(events.some(e => e.type === type)).toBe(false);
         },
         assertEventsInOrder: (types: string[]) => {
-            const actualTypes = events.map((e) => e.type);
-            const relevantTypes = actualTypes.filter((t) => types.includes(t));
+            const actualTypes = events.map(e => e.type);
+            const relevantTypes = actualTypes.filter(t => types.includes(t));
             expect(relevantTypes).toEqual(types);
         },
     };
@@ -90,7 +90,7 @@ export function createEventCollector() {
  * Simulate time passing
  */
 export async function advanceTime(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
+    return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 /**
@@ -153,4 +153,3 @@ export function createCallTracker<T extends (...args: unknown[]) => unknown>() {
 
     return tracker;
 }
-

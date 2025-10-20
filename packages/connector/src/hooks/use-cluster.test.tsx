@@ -18,18 +18,18 @@ describe('useCluster', () => {
     );
 
     it('should return cluster structure with all required fields', () => {
-            const { result } = renderHook(() => useCluster(), { wrapper });
+        const { result } = renderHook(() => useCluster(), { wrapper });
 
-            expect(result.current).toHaveProperty('cluster');
-            expect(result.current).toHaveProperty('clusters');
-            expect(result.current).toHaveProperty('setCluster');
-            expect(result.current).toHaveProperty('isMainnet');
-            expect(result.current).toHaveProperty('isDevnet');
-            expect(result.current).toHaveProperty('isTestnet');
-            expect(result.current).toHaveProperty('isLocal');
-            expect(result.current).toHaveProperty('explorerUrl');
-            expect(result.current).toHaveProperty('type');
-        
+        expect(result.current).toHaveProperty('cluster');
+        expect(result.current).toHaveProperty('clusters');
+        expect(result.current).toHaveProperty('setCluster');
+        expect(result.current).toHaveProperty('isMainnet');
+        expect(result.current).toHaveProperty('isDevnet');
+        expect(result.current).toHaveProperty('isTestnet');
+        expect(result.current).toHaveProperty('isLocal');
+        expect(result.current).toHaveProperty('explorerUrl');
+        expect(result.current).toHaveProperty('type');
+
         // Check types
         expect(typeof result.current.setCluster).toBe('function');
         expect(Array.isArray(result.current.clusters)).toBe(true);
@@ -43,9 +43,9 @@ describe('useCluster', () => {
     });
 
     it('should provide setCluster function that accepts cluster IDs', () => {
-            const { result } = renderHook(() => useCluster(), { wrapper });
+        const { result } = renderHook(() => useCluster(), { wrapper });
 
-            expect(typeof result.current.setCluster).toBe('function');
+        expect(typeof result.current.setCluster).toBe('function');
         // setCluster is async and requires valid cluster in state, skip actual call
     });
 

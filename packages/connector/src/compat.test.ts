@@ -1,6 +1,6 @@
 /**
  * Tests for Wallet Adapter Compatibility layer (compat.ts)
- * 
+ *
  * Verifies the compatibility bridge with @solana/wallet-adapter interface
  */
 
@@ -130,8 +130,8 @@ describe('Wallet Adapter Compatibility (compat.ts)', () => {
 
         describe('with custom options', () => {
             it('should accept transformTransaction option', () => {
-                const transformTransaction = vi.fn((tx) => tx);
-                
+                const transformTransaction = vi.fn(tx => tx);
+
                 const adapter = createWalletAdapterCompat(mockSigner, {
                     disconnect: mockDisconnect,
                     transformTransaction,
@@ -143,7 +143,7 @@ describe('Wallet Adapter Compatibility (compat.ts)', () => {
 
             it('should accept onError option', () => {
                 const onError = vi.fn();
-                
+
                 const adapter = createWalletAdapterCompat(mockSigner, {
                     disconnect: mockDisconnect,
                     onError,
@@ -229,4 +229,3 @@ describe('Wallet Adapter Compatibility (compat.ts)', () => {
         });
     });
 });
-

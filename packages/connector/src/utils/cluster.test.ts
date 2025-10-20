@@ -72,7 +72,7 @@ describe('Cluster Utilities', () => {
         it('should generate transaction explorer URL', () => {
             const sig = 'test-signature';
             const url = getTransactionUrl(sig, mockClusters.devnet);
-            
+
             expect(url).toContain('explorer.solana.com');
             expect(url).toContain('test-signature');
             expect(url).toContain('cluster=devnet');
@@ -81,7 +81,7 @@ describe('Cluster Utilities', () => {
         it('should generate address explorer URL', () => {
             const addr = '5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKucSFTa2KSTu8';
             const url = getAddressUrl(addr, mockClusters.mainnet);
-            
+
             expect(url).toContain('explorer.solana.com');
             expect(url).toContain(addr);
         });
@@ -89,7 +89,7 @@ describe('Cluster Utilities', () => {
         it('should generate token URL', () => {
             const token = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'; // USDC
             const url = getTokenUrl(token, mockClusters.mainnet);
-            
+
             expect(url).toContain('explorer.solana.com');
             expect(url).toContain(token);
         });
@@ -97,7 +97,7 @@ describe('Cluster Utilities', () => {
         it('should generate block URL', () => {
             const slot = 123456789;
             const url = getBlockUrl(slot, mockClusters.mainnet);
-            
+
             expect(url).toContain('explorer.solana.com');
             expect(url).toContain('123456789');
         });

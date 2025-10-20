@@ -200,15 +200,10 @@ describe('ClusterManager', () => {
             const unavailableStorage = new MockStorageAdapter<SolanaClusterId>('solana:mainnet');
             unavailableStorage.isAvailable = () => false;
 
-            const managerWithUnavailableStorage = new ClusterManager(
-                stateManager,
-                eventEmitter,
-                unavailableStorage,
-                {
-                    clusters,
-                    initialCluster: 'solana:mainnet',
-                },
-            );
+            const managerWithUnavailableStorage = new ClusterManager(stateManager, eventEmitter, unavailableStorage, {
+                clusters,
+                initialCluster: 'solana:mainnet',
+            });
 
             await managerWithUnavailableStorage.setCluster('solana:devnet');
 
@@ -302,10 +297,16 @@ describe('ClusterManager', () => {
     describe('debug mode', () => {
         it('should work in debug mode', async () => {
             // Just verify it doesn't throw in debug mode
-            const manager = new ClusterManager(stateManager, eventEmitter, storage, {
-                clusters,
-                initialCluster: 'solana:mainnet',
-            }, true);
+            const manager = new ClusterManager(
+                stateManager,
+                eventEmitter,
+                storage,
+                {
+                    clusters,
+                    initialCluster: 'solana:mainnet',
+                },
+                true,
+            );
 
             await expect(manager.setCluster('solana:devnet')).resolves.not.toThrow();
 
@@ -316,10 +317,16 @@ describe('ClusterManager', () => {
         it('should not log in non-debug mode', async () => {
             const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
-            const manager = new ClusterManager(stateManager, eventEmitter, storage, {
-                clusters,
-                initialCluster: 'solana:mainnet',
-            }, false);
+            const manager = new ClusterManager(
+                stateManager,
+                eventEmitter,
+                storage,
+                {
+                    clusters,
+                    initialCluster: 'solana:mainnet',
+                },
+                false,
+            );
 
             await manager.setCluster('solana:devnet');
 

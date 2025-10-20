@@ -1,11 +1,15 @@
 /**
  * Wallet test fixtures
- * 
+ *
  * Pre-configured wallet instances for testing
  */
 
 import type { WalletInfo } from '../../types/wallets';
-import { createMockPhantomWallet, createMockSolflareWallet, createMockBackpackWallet } from '../mocks/wallet-standard-mock';
+import {
+    createMockPhantomWallet,
+    createMockSolflareWallet,
+    createMockBackpackWallet,
+} from '../mocks/wallet-standard-mock';
 
 export const PHANTOM_WALLET_INFO: WalletInfo = {
     wallet: createMockPhantomWallet(),
@@ -55,4 +59,3 @@ export function createTimeoutWallet() {
         connectBehavior: 'timeout',
     });
 }
-
