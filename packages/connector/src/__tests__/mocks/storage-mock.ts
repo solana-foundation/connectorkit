@@ -9,27 +9,30 @@ import type { StorageAdapter } from '../../types/storage';
 export class MockStorageAdapter<T> implements StorageAdapter<T> {
     private storage = new Map<string, T>();
     private key: string;
+    private defaultValue: T | undefined;
 
     constructor(key: string, defaultValue?: T) {
         this.key = key;
+        this.defaultValue = defaultValue;
         if (defaultValue !== undefined) {
             this.storage.set(key, defaultValue);
         }
     }
 
-    async get(): Promise<T | undefined> {
-        return this.storage.get(this.key);
+    get(): T {
+        const value = this.storage.get(this.key);
+        return (value !== undefined ? value : this.defaultValue) as T;
     }
 
-    async set(value: T): Promise<void> {
+    set(value: T): void {
         this.storage.set(this.key, value);
     }
 
-    async remove(): Promise<void> {
+    remove(): void {
         this.storage.delete(this.key);
     }
 
-    async clear(): Promise<void> {
+    clear(): void {
         this.storage.clear();
     }
 

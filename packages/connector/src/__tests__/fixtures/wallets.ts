@@ -8,24 +8,21 @@ import type { WalletInfo } from '../../types/wallets';
 import { createMockPhantomWallet, createMockSolflareWallet, createMockBackpackWallet } from '../mocks/wallet-standard-mock';
 
 export const PHANTOM_WALLET_INFO: WalletInfo = {
-    name: 'Phantom',
-    icon: 'data:image/svg+xml,<svg><text>P</text></svg>',
-    chains: ['solana:mainnet', 'solana:devnet', 'solana:testnet'],
-    features: ['standard:connect', 'standard:disconnect', 'standard:events', 'solana:signTransaction', 'solana:signMessage'],
+    wallet: createMockPhantomWallet(),
+    installed: true,
+    connectable: true,
 };
 
 export const SOLFLARE_WALLET_INFO: WalletInfo = {
-    name: 'Solflare',
-    icon: 'data:image/svg+xml,<svg><text>S</text></svg>',
-    chains: ['solana:mainnet', 'solana:devnet', 'solana:testnet'],
-    features: ['standard:connect', 'standard:disconnect', 'standard:events', 'solana:signTransaction', 'solana:signMessage'],
+    wallet: createMockSolflareWallet(),
+    installed: true,
+    connectable: true,
 };
 
 export const BACKPACK_WALLET_INFO: WalletInfo = {
-    name: 'Backpack',
-    icon: 'data:image/svg+xml,<svg><text>B</text></svg>',
-    chains: ['solana:mainnet', 'solana:devnet'],
-    features: ['standard:connect', 'standard:disconnect', 'standard:events', 'solana:signTransaction'],
+    wallet: createMockBackpackWallet(),
+    installed: true,
+    connectable: true,
 };
 
 /**

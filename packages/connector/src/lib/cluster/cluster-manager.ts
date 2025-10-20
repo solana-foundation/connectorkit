@@ -19,7 +19,7 @@ export class ClusterManager extends BaseCollaborator {
         config?: ConnectorConfig['cluster'],
         debug = false,
     ) {
-        super({ stateManager, eventEmitter, debug });
+        super({ stateManager, eventEmitter, debug }, 'ClusterManager');
         this.clusterStorage = clusterStorage;
 
         if (config) {

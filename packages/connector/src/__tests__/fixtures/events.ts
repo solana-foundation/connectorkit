@@ -5,16 +5,17 @@
  */
 
 import type { ConnectorEvent } from '../../types/events';
+import type { WalletName } from '../../types/wallets';
 import { TEST_ADDRESSES } from './accounts';
 import { TEST_SIGNATURES } from './transactions';
 
 /**
- * Create a mock wallet registered event
+ * Create a mock wallets detected event
  */
-export function createWalletRegisteredEvent(walletName: string = 'Phantom'): ConnectorEvent {
+export function createWalletsDetectedEvent(count: number = 1): ConnectorEvent {
     return {
-        type: 'wallet-registered',
-        wallet: walletName,
+        type: 'wallets:detected',
+        count,
         timestamp: new Date().toISOString(),
     };
 }
@@ -25,33 +26,32 @@ export function createWalletRegisteredEvent(walletName: string = 'Phantom'): Con
 export function createConnectingEvent(walletName: string = 'Phantom'): ConnectorEvent {
     return {
         type: 'connecting',
-        wallet: walletName,
+        wallet: walletName as WalletName,
         timestamp: new Date().toISOString(),
     };
 }
 
 /**
- * Create a mock connected event
+ * Create a mock wallet connected event
  */
 export function createConnectedEvent(
     walletName: string = 'Phantom',
-    accounts: string[] = [TEST_ADDRESSES.ACCOUNT_1],
+    account: string = TEST_ADDRESSES.ACCOUNT_1,
 ): ConnectorEvent {
     return {
-        type: 'connected',
-        wallet: walletName,
-        accounts,
+        type: 'wallet:connected',
+        wallet: walletName as WalletName,
+        account: account as any,
         timestamp: new Date().toISOString(),
     };
 }
 
 /**
- * Create a mock disconnected event
+ * Create a mock wallet disconnected event
  */
-export function createDisconnectedEvent(walletName: string = 'Phantom'): ConnectorEvent {
+export function createDisconnectedEvent(): ConnectorEvent {
     return {
-        type: 'disconnected',
-        wallet: walletName,
+        type: 'wallet:disconnected',
         timestamp: new Date().toISOString(),
     };
 }
@@ -61,30 +61,31 @@ export function createDisconnectedEvent(walletName: string = 'Phantom'): Connect
  */
 export function createAccountChangedEvent(account: string = TEST_ADDRESSES.ACCOUNT_1): ConnectorEvent {
     return {
-        type: 'account-changed',
-        account,
+        type: 'account:changed',
+        account: account as any,
         timestamp: new Date().toISOString(),
     };
 }
 
 /**
- * Create a mock accounts changed event
+ * Create a mock wallet changed event
  */
-export function createAccountsChangedEvent(accounts: string[] = [TEST_ADDRESSES.ACCOUNT_1]): ConnectorEvent {
+export function createWalletChangedEvent(walletName: string = 'Phantom'): ConnectorEvent {
     return {
-        type: 'accounts-changed',
-        accounts,
+        type: 'wallet:changed',
+        wallet: walletName as WalletName,
         timestamp: new Date().toISOString(),
     };
 }
 
 /**
- * Create a mock transaction sent event
+ * Create a mock transaction tracked event
  */
-export function createTransactionSentEvent(signature: string = TEST_SIGNATURES.TX_1): ConnectorEvent {
+export function createTransactionTrackedEvent(signature: string = TEST_SIGNATURES.TX_1): ConnectorEvent {
     return {
-        type: 'transaction-sent',
-        signature,
+        type: 'transaction:tracked',
+        signature: signature as any,
+        status: 'pending',
         timestamp: new Date().toISOString(),
     };
 }
@@ -92,11 +93,11 @@ export function createTransactionSentEvent(signature: string = TEST_SIGNATURES.T
 /**
  * Create a mock error event
  */
-export function createErrorEvent(error: string = 'Test error', code?: string): ConnectorEvent {
+export function createErrorEvent(error: Error = new Error('Test error'), context: string = 'test'): ConnectorEvent {
     return {
         type: 'error',
         error,
-        code,
+        context,
         timestamp: new Date().toISOString(),
     };
 }

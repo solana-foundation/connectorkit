@@ -22,7 +22,7 @@ export const TEST_ADDRESSES = {
 export function createMockWalletAccount(
     address: string = TEST_ADDRESSES.ACCOUNT_1,
     options: {
-        chains?: string[];
+        chains?: `${string}:${string}`[];
         features?: string[];
         label?: string;
     } = {},
@@ -30,7 +30,7 @@ export function createMockWalletAccount(
     return {
         address,
         publicKey: new Uint8Array(32).fill(1),
-        chains: options.chains ?? ['solana:mainnet', 'solana:devnet'],
+        chains: (options.chains ?? ['solana:mainnet', 'solana:devnet']) as `${string}:${string}`[],
         features: options.features ?? [],
         label: options.label,
     };
@@ -43,13 +43,13 @@ export function createMockAccountInfo(
     address: string = TEST_ADDRESSES.ACCOUNT_1,
     options: {
         label?: string;
-        chains?: string[];
+        chains?: `${string}:${string}`[];
     } = {},
 ): AccountInfo {
     return {
-        address,
+        address: address as any,
         label: options.label,
-        chains: options.chains ?? ['solana:mainnet', 'solana:devnet'],
+        chains: (options.chains ?? ['solana:mainnet', 'solana:devnet']) as `${string}:${string}`[],
     };
 }
 

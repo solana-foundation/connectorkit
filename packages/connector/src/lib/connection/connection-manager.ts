@@ -1,4 +1,4 @@
-import type { Wallet, WalletAccount } from '../../types/wallets';
+import type { Wallet, WalletAccount, WalletName } from '../../types/wallets';
 import type { AccountInfo } from '../../types/accounts';
 import type { StorageAdapter } from '../../types/storage';
 import { BaseCollaborator } from '../core/base-collaborator';
@@ -56,7 +56,7 @@ export class ConnectionManager extends BaseCollaborator {
         walletStorage?: StorageAdapter<string | undefined>,
         debug = false,
     ) {
-        super({ stateManager, eventEmitter, debug });
+        super({ stateManager, eventEmitter, debug }, 'ConnectionManager');
         this.walletStorage = walletStorage;
     }
 
@@ -70,7 +70,7 @@ export class ConnectionManager extends BaseCollaborator {
 
         this.eventEmitter.emit({
             type: 'connecting',
-            wallet: name,
+            wallet: name as WalletName,
             timestamp: new Date().toISOString(),
         });
 
@@ -113,8 +113,8 @@ export class ConnectionManager extends BaseCollaborator {
 
             this.eventEmitter.emit({
                 type: 'wallet:connected',
-                wallet: name,
-                account: selected || '',
+                wallet: name as WalletName,
+                account: (selected || '') as any,
                 timestamp: new Date().toISOString(),
             });
 
@@ -138,7 +138,7 @@ export class ConnectionManager extends BaseCollaborator {
 
             this.eventEmitter.emit({
                 type: 'connection:failed',
-                wallet: name,
+                wallet: name as WalletName,
                 error: errorMessage,
                 timestamp: new Date().toISOString(),
             });
@@ -245,12 +245,12 @@ export class ConnectionManager extends BaseCollaborator {
         if (!target) throw new Error(`Requested account not available: ${address}`);
 
         // Update selected account
-        this.stateManager.updateState({ selectedAccount: target.address as string });
+        this.stateManager.updateState({ selectedAccount: target.address as any });
 
-        // Emit account-changed event
+        // Emit account:changed event
         this.eventEmitter.emit({
-            type: 'account-changed',
-            account: target.address as string,
+            type: 'account:changed',
+            account: target.address as any,
             timestamp: new Date().toISOString(),
         });
     }

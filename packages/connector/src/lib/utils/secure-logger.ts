@@ -17,7 +17,7 @@
  * ```
  */
 
-import { isDebugEnabled, debug as gillDebug, type LogLevel as GillLogLevel } from 'gill';
+import { isDebugEnabled, debug as gillDebug } from 'gill';
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
@@ -167,7 +167,7 @@ export class SecureLogger {
 
         // Use gill's debug system if enabled, otherwise fall back to console.*
         if (this.config.useGillDebug && gillDebugEnabled) {
-            gillDebug(fullMessage, level as GillLogLevel, this.config.prefix);
+            gillDebug(fullMessage, level as any, this.config.prefix);
         } else {
             const prefix = `[${this.config.prefix}]`;
             switch (level) {

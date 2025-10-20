@@ -4,7 +4,8 @@
  * Pre-configured transaction data for testing
  */
 
-import type { TransactionActivity } from '../../types/transactions';
+import type { TransactionActivity, TransactionMethod } from '../../types/transactions';
+import type { SolanaClusterId } from '@wallet-ui/core';
 
 /**
  * Test transaction signatures
@@ -24,13 +25,17 @@ export function createMockTransaction(
         status?: 'pending' | 'confirmed' | 'failed';
         timestamp?: string;
         error?: string;
+        cluster?: SolanaClusterId;
+        method?: TransactionMethod;
     } = {},
 ): TransactionActivity {
     return {
-        signature,
+        signature: signature as any,
         status: options.status ?? 'pending',
         timestamp: options.timestamp ?? new Date().toISOString(),
         error: options.error,
+        cluster: (options.cluster ?? 'solana:devnet') as SolanaClusterId,
+        method: options.method ?? 'signAndSendTransaction',
     };
 }
 

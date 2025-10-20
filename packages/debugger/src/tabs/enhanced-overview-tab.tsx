@@ -8,7 +8,6 @@
 
 import { useState, useMemo } from 'react';
 import type { ConnectorState, ConnectorHealth, TransactionSignerCapabilities } from '@connector-kit/connector';
-import type { SolanaCluster } from '@wallet-ui/core';
 import type { ConnectorClient } from '@connector-kit/connector/headless';
 import { Section, Divider, EmptyState, Button, CollapsibleSection } from '../ui-components';
 import { StorageIcon, NetworkIcon, LockIcon, HealthIcon, WalletIcon } from '../icons';
@@ -20,7 +19,7 @@ interface EnhancedOverviewTabProps {
     formatted: string;
     copied: boolean;
     copy: () => Promise<boolean>;
-    cluster: SolanaCluster | null;
+    cluster: ConnectorState['cluster'];
     rpcUrl: string;
     ready: boolean;
     capabilities: TransactionSignerCapabilities;
@@ -94,12 +93,13 @@ export function EnhancedOverviewTab({
         handleClearCluster();
     };
 
-    const hasHealthIssues =
+    const hasHealthIssues = !!(
         health &&
         (!health.initialized ||
             !health.walletStandardAvailable ||
             !health.storageAvailable ||
-            (health.errors && health.errors.length > 0));
+            (health.errors && health.errors.length > 0))
+    );
 
     return (
         <div style={{ height: '100%', overflowY: 'auto' }}>

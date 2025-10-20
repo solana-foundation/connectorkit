@@ -17,7 +17,7 @@ export class TransactionTracker extends BaseCollaborator {
         maxTransactions = 20,
         debug = false,
     ) {
-        super({ stateManager, eventEmitter, debug });
+        super({ stateManager, eventEmitter, debug }, 'TransactionTracker');
         this.maxTransactions = maxTransactions;
     }
 
@@ -29,7 +29,7 @@ export class TransactionTracker extends BaseCollaborator {
         const fullActivity: TransactionActivity = {
             ...activity,
             timestamp: new Date().toISOString(),
-            cluster: state.cluster?.label || 'unknown',
+            cluster: (state.cluster?.id || 'solana:devnet') as any,
         };
 
         this.transactions.unshift(fullActivity);
@@ -59,7 +59,7 @@ export class TransactionTracker extends BaseCollaborator {
 
             this.eventEmitter.emit({
                 type: 'transaction:updated',
-                signature,
+                signature: signature as any,
                 status,
                 timestamp: new Date().toISOString(),
             });

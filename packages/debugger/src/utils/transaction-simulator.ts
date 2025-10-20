@@ -49,10 +49,10 @@ export async function simulateTransaction(
             replaceRecentBlockhash: options.replaceRecentBlockhash ?? true,
             sigVerify: options.sigVerify ?? false,
             ...(options.accounts ? { accounts: options.accounts } : {}),
-        };
+        } as any;
 
         // Simulate the transaction
-        const simulation = await rpc.simulateTransaction(transactionBytes, simulationOptions).send();
+        const simulation = await rpc.simulateTransaction(transactionBytes as any, simulationOptions).send();
 
         // Check if simulation returned a value
         if (!simulation || !simulation.value) {
