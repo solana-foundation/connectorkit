@@ -1,5 +1,5 @@
 /**
- * @connector-kit/connector - Gill/Kit Transaction Signer Adapter
+ * @solana/connector - Gill/Kit Transaction Signer Adapter
  *
  * Adapter that wraps connector-kit's TransactionSigner to be compatible with
  * gill (@solana/kit) TransactionModifyingSigner interface.
@@ -309,8 +309,8 @@ function extractSignature(signedTx: SolanaTransaction): Uint8Array {
  *
  * @example
  * ```typescript
- * import { createTransactionSigner } from '@connector-kit/connector';
- * import { createGillTransactionSigner } from '@connector-kit/connector/gill';
+ * import { createTransactionSigner } from '@solana/connector';
+ * import { createGillTransactionSigner } from '@solana/connector/gill';
  *
  * const connectorSigner = createTransactionSigner({ wallet, account });
  * const gillSigner = createGillTransactionSigner(connectorSigner);

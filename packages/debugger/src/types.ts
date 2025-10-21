@@ -1,5 +1,5 @@
 /**
- * @connector-kit/debugger - Debug Panel Types
+ * @solana/connector-debugger - Debug Panel Types
  */
 
 import type React from 'react';

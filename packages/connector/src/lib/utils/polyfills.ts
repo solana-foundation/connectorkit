@@ -1,5 +1,5 @@
 /**
- * @connector-kit/connector - Browser Compatibility Polyfills
+ * @solana/connector - Browser Compatibility Polyfills
  *
  * Ensures connector works across all browser environments including:
  * - Mobile browsers (iOS Safari, Chrome Mobile, etc.)
@@ -32,10 +32,10 @@ let installed = false;
  * @example
  * ```ts
  * // Automatically called when connector-provider is imported
- * import { ConnectorProvider } from '@connector-kit/connector'
+ * import { ConnectorProvider } from '@solana/connector'
  *
  * // Can also be called manually if needed
- * import { installPolyfills } from '@connector-kit/connector/headless'
+ * import { installPolyfills } from '@solana/connector/headless'
  * installPolyfills()
  * ```
  */
@@ -74,7 +74,7 @@ export function installPolyfills(): void {
  *
  * @example
  * ```ts
- * import { isPolyfillInstalled } from '@connector-kit/connector/headless'
+ * import { isPolyfillInstalled } from '@solana/connector/headless'
  *
  * if (!isPolyfillInstalled()) {
  *   console.warn('Polyfills not installed - may have issues on older browsers')
@@ -93,7 +93,7 @@ export function isPolyfillInstalled(): boolean {
  *
  * @example
  * ```ts
- * import { isCryptoAvailable } from '@connector-kit/connector/headless'
+ * import { isCryptoAvailable } from '@solana/connector/headless'
  *
  * if (!isCryptoAvailable()) {
  *   // Show warning to user about unsupported browser
@@ -118,7 +118,7 @@ export function isCryptoAvailable(): boolean {
  *
  * @example
  * ```ts
- * import { getPolyfillStatus } from '@connector-kit/connector/headless'
+ * import { getPolyfillStatus } from '@solana/connector/headless'
  *
  * const status = getPolyfillStatus()
  * console.log('Polyfills:', status.installed ? 'installed' : 'not installed')

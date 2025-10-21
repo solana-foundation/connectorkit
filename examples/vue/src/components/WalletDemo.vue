@@ -75,8 +75,8 @@
 
 <script setup lang="ts">
 import { reactive, onMounted, onUnmounted } from 'vue';
-import { ConnectorClient, getDefaultConfig } from '@connector-kit/connector/headless';
-import type { ConnectorState, WalletInfo } from '@connector-kit/connector';
+import { ConnectorClient, getDefaultConfig } from '@solana/connector/headless';
+import type { ConnectorState, WalletInfo } from '@solana/connector';
 
 // Reactive state
 const state = reactive({

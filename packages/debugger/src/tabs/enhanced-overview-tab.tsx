@@ -1,5 +1,5 @@
 /**
- * @connector-kit/debugger - Enhanced Overview Tab Component
+ * @solana/connector-debugger - Enhanced Overview Tab Component
  *
  * Combines Overview + Signer + Wallet information into a single comprehensive dashboard
  */
@@ -7,8 +7,8 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import type { ConnectorState, ConnectorHealth, TransactionSignerCapabilities } from '@connector-kit/connector';
-import type { ConnectorClient } from '@connector-kit/connector/headless';
+import type { ConnectorState, ConnectorHealth, TransactionSignerCapabilities } from '@solana/connector';
+import type { ConnectorClient } from '@solana/connector/headless';
 import { Section, Divider, EmptyState, Button, CollapsibleSection } from '../ui-components';
 import { StorageIcon, NetworkIcon, LockIcon, HealthIcon, WalletIcon } from '../icons';
 

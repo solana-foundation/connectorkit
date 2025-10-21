@@ -1,5 +1,5 @@
 /**
- * @connector-kit/debugger - Address Frequency Tracker
+ * @solana/connector-debugger - Address Frequency Tracker
  *
  * Tracks address usage across transactions to identify ALT candidates.
  * Addresses that appear frequently across multiple transactions are good

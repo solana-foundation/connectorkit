@@ -1,10 +1,10 @@
 /**
- * @connector-kit/debugger - Events Tab Component
+ * @solana/connector-debugger - Events Tab Component
  */
 
 'use client';
 
-import type { ConnectorEvent } from '@connector-kit/connector';
+import type { ConnectorEvent } from '@solana/connector';
 import { Button, EmptyState } from '../ui-components';
 import { PlayIcon, PauseIcon, TrashIcon } from '../icons';
 

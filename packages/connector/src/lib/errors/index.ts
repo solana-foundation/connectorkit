@@ -1,5 +1,5 @@
 /**
- * @connector-kit/connector - Unified Error System
+ * @solana/connector - Unified Error System
  *
  * Provides consistent, structured error handling across the entire library.
  * All errors extend ConnectorError and include:

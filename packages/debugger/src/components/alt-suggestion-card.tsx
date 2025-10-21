@@ -1,5 +1,5 @@
 /**
- * @connector-kit/debugger - ALT Suggestion Card Component
+ * @solana/connector-debugger - ALT Suggestion Card Component
  *
  * Displays optimization suggestions for Address Lookup Tables
  */

@@ -1,5 +1,5 @@
 /**
- * @connector-kit/debugger - Code Snippet Generator
+ * @solana/connector-debugger - Code Snippet Generator
  *
  * Generates ready-to-use code snippets for creating and using
  * Address Lookup Tables based on analysis.

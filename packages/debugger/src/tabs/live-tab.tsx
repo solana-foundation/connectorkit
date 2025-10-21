@@ -1,5 +1,5 @@
 /**
- * @connector-kit/debugger - Live Tab
+ * @solana/connector-debugger - Live Tab
  *
  * Real-time transaction monitoring with automatic simulation
  */
@@ -7,7 +7,7 @@
 'use client';
 
 import { useState } from 'react';
-import type { ConnectorClient } from '@connector-kit/connector/headless';
+import type { ConnectorClient } from '@solana/connector/headless';
 import { useAutoSimulation } from '../hooks/use-auto-simulation';
 import { LiveTransactionCard } from '../components/live-transaction-card';
 import { DEFAULT_AUTO_SIMULATION_CONFIG } from '../types/live-transaction';

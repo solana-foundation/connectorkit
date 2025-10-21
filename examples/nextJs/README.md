@@ -133,7 +133,7 @@ These components are meant to be **copied and customized**:
 
 These components use:
 
-- `@connector-kit/connector` - Headless wallet connection logic
+- `@solana/connector` - Headless wallet connection logic
 - `shadcn/ui` - UI components (Button, Dialog, Dropdown, etc.)
 - `lucide-react` - Icons
 - `tailwindcss` - Styling
@@ -162,7 +162,7 @@ components/
 1. Install dependencies:
 
     ```bash
-    npm install @connector-kit/connector
+    npm install @solana/connector
     npx shadcn@latest init
     npx shadcn@latest add button dialog dropdown-menu avatar badge card
     ```

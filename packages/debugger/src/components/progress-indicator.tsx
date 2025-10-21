@@ -1,5 +1,5 @@
 /**
- * @connector-kit/debugger - Progress Indicator Component
+ * @solana/connector-debugger - Progress Indicator Component
  *
  * Visual progress indicator for transaction lifecycle
  */

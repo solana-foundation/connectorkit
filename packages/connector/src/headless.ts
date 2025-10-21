@@ -1,5 +1,5 @@
 /**
- * @connector-kit/connector/headless
+ * @solana/connector/headless
  *
  * Framework-agnostic core - works with Vue, Angular, Vanilla JS
  * Zero React dependencies for maximum compatibility

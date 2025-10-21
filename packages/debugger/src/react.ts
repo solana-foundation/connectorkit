@@ -1,5 +1,5 @@
 /**
- * @connector-kit/debugger/react
+ * @solana/connector-debugger/react
  *
  * React-specific exports for the debug panel
  */

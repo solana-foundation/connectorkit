@@ -17,7 +17,7 @@ import {
     LAMPORTS_PER_SOL,
 } from 'gill';
 import { getTransferSolInstruction } from 'gill/programs';
-import { useGillTransactionSigner, useCluster, useConnectorClient } from '@connector-kit/connector';
+import { useGillTransactionSigner, useCluster, useConnectorClient } from '@solana/connector';
 import { TransactionForm } from './transaction-form';
 import { TransactionResult } from './transaction-result';
 

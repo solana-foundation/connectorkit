@@ -1,5 +1,5 @@
 /**
- * Global test setup for @connector-kit/connector
+ * Global test setup for @solana/connector
  *
  * This file runs before all tests to set up the testing environment,
  * including global mocks and polyfills.

@@ -1,5 +1,5 @@
 {
-    "name": "@connector-kit/connector",
+    "name": "@solana/connector",
     "version": "0.1.0",
     "description": "Headless wallet connector client and React provider built on Wallet Standard",
     "main": "./dist/index.js",
@@ -54,7 +54,7 @@
         "react": {
             "optional": true
         },
-        "@connector-kit/debugger": {
+        "@solana/connector-debugger": {
             "optional": true
         },
         "@solana/web3.js": {

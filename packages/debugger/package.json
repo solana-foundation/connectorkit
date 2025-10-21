@@ -1,7 +1,7 @@
 {
-    "name": "@connector-kit/debugger",
+    "name": "@solana/connector-debugger",
     "version": "0.1.0",
-    "description": "Development debug panel for @connector-kit/connector",
+    "description": "Development debug panel for @solana/connector",
     "main": "./dist/index.js",
     "module": "./dist/index.mjs",
     "types": "./dist/index.d.ts",
@@ -32,11 +32,11 @@
         "@solana/kit": "^4.0.0"
     },
     "peerDependencies": {
-        "@connector-kit/connector": "workspace:*",
+        "@solana/connector": "workspace:*",
         "react": ">=18.0.0"
     },
     "devDependencies": {
-        "@connector-kit/connector": "workspace:*",
+        "@solana/connector": "workspace:*",
         "@types/react": "^19.2.2",
         "tsup": "^8.5.0",
         "typescript": "^5.9.3"

@@ -1,5 +1,5 @@
 /**
- * @connector-kit/connector - useCluster hook
+ * @solana/connector - useCluster hook
  *
  * React hook for managing Solana cluster (network) state
  */

@@ -10,7 +10,7 @@ import type {
 } from '@wallet-standard/features';
 
 /*
- * @connector-kit/connector - wallet-standard integration
+ * @solana/connector - wallet-standard integration
  *
  * Simplified wallet standard types and registry access
  */

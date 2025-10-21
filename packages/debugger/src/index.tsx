@@ -1,5 +1,5 @@
 /**
- * @connector-kit/debugger - Enhanced Debug Panel Component
+ * @solana/connector-debugger - Enhanced Debug Panel Component
  *
  * Comprehensive development-only debug panel with:
  * - Tabbed interface for organization
@@ -13,14 +13,14 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import type { ConnectorEvent } from '@connector-kit/connector';
+import type { ConnectorEvent } from '@solana/connector';
 import {
     useConnector,
     useConnectorClient,
     useAccount,
     useCluster,
     useTransactionSigner,
-} from '@connector-kit/connector/react';
+} from '@solana/connector/react';
 
 import type { DebugPanelProps, TabId, TabConfig } from './types';
 import { BugIcon, CloseIcon, OverviewIcon, TransactionsIcon, EventsIcon } from './icons';
@@ -56,7 +56,7 @@ const POSITION_STYLES: Record<string, React.CSSProperties> = {
  *
  * @example
  * ```tsx
- * import { ConnectorDebugPanel } from '@connector-kit/debugger/react'
+ * import { ConnectorDebugPanel } from '@solana/connector-debugger/react'
  *
  * function App() {
  *   return (
@@ -104,7 +104,7 @@ export function ConnectorDebugPanel({
     useEffect(() => {
         if (!client || isPaused) return;
 
-        const unsubscribe = client.on((event: import('@connector-kit/connector').ConnectorEvent) => {
+        const unsubscribe = client.on((event: import('@solana/connector').ConnectorEvent) => {
             setEvents(prev => {
                 const newEvents = [event, ...prev];
                 return newEvents.slice(0, maxEvents);

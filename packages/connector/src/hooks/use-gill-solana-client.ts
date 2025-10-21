@@ -1,5 +1,5 @@
 /**
- * @connector-kit/connector - useGillSolanaClient hook
+ * @solana/connector - useGillSolanaClient hook
  *
  * React hook for Gill's SolanaClient with built-in RPC and WebSocket subscriptions
  * Provides rpc, rpcSubscriptions, sendAndConfirmTransaction, and simulateTransaction
@@ -50,7 +50,7 @@ export interface UseGillSolanaClientReturn {
  *
  * @example
  * ```tsx
- * import { useGillSolanaClient, useGillTransactionSigner } from '@connector-kit/connector';
+ * import { useGillSolanaClient, useGillTransactionSigner } from '@solana/connector';
  * import { signTransactionMessageWithSigners } from 'gill';
  *
  * function SendTransaction() {

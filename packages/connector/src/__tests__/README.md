@@ -1,6 +1,6 @@
-# Testing Guide for @connector-kit/connector
+# Testing Guide for @solana/connector
 
-This guide explains how to write, run, and contribute tests for the `@connector-kit/connector` package.
+This guide explains how to write, run, and contribute tests for the `@solana/connector` package.
 
 ## Table of Contents
 

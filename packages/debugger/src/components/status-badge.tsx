@@ -1,5 +1,5 @@
 /**
- * @connector-kit/debugger - Status Badge Component
+ * @solana/connector-debugger - Status Badge Component
  *
  * Animated status indicators for transaction lifecycle
  */

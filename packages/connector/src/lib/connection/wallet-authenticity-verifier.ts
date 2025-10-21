@@ -1,5 +1,5 @@
 /**
- * @connector-kit/connector - Wallet Authenticity Verifier
+ * @solana/connector - Wallet Authenticity Verifier
  *
  * Verifies that detected wallets are authentic and not malicious browser extensions
  * Uses dynamic heuristic-based approach instead of hard-coded wallet lists

@@ -1,6 +1,6 @@
-# @connector-kit/debugger
+# @solana/connector-debugger
 
-Development debug panel for `@connector-kit/connector` with advanced transaction analysis and optimization capabilities.
+Development debug panel for `@solana/connector` with advanced transaction analysis and optimization capabilities.
 
 **✨ New in this version:** Transaction size analysis, Address Lookup Table optimization recommendations, pre-flight simulation, session-wide statistics, and automatic code generation for creating ALTs. Test transactions before sending and validate optimizations work. Based on real-world measurements showing **40-50% typical size reductions** and **12-15% compute unit savings**.
 
@@ -44,19 +44,19 @@ Development debug panel for `@connector-kit/connector` with advanced transaction
 ## Installation
 
 ```bash
-npm install @connector-kit/debugger
+npm install @solana/connector-debugger
 # or
-pnpm add @connector-kit/debugger
+pnpm add @solana/connector-debugger
 # or
-yarn add @connector-kit/debugger
+yarn add @solana/connector-debugger
 ```
 
 ## Usage
 
 ```tsx
-import { AppProvider } from '@connector-kit/connector/react';
-import { ConnectorDebugPanel } from '@connector-kit/debugger/react';
-import { getDefaultConfig } from '@connector-kit/connector/headless';
+import { AppProvider } from '@solana/connector/react';
+import { ConnectorDebugPanel } from '@solana/connector-debugger/react';
+import { getDefaultConfig } from '@solana/connector/headless';
 
 function App() {
     const config = getDefaultConfig({
@@ -480,7 +480,7 @@ await signer.signAndSendTransaction(transaction);
 ## Important Notes
 
 - **Development Only**: The debug panel should only be used in development environments
-- **Requires Connector Provider**: Must be used within `AppProvider` or `ConnectorProvider` from `@connector-kit/connector`
+- **Requires Connector Provider**: Must be used within `AppProvider` or `ConnectorProvider` from `@solana/connector`
 - **RPC Access**: Transaction details require RPC access (uses cluster from connector config)
 
 ## Advanced Features

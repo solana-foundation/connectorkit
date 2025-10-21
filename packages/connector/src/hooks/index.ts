@@ -1,5 +1,5 @@
 /**
- * @connector-kit/connector - React Hooks
+ * @solana/connector - React Hooks
  *
  * Enhanced React hooks for wallet and cluster management
  */

@@ -1,6 +1,6 @@
 'use client';
 
-import { useConnector, useAccount } from '@connector-kit/connector';
+import { useConnector, useAccount } from '@solana/connector';
 import { Button } from '@/components/ui/button';
 import {
     DropdownMenu,

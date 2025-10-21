@@ -1,6 +1,6 @@
 'use client';
 
-import { useConnector } from '@connector-kit/connector/react';
+import { useConnector } from '@solana/connector/react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';

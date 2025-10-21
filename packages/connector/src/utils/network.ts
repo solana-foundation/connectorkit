@@ -1,5 +1,5 @@
 /**
- * @connector-kit/connector - Network utilities
+ * @solana/connector - Network utilities
  *
  * Utilities for translating between different Solana network naming conventions.
  * Ensures compatibility with WalletUI (SolanaClusterId) and Gill types.

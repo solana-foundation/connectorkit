@@ -1,5 +1,5 @@
 /**
- * @connector-kit/debugger - Auto-Simulation Hook
+ * @solana/connector-debugger - Auto-Simulation Hook
  *
  * Automatically simulates transactions when connector emits preparing events
  */
@@ -7,7 +7,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import type { ConnectorClient } from '@connector-kit/connector';
+import type { ConnectorClient } from '@solana/connector';
 import type { LiveTransaction, AutoSimulationConfig, LiveTransactionStatus } from '../types/live-transaction';
 import { simulateTransaction } from '../utils/transaction-simulator';
 import { SimulationTracker } from '../utils/simulation-tracker';

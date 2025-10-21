@@ -1,5 +1,5 @@
 /**
- * @connector-kit/connector - Cluster utilities
+ * @solana/connector - Cluster utilities
  *
  * Utility functions for working with Solana clusters (networks)
  */

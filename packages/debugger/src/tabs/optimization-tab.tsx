@@ -1,5 +1,5 @@
 /**
- * @connector-kit/debugger - Optimization Tab
+ * @solana/connector-debugger - Optimization Tab
  *
  * Session-wide statistics and ALT recommendations
  */

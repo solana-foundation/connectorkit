@@ -1,9 +1,9 @@
 'use client';
 
 import { useMemo } from 'react';
-import { AppProvider } from '@connector-kit/connector/react';
-import { ConnectorDebugPanel } from '@connector-kit/debugger/react';
-import { getDefaultConfig, getDefaultMobileConfig } from '@connector-kit/connector/headless';
+import { AppProvider } from '@solana/connector/react';
+import { ConnectorDebugPanel } from '@solana/connector-debugger/react';
+import { getDefaultConfig, getDefaultMobileConfig } from '@solana/connector/headless';
 import type { ReactNode } from 'react';
 
 export function Providers({ children }: { children: ReactNode }) {

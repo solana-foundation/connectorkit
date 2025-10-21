@@ -1,5 +1,5 @@
 /**
- * @connector-kit/debugger - Transaction Size Analyzer
+ * @solana/connector-debugger - Transaction Size Analyzer
  *
  * Analyzes transaction byte sizes and categorizes them relative to Solana's
  * 1232 byte transaction limit. Provides insights for optimization.

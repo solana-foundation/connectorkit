@@ -1,5 +1,5 @@
 /**
- * @connector-kit/connector - Transaction Signing Abstraction Layer
+ * @solana/connector - Transaction Signing Abstraction Layer
  *
  * Provides a clean, unified interface for transaction operations that works
  * across both Wallet Standard and legacy wallet implementations.

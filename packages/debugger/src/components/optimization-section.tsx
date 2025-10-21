@@ -1,5 +1,5 @@
 /**
- * @connector-kit/debugger - Optimization Section Component
+ * @solana/connector-debugger - Optimization Section Component
  *
  * Displays optimization analysis in transaction detail view
  */

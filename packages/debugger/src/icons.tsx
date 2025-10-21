@@ -1,5 +1,5 @@
 /**
- * @connector-kit/debugger - Debug Panel Icons
+ * @solana/connector-debugger - Debug Panel Icons
  */
 
 import React from 'react';

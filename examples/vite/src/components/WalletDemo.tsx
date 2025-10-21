@@ -1,4 +1,4 @@
-import { useConnector, useAccount, useCluster } from '@connector-kit/connector/react';
+import { useConnector, useAccount, useCluster } from '@solana/connector/react';
 
 export function WalletDemo() {
     const { wallets, select, disconnect, connected, connecting } = useConnector();

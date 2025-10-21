@@ -1,5 +1,5 @@
 /**
- * @connector-kit/connector - Formatting utilities
+ * @solana/connector - Formatting utilities
  *
  * Unified utility functions for formatting addresses, amounts, and other display values
  * Consolidates both fast (number-based) and precise (bigint-based) formatting options

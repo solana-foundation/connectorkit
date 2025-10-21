@@ -1,5 +1,5 @@
 /**
- * @connector-kit/debugger - Simulation Tracker
+ * @solana/connector-debugger - Simulation Tracker
  *
  * Tracks simulation results across the session for statistics and analysis
  */

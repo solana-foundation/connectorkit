@@ -1,13 +1,13 @@
-# @connector-kit/connector
+# @solana/connector
 
 Headless wallet connector built on Wallet Standard and WalletUI
 
-![npm](https://img.shields.io/npm/v/@connector-kit/connector)
+![npm](https://img.shields.io/npm/v/@solana/connector)
 
 ## Installation
 
 ```bash
-pnpm add @connector-kit/connector
+pnpm add @solana/connector
 ```
 
 ## Features
@@ -38,13 +38,13 @@ pnpm add @connector-kit/connector
 ### 1. Install
 
 ```bash
-pnpm add @connector-kit/connector
+pnpm add @solana/connector
 ```
 
 ### 2. Setup Provider (once in your app root)
 
 ```typescript
-import { ConnectorProvider, getDefaultConfig } from '@connector-kit/connector';
+import { ConnectorProvider, getDefaultConfig } from '@solana/connector';
 
 function App() {
   return (
@@ -58,7 +58,7 @@ function App() {
 ### 3. Use Hooks (in any component)
 
 ```typescript
-import { useConnector, useAccount } from '@connector-kit/connector';
+import { useConnector, useAccount } from '@solana/connector';
 
 function WalletButton() {
   const { wallets, select, disconnect, connected } = useConnector();
@@ -98,7 +98,7 @@ These are the main hooks you'll use in your components.
 Main hook for wallet connection and state.
 
 ```typescript
-import { useConnector } from '@connector-kit/connector';
+import { useConnector } from '@solana/connector';
 
 function Component() {
     const {
@@ -121,7 +121,7 @@ function Component() {
 Hook for working with the connected account.
 
 ```typescript
-import { useAccount } from '@connector-kit/connector';
+import { useAccount } from '@solana/connector';
 
 function Component() {
     const {
@@ -139,7 +139,7 @@ function Component() {
 Hook for managing Solana network/cluster.
 
 ```typescript
-import { useCluster } from '@connector-kit/connector';
+import { useCluster } from '@solana/connector';
 
 function Component() {
     const {
@@ -159,7 +159,7 @@ function Component() {
 Hook for accessing current wallet metadata.
 
 ```typescript
-import { useWalletInfo } from '@connector-kit/connector';
+import { useWalletInfo } from '@solana/connector';
 
 function Component() {
     const {
@@ -180,7 +180,7 @@ Convenience functions when you need more control than the hooks provide.
 ### Formatting
 
 ```typescript
-import { formatSOL, formatAddress } from '@connector-kit/connector';
+import { formatSOL, formatAddress } from '@solana/connector';
 
 // Format SOL amounts (custom decimals)
 formatSOL(1500000000, { decimals: 4 }); // "1.5000 SOL"
@@ -192,7 +192,7 @@ formatAddress(address, { length: 6 }); // "5Gv8yU...8x3kF"
 ### Clipboard
 
 ```typescript
-import { copyAddressToClipboard } from '@connector-kit/connector';
+import { copyAddressToClipboard } from '@solana/connector';
 
 // Copy to clipboard
 await copyAddressToClipboard(address);
@@ -201,7 +201,7 @@ await copyAddressToClipboard(address);
 ### Explorer URLs
 
 ```typescript
-import { getTransactionUrl, getAddressUrl } from '@connector-kit/connector';
+import { getTransactionUrl, getAddressUrl } from '@solana/connector';
 
 // Get Solana Explorer URLs
 const txUrl = getTransactionUrl(cluster, signature);
@@ -211,7 +211,7 @@ const addrUrl = getAddressUrl(cluster, address);
 ### Network Helpers
 
 ```typescript
-import { isMainnet, getNetworkDisplayName } from '@connector-kit/connector';
+import { isMainnet, getNetworkDisplayName } from '@solana/connector';
 
 // Check network type
 if (isMainnet(cluster)) {
@@ -231,7 +231,7 @@ const name = getNetworkDisplayName('mainnet-beta'); // "Mainnet"
 ### Basic Configuration
 
 ```typescript
-import { getDefaultConfig } from '@connector-kit/connector';
+import { getDefaultConfig } from '@solana/connector';
 
 const config = getDefaultConfig({
     appName: 'My App', // Required
@@ -254,7 +254,7 @@ const config = getDefaultConfig({
 ### Custom Clusters
 
 ```typescript
-import { getDefaultConfig, createSolanaMainnet } from '@connector-kit/connector';
+import { getDefaultConfig, createSolanaMainnet } from '@solana/connector';
 
 const config = getDefaultConfig({
     appName: 'My App',
@@ -286,7 +286,7 @@ const config = getDefaultConfig({
 ### Error Boundaries
 
 ```typescript
-import { ConnectorErrorBoundary } from '@connector-kit/connector';
+import { ConnectorErrorBoundary } from '@solana/connector';
 
 <ConnectorErrorBoundary
   maxRetries={3}
@@ -311,7 +311,7 @@ import { ConnectorErrorBoundary } from '@connector-kit/connector';
 Use `ConnectorClient` for non-React frameworks.
 
 ```typescript
-import { ConnectorClient, getDefaultConfig } from '@connector-kit/connector/headless';
+import { ConnectorClient, getDefaultConfig } from '@solana/connector/headless';
 
 // Create client
 const client = new ConnectorClient(getDefaultConfig({ appName: 'My App' }));
@@ -352,7 +352,7 @@ See [Complete API Reference](#complete-api-reference) for full details.
 If you're using both ConnectorKit and Armadura, use `createConfig()` to avoid duplication:
 
 ```typescript
-import { createConfig, AppProvider } from '@connector-kit/connector';
+import { createConfig, AppProvider } from '@solana/connector';
 import { ArmaProvider } from '@armadura/sdk';
 
 const config = createConfig({
@@ -396,7 +396,7 @@ Storage uses nanostores with built-in enhancements that are **automatically appl
 - Custom error tracking
 
 ```typescript
-import { getDefaultConfig, createEnhancedStorageWallet, EnhancedStorageAdapter } from '@connector-kit/connector';
+import { getDefaultConfig, createEnhancedStorageWallet, EnhancedStorageAdapter } from '@solana/connector';
 
 const config = getDefaultConfig({
     appName: 'My App',
@@ -463,7 +463,7 @@ pnpm lint        # Lint code
 Create a default connector configuration with sensible defaults.
 
 ```typescript
-import { getDefaultConfig } from '@connector-kit/connector';
+import { getDefaultConfig } from '@solana/connector';
 
 const config = getDefaultConfig({
   appName: string,                        // Required: App name
@@ -488,7 +488,7 @@ const config = getDefaultConfig({
 Create unified configuration for ConnectorKit + Armadura integration.
 
 ```typescript
-import { createConfig } from '@connector-kit/connector';
+import { createConfig } from '@solana/connector';
 
 const config = createConfig({
   appName: string,
@@ -511,7 +511,7 @@ const config = createConfig({
 Create Mobile Wallet Adapter configuration.
 
 ```typescript
-import { getDefaultMobileConfig } from '@connector-kit/connector';
+import { getDefaultMobileConfig } from '@solana/connector';
 
 const mobileConfig = getDefaultMobileConfig({
   appName: string,
@@ -525,7 +525,7 @@ const mobileConfig = getDefaultMobileConfig({
 #### Clipboard Utilities
 
 ```typescript
-import { copyAddressToClipboard, copyToClipboard } from '@connector-kit/connector';
+import { copyAddressToClipboard, copyToClipboard } from '@solana/connector';
 
 // Copy address to clipboard
 await copyAddressToClipboard(address: string): Promise<boolean>
@@ -550,7 +550,7 @@ import {
   formatSOLSimple,
   formatNumberSimple,
   truncateSimple
-} from '@connector-kit/connector';
+} from '@solana/connector';
 
 // Format Solana address (with copy to clipboard)
 formatAddress(address: string, options?: {
@@ -594,7 +594,7 @@ import {
   isLocalCluster,
   getClusterName,
   getClusterType
-} from '@connector-kit/connector';
+} from '@solana/connector';
 
 // Get RPC endpoint for cluster
 getClusterRpcUrl(cluster: SolanaCluster): string
@@ -639,7 +639,7 @@ import {
   isLocalnet,
   getNetworkDisplayName,
   RPC_ENDPOINTS
-} from '@connector-kit/connector';
+} from '@solana/connector';
 
 // Normalize network names ('mainnet' vs 'mainnet-beta')
 normalizeNetwork(network: string): SolanaNetwork
@@ -688,7 +688,7 @@ import {
   createEnhancedStorageCluster,
   createEnhancedStorageWallet,
   EnhancedStorageAdapter
-} from '@connector-kit/connector';
+} from '@solana/connector';
 
 // Account storage (with Solana address validation)
 const accountStorage = createEnhancedStorageAccount({
@@ -761,7 +761,7 @@ import {
   createSolanaDevnet,
   createSolanaTestnet,
   createSolanaLocalnet
-} from '@connector-kit/connector';
+} from '@solana/connector';
 
 // Create cluster configurations
 const mainnet = createSolanaMainnet({
@@ -777,7 +777,7 @@ const localnet = createSolanaLocalnet({ /* options */ });
 ### Error Handling
 
 ```typescript
-import { WalletErrorType, type WalletError } from '@connector-kit/connector';
+import { WalletErrorType, type WalletError } from '@solana/connector';
 
 // Error types enum
 WalletErrorType {
@@ -839,7 +839,7 @@ import type {
 
     // Errors
     WalletError,
-} from '@connector-kit/connector';
+} from '@solana/connector';
 ```
 
 ### Advanced Usage
@@ -848,7 +848,7 @@ import type {
 
 ```typescript
 // Import headless exports only (no React)
-import { ConnectorClient, getDefaultConfig } from '@connector-kit/connector/headless';
+import { ConnectorClient, getDefaultConfig } from '@solana/connector/headless';
 
 const client = new ConnectorClient(config);
 ```
@@ -857,7 +857,7 @@ const client = new ConnectorClient(config);
 
 ```typescript
 // Import React exports only
-import { ConnectorProvider, useConnector, useAccount } from '@connector-kit/connector/react';
+import { ConnectorProvider, useConnector, useAccount } from '@solana/connector/react';
 ```
 
 #### Tree-Shaking
@@ -866,8 +866,8 @@ The package supports tree-shaking. Import only what you need:
 
 ```typescript
 // Import specific utilities
-import { formatAddress } from '@connector-kit/connector/utils/formatting';
-import { getClusterRpcUrl } from '@connector-kit/connector/utils/cluster';
+import { formatAddress } from '@solana/connector/utils/formatting';
+import { getClusterRpcUrl } from '@solana/connector/utils/cluster';
 ```
 
 ## Documentation

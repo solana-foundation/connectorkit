@@ -1,5 +1,5 @@
 /**
- * @connector-kit/connector - useGillTransactionSigner hook
+ * @solana/connector - useGillTransactionSigner hook
  *
  * React hook for gill-compatible transaction signing
  * Use this when working with modern Solana libraries (@solana/kit, gill)
@@ -40,7 +40,7 @@ export interface UseGillTransactionSignerReturn {
  *
  * @example
  * ```tsx
- * import { useGillTransactionSigner } from '@connector-kit/connector';
+ * import { useGillTransactionSigner } from '@solana/connector';
  * import { getTransferSolInstruction } from 'gill/programs';
  * import { address, pipe, createTransactionMessage } from 'gill';
  *
@@ -75,7 +75,7 @@ export interface UseGillTransactionSignerReturn {
  * @example
  * ```tsx
  * // For backward compatibility, continue using useTransactionSigner
- * import { useTransactionSigner } from '@connector-kit/connector';
+ * import { useTransactionSigner } from '@solana/connector';
  *
  * function LegacyTransfer() {
  *   const { signer } = useTransactionSigner(); // Wallet adapter compatible

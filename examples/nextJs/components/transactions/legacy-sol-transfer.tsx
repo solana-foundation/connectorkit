@@ -3,8 +3,8 @@
 import { useState } from 'react';
 import { Connection, Transaction, SystemProgram, PublicKey, LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { signature as createSignature, address } from 'gill';
-import { useWalletAdapterCompat } from '@connector-kit/connector/compat';
-import { useTransactionSigner, useConnector, useCluster, useConnectorClient } from '@connector-kit/connector';
+import { useWalletAdapterCompat } from '@solana/connector/compat';
+import { useTransactionSigner, useConnector, useCluster, useConnectorClient } from '@solana/connector';
 import { TransactionForm } from './transaction-form';
 import { TransactionResult } from './transaction-result';
 

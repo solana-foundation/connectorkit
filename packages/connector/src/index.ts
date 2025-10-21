@@ -1,5 +1,5 @@
 /**
- * @connector-kit/connector
+ * @solana/connector
  *
  * Complete library - includes both React and headless functionality
  * Use this for full-featured applications

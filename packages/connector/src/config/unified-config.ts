@@ -1,5 +1,5 @@
 /**
- * @connector-kit/connector - Unified configuration
+ * @solana/connector - Unified configuration
  *
  * Simplified configuration for apps using ConnectorKit
  * Eliminates config duplication and provides a single source of truth
@@ -64,7 +64,7 @@ export interface UnifiedConfig {
  *
  * @example Basic usage
  * ```tsx
- * import { createConfig, AppProvider } from '@connector-kit/connector';
+ * import { createConfig, AppProvider } from '@solana/connector';
  *
  * const config = createConfig({
  *   appName: 'My App',
@@ -79,7 +79,7 @@ export interface UnifiedConfig {
  *
  * @example Integration with external libraries
  * ```tsx
- * import { createConfig, AppProvider } from '@connector-kit/connector';
+ * import { createConfig, AppProvider } from '@solana/connector';
  * import { ArmaProvider } from '@armadura/sdk';
  *
  * const config = createConfig({

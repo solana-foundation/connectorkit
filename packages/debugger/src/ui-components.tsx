@@ -1,5 +1,5 @@
 /**
- * @connector-kit/debugger - Debug Panel UI Components
+ * @solana/connector-debugger - Debug Panel UI Components
  */
 
 'use client';

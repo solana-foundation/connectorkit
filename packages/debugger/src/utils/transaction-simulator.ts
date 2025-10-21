@@ -1,5 +1,5 @@
 /**
- * @connector-kit/debugger - Transaction Simulator
+ * @solana/connector-debugger - Transaction Simulator
  *
  * Core simulation logic for testing transactions before sending
  */

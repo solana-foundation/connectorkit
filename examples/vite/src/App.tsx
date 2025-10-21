@@ -1,5 +1,5 @@
-import { ConnectorProvider } from '@connector-kit/connector/react';
-import { getDefaultConfig } from '@connector-kit/connector/headless';
+import { ConnectorProvider } from '@solana/connector/react';
+import { getDefaultConfig } from '@solana/connector/headless';
 import { WalletDemo } from './components/WalletDemo';
 
 const config = getDefaultConfig({

@@ -1,5 +1,5 @@
 /**
- * @connector-kit/debugger - ALT Usage Detector
+ * @solana/connector-debugger - ALT Usage Detector
  *
  * Detects when transactions use Address Lookup Tables and analyzes
  * the compression achieved.

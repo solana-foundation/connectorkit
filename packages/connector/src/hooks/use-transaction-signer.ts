@@ -1,5 +1,5 @@
 /**
- * @connector-kit/connector - useTransactionSigner hook
+ * @solana/connector - useTransactionSigner hook
  *
  * React hook for transaction signing operations
  * Provides a clean interface for signing and sending transactions

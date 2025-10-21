@@ -1,7 +1,7 @@
 'use client';
 
 import { ConnectButton, AccountSwitcher, ClusterSelector } from '@/components/connector';
-import { useConnector, useAccount, useCluster, useWalletInfo } from '@connector-kit/connector';
+import { useConnector, useAccount, useCluster, useWalletInfo } from '@solana/connector';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';

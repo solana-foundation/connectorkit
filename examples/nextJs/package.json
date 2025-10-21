@@ -9,8 +9,8 @@
         "lint": "eslint"
     },
     "dependencies": {
-        "@connector-kit/connector": "workspace:*",
-        "@connector-kit/debugger": "workspace:*",
+        "@solana/connector": "workspace:*",
+        "@solana/connector-debugger": "workspace:*",
         "@radix-ui/react-avatar": "^1.1.10",
         "@radix-ui/react-dialog": "^1.1.15",
         "@radix-ui/react-dropdown-menu": "^2.1.16",

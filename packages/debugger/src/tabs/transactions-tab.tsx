@@ -1,11 +1,11 @@
 /**
- * @connector-kit/debugger - Transactions Tab Component
+ * @solana/connector-debugger - Transactions Tab Component
  */
 
 'use client';
 
 import { useState, useCallback } from 'react';
-import type { TransactionActivity, SolanaCluster, ConnectorClient } from '@connector-kit/connector';
+import type { TransactionActivity, SolanaCluster, ConnectorClient } from '@solana/connector';
 import { Button, EmptyState } from '../ui-components';
 import { ExternalLinkIcon, PassedIcon, FailedIcon } from '../icons';
 import { Spinner } from './spinner';

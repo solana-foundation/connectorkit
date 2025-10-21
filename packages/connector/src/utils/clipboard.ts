@@ -1,5 +1,5 @@
 /**
- * @connector-kit/connector - Enhanced Clipboard Utilities
+ * @solana/connector - Enhanced Clipboard Utilities
  *
  * Comprehensive clipboard functionality with validation, formatting, fallbacks,
  * and detailed error reporting for Solana addresses and transaction signatures.

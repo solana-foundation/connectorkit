@@ -1,5 +1,5 @@
 /**
- * @connector-kit/debugger - ALT Optimization Calculator
+ * @solana/connector-debugger - ALT Optimization Calculator
  *
  * Calculates potential savings from using Address Lookup Tables (ALTs).
  * Based on real-world data from transaction optimizer showing 40-50% typical savings.

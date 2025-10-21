@@ -1,5 +1,5 @@
 /**
- * @connector-kit/debugger - Live Transaction Card Component
+ * @solana/connector-debugger - Live Transaction Card Component
  *
  * Displays individual live transaction with real-time updates
  */

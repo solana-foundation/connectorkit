@@ -1,5 +1,5 @@
 /**
- * @connector-kit/connector - useTransactionPreparer hook
+ * @solana/connector - useTransactionPreparer hook
  *
  * React hook for preparing transactions with automatic optimization
  * Handles blockhash fetching, compute unit limits, and transaction simulation
@@ -80,7 +80,7 @@ export interface UseTransactionPreparerReturn {
  *
  * @example
  * ```tsx
- * import { useTransactionPreparer, useGillTransactionSigner } from '@connector-kit/connector';
+ * import { useTransactionPreparer, useGillTransactionSigner } from '@solana/connector';
  * import { pipe, createTransactionMessage, appendTransactionMessageInstructions } from 'gill';
  * import { getTransferSolInstruction } from 'gill/programs';
  *

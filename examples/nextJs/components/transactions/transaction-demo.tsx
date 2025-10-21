@@ -1,6 +1,6 @@
 'use client';
 
-import { useConnector } from '@connector-kit/connector';
+import { useConnector } from '@solana/connector';
 import { Alert } from '@/components/ui/alert';
 import { Info } from 'lucide-react';
 import { LegacySolTransfer } from './legacy-sol-transfer';

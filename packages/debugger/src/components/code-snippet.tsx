@@ -1,5 +1,5 @@
 /**
- * @connector-kit/debugger - Code Snippet Component
+ * @solana/connector-debugger - Code Snippet Component
  *
  * Displays code snippets with syntax highlighting and copy functionality
  */

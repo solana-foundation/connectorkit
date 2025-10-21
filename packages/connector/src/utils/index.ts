@@ -1,5 +1,5 @@
 /**
- * @connector-kit/connector - Utilities
+ * @solana/connector - Utilities
  *
  * Utility functions for common tasks
  */

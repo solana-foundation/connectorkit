@@ -131,7 +131,7 @@ describe('React Entry Point (react.ts)', () => {
 
     describe('deprecation notices', () => {
         it('should note debug panel deprecation in comments', () => {
-            // The debug panel has been moved to @connector-kit/debugger
+            // The debug panel has been moved to @solana/connector-debugger
             // This is documented in the source file comments
             // No runtime test needed, but verifying the entry point works
             expect(true).toBe(true);

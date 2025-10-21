@@ -1,5 +1,5 @@
 /**
- * @connector-kit/debugger - Size Badge Component
+ * @solana/connector-debugger - Size Badge Component
  *
  * Visual indicator for transaction size with color coding
  */

@@ -1,5 +1,5 @@
 /**
- * @connector-kit/debugger - Simulation Types
+ * @solana/connector-debugger - Simulation Types
  *
  * TypeScript types for transaction simulation features
  */

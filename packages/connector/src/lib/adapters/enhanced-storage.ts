@@ -1,5 +1,5 @@
 /**
- * @connector-kit/connector - Enhanced Storage
+ * @solana/connector - Enhanced Storage
  *
  * Extended version of @wallet-ui/core Storage with additional features:
  * - Validation hooks

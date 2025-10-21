@@ -16,7 +16,7 @@
         "incremental": true,
         "baseUrl": ".",
         "paths": {
-            "@connector-kit/*": ["packages/*/src"]
+            "@solana/*": ["packages/*/src"]
         }
     },
     "include": ["**/*.ts", "**/*.tsx"],

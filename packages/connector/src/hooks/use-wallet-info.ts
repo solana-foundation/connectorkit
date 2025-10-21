@@ -1,5 +1,5 @@
 /**
- * @connector-kit/connector - useWalletInfo hook
+ * @solana/connector - useWalletInfo hook
  *
  * React hook for getting information about the connected wallet
  */

@@ -1,5 +1,5 @@
 /**
- * @connector-kit/debugger - Simulation Comparison Component
+ * @solana/connector-debugger - Simulation Comparison Component
  *
  * Side-by-side comparison of simulation results (with/without ALT)
  */

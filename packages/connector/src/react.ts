@@ -1,5 +1,5 @@
 /**
- * @connector-kit/connector/react
+ * @solana/connector/react
  *
  * React-specific exports with hooks and components
  * Use this when you only need React functionality
@@ -13,8 +13,8 @@ export { UnifiedProvider, AppProvider } from './ui/unified-provider';
 export { ConnectorErrorBoundary, withErrorBoundary } from './ui/error-boundary';
 
 // Development tools
-// Note: Debug panel has been moved to @connector-kit/debugger package
-// Import from '@connector-kit/debugger/react' instead
+// Note: Debug panel has been moved to @solana/connector-debugger package
+// Import from '@solana/connector-debugger/react' instead
 // These re-exports are deprecated and will be removed in a future version
 
 // Enhanced React hooks

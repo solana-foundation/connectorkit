@@ -1,5 +1,5 @@
 /**
- * @connector-kit/connector - Secure Logger
+ * @solana/connector - Secure Logger
  *
  * Production-safe logger that redacts sensitive information
  * Prevents accidental exposure of addresses, keys, and other PII in logs

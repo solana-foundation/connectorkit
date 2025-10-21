@@ -1,5 +1,5 @@
 /**
- * @connector-kit/debugger - Simulation Section Component
+ * @solana/connector-debugger - Simulation Section Component
  *
  * Displays simulation results in transaction detail view
  */

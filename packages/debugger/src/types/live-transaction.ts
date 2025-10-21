@@ -1,5 +1,5 @@
 /**
- * @connector-kit/debugger - Live Transaction Types
+ * @solana/connector-debugger - Live Transaction Types
  *
  * Types for real-time transaction monitoring and lifecycle tracking
  */

@@ -54,8 +54,8 @@ export interface WalletAdapterCompatOptions {
  *
  * @example
  * ```typescript
- * import { createWalletAdapterCompat } from '@connector-kit/connector/compat';
- * import { useTransactionSigner, useConnector } from '@connector-kit/connector';
+ * import { createWalletAdapterCompat } from '@solana/connector/compat';
+ * import { useTransactionSigner, useConnector } from '@solana/connector';
  *
  * function JupiterIntegration() {
  *   const { signer } = useTransactionSigner();
@@ -215,8 +215,8 @@ export function createWalletAdapterCompat(
  *
  * @example
  * ```typescript
- * import { useWalletAdapterCompat } from '@connector-kit/connector/compat';
- * import { useTransactionSigner, useConnector } from '@connector-kit/connector';
+ * import { useWalletAdapterCompat } from '@solana/connector/compat';
+ * import { useTransactionSigner, useConnector } from '@solana/connector';
  *
  * function MyComponent() {
  *   const { signer } = useTransactionSigner();

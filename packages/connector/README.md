@@ -1,135 +1,252 @@
-# @connector-kit/connector
-
-Headless wallet connector built on Wallet Standard with powerful transaction signing, event system, and performance optimizations.
-
-![npm](https://img.shields.io/npm/v/@connector-kit/connector)
-![Bundle Size](https://img.shields.io/bundlephobia/minzip/@connector-kit/connector)
-![TypeScript](https://img.shields.io/badge/TypeScript-100%25-blue)
-
-## ✨ What's New
-
-**Enhanced with production-ready features:**
-
-- 🔐 **Transaction Signer** - Clean abstraction for signing/sending transactions
-- 📊 **Event System** - Track connections, transactions, and errors for analytics
-- 🐛 **Debug Panel** - Floating dev-only state inspector
-- ⚡ **Performance** - 40-60% fewer re-renders via optimized state updates
-- 🔄 **Connection Pooling** - Reusable RPC connections for better performance
-- 🏥 **Health Checks** - Comprehensive diagnostics for production debugging
-- 🌐 **Browser Polyfills** - Automatic compatibility for all browsers
-- 🔌 **Wallet Adapter Compat** - Drop-in replacement for @solana/wallet-adapter
-
+---
+title: @solana/connector
+description: Production-ready wallet connector for Solana applications
 ---
 
-## Installation
+**ConnectorKit is your Solana wallet infrastructure.** A headless, framework-agnostic wallet connector built on Wallet Standard with powerful transaction signing, event system, and performance optimizations that just work.
 
-```bash
-pnpm add @connector-kit/connector
-```
+![npm](https://img.shields.io/npm/v/@solana/connector)
+![Bundle Size](https://img.shields.io/bundlephobia/minzip/@solana/connector)
+![TypeScript](https://img.shields.io/badge/TypeScript-100%25-blue)
+![Test Coverage](https://img.shields.io/badge/coverage-80%25+-green)
+
+### Why ConnectorKit?
+
+- **Clean Transaction API**: Unified interface for signing and sending—no more wallet-specific logic
+- **Production Ready**: Event system, health checks, error boundaries, and monitoring built-in
+- **Better Performance**: 40-60% fewer re-renders via optimized state management
+- **Universal Compatibility**: Drop-in replacement for @solana/wallet-adapter
+- **Framework Agnostic**: React, Vue, Svelte, or vanilla JavaScript
+
+### Architecture
+
+- **Language**: TypeScript with full type safety
+- **Standard**: Built on Wallet Standard protocol
+- **Frameworks**: React hooks + headless core for any framework
+- **Mobile**: Solana Mobile Wallet Adapter integration
+- **Storage**: Enhanced persistence with SSR support
+
+### Features
+
+- Wallet Standard compliance with multi-wallet support
+- Clean transaction signer abstraction
+- Comprehensive event system for analytics
+- Connection pooling for better performance
+- Health checks and diagnostics
+- Auto-connect and account management
+- Network switching (mainnet, devnet, testnet, custom)
+- Browser polyfills for universal compatibility
+- Debug panel for development
+- Wallet Adapter compatibility bridge
+- 80%+ test coverage
+
+---
 
 ## Quick Start
 
-### 1. Setup Provider
+Install ConnectorKit:
+
+```bash
+pnpm add @solana/connector
+# or
+npm install @solana/connector
+# or
+yarn add @solana/connector
+```
+
+Basic usage:
 
 ```typescript
-import { ConnectorProvider, getDefaultConfig } from '@connector-kit/connector';
+import {
+  ConnectorProvider,
+  getDefaultConfig,
+  useConnector,
+  useAccount,
+  useTransactionSigner
+} from '@solana/connector';
 
+// 1. Wrap your app
 function App() {
   return (
     <ConnectorProvider config={getDefaultConfig({ appName: "My App" })}>
-      <YourApp />
+      <WalletButton />
     </ConnectorProvider>
   );
 }
-```
 
-### 2. Connect Wallet
-
-```typescript
-import { useConnector, useAccount } from '@connector-kit/connector';
-
+// 2. Connect wallet
 function WalletButton() {
-  const { wallets, select, disconnect, connected } = useConnector();
-  const { address, formatted, copy } = useAccount();
+  const { wallets, select, connected, disconnect } = useConnector();
+  const { address, formatted } = useAccount();
 
   if (!connected) {
-    return (
-      <div>
-        {wallets.map(w => (
-          <button key={w.name} onClick={() => select(w.name)}>
-            Connect {w.name}
-          </button>
-        ))}
-      </div>
-    );
+    return wallets.map(w => (
+      <button key={w.name} onClick={() => select(w.name)}>
+        Connect {w.name}
+      </button>
+    ));
   }
 
   return (
-    <div>
-      <button onClick={copy}>{formatted}</button>
+    <>
+      <span>{formatted}</span>
       <button onClick={disconnect}>Disconnect</button>
-    </div>
+    </>
   );
 }
-```
 
-### 3. Sign Transactions (NEW!)
-
-```typescript
-import { useTransactionSigner } from '@connector-kit/connector';
-
+// 3. Sign transactions
 function SendTransaction() {
-  const { signer, ready, capabilities } = useTransactionSigner();
+  const { signer, ready } = useTransactionSigner();
 
   const handleSend = async () => {
-    if (!signer) return;
-
     const signature = await signer.signAndSendTransaction(transaction);
-    console.log('Transaction sent:', signature);
   };
 
-  return (
-    <button onClick={handleSend} disabled={!ready}>
-      Send Transaction
-    </button>
-  );
+  return <button onClick={handleSend} disabled={!ready}>Send</button>;
 }
 ```
 
-**That's it!** You're ready to build. Everything else below is optional.
+**[→ Getting Started](#core-hooks)** - Learn the core hooks
+
+**[→ Transaction Signer](#transaction-signer)** - Sign and send transactions
+
+**[→ Event System](#event-system)** - Track wallet events for analytics
+
+**[→ Framework Guides](#headless-client-vue-svelte-vanilla-js)** - Use with Vue, Svelte, or vanilla JS
 
 ---
 
-## Table of Contents
+## Documentation
 
-- [Core Features](#core-features)
+### Getting Started
+
+- [Installation](#quick-start)
+- [Quick Start Guide](#quick-start)
+- [TypeScript SDK](#typescript-sdk)
 - [Core Hooks](#core-hooks)
-- [New Features](#new-features)
-    - [Transaction Signer](#transaction-signer)
-    - [Event System](#event-system)
-    - [Debug Panel](#debug-panel)
-    - [Connection Pooling](#connection-pooling)
-    - [Health Checks](#health-checks)
-    - [Wallet Adapter Compatibility](#wallet-adapter-compatibility)
-- [Configuration](#configuration)
-- [Advanced Usage](#advanced-usage)
-- [Testing](#testing)
-- [API Reference](#complete-api-reference)
+- [Local Development](#local-development)
+
+### Production Features
+
+- [Transaction Signer](#transaction-signer) - Clean signing API
+- [Event System](#event-system) - Analytics and monitoring
+- [Debug Panel](#debug-panel) - Development tools
+- [Connection Pooling](#connection-pooling) - Performance optimization
+- [Health Checks](#health-checks) - Diagnostics
+- [Wallet Adapter Compatibility](#wallet-adapter-compatibility) - Drop-in replacement
+
+### Configuration & Usage
+
+- [Configuration](#configuration) - Setup options
+- [Network Selection](#network-selection) - Cluster management
+- [Custom Storage](#custom-storage) - Persistence options
+- [Mobile Wallet Adapter](#mobile-wallet-adapter) - Mobile support
+- [Advanced Usage](#advanced-usage) - Framework-specific guides
+
+### Reference
+
+- [Complete API Reference](#complete-api-reference)
+- [Configuration Functions](#configuration-functions)
+- [Transaction Signing API](#transaction-signing-api-new)
+- [Event System API](#event-system-api-new)
+- [Health Check API](#health-check-api-new)
+- [Connection Pool API](#connection-pool-api-new)
+- [Utility Functions](#utility-functions)
+- [TypeScript Types](#types)
+
+### Testing & Performance
+
+- [Testing](#testing) - Test suite and utilities
+- [Performance](#performance) - Bundle size and optimization
+- [Browser Compatibility](#browser-compatibility)
+
+### Migration & Examples
+
+- [Migration from wallet-adapter](#migration-from-solanawallet-adapter)
+- [Examples](#examples)
+- [Supported Wallets](#supported-wallets)
 
 ---
 
-## Core Features
+## TypeScript SDK
 
-- ✅ **Wallet Standard** - Compatible with all Wallet Standard wallets
-- ✅ **Multi-Wallet** - Support for multiple wallet adapters
-- ✅ **Auto-Connect** - Automatic wallet reconnection
-- ✅ **Account Management** - Multi-account support
-- ✅ **Network Switching** - Full cluster/network management
-- ✅ **Mobile Support** - Solana Mobile Wallet Adapter integration
-- ✅ **Enhanced Storage** - Persistent state with validation
-- ✅ **Error Boundaries** - Automatic error handling and recovery
-- ✅ **Framework Agnostic** - Headless core works with any framework
-- ✅ **TypeScript** - Fully typed with comprehensive JSDoc
+ConnectorKit provides React hooks and a headless core for any framework:
+
+```typescript
+// React
+import { useConnector, useTransactionSigner, useAccount } from '@solana/connector';
+
+// Headless (Vue, Svelte, vanilla JS)
+import { ConnectorClient, getDefaultConfig } from '@solana/connector/headless';
+
+const client = new ConnectorClient(getDefaultConfig({ appName: 'My App' }));
+await client.select('Phantom');
+```
+
+**[→ API Reference](#complete-api-reference)** - Full TypeScript API documentation
+
+**[→ Core Hooks](#core-hooks)** - React hooks reference
+
+**[→ Headless Guide](#headless-client-vue-svelte-vanilla-js)** - Use without React
+
+---
+
+## Local Development
+
+### Prerequisites
+
+- Node.js 20+ (or 18+)
+- pnpm, npm, or yarn
+- TypeScript 5.0+
+
+### Installation
+
+```bash
+git clone https://github.com/your-org/connectorkit.git
+cd connectorkit
+pnpm install
+```
+
+### Build
+
+```bash
+pnpm build
+```
+
+### Running Examples
+
+```bash
+cd examples/react
+pnpm dev
+```
+
+Or run the Vite example:
+
+```bash
+cd examples/vite
+pnpm dev
+```
+
+### Local Testing
+
+Run all tests:
+
+```bash
+pnpm test
+```
+
+Run tests in watch mode:
+
+```bash
+pnpm test:watch
+```
+
+Generate coverage report:
+
+```bash
+pnpm test:coverage
+```
 
 ---
 
@@ -140,7 +257,7 @@ function SendTransaction() {
 Main hook for wallet connection and state.
 
 ```typescript
-import { useConnector } from '@connector-kit/connector';
+import { useConnector } from '@solana/connector';
 
 function Component() {
     const {
@@ -163,7 +280,7 @@ function Component() {
 Hook for working with the connected account.
 
 ```typescript
-import { useAccount } from '@connector-kit/connector';
+import { useAccount } from '@solana/connector';
 
 function Component() {
     const {
@@ -183,7 +300,7 @@ function Component() {
 Hook for managing Solana network/cluster.
 
 ```typescript
-import { useCluster } from '@connector-kit/connector';
+import { useCluster } from '@solana/connector';
 
 function Component() {
     const {
@@ -200,14 +317,14 @@ function Component() {
 
 ---
 
-## New Features
+## Production Features
 
 ### Transaction Signer
 
 Clean, unified interface for transaction signing operations.
 
 ```typescript
-import { useTransactionSigner } from '@connector-kit/connector';
+import { useTransactionSigner } from '@solana/connector';
 
 function SendTx() {
   const { signer, ready, capabilities } = useTransactionSigner();
@@ -253,7 +370,7 @@ function SendTx() {
 **Error Handling**:
 
 ```typescript
-import { isTransactionSignerError, TransactionSignerError } from '@connector-kit/connector';
+import { isTransactionSignerError, TransactionSignerError } from '@solana/connector';
 
 try {
     await signer.signAndSendTransaction(tx);
@@ -282,7 +399,7 @@ try {
 Track all connector lifecycle events for analytics and monitoring.
 
 ```typescript
-import { useConnectorClient } from '@connector-kit/connector';
+import { useConnectorClient } from '@solana/connector';
 
 function AnalyticsTracker() {
     const client = useConnectorClient();
@@ -344,7 +461,7 @@ function AnalyticsTracker() {
 Floating development panel for instant state visibility.
 
 ```typescript
-import { ConnectorDebugPanel } from '@connector-kit/connector';
+import { ConnectorDebugPanel } from '@solana/connector';
 
 function App() {
   return (
@@ -382,7 +499,7 @@ function App() {
 Reusable RPC connections for better performance.
 
 ```typescript
-import { ConnectionPool, createConnectionPool } from '@connector-kit/connector/headless';
+import { ConnectionPool, createConnectionPool } from '@solana/connector/headless';
 import { Connection } from '@solana/web3.js';
 
 // Create custom pool
@@ -411,7 +528,7 @@ console.log(`Hit rate: ${(stats.hits / (stats.hits + stats.misses)) * 100}%`);
 **Global pool** (simpler):
 
 ```typescript
-import { getConnectionPool } from '@connector-kit/connector/headless';
+import { getConnectionPool } from '@solana/connector/headless';
 
 const pool = getConnectionPool();
 const connection = pool.get(cluster);
@@ -422,7 +539,7 @@ const connection = pool.get(cluster);
 Comprehensive diagnostics for debugging and monitoring.
 
 ```typescript
-import { useConnectorClient } from '@connector-kit/connector';
+import { useConnectorClient } from '@solana/connector';
 
 function HealthMonitor() {
   const client = useConnectorClient();
@@ -454,8 +571,8 @@ function HealthMonitor() {
 Drop-in replacement for libraries expecting @solana/wallet-adapter.
 
 ```typescript
-import { useTransactionSigner, useConnector } from '@connector-kit/connector';
-import { createWalletAdapterCompat } from '@connector-kit/connector/compat';
+import { useTransactionSigner, useConnector } from '@solana/connector';
+import { createWalletAdapterCompat } from '@solana/connector/compat';
 
 function JupiterIntegration() {
   const { signer } = useTransactionSigner();
@@ -491,7 +608,7 @@ function JupiterIntegration() {
 ### Basic Configuration
 
 ```typescript
-import { getDefaultConfig } from '@connector-kit/connector';
+import { getDefaultConfig } from '@solana/connector';
 
 const config = getDefaultConfig({
     appName: 'My App', // Required
@@ -520,7 +637,7 @@ const config = getDefaultConfig({
 ### Custom Clusters
 
 ```typescript
-import { getDefaultConfig, createSolanaMainnet } from '@connector-kit/connector';
+import { getDefaultConfig, createSolanaMainnet } from '@solana/connector';
 
 const config = getDefaultConfig({
     appName: 'My App',
@@ -561,7 +678,7 @@ const config = getDefaultConfig({
 Use `ConnectorClient` for non-React frameworks.
 
 ```typescript
-import { ConnectorClient, getDefaultConfig } from '@connector-kit/connector/headless';
+import { ConnectorClient, getDefaultConfig } from '@solana/connector/headless';
 
 // Create client
 const client = new ConnectorClient(getDefaultConfig({ appName: 'My App' }));
@@ -599,7 +716,7 @@ client.destroy();
 If you're using both ConnectorKit and Armadura:
 
 ```typescript
-import { createConfig, AppProvider } from '@connector-kit/connector';
+import { createConfig, AppProvider } from '@solana/connector';
 import { ArmaProvider } from '@armadura/sdk';
 
 const config = createConfig({
@@ -638,7 +755,7 @@ Only customize for:
 - Custom error tracking
 
 ```typescript
-import { getDefaultConfig, createEnhancedStorageWallet, EnhancedStorageAdapter } from '@connector-kit/connector';
+import { getDefaultConfig, createEnhancedStorageWallet, EnhancedStorageAdapter } from '@solana/connector';
 
 const config = getDefaultConfig({
     appName: 'My App',
@@ -668,28 +785,28 @@ const config = getDefaultConfig({
 
 ```typescript
 // Full library - includes React and headless
-import { ConnectorProvider, useConnector } from '@connector-kit/connector';
+import { ConnectorProvider, useConnector } from '@solana/connector';
 ```
 
 ### Headless Export (Framework Agnostic)
 
 ```typescript
 // Headless core only - no React
-import { ConnectorClient, getDefaultConfig } from '@connector-kit/connector/headless';
+import { ConnectorClient, getDefaultConfig } from '@solana/connector/headless';
 ```
 
 ### React Export
 
 ```typescript
 // React-specific exports only
-import { useConnector, useAccount } from '@connector-kit/connector/react';
+import { useConnector, useAccount } from '@solana/connector/react';
 ```
 
 ### Compatibility Layer (NEW!)
 
 ```typescript
 // Wallet adapter compatibility bridge
-import { createWalletAdapterCompat } from '@connector-kit/connector/compat';
+import { createWalletAdapterCompat } from '@solana/connector/compat';
 ```
 
 ---
@@ -887,7 +1004,7 @@ interface UseTransactionSignerReturn {
 Create a transaction signer (headless).
 
 ```typescript
-import { createTransactionSigner } from '@connector-kit/connector/headless';
+import { createTransactionSigner } from '@solana/connector/headless';
 
 const signer = createTransactionSigner({
     wallet: connectedWallet,
@@ -1015,7 +1132,7 @@ import {
     isPolyfillInstalled,
     isCryptoAvailable,
     getPolyfillStatus,
-} from '@connector-kit/connector/headless';
+} from '@solana/connector/headless';
 
 // Install browser polyfills (automatic in React provider)
 installPolyfills();
@@ -1031,7 +1148,7 @@ const status = getPolyfillStatus();
 #### Formatting
 
 ```typescript
-import { formatSOL, formatAddress } from '@connector-kit/connector';
+import { formatSOL, formatAddress } from '@solana/connector';
 
 // Format SOL amounts
 formatSOL(1500000000, { decimals: 4 }); // "1.5000 SOL"
@@ -1040,13 +1157,13 @@ formatSOL(1500000000, { decimals: 4 }); // "1.5000 SOL"
 formatAddress(address, { length: 6 }); // "5Gv8yU...8x3kF"
 
 // Lightweight versions (smaller bundle, no Intl)
-import { formatSOLSimple, formatAddressSimple } from '@connector-kit/connector';
+import { formatSOLSimple, formatAddressSimple } from '@solana/connector';
 ```
 
 #### Clipboard
 
 ```typescript
-import { copyAddressToClipboard, copyToClipboard } from '@connector-kit/connector';
+import { copyAddressToClipboard, copyToClipboard } from '@solana/connector';
 
 await copyAddressToClipboard(address);
 await copyToClipboard(text);
@@ -1062,7 +1179,7 @@ import {
     getAddressUrl,
     isMainnetCluster,
     isDevnetCluster,
-} from '@connector-kit/connector';
+} from '@solana/connector';
 
 const rpcUrl = getClusterRpcUrl(cluster);
 const explorerUrl = getClusterExplorerUrl(cluster);
@@ -1126,7 +1243,7 @@ import type {
 
     // Errors
     WalletError,
-} from '@connector-kit/connector';
+} from '@solana/connector';
 ```
 
 ---
@@ -1183,13 +1300,13 @@ const { publicKey, sendTransaction } = useWallet();
 await sendTransaction(tx, connection);
 
 // After (connector-kit)
-import { useTransactionSigner } from '@connector-kit/connector';
+import { useTransactionSigner } from '@solana/connector';
 
 const { signer } = useTransactionSigner();
 await signer.signAndSendTransaction(tx);
 
 // Or use compatibility bridge for existing integrations
-import { createWalletAdapterCompat } from '@connector-kit/connector/compat';
+import { createWalletAdapterCompat } from '@solana/connector/compat';
 
 const walletAdapter = createWalletAdapterCompat(signer, { disconnect });
 // Pass walletAdapter to existing wallet-adapter code
@@ -1201,24 +1318,110 @@ const walletAdapter = createWalletAdapterCompat(signer, { disconnect });
 
 Check out the [examples directory](../../examples/react) for:
 
-- Complete wallet connection UI with shadcn/ui
-- Transaction signing demos
-- Network switching
-- Account management
-- Mobile wallet support
+- **React Example** - Complete wallet connection UI with shadcn/ui
+- **Vite Example** - Lightweight setup with Vite
+- **Transaction Signing** - Full transaction demos
+- **Network Switching** - Cluster/network management
+- **Account Management** - Multi-account support
+- **Mobile Support** - Solana Mobile Wallet Adapter
 
 ---
 
 ## Development
 
+### Commands
+
 ```bash
-pnpm install     # Install dependencies
-pnpm build       # Build package
-pnpm dev         # Development mode with watch
-pnpm type-check  # TypeScript validation
-pnpm lint        # Lint code
-pnpm size        # Check bundle size
+# Install dependencies
+pnpm install
+
+# Build package
+pnpm build
+
+# Development mode with watch
+pnpm dev
+
+# Type checking
+pnpm type-check
+
+# Linting
+pnpm lint
+
+# Run tests
+pnpm test
+
+# Test in watch mode
+pnpm test:watch
+
+# Test with UI
+pnpm test:ui
+
+# Coverage report
+pnpm test:coverage
+
+# Check bundle size
+pnpm size
 ```
+
+### Project Structure
+
+```
+packages/connector/
+├── src/
+│   ├── lib/
+│   │   ├── core/              # Core functionality
+│   │   │   ├── state-manager.ts
+│   │   │   ├── event-emitter.ts
+│   │   │   └── debug-metrics.ts
+│   │   ├── connection/        # Connection management
+│   │   │   ├── connection-manager.ts
+│   │   │   └── connection-pool.ts
+│   │   ├── transaction/       # Transaction signing
+│   │   │   ├── transaction-signer.ts
+│   │   │   └── signer-factory.ts
+│   │   └── storage/           # Persistence layer
+│   │       └── enhanced-storage.ts
+│   ├── hooks/                 # React hooks
+│   │   ├── use-connector.ts
+│   │   ├── use-account.ts
+│   │   ├── use-cluster.ts
+│   │   └── use-transaction-signer.ts
+│   ├── components/            # React components
+│   │   └── debug-panel.tsx
+│   ├── compat/                # Wallet adapter compatibility
+│   │   └── wallet-adapter-compat.ts
+│   ├── __tests__/             # Test utilities
+│   │   ├── mocks/
+│   │   ├── fixtures/
+│   │   └── utils/
+│   └── index.ts               # Main exports
+├── tsconfig.json
+├── tsup.config.ts
+├── vitest.config.ts
+└── package.json
+```
+
+### Contributing
+
+Contributions are welcome! Please:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Make your changes
+4. Add tests for new functionality
+5. Ensure tests pass (`pnpm test`)
+6. Commit with conventional commits (`feat:`, `fix:`, `docs:`, etc.)
+7. Push to your fork and submit a pull request
+
+For detailed testing guidelines, see [Testing Guide](src/__tests__/README.md).
+
+---
+
+## Community & Support
+
+- **Questions?** Ask on [Solana Stack Exchange](https://solana.stackexchange.com/) (use the `connectorkit` tag)
+- **Issues?** Report on [GitHub Issues](https://github.com/your-org/connectorkit/issues)
+- **Discussions?** Join [GitHub Discussions](https://github.com/your-org/connectorkit/discussions)
 
 ---
 
@@ -1226,29 +1429,32 @@ pnpm size        # Check bundle size
 
 Compatible with all [Wallet Standard](https://github.com/wallet-standard/wallet-standard) compliant wallets:
 
-- Phantom
-- Solflare
-- Backpack
-- Glow
-- Brave Wallet
-- Solana Mobile wallets
-- Any Wallet Standard compatible wallet
+- **Phantom** - Browser extension and mobile
+- **Solflare** - Browser extension and mobile
+- **Backpack** - xNFT and wallet
+- **Glow** - Browser extension
+- **Brave Wallet** - Built-in browser wallet
+- **Solana Mobile** - All mobile wallet adapter compatible wallets
+- **Any Wallet Standard wallet** - Full compatibility
 
 ---
 
-## Documentation
+## Other Resources
 
-- [Full Documentation](https://connectorkit.dev)
-- [API Reference](#complete-api-reference) (above)
-- [Examples](../../examples/react)
-- [Wallet Standard Spec](https://github.com/wallet-standard/wallet-standard)
-
----
-
-## License
-
-MIT
+- [ConnectorKit Documentation](https://connectorkit.dev) - Full documentation site
+- [API Reference](#complete-api-reference) - Complete TypeScript API
+- [Examples](../../examples/react) - Working examples
+- [Wallet Standard Spec](https://github.com/wallet-standard/wallet-standard) - Protocol specification
+- [@solana/connector on NPM](https://www.npmjs.com/package/@solana/connector) - Package page
 
 ---
 
-**Built with ❤️ and attention to detail**
+## Source
+
+- [GitHub Repository](https://github.com/your-org/connectorkit)
+- [Examples Directory](../../examples)
+- [Package Directory](../../packages/connector)
+
+Built with ❤️ for the Solana ecosystem.
+
+Licensed under MIT. See [LICENSE](../../LICENSE) for details.

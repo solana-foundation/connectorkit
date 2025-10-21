@@ -1,5 +1,5 @@
 /**
- * @connector-kit/connector - useAccount hook
+ * @solana/connector - useAccount hook
  *
  * React hook for working with the connected wallet account
  */

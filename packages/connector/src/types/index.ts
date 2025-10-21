@@ -1,5 +1,5 @@
 /**
- * Central type exports for @connector-kit/connector
+ * Central type exports for @solana/connector
  *
  * Domain-organized types for wallets, accounts, transactions, events, storage, and connector state.
  */

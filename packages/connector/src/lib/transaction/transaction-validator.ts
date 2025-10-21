@@ -1,5 +1,5 @@
 /**
- * @connector-kit/connector - Transaction Validator
+ * @solana/connector - Transaction Validator
  *
  * Validates transactions before signing to prevent malformed or malicious transactions
  * Helps ensure transaction safety and proper error handling

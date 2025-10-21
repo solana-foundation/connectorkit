@@ -1,5 +1,5 @@
 /**
- * @connector-kit/connector - Explorer URL Utilities
+ * @solana/connector - Explorer URL Utilities
  *
  * Generate URLs for various Solana block explorers to view transactions,
  * accounts, and other on-chain data.

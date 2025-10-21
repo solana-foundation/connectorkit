@@ -2,7 +2,7 @@
 
 import { TransactionDemo } from '@/components/transactions';
 import { ConnectButton, ClusterSelector, AccountSwitcher } from '@/components/connector';
-import { useConnector } from '@connector-kit/connector';
+import { useConnector } from '@solana/connector';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
