@@ -8,26 +8,13 @@ import { createLogger } from '../utils/secure-logger';
 
 const logger = createLogger('AutoConnector');
 
-/**
- * Minimum length for a valid Solana public key address string (base58 encoded).
- * Typical Solana addresses are 32-44 characters. This threshold filters out
- * obviously invalid or malformed address strings.
- */
 const MIN_ADDRESS_LENGTH = 30;
 
-/**
- * Legacy wallet connect result
- */
 interface LegacyConnectResult {
     publicKey?: LegacyPublicKey;
     accounts?: unknown[];
 }
 
-/**
- * AutoConnector - Handles automatic wallet reconnection strategies
- *
- * Implements instant reconnection via direct detection and fallback via standard detection.
- */
 export class AutoConnector {
     private walletDetector: WalletDetector;
     private connectionManager: ConnectionManager;
@@ -49,9 +36,6 @@ export class AutoConnector {
         this.debug = debug;
     }
 
-    /**
-     * Attempt auto-connection using both instant and fallback strategies
-     */
     async attemptAutoConnect(): Promise<boolean> {
         const instantSuccess = await this.attemptInstantConnect();
         if (instantSuccess) return true;
@@ -60,10 +44,6 @@ export class AutoConnector {
         return this.stateManager.getSnapshot().connected;
     }
 
-    /**
-     * Attempt instant auto-connection using direct wallet detection
-     * Bypasses wallet standard initialization for maximum speed
-     */
     private async attemptInstantConnect(): Promise<boolean> {
         const storedWalletName = this.walletStorage?.get();
         if (!storedWalletName) return false;
@@ -89,7 +69,6 @@ export class AutoConnector {
                             logger.debug('Direct wallet publicKey property', { publicKey: directWallet.publicKey });
                         }
 
-                        // Strategy 1: Check if result has proper wallet standard format
                         if (
                             result &&
                             typeof result === 'object' &&
@@ -99,7 +78,6 @@ export class AutoConnector {
                             return result;
                         }
 
-                        // Strategy 2: Check if result has legacy publicKey format
                         const legacyResult = result as LegacyConnectResult | undefined;
                         if (legacyResult?.publicKey && typeof legacyResult.publicKey.toString === 'function') {
                             return {
@@ -116,7 +94,6 @@ export class AutoConnector {
                             };
                         }
 
-                        // Strategy 3: Legacy wallet pattern - publicKey on wallet object
                         if (directWallet.publicKey && typeof directWallet.publicKey.toString === 'function') {
                             const address = directWallet.publicKey.toString();
                             if (this.debug) {
@@ -136,7 +113,6 @@ export class AutoConnector {
                             };
                         }
 
-                        // Strategy 4: Check if result itself is a publicKey
                         const publicKeyResult = result as LegacyPublicKey | undefined;
                         if (
                             publicKeyResult &&
@@ -265,9 +241,6 @@ export class AutoConnector {
         }
     }
 
-    /**
-     * Attempt auto-connection via standard wallet detection (fallback)
-     */
     private async attemptStandardConnect(): Promise<void> {
         try {
             if (this.stateManager.getSnapshot().connected) {

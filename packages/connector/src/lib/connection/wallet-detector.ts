@@ -129,7 +129,7 @@ export class WalletDetector extends BaseCollaborator {
                     update();
                 }
             }, 1000);
-        } catch (e) {}
+        } catch {}
     }
 
     /**
@@ -242,7 +242,9 @@ export class WalletDetector extends BaseCollaborator {
         for (const unsubscribe of this.unsubscribers) {
             try {
                 unsubscribe();
-            } catch {}
+            } catch (error) {
+                logger.warn('Error during unsubscribe cleanup', { error });
+            }
         }
         this.unsubscribers = [];
     }

@@ -11,11 +11,8 @@ import { createLogger } from '../lib/utils/secure-logger';
 
 const logger = createLogger('ConnectorProvider');
 
-// Install browser compatibility polyfills immediately when module loads
-// This ensures crypto operations work across all browser environments
 installPolyfills();
 
-// Global connector client declaration for auto-detection
 declare global {
     interface Window {
         __connectorClient?: ConnectorClient;
@@ -44,7 +41,6 @@ export interface MobileWalletAdapterConfig {
     onWalletNotFound?: (wallet: unknown) => Promise<void>;
 }
 
-// Internal provider without error boundary
 function ConnectorProviderInternal({
     children,
     config,
@@ -56,19 +52,15 @@ function ConnectorProviderInternal({
 }) {
     const clientRef = useRef<ConnectorClient | null>(null);
 
-    // Lazy initialization - only create client once on first render
-    // This prevents double-initialization in React 19 strict mode
     const getClient = React.useCallback(() => {
         if (!clientRef.current) {
             try {
                 clientRef.current = new ConnectorClient(config);
 
-                // ✅ Set window.__connectorClient IMMEDIATELY for auto-detection
                 if (typeof window !== 'undefined') {
                     window.__connectorClient = clientRef.current;
                 }
 
-                // Log successful initialization in debug mode
                 if (config?.debug) {
                     logger.info('Client initialized successfully');
                 }
@@ -76,7 +68,6 @@ function ConnectorProviderInternal({
                 const err = error as Error;
                 logger.error('Failed to initialize client', { error: err });
 
-                // Call config error handler if provided
                 const extendedConfig = config as ExtendedConnectorConfig;
                 if (extendedConfig?.errorBoundary?.onError) {
                     extendedConfig.errorBoundary.onError(err, {
@@ -85,24 +76,18 @@ function ConnectorProviderInternal({
                     });
                 }
 
-                // Return null to allow graceful degradation
-                // Components can check for null client and show fallback UI
                 return null;
             }
         }
         return clientRef.current;
     }, [config]);
 
-    // Get client reference (memoized)
     const client = getClient();
 
-    // On client mount, ensure wallet detection runs (run only once)
     React.useEffect(() => {
         const currentClient = clientRef.current;
 
         if (currentClient) {
-            // Force re-initialization if client was created during SSR
-            // This ensures wallets are detected even if client was created before window existed
             const privateClient = currentClient as unknown as { initialize?: () => void };
             if (privateClient.initialize && typeof privateClient.initialize === 'function') {
                 privateClient.initialize();
@@ -110,7 +95,6 @@ function ConnectorProviderInternal({
         }
 
         return () => {
-            // Cleanup global reference and client on unmount
             if (typeof window !== 'undefined') {
                 window.__connectorClient = undefined;
             }
@@ -118,9 +102,8 @@ function ConnectorProviderInternal({
                 currentClient.destroy();
             }
         };
-    }, []); // Empty dependency array - run only once
+    }, []);
 
-    // Optionally register Mobile Wallet Adapter on the client
     React.useEffect(() => {
         if (!mobile) return;
         let cancelled = false;
@@ -161,7 +144,6 @@ function ConnectorProviderInternal({
     return <ConnectorContext.Provider value={client}>{children}</ConnectorContext.Provider>;
 }
 
-// Enhanced provider with optional error boundary
 export function ConnectorProvider({
     children,
     config,
@@ -174,7 +156,6 @@ export function ConnectorProvider({
     const extendedConfig = config as ExtendedConnectorConfig;
     const errorBoundaryConfig = extendedConfig?.errorBoundary;
 
-    // If error boundary is disabled, use internal provider directly
     if (!errorBoundaryConfig?.enabled) {
         return (
             <ConnectorProviderInternal config={config} mobile={mobile}>
@@ -183,7 +164,6 @@ export function ConnectorProvider({
         );
     }
 
-    // Wrap with error boundary for enhanced error handling
     return (
         <ConnectorErrorBoundary
             maxRetries={errorBoundaryConfig.maxRetries ?? 3}
@@ -206,15 +186,12 @@ export function useConnector(): ConnectorSnapshot {
         );
     }
 
-    // Subscribe to state changes
     const state = useSyncExternalStore(
         React.useCallback(cb => client.subscribe(cb), [client]),
         React.useCallback(() => client.getSnapshot(), [client]),
         React.useCallback(() => client.getSnapshot(), [client]),
     );
 
-    // Stable method references that don't change when state changes
-    // These are bound once and reused across renders
     const methods = useMemo(
         () => ({
             select: client.select.bind(client),
@@ -224,7 +201,6 @@ export function useConnector(): ConnectorSnapshot {
         [client],
     );
 
-    // Optimized: Only create new object when state actually changes
     return useMemo(
         () => ({
             ...state,
@@ -234,24 +210,6 @@ export function useConnector(): ConnectorSnapshot {
     );
 }
 
-/**
- * Get the connector client instance
- * Returns null if not within ConnectorProvider or if initialization failed
- *
- * @example
- * ```tsx
- * function MyComponent() {
- *   const client = useConnectorClient()
- *
- *   if (!client) {
- *     return <div>Connector not available</div>
- *   }
- *
- *   // Use client methods directly
- *   const health = client.getHealth()
- * }
- * ```
- */
 export function useConnectorClient(): ConnectorClient | null {
     return useContext(ConnectorContext);
 }

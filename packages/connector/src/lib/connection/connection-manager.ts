@@ -111,12 +111,21 @@ export class ConnectionManager extends BaseCollaborator {
                 accountsCount: accounts.length,
             });
 
-            this.eventEmitter.emit({
-                type: 'wallet:connected',
-                wallet: name as WalletName,
-                account: (selected || '') as any,
-                timestamp: new Date().toISOString(),
-            });
+            // Only emit wallet:connected event if we have a valid account
+            // The event type requires a non-null Address
+            if (selected) {
+                this.eventEmitter.emit({
+                    type: 'wallet:connected',
+                    wallet: name as WalletName,
+                    account: selected as Address,
+                    timestamp: new Date().toISOString(),
+                });
+            } else {
+                this.log('⚠️ Connection succeeded but no account available', {
+                    wallet: wallet.name,
+                    accountsCount: accounts.length,
+                });
+            }
 
             // Save wallet name to storage (if available)
             if (this.walletStorage) {
@@ -170,9 +179,7 @@ export class ConnectionManager extends BaseCollaborator {
      */
     async disconnect(): Promise<void> {
         if (this.walletChangeUnsub) {
-            try {
-                this.walletChangeUnsub();
-            } catch {}
+            this.walletChangeUnsub();
             this.walletChangeUnsub = null;
         }
         this.stopPollingWalletAccounts();
@@ -181,9 +188,7 @@ export class ConnectionManager extends BaseCollaborator {
         if (wallet) {
             const disconnect = getDisconnectFeature(wallet);
             if (disconnect) {
-                try {
-                    await disconnect();
-                } catch (error) {}
+                await disconnect();
             }
         }
 
@@ -219,8 +224,6 @@ export class ConnectionManager extends BaseCollaborator {
         const current = state.selectedWallet;
         if (!current) throw new Error('No wallet connected');
 
-        // Basic address validation: check for empty or obviously invalid addresses
-        // Note: We use a lenient check to support test addresses
         if (!address || address.length < 5) {
             throw new Error(`Invalid address format: ${address}`);
         }
@@ -244,13 +247,11 @@ export class ConnectionManager extends BaseCollaborator {
 
         if (!target) throw new Error(`Requested account not available: ${address}`);
 
-        // Update selected account
-        this.stateManager.updateState({ selectedAccount: target.address as any });
+        this.stateManager.updateState({ selectedAccount: target.address as Address });
 
-        // Emit account:changed event
         this.eventEmitter.emit({
             type: 'account:changed',
-            account: target.address as any,
+            account: target.address as Address,
             timestamp: new Date().toISOString(),
         });
     }
@@ -271,9 +272,7 @@ export class ConnectionManager extends BaseCollaborator {
      */
     private subscribeToWalletEvents(): void {
         if (this.walletChangeUnsub) {
-            try {
-                this.walletChangeUnsub();
-            } catch {}
+            this.walletChangeUnsub();
             this.walletChangeUnsub = null;
         }
         this.stopPollingWalletAccounts();

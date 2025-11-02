@@ -1,7 +1,5 @@
 /**
- * @solana/connector - useAccount hook
- *
- * React hook for working with the connected wallet account
+ * useAccount hook
  */
 
 'use client';
@@ -31,25 +29,6 @@ export interface UseAccountReturn {
     selectAccount: (address: string) => Promise<void>;
 }
 
-/**
- * Hook for working with the connected wallet account
- * Provides formatted address, clipboard copying, and account selection
- *
- * @example
- * ```tsx
- * function AccountDisplay() {
- *   const { address, formatted, copy, copied, connected } = useAccount()
- *
- *   if (!connected) return <p>Not connected</p>
- *
- *   return (
- *     <button onClick={copy}>
- *       {formatted} {copied && '✓'}
- *     </button>
- *   )
- * }
- * ```
- */
 export function useAccount(): UseAccountReturn {
     const { selectedAccount, accounts, connected, selectAccount } = useConnector();
     const [copied, setCopied] = useState(false);

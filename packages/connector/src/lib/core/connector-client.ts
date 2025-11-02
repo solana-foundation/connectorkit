@@ -25,12 +25,6 @@ import { createLogger } from '../utils/secure-logger';
 
 const logger = createLogger('ConnectorClient');
 
-/**
- * ConnectorClient - Lean coordinator that delegates to specialized collaborators
- *
- * Orchestrates wallet connection, state management, and event handling by wiring
- * together focused collaborators, each with a single responsibility.
- */
 export class ConnectorClient {
     private stateManager: StateManager;
     private eventEmitter: EventEmitter;
@@ -107,9 +101,6 @@ export class ConnectorClient {
         this.initialize();
     }
 
-    /**
-     * Initialize the connector
-     */
     private initialize(): void {
         if (typeof window === 'undefined') return;
         if (this.initialized) return;
@@ -135,13 +126,6 @@ export class ConnectorClient {
         }
     }
 
-    // ============================================================================
-    // Public API - Delegates to collaborators
-    // ============================================================================
-
-    /**
-     * Connect to a wallet by name
-     */
     async select(walletName: string): Promise<void> {
         const wallet = this.stateManager
             .getSnapshot()
@@ -150,45 +134,26 @@ export class ConnectorClient {
         await this.connectionManager.connect(wallet, walletName);
     }
 
-    /**
-     * Disconnect from the current wallet
-     */
     async disconnect(): Promise<void> {
         await this.connectionManager.disconnect();
     }
 
-    /**
-     * Select a different account
-     */
     async selectAccount(address: string): Promise<void> {
         await this.connectionManager.selectAccount(address);
     }
 
-    /**
-     * Set the active cluster (network)
-     */
     async setCluster(clusterId: SolanaClusterId): Promise<void> {
         await this.clusterManager.setCluster(clusterId);
     }
 
-    /**
-     * Get the currently active cluster
-     */
     getCluster(): SolanaCluster | null {
         return this.clusterManager.getCluster();
     }
 
-    /**
-     * Get all available clusters
-     */
     getClusters(): SolanaCluster[] {
         return this.clusterManager.getClusters();
     }
 
-    /**
-     * Get the RPC URL for the current cluster
-     * @returns RPC URL or null if no cluster is selected
-     */
     getRpcUrl(): string | null {
         const cluster = this.clusterManager.getCluster();
         if (!cluster) return null;
@@ -202,44 +167,19 @@ export class ConnectorClient {
         }
     }
 
-    /**
-     * Subscribe to state changes
-     */
     subscribe(listener: Listener): () => void {
         return this.stateManager.subscribe(listener);
     }
 
-    /**
-     * Get current state snapshot
-     */
     getSnapshot(): ConnectorState {
         return this.stateManager.getSnapshot();
     }
 
-    /**
-     * Reset all storage to initial values
-     * Useful for "logout", "forget this device", or clearing user data
-     *
-     * This will:
-     * - Clear saved wallet name
-     * - Clear saved account address
-     * - Reset cluster to initial value (does not clear)
-     *
-     * Note: This does NOT disconnect the wallet. Call disconnect() separately if needed.
-     *
-     * @example
-     * ```ts
-     * // Complete logout flow
-     * await client.disconnect();
-     * client.resetStorage();
-     * ```
-     */
     resetStorage(): void {
         if (this.config.debug) {
             logger.info('Resetting all storage to initial values');
         }
 
-        // Reset each storage adapter
         const storageKeys = ['account', 'wallet', 'cluster'] as const;
 
         for (const key of storageKeys) {
@@ -265,76 +205,44 @@ export class ConnectorClient {
         });
     }
 
-    /**
-     * Subscribe to connector events
-     */
     on(listener: ConnectorEventListener): () => void {
         return this.eventEmitter.on(listener);
     }
 
-    /**
-     * Remove a specific event listener
-     */
     off(listener: ConnectorEventListener): void {
         this.eventEmitter.off(listener);
     }
 
-    /**
-     * Remove all event listeners
-     */
     offAll(): void {
         this.eventEmitter.offAll();
     }
 
-    /**
-     * Emit a connector event
-     * Internal method used by transaction signer and other components
-     * @internal
-     */
     emitEvent(event: ConnectorEvent): void {
         this.eventEmitter.emit(event);
     }
 
-    /**
-     * Track a transaction for debugging and monitoring
-     */
     trackTransaction(activity: Omit<TransactionActivity, 'timestamp' | 'cluster'>): void {
         this.transactionTracker.trackTransaction(activity);
     }
 
-    /**
-     * Update transaction status
-     */
     updateTransactionStatus(signature: string, status: TransactionActivity['status'], error?: string): void {
         this.transactionTracker.updateStatus(signature, status, error);
     }
 
-    /**
-     * Clear transaction history
-     */
     clearTransactionHistory(): void {
         this.transactionTracker.clearHistory();
     }
 
-    /**
-     * Get connector health and diagnostics
-     */
     getHealth(): ConnectorHealth {
         return this.healthMonitor.getHealth();
     }
 
-    /**
-     * Get performance and debug metrics
-     */
     getDebugMetrics(): ConnectorDebugMetrics {
         const snapshot = this.stateManager.getSnapshot();
         this.debugMetrics.updateListenerCounts(this.eventEmitter.getListenerCount(), 0);
         return this.debugMetrics.getMetrics();
     }
 
-    /**
-     * Get debug state including transactions
-     */
     getDebugState(): ConnectorDebugState {
         return {
             ...this.getDebugMetrics(),
@@ -343,16 +251,10 @@ export class ConnectorClient {
         };
     }
 
-    /**
-     * Reset debug metrics
-     */
     resetDebugMetrics(): void {
         this.debugMetrics.resetMetrics();
     }
 
-    /**
-     * Cleanup resources
-     */
     destroy(): void {
         this.connectionManager.disconnect().catch(() => {});
         this.walletDetector.destroy();

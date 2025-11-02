@@ -1,17 +1,8 @@
-/**
- * Event test fixtures
- *
- * Pre-configured event payloads for testing
- */
-
 import type { ConnectorEvent } from '../../types/events';
 import type { WalletName } from '../../types/wallets';
 import { TEST_ADDRESSES } from './accounts';
 import { TEST_SIGNATURES } from './transactions';
 
-/**
- * Create a mock wallets detected event
- */
 export function createWalletsDetectedEvent(count: number = 1): ConnectorEvent {
     return {
         type: 'wallets:detected',
@@ -20,9 +11,6 @@ export function createWalletsDetectedEvent(count: number = 1): ConnectorEvent {
     };
 }
 
-/**
- * Create a mock connecting event
- */
 export function createConnectingEvent(walletName: string = 'Phantom'): ConnectorEvent {
     return {
         type: 'connecting',
@@ -31,9 +19,6 @@ export function createConnectingEvent(walletName: string = 'Phantom'): Connector
     };
 }
 
-/**
- * Create a mock wallet connected event
- */
 export function createConnectedEvent(
     walletName: string = 'Phantom',
     account: string = TEST_ADDRESSES.ACCOUNT_1,
@@ -46,9 +31,6 @@ export function createConnectedEvent(
     };
 }
 
-/**
- * Create a mock wallet disconnected event
- */
 export function createDisconnectedEvent(): ConnectorEvent {
     return {
         type: 'wallet:disconnected',
@@ -56,9 +38,6 @@ export function createDisconnectedEvent(): ConnectorEvent {
     };
 }
 
-/**
- * Create a mock account changed event
- */
 export function createAccountChangedEvent(account: string = TEST_ADDRESSES.ACCOUNT_1): ConnectorEvent {
     return {
         type: 'account:changed',
@@ -67,9 +46,6 @@ export function createAccountChangedEvent(account: string = TEST_ADDRESSES.ACCOU
     };
 }
 
-/**
- * Create a mock wallet changed event
- */
 export function createWalletChangedEvent(walletName: string = 'Phantom'): ConnectorEvent {
     return {
         type: 'wallet:changed',
@@ -78,9 +54,6 @@ export function createWalletChangedEvent(walletName: string = 'Phantom'): Connec
     };
 }
 
-/**
- * Create a mock transaction tracked event
- */
 export function createTransactionTrackedEvent(signature: string = TEST_SIGNATURES.TX_1): ConnectorEvent {
     return {
         type: 'transaction:tracked',
@@ -90,9 +63,6 @@ export function createTransactionTrackedEvent(signature: string = TEST_SIGNATURE
     };
 }
 
-/**
- * Create a mock error event
- */
 export function createErrorEvent(error: Error = new Error('Test error'), context: string = 'test'): ConnectorEvent {
     return {
         type: 'error',

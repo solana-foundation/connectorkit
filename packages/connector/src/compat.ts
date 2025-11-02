@@ -1,9 +1,5 @@
 /**
  * Wallet Adapter Compatibility Bridge
- *
- * Provides a compatibility layer that bridges connector-kit's TransactionSigner
- * with @solana/wallet-adapter interface for seamless integration with
- * libraries expecting wallet-adapter (Jupiter, Serum, Raydium, etc.)
  */
 
 import { useMemo } from 'react';
@@ -48,33 +44,6 @@ export interface WalletAdapterCompatOptions {
     onError?: (error: Error, operation: string) => void;
 }
 
-/**
- * Creates a wallet-adapter compatible interface from a TransactionSigner.
- * This allows using connector-kit with any library that expects @solana/wallet-adapter.
- *
- * @example
- * ```typescript
- * import { createWalletAdapterCompat } from '@solana/connector/compat';
- * import { useTransactionSigner, useConnector } from '@solana/connector';
- *
- * function JupiterIntegration() {
- *   const { signer } = useTransactionSigner();
- *   const { disconnect } = useConnector();
- *
- *   const walletAdapter = createWalletAdapterCompat(signer, {
- *     disconnect: async () => {
- *       await disconnect();
- *     }
- *   });
- *
- *   return <JupiterTerminal wallet={walletAdapter} />;
- * }
- * ```
- *
- * @param signer - TransactionSigner from connector-kit (can be null)
- * @param options - Configuration options including disconnect handler
- * @returns WalletAdapterCompatible interface
- */
 export function createWalletAdapterCompat(
     signer: TransactionSigner | null,
     options: WalletAdapterCompatOptions,
@@ -144,16 +113,12 @@ export function createWalletAdapterCompat(
             try {
                 const tx = transformTransaction ? transformTransaction(transaction) : transaction;
 
-                // Wallet adapter pattern: Sign the transaction, then send via connection
-                // The signer.signTransaction now handles format conversion automatically:
-                // web3.js → Wallet Standard (serialized) → web3.js
                 const capabilities = signer.getCapabilities();
 
                 if (!capabilities.canSign) {
                     throw new Error('Wallet does not support transaction signing');
                 }
 
-                // Sign the transaction (format conversion happens inside signTransaction)
                 const signedTx = await signer.signTransaction(tx);
 
                 // Serialize the signed transaction
@@ -176,8 +141,6 @@ export function createWalletAdapterCompat(
         },
 
         connect: async () => {
-            // Connect is handled by connector-kit's ConnectorProvider
-            // This is a no-op for compatibility
             return Promise.resolve();
         },
 
@@ -209,34 +172,6 @@ export function createWalletAdapterCompat(
     };
 }
 
-/**
- * React hook version of createWalletAdapterCompat.
- * Automatically memoizes the adapter when signer changes.
- *
- * @example
- * ```typescript
- * import { useWalletAdapterCompat } from '@solana/connector/compat';
- * import { useTransactionSigner, useConnector } from '@solana/connector';
- *
- * function MyComponent() {
- *   const { signer } = useTransactionSigner();
- *   const { disconnect } = useConnector();
- *
- *   const walletAdapter = useWalletAdapterCompat(signer, disconnect, {
- *     onError: (error, operation) => {
- *       console.error(`Error in ${operation}:`, error);
- *     }
- *   });
- *
- *   return <JupiterTerminal wallet={walletAdapter} />;
- * }
- * ```
- *
- * @param signer - TransactionSigner from useTransactionSigner
- * @param disconnect - Disconnect function from useConnector
- * @param options - Additional options (excluding disconnect)
- * @returns Memoized WalletAdapterCompatible interface
- */
 export function useWalletAdapterCompat(
     signer: TransactionSigner | null,
     disconnect: () => Promise<void>,

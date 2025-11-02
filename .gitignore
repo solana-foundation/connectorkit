@@ -35,6 +35,9 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 # Finder (MacOS) folder config
 .DS_Store
 
+# cursor
+.cursor
+
 # Reference projects (local development only)
 /ai-main/
 /gill-master/

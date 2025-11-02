@@ -1,12 +1,5 @@
 /**
- * @solana/connector - Transaction Signing Abstraction Layer
- *
- * Provides a clean, unified interface for transaction operations that works
- * across both Wallet Standard and legacy wallet implementations.
- *
- * Inspired by wallet-adapter-compat's transaction signer pattern, this
- * abstraction layer makes it easy to integrate with transaction libraries
- * and provides consistent error handling and capability detection.
+ * Transaction signing abstraction layer
  */
 
 import type {
@@ -21,136 +14,29 @@ import { TransactionError, ValidationError, Errors } from '../errors';
 
 const logger = createLogger('TransactionSigner');
 
-/**
- * Unified transaction signer interface
- *
- * This interface abstracts wallet-specific transaction signing methods
- * into a consistent API that works across all Wallet Standard wallets.
- *
- * @example
- * ```ts
- * const signer = createTransactionSigner({
- *   wallet: connectedWallet,
- *   account: selectedAccount,
- *   cluster: currentCluster
- * })
- *
- * // Check capabilities before using
- * const caps = signer.getCapabilities()
- * if (!caps.canSend) {
- *   console.warn('Wallet cannot send transactions directly')
- * }
- *
- * // Sign and send a transaction
- * const signature = await signer.signAndSendTransaction(transaction)
- * console.log('Transaction sent:', signature)
- * ```
- */
 export interface TransactionSigner {
     /** The wallet address that will sign transactions */
     readonly address: string;
 
-    /**
-     * Sign a single transaction without sending it
-     * The wallet prompts the user to approve the transaction
-     *
-     * @param transaction - The transaction to sign
-     * @returns The signed transaction
-     * @throws {TransactionSignerError} If wallet doesn't support signing or user rejects
-     */
     signTransaction(transaction: SolanaTransaction): Promise<SolanaTransaction>;
 
-    /**
-     * Sign multiple transactions at once
-     * More efficient than signing one-by-one for batch operations
-     * Falls back to sequential signing if batch not supported
-     *
-     * @param transactions - Array of transactions to sign
-     * @returns Array of signed transactions in the same order
-     * @throws {TransactionSignerError} If signing fails for any transaction
-     */
     signAllTransactions(transactions: SolanaTransaction[]): Promise<SolanaTransaction[]>;
 
-    /**
-     * Sign and send a transaction in one operation
-     * The wallet handles both signing and broadcasting to the network
-     *
-     * @param transaction - The transaction to sign and send
-     * @param options - Optional send options (e.g., skipPreflight)
-     * @returns The transaction signature/hash
-     * @throws {TransactionSignerError} If sending fails or user rejects
-     */
     signAndSendTransaction(
         transaction: SolanaTransaction,
         options?: { skipPreflight?: boolean; maxRetries?: number },
     ): Promise<string>;
 
-    /**
-     * Sign and send multiple transactions sequentially
-     * Waits for each transaction to be sent before sending the next
-     *
-     * @param transactions - Array of transactions to sign and send
-     * @param options - Optional send options
-     * @returns Array of transaction signatures in the same order
-     * @throws {TransactionSignerError} If any transaction fails
-     */
     signAndSendTransactions(
         transactions: SolanaTransaction[],
         options?: { skipPreflight?: boolean; maxRetries?: number },
     ): Promise<string[]>;
 
-    /**
-     * Sign an arbitrary message (for authentication, verification, etc.)
-     * Optional: not all wallets support message signing
-     *
-     * @param message - The message to sign (as Uint8Array)
-     * @returns The signature bytes
-     * @throws {TransactionSignerError} If wallet doesn't support message signing
-     */
     signMessage?(message: Uint8Array): Promise<Uint8Array>;
 
-    /**
-     * Get the signer's capabilities
-     * Use this to conditionally enable/disable features in your UI
-     *
-     * @returns Object describing what this signer can do
-     */
     getCapabilities(): TransactionSignerCapabilities;
 }
 
-/**
- * Create a transaction signer from a Wallet Standard wallet
- *
- * This factory function creates a TransactionSigner instance that bridges
- * Wallet Standard features to a clean, consistent API.
- *
- * @param config - Configuration including wallet, account, and optional cluster
- * @returns TransactionSigner instance, or null if wallet/account invalid
- *
- * @example
- * ```ts
- * // Basic usage
- * const signer = createTransactionSigner({
- *   wallet: connectedWallet,
- *   account: selectedAccount
- * })
- *
- * if (!signer) {
- *   console.error('Failed to create signer - wallet or account missing')
- *   return
- * }
- *
- * // Use the signer
- * try {
- *   const sig = await signer.signAndSendTransaction(tx)
- *   console.log('Success:', sig)
- * } catch (error) {
- *   if (error instanceof TransactionSignerError) {
- *     console.error('Signing error:', error.code, error.message)
- *   }
- * }
- * ```
- */
 export function createTransactionSigner(config: TransactionSignerConfig): TransactionSigner | null {
     const { wallet, account, cluster, eventEmitter } = config;
 
@@ -168,7 +54,6 @@ export function createTransactionSigner(config: TransactionSignerConfig): Transa
         supportsBatchSigning: Boolean(features['solana:signAllTransactions']),
     };
 
-    // Build the signer interface
     const signer: TransactionSigner = {
         address,
 
@@ -177,7 +62,6 @@ export function createTransactionSigner(config: TransactionSignerConfig): Transa
                 throw Errors.featureNotSupported('transaction signing');
             }
 
-            // Validate transaction before signing
             const validation = TransactionValidator.validate(transaction);
             if (!validation.valid) {
                 logger.error('Transaction validation failed', { errors: validation.errors });
@@ -353,7 +237,6 @@ export function createTransactionSigner(config: TransactionSignerConfig): Transa
 
                 const { serialized } = prepareTransactionForWallet(transaction);
 
-                // Emit preparing event for debugger
                 if (eventEmitter) {
                     eventEmitter.emit({
                         type: 'transaction:preparing',
@@ -369,7 +252,6 @@ export function createTransactionSigner(config: TransactionSignerConfig): Transa
                     ...(options ? { options } : {}),
                 };
 
-                // Emit signing event
                 if (eventEmitter) {
                     eventEmitter.emit({
                         type: 'transaction:signing',
@@ -393,7 +275,6 @@ export function createTransactionSigner(config: TransactionSignerConfig): Transa
 
                 const signature = typeof result === 'object' && result.signature ? result.signature : String(result);
 
-                // Emit sent event
                 if (eventEmitter) {
                     eventEmitter.emit({
                         type: 'transaction:sent',
@@ -465,10 +346,6 @@ export function createTransactionSigner(config: TransactionSignerConfig): Transa
 
 /**
  * @deprecated Use TransactionError from '../errors' instead
- * Kept for backward compatibility
- *
- * Custom error class for transaction signer operations
- * Provides structured error information for better error handling
  */
 export class TransactionSignerError extends TransactionError {
     constructor(
@@ -485,9 +362,6 @@ export class TransactionSignerError extends TransactionError {
 
 /**
  * @deprecated Use isTransactionError from '../errors' instead
- * Kept for backward compatibility
- *
- * Type guard to check if an error is a TransactionSignerError
  */
 export function isTransactionSignerError(error: unknown): error is TransactionSignerError {
     return error instanceof TransactionSignerError || error instanceof TransactionError;
