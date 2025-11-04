@@ -28,12 +28,12 @@ vi.mock('gill', () => ({
 
 describe('Cluster Utilities', () => {
     const mockClusters: Record<string, SolanaCluster> = {
-        mainnet: { id: 'solana:mainnet', name: 'Mainnet', rpcUrl: 'https://api.mainnet.solana.com' },
-        mainnetBeta: { id: 'solana:mainnet-beta', name: 'Mainnet Beta', rpcUrl: 'https://api.mainnet-beta.solana.com' },
-        devnet: { id: 'solana:devnet', name: 'Devnet', rpcUrl: 'https://api.devnet.solana.com' },
-        testnet: { id: 'solana:testnet', name: 'Testnet', rpcUrl: 'https://api.testnet.solana.com' },
-        localnet: { id: 'solana:localnet', name: 'Localnet', rpcUrl: 'http://localhost:8899' },
-        custom: { id: 'custom:test', name: 'Custom', rpcUrl: 'https://custom-rpc.com' },
+        mainnet: { id: 'solana:mainnet', label: 'Mainnet', url: 'https://api.mainnet.solana.com' } as SolanaCluster,
+        mainnetBeta: { id: 'solana:mainnet-beta', label: 'Mainnet Beta', url: 'https://api.mainnet-beta.solana.com' } as SolanaCluster,
+        devnet: { id: 'solana:devnet', label: 'Devnet', url: 'https://api.devnet.solana.com' } as SolanaCluster,
+        testnet: { id: 'solana:testnet', label: 'Testnet', url: 'https://api.testnet.solana.com' } as SolanaCluster,
+        localnet: { id: 'solana:localnet', label: 'Localnet', url: 'http://localhost:8899' } as SolanaCluster,
+        custom: { id: 'custom:test', label: 'Custom', url: 'https://custom-rpc.com' } as SolanaCluster,
     };
 
     describe('getClusterRpcUrl', () => {

@@ -26,10 +26,11 @@ export class TransactionTracker extends BaseCollaborator {
      */
     trackTransaction(activity: Omit<TransactionActivity, 'timestamp' | 'cluster'>): void {
         const state = this.getState();
+        const clusterId = state.cluster?.id || 'solana:devnet';
         const fullActivity: TransactionActivity = {
             ...activity,
             timestamp: new Date().toISOString(),
-            cluster: (state.cluster?.id || 'solana:devnet') as any,
+            cluster: clusterId as any,
         };
 
         this.transactions.unshift(fullActivity);

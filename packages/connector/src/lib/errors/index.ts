@@ -1,42 +1,12 @@
 /**
  * @solana/connector - Unified Error System
- *
- * Provides consistent, structured error handling across the entire library.
- * All errors extend ConnectorError and include:
- * - Error codes for programmatic handling
- * - Optional context data
- * - Original error preservation
- * - Stack trace capture
  */
 
-/**
- * Base error class for all Connector errors
- * Provides common structure and metadata
- */
 export abstract class ConnectorError extends Error {
-    /**
-     * Error code for programmatic handling
-     */
     abstract readonly code: string;
-
-    /**
-     * Whether this error is recoverable (user can retry)
-     */
     abstract readonly recoverable: boolean;
-
-    /**
-     * Additional context about the error
-     */
     readonly context?: Record<string, unknown>;
-
-    /**
-     * The underlying error that caused this error
-     */
     readonly originalError?: Error;
-
-    /**
-     * Timestamp when error occurred
-     */
     readonly timestamp: string;
 
     constructor(message: string, context?: Record<string, unknown>, originalError?: Error) {
@@ -46,15 +16,11 @@ export abstract class ConnectorError extends Error {
         this.originalError = originalError;
         this.timestamp = new Date().toISOString();
 
-        // Maintain proper stack trace
         if (Error.captureStackTrace) {
             Error.captureStackTrace(this, this.constructor);
         }
     }
 
-    /**
-     * Get a JSON representation of the error
-     */
     toJSON(): Record<string, unknown> {
         return {
             name: this.name,
@@ -68,9 +34,6 @@ export abstract class ConnectorError extends Error {
     }
 }
 
-/**
- * Connection-related errors (wallet connection, disconnection)
- */
 export class ConnectionError extends ConnectorError {
     readonly code: ConnectionErrorCode;
     readonly recoverable = true;
@@ -90,9 +53,6 @@ export type ConnectionErrorCode =
     | 'ACCOUNT_NOT_AVAILABLE'
     | 'RECONNECTION_FAILED';
 
-/**
- * Validation errors (invalid data, unsupported formats)
- */
 export class ValidationError extends ConnectorError {
     readonly code: ValidationErrorCode;
     readonly recoverable = false;
@@ -112,19 +72,11 @@ export type ValidationErrorCode =
     | 'UNSUPPORTED_FORMAT'
     | 'VALIDATION_FAILED';
 
-/**
- * Configuration errors (setup issues, missing required options)
- */
 export class ConfigurationError extends ConnectorError {
     readonly code: ConfigurationErrorCode;
     readonly recoverable = false;
 
-    constructor(
-        code: ConfigurationErrorCode,
-        message: string,
-        context?: Record<string, unknown>,
-        originalError?: Error,
-    ) {
+    constructor(code: ConfigurationErrorCode, message: string, context?: Record<string, unknown>, originalError?: Error) {
         super(message, context, originalError);
         this.code = code;
     }
@@ -137,9 +89,6 @@ export type ConfigurationErrorCode =
     | 'INVALID_CONFIG'
     | 'INITIALIZATION_FAILED';
 
-/**
- * Network errors (RPC failures, timeout)
- */
 export class NetworkError extends ConnectorError {
     readonly code: NetworkErrorCode;
     readonly recoverable = true;
@@ -156,10 +105,6 @@ export type NetworkErrorCode =
     | 'NETWORK_UNAVAILABLE'
     | 'TRANSACTION_SIMULATION_FAILED';
 
-/**
- * Transaction errors (signing, sending transactions)
- * Extends the existing TransactionSignerError pattern
- */
 export class TransactionError extends ConnectorError {
     readonly code: TransactionErrorCode;
     readonly recoverable: boolean;
@@ -167,7 +112,6 @@ export class TransactionError extends ConnectorError {
     constructor(code: TransactionErrorCode, message: string, context?: Record<string, unknown>, originalError?: Error) {
         super(message, context, originalError);
         this.code = code;
-        // Some transaction errors are recoverable (user rejected, network issue)
         this.recoverable = ['USER_REJECTED', 'SEND_FAILED', 'SIMULATION_FAILED'].includes(code);
     }
 }
@@ -180,10 +124,6 @@ export type TransactionErrorCode =
     | 'SIMULATION_FAILED'
     | 'INVALID_TRANSACTION'
     | 'TRANSACTION_EXPIRED';
-
-// ============================================================================
-// Type Guards
-// ============================================================================
 
 export function isConnectorError(error: unknown): error is ConnectorError {
     return error instanceof ConnectorError;
@@ -209,19 +149,12 @@ export function isTransactionError(error: unknown): error is TransactionError {
     return error instanceof TransactionError;
 }
 
-// ============================================================================
-// Error Factory Functions (Convenience Helpers)
-// ============================================================================
-
 export const Errors = {
-    // Connection errors
     walletNotConnected: (context?: Record<string, unknown>) =>
         new ConnectionError('WALLET_NOT_CONNECTED', 'No wallet connected', context),
 
     walletNotFound: (walletName?: string) =>
-        new ConnectionError('WALLET_NOT_FOUND', `Wallet not found${walletName ? `: ${walletName}` : ''}`, {
-            walletName,
-        }),
+        new ConnectionError('WALLET_NOT_FOUND', `Wallet not found${walletName ? `: ${walletName}` : ''}`, { walletName }),
 
     connectionFailed: (originalError?: Error) =>
         new ConnectionError('CONNECTION_FAILED', 'Failed to connect to wallet', undefined, originalError),
@@ -229,20 +162,15 @@ export const Errors = {
     accountNotAvailable: (address?: string) =>
         new ConnectionError('ACCOUNT_NOT_AVAILABLE', 'Requested account not available', { address }),
 
-    // Validation errors
     invalidTransaction: (reason: string, context?: Record<string, unknown>) =>
         new ValidationError('INVALID_TRANSACTION', `Invalid transaction: ${reason}`, context),
 
     invalidFormat: (expectedFormat: string, actualFormat?: string) =>
-        new ValidationError('INVALID_FORMAT', `Invalid format: expected ${expectedFormat}`, {
-            expectedFormat,
-            actualFormat,
-        }),
+        new ValidationError('INVALID_FORMAT', `Invalid format: expected ${expectedFormat}`, { expectedFormat, actualFormat }),
 
     unsupportedFormat: (format: string) =>
         new ValidationError('UNSUPPORTED_FORMAT', `Unsupported format: ${format}`, { format }),
 
-    // Configuration errors
     missingProvider: (hookName: string) =>
         new ConfigurationError(
             'MISSING_PROVIDER',
@@ -257,13 +185,12 @@ export const Errors = {
             { clusterId, availableClusters },
         ),
 
-    // Network errors
     rpcError: (message: string, originalError?: Error) =>
         new NetworkError('RPC_ERROR', message, undefined, originalError),
 
-    networkTimeout: () => new NetworkError('NETWORK_TIMEOUT', 'Network request timed out'),
+    networkTimeout: () =>
+        new NetworkError('NETWORK_TIMEOUT', 'Network request timed out'),
 
-    // Transaction errors
     signingFailed: (originalError?: Error) =>
         new TransactionError('SIGNING_FAILED', 'Failed to sign transaction', undefined, originalError),
 
@@ -274,23 +201,12 @@ export const Errors = {
         new TransactionError('USER_REJECTED', `User rejected ${operation}`, { operation }),
 } as const;
 
-// ============================================================================
-// Error Conversion Utilities
-// ============================================================================
-
-/**
- * Convert any error to a ConnectorError
- * Useful for wrapping unknown errors in a structured format
- */
 export function toConnectorError(error: unknown, defaultMessage = 'An unexpected error occurred'): ConnectorError {
-    // Already a ConnectorError
     if (isConnectorError(error)) {
         return error;
     }
 
-    // Standard Error
     if (error instanceof Error) {
-        // Try to classify based on message patterns
         const message = error.message.toLowerCase();
 
         if (message.includes('user rejected') || message.includes('user denied')) {
@@ -309,29 +225,21 @@ export function toConnectorError(error: unknown, defaultMessage = 'An unexpected
             return Errors.rpcError(error.message, error);
         }
 
-        // Generic validation error for "invalid" messages
         if (message.includes('invalid')) {
             return new ValidationError('VALIDATION_FAILED', error.message, undefined, error);
         }
 
-        // Wrap in generic transaction error
         return new TransactionError('SIGNING_FAILED', error.message, undefined, error);
     }
 
-    // Unknown error type
     return new TransactionError('SIGNING_FAILED', defaultMessage, { originalError: String(error) });
 }
 
-/**
- * Get user-friendly error message
- * Converts technical errors into messages suitable for display
- */
 export function getUserFriendlyMessage(error: unknown): string {
     if (!isConnectorError(error)) {
         return 'An unexpected error occurred. Please try again.';
     }
 
-    // Provide context-aware messages
     const messages: Record<string, string> = {
         WALLET_NOT_CONNECTED: 'Please connect your wallet to continue.',
         WALLET_NOT_FOUND: 'Wallet not found. Please install a supported wallet.',

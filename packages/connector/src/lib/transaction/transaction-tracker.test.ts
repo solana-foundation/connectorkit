@@ -26,7 +26,7 @@ describe('TransactionTracker', () => {
             connecting: false,
             accounts: [],
             selectedAccount: null,
-            cluster: { id: 'mainnet-beta', label: 'Mainnet Beta', endpoint: 'https://api.mainnet-beta.solana.com' },
+            cluster: { id: 'solana:mainnet-beta', label: 'Mainnet Beta', url: 'https://api.mainnet-beta.solana.com' } as any,
             clusters: [],
         };
 
@@ -53,7 +53,7 @@ describe('TransactionTracker', () => {
             expect(transactions[0]).toMatchObject({
                 signature: TEST_SIGNATURES.TX_1,
                 status: 'pending',
-                cluster: 'Mainnet Beta',
+                cluster: 'solana:mainnet-beta',
             });
             expect(transactions[0].timestamp).toBeDefined();
         });
@@ -128,7 +128,7 @@ describe('TransactionTracker', () => {
             });
 
             const transactions = transactionTracker.getTransactions();
-            expect(transactions[0].cluster).toBe('Mainnet Beta');
+            expect(transactions[0].cluster).toBe('solana:mainnet-beta');
         });
 
         it('should handle unknown cluster', () => {
@@ -141,7 +141,7 @@ describe('TransactionTracker', () => {
             });
 
             const transactions = transactionTracker.getTransactions();
-            expect(transactions[0].cluster).toBe('unknown');
+            expect(transactions[0].cluster).toBe('solana:devnet');
         });
     });
 

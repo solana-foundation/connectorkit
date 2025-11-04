@@ -127,11 +127,29 @@ export { createSolanaMainnet, createSolanaDevnet, createSolanaTestnet, createSol
 export { installPolyfills, isPolyfillInstalled, isCryptoAvailable, getPolyfillStatus } from './lib/utils/polyfills';
 
 // ============================================================================
+// Kit Signer Integration
+// ============================================================================
+export * from './lib/kit-signers/types';
+export * from './lib/kit-signers/factories';
+export * from './lib/kit-signers/integration';
+export * from './lib/kit-signers/utils';
+export { createSignableMessage } from '@solana/signers';
+export { address } from '@solana/addresses';
+
+// ============================================================================
+// Connection Abstraction
+// ============================================================================
+export type { DualConnection, Commitment } from './lib/connection/types';
+export { isLegacyConnection, isKitConnection } from './lib/connection/types';
+export { getLatestBlockhash, sendRawTransaction } from './lib/connection/helpers';
+
+// ============================================================================
 // Utility Functions
 // ============================================================================
 export * from './utils/clipboard';
 export * from './utils/formatting';
 export * from './utils/cluster';
+export * from './utils/chain';
 export * from './utils/network';
 
 // ============================================================================

@@ -71,3 +71,11 @@ export function createErrorEvent(error: Error = new Error('Test error'), context
         timestamp: new Date().toISOString(),
     };
 }
+
+export function createWalletRegisteredEvent(walletName: string = 'Phantom'): ConnectorEvent {
+    return {
+        type: 'wallet:registered',
+        wallet: walletName as WalletName,
+        timestamp: new Date().toISOString(),
+    };
+}

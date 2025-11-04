@@ -57,3 +57,4 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 /explorer-master/
 /solana-transaction-optimizer-main/
 **/local/
+/hermis-main/

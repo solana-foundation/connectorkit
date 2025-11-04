@@ -34,17 +34,17 @@ export default function TransactionsPage() {
             </header>
 
             {/* Main Content */}
-            <main className="container mx-auto px-4 py-8">
-                <div className="max-w-6xl mx-auto space-y-6">
-                    {/* Transaction Demo */}
+            <main className="container mx-auto px-4 py-6">
+                <div className="max-w-7xl mx-auto">
+                    <div className="mb-6">
+                        <h1 className="text-3xl font-bold">Transaction Examples</h1>
+                        <p className="text-muted-foreground mt-1">
+                            Test transactions, Kit signers, chain utilities, and connection abstraction
+                        </p>
+                    </div>
                     <TransactionDemo />
                 </div>
             </main>
-
-            {/* Footer */}
-            <footer className="border-t mt-12 py-6 text-center text-sm text-muted-foreground">
-                <p>Built with ConnectorKit • Testing compat layer and debugger integration</p>
-            </footer>
         </div>
     );
 }

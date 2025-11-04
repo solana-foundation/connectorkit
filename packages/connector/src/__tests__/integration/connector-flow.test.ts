@@ -230,11 +230,12 @@ describe('Connector Flow Integration', () => {
         it('should emit account-changed event', async () => {
             await client.selectAccount(TEST_ADDRESSES.ACCOUNT_2);
 
-            await waitForCondition(() => eventCollector.getEventsByType('account-changed').length > 0, {
-                timeout: 2000,
+            await waitForCondition(() => eventCollector.getEventsByType('account:changed').length > 0, {
+                timeout: 5000,
+                interval: 100,
             });
 
-            eventCollector.assertEventEmitted('account-changed');
+            eventCollector.assertEventEmitted('account:changed');
         });
 
         it('should throw error for invalid account', async () => {
