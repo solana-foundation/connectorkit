@@ -1,6 +1,6 @@
 {
     "name": "@solana/connector-debugger",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "description": "Development debug panel for @solana/connector",
     "main": "./dist/index.js",
     "module": "./dist/index.mjs",
