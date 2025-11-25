@@ -7,7 +7,7 @@
 
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import type { TransactionMessage, TransactionMessageWithFeePayer, TransactionMessageWithBlockhashLifetime } from '@solana/kit';
 
 /**
@@ -170,8 +170,9 @@ export function useTransactionPreparer(): UseTransactionPreparerReturn {
         [client],
     );
 
-    return {
+    // Memoize return object to prevent unnecessary re-renders in consumers
+    return useMemo(() => ({
         prepare,
         ready,
-    };
+    }), [prepare, ready]);
 }
