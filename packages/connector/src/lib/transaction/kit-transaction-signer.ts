@@ -328,9 +328,9 @@ export function createKitTransactionSigner<TAddress extends string = string>(
     return {
         address: signerAddress,
 
-        async modifyAndSignTransactions<T extends Transaction | (Transaction & TransactionWithLifetime)>(
-            transactions: readonly T[],
-        ): Promise<readonly (T & TransactionWithinSizeLimit & TransactionWithLifetime)[]> {
+        async modifyAndSignTransactions(
+            transactions: readonly (Transaction | (Transaction & TransactionWithLifetime))[],
+        ): Promise<readonly (Transaction & TransactionWithinSizeLimit & TransactionWithLifetime)[]> {
             // Wallets need full wire format to simulate/display transactions
             // Format: [1-byte: num_sigs, ...64-byte sig slots, ...messageBytes]
             // Note: For single-signer transactions, num_sigs = 1 (encoded as 0x01)
@@ -408,7 +408,7 @@ export function createKitTransactionSigner<TAddress extends string = string>(
                         const walletTransaction = decoder.decode(signedTxBytes);
 
                         // Preserve lifetimeConstraint from original if present
-                        const originalWithLifetime = originalTransaction as TransactionWithOptionalLifetime<T>;
+                        const originalWithLifetime = originalTransaction as TransactionWithOptionalLifetime<Transaction>;
                         const result = {
                             ...walletTransaction,
                             ...(originalWithLifetime.lifetimeConstraint
@@ -416,7 +416,7 @@ export function createKitTransactionSigner<TAddress extends string = string>(
                                       lifetimeConstraint: originalWithLifetime.lifetimeConstraint,
                                   }
                                 : {}),
-                        } as T;
+                        };
 
                         logger.debug('Using modified transaction from wallet', {
                             modifiedMessageBytesLength: walletTransaction.messageBytes.length,
@@ -425,7 +425,7 @@ export function createKitTransactionSigner<TAddress extends string = string>(
 
                         // Assert transaction is within size limit (Kit 5.x requirement)
                         assertIsTransactionWithinSizeLimit(result);
-                        return result as T & TransactionWithinSizeLimit & TransactionWithLifetime;
+                        return result as Transaction & TransactionWithinSizeLimit & TransactionWithLifetime;
                     }
 
                     // Wallet didn't modify - use original messageBytes with wallet signature
@@ -453,14 +453,14 @@ export function createKitTransactionSigner<TAddress extends string = string>(
 
                     // Assert transaction is within size limit (Kit 5.x requirement)
                     assertIsTransactionWithinSizeLimit(signedTransaction);
-                    return signedTransaction as T & TransactionWithinSizeLimit & TransactionWithLifetime;
+                    return signedTransaction as Transaction & TransactionWithinSizeLimit & TransactionWithLifetime;
                 } catch (error) {
                     logger.error('Failed to decode signed transaction', { error });
                     // Return original transaction with assertions if decode fails
                     assertIsTransactionWithinSizeLimit(originalTransaction);
-                    return originalTransaction as T & TransactionWithinSizeLimit & TransactionWithLifetime;
+                    return originalTransaction as Transaction & TransactionWithinSizeLimit & TransactionWithLifetime;
                 }
-            }) as readonly (T & TransactionWithinSizeLimit & TransactionWithLifetime)[];
+            }) as readonly (Transaction & TransactionWithinSizeLimit & TransactionWithLifetime)[];
         },
     };
 }

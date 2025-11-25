@@ -4,13 +4,13 @@
  * Connection Abstraction Demo Component
  *
  * Demonstrates dual-architecture connection helpers that work with both
- * legacy @solana/web3.js Connection and modern Kit/gill Rpc.
+ * legacy @solana/web3.js Connection and modern @solana/kit Rpc.
  */
 
 import { useState } from 'react';
 import { useConnectorClient } from '@solana/connector';
 import { getLatestBlockhash, isLegacyConnection, isKitConnection } from '@solana/connector/headless';
-import { createSolanaRpc } from 'gill';
+import { createSolanaRpc } from '@solana/kit';
 import { Connection } from '@solana/web3.js';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -70,9 +70,9 @@ export function ConnectionAbstractionDemo() {
                 throw new Error('No RPC URL available');
             }
 
-            // Create Kit/gill Rpc
+            // Create Kit Rpc
             const rpc = createSolanaRpc(rpcUrl);
-            // Cast to DualConnection - gill's Rpc is compatible with our KitRpc structural type
+            // Cast to DualConnection - kit's Rpc is compatible with our KitRpc structural type
             const dualRpc = rpc as unknown as Parameters<typeof getLatestBlockhash>[0];
             
             // Debug: Check what properties the rpc has

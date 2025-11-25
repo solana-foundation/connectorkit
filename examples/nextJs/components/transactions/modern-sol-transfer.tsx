@@ -14,10 +14,11 @@ import {
     signTransactionMessageWithSigners,
     createSolanaRpcSubscriptions,
     lamports,
-    LAMPORTS_PER_SOL,
-} from 'gill';
-import { getTransferSolInstruction } from 'gill/programs';
-import { useGillTransactionSigner, useCluster, useConnectorClient } from '@solana/connector';
+    assertIsTransactionWithBlockhashLifetime,
+    type TransactionSigner,
+} from '@solana/kit';
+import { getTransferSolInstruction } from '@solana-program/system';
+import { useKitTransactionSigner, useCluster, useConnectorClient, LAMPORTS_PER_SOL } from '@solana/connector';
 import { TransactionForm } from './transaction-form';
 import { TransactionResult } from './transaction-result';
 
@@ -26,10 +27,10 @@ import { TransactionResult } from './transaction-result';
  *
  * Demonstrates using @solana/kit (web3.js 2.0) with modular packages.
  * This shows the modern, type-safe approach to Solana development using
- * connector-kit's gill-compatible TransactionSigner.
+ * connector-kit's kit-compatible TransactionSigner.
  */
 export function ModernSolTransfer() {
-    const { signer, ready } = useGillTransactionSigner();
+    const { signer, ready } = useKitTransactionSigner();
     const { cluster } = useCluster();
     const client = useConnectorClient();
     const [signature, setSignature] = useState<string | null>(null);
@@ -55,13 +56,13 @@ export function ModernSolTransfer() {
         // Get recent blockhash using web3.js 2.0 RPC
         const { value: latestBlockhash } = await rpc.getLatestBlockhash().send();
 
-        // Convert SOL to lamports using gill's helper and constant
+        // Convert SOL to lamports using kit's helper and constant
         const amountInLamports = lamports(BigInt(Math.floor(amount * Number(LAMPORTS_PER_SOL))));
 
-        // Create transfer instruction using gill's modern API
-        // Now fully type-safe with gill-compatible signer!
+        // Create transfer instruction using @solana/kit's modern API
+        // Cast to TransactionSigner for compatibility with instruction builders
         const transferInstruction = getTransferSolInstruction({
-            source: signer,
+            source: signer as TransactionSigner,
             destination: address(recipientAddress),
             amount: amountInLamports,
         });
@@ -89,6 +90,8 @@ export function ModernSolTransfer() {
 
         console.log('📡 Modern SOL Transfer: Sending and confirming transaction');
         try {
+            // Assert transaction has blockhash lifetime (we set it above with setTransactionMessageLifetimeUsingBlockhash)
+            assertIsTransactionWithBlockhashLifetime(signedTransaction);
             await sendAndConfirmTransactionFactory({ rpc, rpcSubscriptions })(signedTransaction, {
                 commitment: 'confirmed',
             });
