@@ -59,11 +59,21 @@ export function isDebugEnabled(): boolean {
         if (process.env?.CONNECTOR_DEBUG_LEVEL) return true;
         if (process.env?.CONNECTOR_DEBUG === 'true' || process.env?.CONNECTOR_DEBUG === '1') return true;
     }
-    if (typeof globalThis !== 'undefined' && (globalThis as typeof globalThis & { __CONNECTOR_DEBUG__?: boolean }).__CONNECTOR_DEBUG__ === true) {
-        return true;
+    if (typeof globalThis !== 'undefined') {
+        if ((globalThis as typeof globalThis & { __CONNECTOR_DEBUG__?: boolean }).__CONNECTOR_DEBUG__ === true) {
+            return true;
+        }
+        if ((globalThis as typeof globalThis & { __CONNECTOR_DEBUG_LEVEL__?: LogLevel }).__CONNECTOR_DEBUG_LEVEL__) {
+            return true;
+        }
     }
-    if (typeof window !== 'undefined' && (window as Window & { __CONNECTOR_DEBUG__?: boolean }).__CONNECTOR_DEBUG__ === true) {
-        return true;
+    if (typeof window !== 'undefined') {
+        if ((window as Window & { __CONNECTOR_DEBUG__?: boolean }).__CONNECTOR_DEBUG__ === true) {
+            return true;
+        }
+        if ((window as Window & { __CONNECTOR_DEBUG_LEVEL__?: LogLevel }).__CONNECTOR_DEBUG_LEVEL__) {
+            return true;
+        }
     }
     return false;
 }
