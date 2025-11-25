@@ -5,7 +5,7 @@
  * and detailed error reporting for Solana addresses and transaction signatures.
  */
 
-import { isAddress } from 'gill';
+import { isAddress } from '@solana/addresses';
 import { formatAddress } from './formatting';
 
 /**

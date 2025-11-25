@@ -29,6 +29,9 @@ describe('Main Entry Point (index.ts)', () => {
             expect(ConnectorKit.useAccount).toBeDefined();
             expect(ConnectorKit.useWalletInfo).toBeDefined();
             expect(ConnectorKit.useTransactionSigner).toBeDefined();
+            expect(ConnectorKit.useKitTransactionSigner).toBeDefined();
+            expect(ConnectorKit.useSolanaClient).toBeDefined();
+            // Deprecated aliases
             expect(ConnectorKit.useGillTransactionSigner).toBeDefined();
             expect(ConnectorKit.useGillSolanaClient).toBeDefined();
             expect(ConnectorKit.useTransactionPreparer).toBeDefined();
@@ -47,8 +50,11 @@ describe('Main Entry Point (index.ts)', () => {
 
         it('should export transaction signing functions', () => {
             expect(ConnectorKit.createTransactionSigner).toBeDefined();
-            expect(ConnectorKit.createGillTransactionSigner).toBeDefined();
+            expect(ConnectorKit.createKitTransactionSigner).toBeDefined();
             expect(typeof ConnectorKit.createTransactionSigner).toBe('function');
+            expect(typeof ConnectorKit.createKitTransactionSigner).toBe('function');
+            // Deprecated alias
+            expect(ConnectorKit.createGillTransactionSigner).toBeDefined();
             expect(typeof ConnectorKit.createGillTransactionSigner).toBe('function');
         });
 

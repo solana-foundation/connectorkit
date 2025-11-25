@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { renderHook } from '@testing-library/react';
-import { useGillTransactionSigner } from './use-gill-transaction-signer';
+import { useKitTransactionSigner, useGillTransactionSigner } from './use-kit-transaction-signer';
 import { ConnectorProvider } from '../ui/connector-provider';
 import type { ReactNode } from 'react';
 
-describe('useGillTransactionSigner', () => {
+describe('useKitTransactionSigner', () => {
     const mockConfig = {
         clusters: [{ id: 'solana:devnet', name: 'Devnet', rpcUrl: 'https://api.devnet.solana.com' }],
     };
@@ -14,7 +14,7 @@ describe('useGillTransactionSigner', () => {
     );
 
     it.skip('should return signer and ready status', () => {
-        const { result } = renderHook(() => useGillTransactionSigner(), { wrapper });
+        const { result } = renderHook(() => useKitTransactionSigner(), { wrapper });
 
         expect(result.current).toHaveProperty('signer');
         expect(result.current).toHaveProperty('ready');
@@ -22,9 +22,16 @@ describe('useGillTransactionSigner', () => {
     });
 
     it.skip('should return null signer when not ready (no wallet connected)', () => {
-        const { result } = renderHook(() => useGillTransactionSigner(), { wrapper });
+        const { result } = renderHook(() => useKitTransactionSigner(), { wrapper });
 
         expect(result.current.signer).toBeNull();
         expect(result.current.ready).toBe(false);
     });
+
+    describe('useGillTransactionSigner (deprecated alias)', () => {
+        it('should be an alias to useKitTransactionSigner', () => {
+            expect(useGillTransactionSigner).toBe(useKitTransactionSigner);
+        });
+    });
 });
+

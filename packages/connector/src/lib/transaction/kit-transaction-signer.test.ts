@@ -1,11 +1,20 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { createGillTransactionSigner } from './gill-transaction-signer';
+import { createKitTransactionSigner, createGillTransactionSigner } from './kit-transaction-signer';
 import type { TransactionSigner } from './transaction-signer';
 
 // Mock dependencies
-vi.mock('gill', () => ({
+vi.mock('@solana/transactions', () => ({
     getTransactionDecoder: vi.fn(() => ({ decode: vi.fn() })),
-    getSignatureFromBytes: vi.fn(() => 'mock-signature'),
+    assertIsTransactionWithinSizeLimit: vi.fn(),
+}));
+
+vi.mock('@solana/codecs', () => ({
+    getBase58Decoder: vi.fn(() => ({ decode: vi.fn(() => 'mock-address') })),
+}));
+
+vi.mock('@solana/keys', () => ({}));
+
+vi.mock('@solana/addresses', () => ({
     address: vi.fn((addr: string) => addr),
 }));
 
@@ -17,7 +26,7 @@ vi.mock('../../utils/transaction-format', () => ({
     isWeb3jsTransaction: vi.fn(() => false),
 }));
 
-describe('GillTransactionSigner', () => {
+describe('KitTransactionSigner', () => {
     let mockConnectorSigner: TransactionSigner;
     let mockAddress: string;
 
@@ -38,9 +47,9 @@ describe('GillTransactionSigner', () => {
         } as any;
     });
 
-    describe('createGillTransactionSigner', () => {
-        it('should create gill transaction signer', () => {
-            const signer = createGillTransactionSigner(mockConnectorSigner);
+    describe('createKitTransactionSigner', () => {
+        it('should create kit transaction signer', () => {
+            const signer = createKitTransactionSigner(mockConnectorSigner);
 
             expect(signer).toHaveProperty('address');
             expect(signer).toHaveProperty('modifyAndSignTransactions');
@@ -49,23 +58,30 @@ describe('GillTransactionSigner', () => {
 
         it('should handle missing address', () => {
             const signerWithoutAddress = { ...mockConnectorSigner, address: '' };
-            expect(() => createGillTransactionSigner(signerWithoutAddress)).not.toThrow();
+            expect(() => createKitTransactionSigner(signerWithoutAddress)).not.toThrow();
         });
 
         it('should preserve address from connector signer', () => {
-            const signer = createGillTransactionSigner(mockConnectorSigner);
+            const signer = createKitTransactionSigner(mockConnectorSigner);
             expect(signer?.address).toBe(mockAddress);
         });
 
         it('should have modifyAndSignTransactions method', () => {
-            const signer = createGillTransactionSigner(mockConnectorSigner);
+            const signer = createKitTransactionSigner(mockConnectorSigner);
             expect(typeof signer.modifyAndSignTransactions).toBe('function');
         });
 
         it('should handle empty transaction array', async () => {
-            const signer = createGillTransactionSigner(mockConnectorSigner);
+            const signer = createKitTransactionSigner(mockConnectorSigner);
             const result = await signer.modifyAndSignTransactions([]);
             expect(result).toEqual([]);
         });
     });
+
+    describe('createGillTransactionSigner (deprecated alias)', () => {
+        it('should be an alias to createKitTransactionSigner', () => {
+            expect(createGillTransactionSigner).toBe(createKitTransactionSigner);
+        });
+    });
 });
+

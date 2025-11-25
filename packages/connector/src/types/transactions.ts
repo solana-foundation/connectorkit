@@ -4,7 +4,9 @@
 
 import type { Wallet, WalletAccount } from './wallets';
 import type { SolanaCluster, SolanaClusterId } from '@wallet-ui/core';
-import type { Address, Signature, TransactionMessage } from 'gill';
+import type { Address } from '@solana/addresses';
+import type { Signature } from '@solana/keys';
+import type { TransactionMessage } from '@solana/transaction-messages';
 import type { Transaction, VersionedTransaction } from '@solana/web3.js';
 
 /**

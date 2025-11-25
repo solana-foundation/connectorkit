@@ -18,7 +18,7 @@ export type WalletName = string & { readonly __brand: 'WalletName' };
  * Account address as a branded string for type safety
  * Represents a Solana address (base58-encoded public key)
  *
- * @deprecated Use `Address` from 'gill' instead for consistent address typing
+ * @deprecated Use `Address` from '@solana/addresses' instead for consistent address typing
  */
 export type AccountAddress = string & { readonly __brand: 'AccountAddress' };
 
@@ -32,7 +32,7 @@ export function isWalletName(value: string): value is WalletName {
 /**
  * Type guard to check if a string is a valid account address
  *
- * @deprecated Use `isAddress` from 'gill' instead for proper address validation
+ * @deprecated Use `isAddress` from '@solana/addresses' instead for proper address validation
  */
 export function isAccountAddress(value: string): value is AccountAddress {
     // Basic validation: Solana addresses are typically 32-44 characters

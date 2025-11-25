@@ -10,7 +10,7 @@ import {
 } from '../lib/adapters/enhanced-storage';
 import { toClusterId } from '../utils/network';
 import type React from 'react';
-import { isAddress } from 'gill';
+import { isAddress } from '@solana/addresses';
 import { DEFAULT_MAX_RETRIES } from '../lib/constants';
 import { createLogger } from '../lib/utils/secure-logger';
 

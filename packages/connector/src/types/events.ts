@@ -5,7 +5,8 @@
 import type { TransactionActivity, TransactionActivityStatus } from './transactions';
 import type { WalletName } from './wallets';
 import type { SolanaClusterId } from '@wallet-ui/core';
-import type { Address, Signature } from 'gill';
+import type { Address } from '@solana/addresses';
+import type { Signature } from '@solana/keys';
 
 /**
  * Event types emitted by the connector

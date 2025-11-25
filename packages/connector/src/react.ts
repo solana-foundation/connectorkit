@@ -22,16 +22,32 @@ export { useCluster } from './hooks/use-cluster';
 export { useAccount } from './hooks/use-account';
 export { useWalletInfo } from './hooks/use-wallet-info';
 export { useTransactionSigner } from './hooks/use-transaction-signer';
-export { useGillTransactionSigner } from './hooks/use-gill-transaction-signer';
-export { useGillSolanaClient } from './hooks/use-gill-solana-client';
+export {
+    useKitTransactionSigner,
+    /** @deprecated Use `useKitTransactionSigner` instead */
+    useGillTransactionSigner,
+} from './hooks/use-kit-transaction-signer';
+export {
+    useSolanaClient,
+    /** @deprecated Use `useSolanaClient` instead */
+    useGillSolanaClient,
+} from './hooks/use-kit-solana-client';
 export { useTransactionPreparer } from './hooks/use-transaction-preparer';
 
 export type { UseClusterReturn } from './hooks/use-cluster';
 export type { UseAccountReturn } from './hooks/use-account';
 export type { UseWalletInfoReturn } from './hooks/use-wallet-info';
 export type { UseTransactionSignerReturn } from './hooks/use-transaction-signer';
-export type { UseGillTransactionSignerReturn } from './hooks/use-gill-transaction-signer';
-export type { UseGillSolanaClientReturn } from './hooks/use-gill-solana-client';
+export type {
+    UseKitTransactionSignerReturn,
+    /** @deprecated Use `UseKitTransactionSignerReturn` instead */
+    UseGillTransactionSignerReturn,
+} from './hooks/use-kit-transaction-signer';
+export type {
+    UseSolanaClientReturn,
+    /** @deprecated Use `UseSolanaClientReturn` instead */
+    UseGillSolanaClientReturn,
+} from './hooks/use-kit-solana-client';
 export type { UseTransactionPreparerReturn, TransactionPrepareOptions } from './hooks/use-transaction-preparer';
 
 // React-specific types

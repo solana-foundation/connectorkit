@@ -5,7 +5,7 @@
  * accounts, and other on-chain data.
  */
 
-import { getExplorerLink } from 'gill';
+import { getExplorerLink } from '../kit-utils';
 
 export type ExplorerType = 'solana-explorer' | 'solscan' | 'xray' | 'solana-fm';
 

@@ -67,7 +67,11 @@ export {
     TransactionSignerError,
     isTransactionSignerError,
 } from './lib/transaction/transaction-signer';
-export { createGillTransactionSigner } from './lib/transaction/gill-transaction-signer';
+export {
+    createKitTransactionSigner,
+    /** @deprecated Use `createKitTransactionSigner` instead */
+    createGillTransactionSigner,
+} from './lib/transaction/kit-transaction-signer';
 
 export type { TransactionSigner } from './lib/transaction/transaction-signer';
 
@@ -166,3 +170,25 @@ export {
 } from './lib/utils/explorer-urls';
 
 export type { ExplorerType, ExplorerOptions } from './lib/utils/explorer-urls';
+
+// ============================================================================
+// Kit Utilities (replaces gill imports)
+// ============================================================================
+export {
+    LAMPORTS_PER_SOL,
+    lamportsToSol,
+    solToLamports,
+    getExplorerLink,
+    getPublicSolanaRpcUrl,
+    createSolanaClient,
+    prepareTransaction,
+} from './lib/kit-utils';
+
+export type {
+    SolanaClusterMoniker,
+    ModifiedClusterUrl,
+    SolanaClient,
+    CreateSolanaClientArgs,
+    GetExplorerLinkArgs,
+    PrepareTransactionConfig,
+} from './lib/kit-utils';

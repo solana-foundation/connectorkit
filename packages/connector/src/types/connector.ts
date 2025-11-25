@@ -7,7 +7,7 @@ import type { StorageAdapter } from './storage';
 import type { WalletInfo } from './wallets';
 import type { AccountInfo } from './accounts';
 import type { Wallet } from './wallets';
-import type { Address } from 'gill';
+import type { Address } from '@solana/addresses';
 
 /**
  * Core connector state

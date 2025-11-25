@@ -8,7 +8,7 @@ import {
 } from './clipboard';
 
 // Mock dependencies
-vi.mock('gill', () => ({
+vi.mock('@solana/addresses', () => ({
     isAddress: vi.fn(addr => typeof addr === 'string' && addr.length >= 32),
 }));
 

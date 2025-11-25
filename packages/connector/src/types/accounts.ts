@@ -3,7 +3,7 @@
  */
 
 import type { WalletAccount } from './wallets';
-import type { Address } from 'gill';
+import type { Address } from '@solana/addresses';
 
 /**
  * Extended account information with formatted address

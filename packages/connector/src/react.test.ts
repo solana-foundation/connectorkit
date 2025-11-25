@@ -63,14 +63,26 @@ describe('React Entry Point (react.ts)', () => {
             expect(typeof ConnectorKitReact.useTransactionSigner).toBe('function');
         });
 
-        it('should export useGillTransactionSigner hook', () => {
-            expect(ConnectorKitReact.useGillTransactionSigner).toBeDefined();
-            expect(typeof ConnectorKitReact.useGillTransactionSigner).toBe('function');
+        it('should export useKitTransactionSigner hook', () => {
+            expect(ConnectorKitReact.useKitTransactionSigner).toBeDefined();
+            expect(typeof ConnectorKitReact.useKitTransactionSigner).toBe('function');
         });
 
-        it('should export useGillSolanaClient hook', () => {
+        it('should export useGillTransactionSigner hook (deprecated alias)', () => {
+            expect(ConnectorKitReact.useGillTransactionSigner).toBeDefined();
+            expect(typeof ConnectorKitReact.useGillTransactionSigner).toBe('function');
+            expect(ConnectorKitReact.useGillTransactionSigner).toBe(ConnectorKitReact.useKitTransactionSigner);
+        });
+
+        it('should export useSolanaClient hook', () => {
+            expect(ConnectorKitReact.useSolanaClient).toBeDefined();
+            expect(typeof ConnectorKitReact.useSolanaClient).toBe('function');
+        });
+
+        it('should export useGillSolanaClient hook (deprecated alias)', () => {
             expect(ConnectorKitReact.useGillSolanaClient).toBeDefined();
             expect(typeof ConnectorKitReact.useGillSolanaClient).toBe('function');
+            expect(ConnectorKitReact.useGillSolanaClient).toBe(ConnectorKitReact.useSolanaClient);
         });
 
         it('should export useTransactionPreparer hook', () => {

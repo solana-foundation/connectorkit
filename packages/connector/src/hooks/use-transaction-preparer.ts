@@ -8,13 +8,15 @@
 'use client';
 
 import { useCallback } from 'react';
-import {
-    prepareTransaction,
-    type PrepareTransactionConfig,
-    type CompilableTransactionMessage,
-    type TransactionMessageWithBlockhashLifetime,
-} from 'gill';
-import { useGillSolanaClient } from './use-gill-solana-client';
+import type { TransactionMessage, TransactionMessageWithFeePayer, TransactionMessageWithBlockhashLifetime } from '@solana/kit';
+
+/**
+ * A transaction message that can be compiled for signing.
+ * Replaces the deprecated CompilableTransactionMessage type.
+ */
+type CompilableTransactionMessage = TransactionMessage & TransactionMessageWithFeePayer;
+import { prepareTransaction } from '../lib/kit-utils';
+import { useSolanaClient } from './use-kit-solana-client';
 import { NetworkError } from '../lib/errors';
 
 /**
@@ -70,7 +72,7 @@ export interface UseTransactionPreparerReturn {
 /**
  * Hook for preparing transactions with automatic optimization
  *
- * Uses Gill's prepareTransaction utility to:
+ * Uses kit's prepareTransaction utility to:
  * 1. Simulate the transaction to determine optimal compute units
  * 2. Set compute unit limit (with configurable multiplier for safety margin)
  * 3. Fetch and set the latest blockhash (if not already present)
@@ -80,14 +82,14 @@ export interface UseTransactionPreparerReturn {
  *
  * @example
  * ```tsx
- * import { useTransactionPreparer, useGillTransactionSigner } from '@solana/connector';
- * import { pipe, createTransactionMessage, appendTransactionMessageInstructions } from 'gill';
- * import { getTransferSolInstruction } from 'gill/programs';
+ * import { useTransactionPreparer, useKitTransactionSigner } from '@solana/connector';
+ * import { pipe, createTransactionMessage, appendTransactionMessageInstructions } from '@solana/kit';
+ * import { getTransferSolInstruction } from '@solana-program/system';
  *
  * function SendOptimizedTransaction() {
  *   const { prepare, ready } = useTransactionPreparer();
- *   const { signer } = useGillTransactionSigner();
- *   const { client } = useGillSolanaClient();
+ *   const { signer } = useKitTransactionSigner();
+ *   const { client } = useSolanaClient();
  *
  *   const handleSend = async (recipient: string, amount: bigint) => {
  *     if (!ready || !signer || !client) return;
@@ -146,7 +148,7 @@ export interface UseTransactionPreparerReturn {
  * ```
  */
 export function useTransactionPreparer(): UseTransactionPreparerReturn {
-    const { client, ready } = useGillSolanaClient();
+    const { client, ready } = useSolanaClient();
 
     const prepare = useCallback(
         async <TMessage extends CompilableTransactionMessage>(

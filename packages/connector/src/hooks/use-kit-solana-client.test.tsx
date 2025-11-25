@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { renderHook } from '@testing-library/react';
-import { useGillSolanaClient } from './use-gill-solana-client';
+import { useSolanaClient, useGillSolanaClient } from './use-kit-solana-client';
 import { ConnectorProvider } from '../ui/connector-provider';
 import type { ReactNode } from 'react';
 
-describe('useGillSolanaClient', () => {
+describe('useSolanaClient', () => {
     const mockConfig = {
         clusters: [{ id: 'solana:devnet', name: 'Devnet', rpcUrl: 'https://api.devnet.solana.com' }],
     };
@@ -14,7 +14,7 @@ describe('useGillSolanaClient', () => {
     );
 
     it.skip('should return client and ready status', () => {
-        const { result } = renderHook(() => useGillSolanaClient(), { wrapper });
+        const { result } = renderHook(() => useSolanaClient(), { wrapper });
 
         expect(result.current).toHaveProperty('client');
         expect(result.current).toHaveProperty('ready');
@@ -22,10 +22,17 @@ describe('useGillSolanaClient', () => {
     });
 
     it.skip('should return null client when not ready', () => {
-        const { result } = renderHook(() => useGillSolanaClient(), { wrapper });
+        const { result } = renderHook(() => useSolanaClient(), { wrapper });
 
         // Without a cluster selected, client should be null and ready should be false
         expect(result.current.client).toBeNull();
         expect(result.current.ready).toBe(false);
     });
+
+    describe('useGillSolanaClient (deprecated alias)', () => {
+        it('should be an alias to useSolanaClient', () => {
+            expect(useGillSolanaClient).toBe(useSolanaClient);
+        });
+    });
 });
+

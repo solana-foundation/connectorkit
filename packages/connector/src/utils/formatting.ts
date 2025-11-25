@@ -5,7 +5,7 @@
  * Consolidates both fast (number-based) and precise (bigint-based) formatting options
  */
 
-import { lamportsToSol, LAMPORTS_PER_SOL } from 'gill';
+import { lamportsToSol, LAMPORTS_PER_SOL } from '../lib/kit-utils';
 
 /**
  * Format a Solana address for display

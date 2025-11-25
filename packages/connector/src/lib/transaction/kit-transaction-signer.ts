@@ -1,8 +1,8 @@
 /**
- * @solana/connector - Gill/Kit Transaction Signer Adapter
+ * @solana/connector - Kit Transaction Signer Adapter
  *
  * Adapter that wraps connector-kit's TransactionSigner to be compatible with
- * gill (@solana/kit) TransactionModifyingSigner interface.
+ * @solana/kit TransactionModifyingSigner interface.
  *
  * This enables connector-kit to work seamlessly with modern Solana libraries
  * that expect @solana/kit's signer interface.
@@ -13,20 +13,17 @@
 
 import type { TransactionSigner as ConnectorTransactionSigner } from './transaction-signer';
 import type { SolanaTransaction } from '../../types/transactions';
-import {
-    Address,
-    TransactionModifyingSigner,
-    Transaction,
-    address as createAddress,
-    getBase58Decoder,
-    getTransactionDecoder,
-    getSignatureFromBytes,
-    type SignatureBytes,
-} from 'gill';
+import type { Address } from '@solana/addresses';
+import { address as createAddress } from '@solana/addresses';
+import type { TransactionModifyingSigner } from '@solana/signers';
+import type { Transaction, TransactionWithLifetime, TransactionWithinSizeLimit } from '@solana/transactions';
+import { getTransactionDecoder, assertIsTransactionWithinSizeLimit } from '@solana/transactions';
+import { getBase58Decoder } from '@solana/codecs';
+import type { SignatureBytes } from '@solana/keys';
 import { isWeb3jsTransaction } from '../../utils/transaction-format';
 import { createLogger } from '../utils/secure-logger';
 
-const logger = createLogger('GillTransactionSigner');
+const logger = createLogger('KitTransactionSigner');
 
 /**
  * Interface for transactions that can be serialized to bytes
@@ -36,9 +33,9 @@ interface SerializableTransaction {
 }
 
 /**
- * Type helper for transactions that may include a lifetime constraint
+ * Type helper for transactions that may include a lifetime constraint (local helper)
  */
-type TransactionWithLifetime<T extends Transaction> = T & {
+type TransactionWithOptionalLifetime<T extends Transaction> = T & {
     lifetimeConstraint?: unknown;
 };
 
@@ -135,7 +132,7 @@ function parseMessageSigners(messageBytes: Uint8Array): {
         }
         // Each address is 32 bytes
         const accountBytes = messageBytes.subarray(offset, offset + 32);
-        // Convert to base58 string using gill's decoder
+        // Convert to base58 string using kit's decoder
         const accountAddress = base58Decoder.decode(accountBytes);
         staticAccounts.push(accountAddress);
         offset += 32;
@@ -299,31 +296,31 @@ function extractSignature(signedTx: SolanaTransaction): Uint8Array {
 }
 
 /**
- * Create a gill-compatible TransactionPartialSigner from connector-kit's TransactionSigner
+ * Create a kit-compatible TransactionPartialSigner from connector-kit's TransactionSigner
  *
  * This adapter allows connector-kit to work with modern Solana libraries that use
- * @solana/kit's signer interfaces (gill, etc.)
+ * @solana/kit's signer interfaces.
  *
  * @param connectorSigner - Connector-kit's TransactionSigner instance
- * @returns Gill-compatible TransactionPartialSigner
+ * @returns Kit-compatible TransactionModifyingSigner
  *
  * @example
  * ```typescript
  * import { createTransactionSigner } from '@solana/connector';
- * import { createGillTransactionSigner } from '@solana/connector/gill';
+ * import { createKitTransactionSigner } from '@solana/connector';
  *
  * const connectorSigner = createTransactionSigner({ wallet, account });
- * const gillSigner = createGillTransactionSigner(connectorSigner);
+ * const kitSigner = createKitTransactionSigner(connectorSigner);
  *
- * // Now compatible with gill libraries
+ * // Now compatible with @solana/kit libraries
  * const instruction = getTransferSolInstruction({
- *   source: gillSigner,
+ *   source: kitSigner,
  *   destination: address('...'),
  *   amount: 1000000n
  * });
  * ```
  */
-export function createGillTransactionSigner<TAddress extends string = string>(
+export function createKitTransactionSigner<TAddress extends string = string>(
     connectorSigner: ConnectorTransactionSigner,
 ): TransactionModifyingSigner<TAddress> {
     const signerAddress = createAddress(connectorSigner.address) as Address<TAddress>;
@@ -331,7 +328,9 @@ export function createGillTransactionSigner<TAddress extends string = string>(
     return {
         address: signerAddress,
 
-        async modifyAndSignTransactions<T extends Transaction>(transactions: readonly T[]): Promise<readonly T[]> {
+        async modifyAndSignTransactions<T extends Transaction | (Transaction & TransactionWithLifetime)>(
+            transactions: readonly T[],
+        ): Promise<readonly (T & TransactionWithinSizeLimit & TransactionWithLifetime)[]> {
             // Wallets need full wire format to simulate/display transactions
             // Format: [1-byte: num_sigs, ...64-byte sig slots, ...messageBytes]
             // Note: For single-signer transactions, num_sigs = 1 (encoded as 0x01)
@@ -409,7 +408,7 @@ export function createGillTransactionSigner<TAddress extends string = string>(
                         const walletTransaction = decoder.decode(signedTxBytes);
 
                         // Preserve lifetimeConstraint from original if present
-                        const originalWithLifetime = originalTransaction as TransactionWithLifetime<T>;
+                        const originalWithLifetime = originalTransaction as TransactionWithOptionalLifetime<T>;
                         const result = {
                             ...walletTransaction,
                             ...(originalWithLifetime.lifetimeConstraint
@@ -424,34 +423,50 @@ export function createGillTransactionSigner<TAddress extends string = string>(
                             signatures: Object.keys(walletTransaction.signatures),
                         });
 
-                        return result;
+                        // Assert transaction is within size limit (Kit 5.x requirement)
+                        assertIsTransactionWithinSizeLimit(result);
+                        return result as T & TransactionWithinSizeLimit & TransactionWithLifetime;
                     }
 
                     // Wallet didn't modify - use original messageBytes with wallet signature
-                    const signatureBytes = extractSignature(signedTxBytes);
-                    const signatureBase58 = getSignatureFromBytes(signatureBytes as SignatureBytes);
+                    const extractedSignatureBytes = extractSignature(signedTxBytes);
+                    // Convert to base58 for logging (signature is always 64 bytes)
+                    const base58Decoder = getBase58Decoder();
+                    const signatureBase58 = base58Decoder.decode(extractedSignatureBytes);
 
                     logger.debug('Extracted signature from wallet (unmodified)', {
                         signerAddress,
-                        signatureLength: signatureBytes.length,
+                        signatureLength: extractedSignatureBytes.length,
                         signatureBase58, // Human-readable signature for debugging/logging
                     });
+
+                    // Cast the extracted bytes as SignatureBytes (we know it's 64 bytes from the wallet)
+                    const typedSignatureBytes = extractedSignatureBytes as SignatureBytes;
 
                     const signedTransaction = {
                         ...originalTransaction,
                         signatures: Object.freeze({
                             ...originalTransaction.signatures,
-                            [signerAddress]: signatureBytes,
+                            [signerAddress]: typedSignatureBytes,
                         }),
-                    } as T;
+                    };
 
-                    return signedTransaction;
+                    // Assert transaction is within size limit (Kit 5.x requirement)
+                    assertIsTransactionWithinSizeLimit(signedTransaction);
+                    return signedTransaction as T & TransactionWithinSizeLimit & TransactionWithLifetime;
                 } catch (error) {
                     logger.error('Failed to decode signed transaction', { error });
-                    // Return original transaction with no signatures if decode fails
-                    return originalTransaction as T;
+                    // Return original transaction with assertions if decode fails
+                    assertIsTransactionWithinSizeLimit(originalTransaction);
+                    return originalTransaction as T & TransactionWithinSizeLimit & TransactionWithLifetime;
                 }
-            }) as readonly T[];
+            }) as readonly (T & TransactionWithinSizeLimit & TransactionWithLifetime)[];
         },
     };
 }
+
+/**
+ * @deprecated Use `createKitTransactionSigner` instead. This alias is provided for backward compatibility.
+ */
+export const createGillTransactionSigner = createKitTransactionSigner;
+

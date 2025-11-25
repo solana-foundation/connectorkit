@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { SecureLogger, createLogger, logger } from './secure-logger';
 
-// Mock gill
-vi.mock('gill', () => ({
+// Mock kit-utils
+vi.mock('../kit-utils', () => ({
     isDebugEnabled: vi.fn(() => false),
     debug: vi.fn(),
 }));
@@ -11,7 +11,7 @@ describe('SecureLogger', () => {
     let testLogger: SecureLogger;
 
     beforeEach(() => {
-        testLogger = new SecureLogger({ prefix: 'Test', enabled: true, useGillDebug: false });
+        testLogger = new SecureLogger({ prefix: 'Test', enabled: true, useConnectorDebug: false });
     });
 
     it('should create logger instance', () => {

@@ -1,28 +1,28 @@
 /**
- * @solana/connector - useGillSolanaClient hook
+ * @solana/connector - useSolanaClient hook
  *
- * React hook for Gill's SolanaClient with built-in RPC and WebSocket subscriptions
- * Provides rpc, rpcSubscriptions, sendAndConfirmTransaction, and simulateTransaction
+ * React hook for Kit's SolanaClient with built-in RPC and WebSocket subscriptions
+ * Provides rpc and rpcSubscriptions
  */
 
 'use client';
 
 import { useMemo } from 'react';
-import { createSolanaClient, type SolanaClient, type ModifiedClusterUrl } from 'gill';
+import { createSolanaClient, type SolanaClient, type ModifiedClusterUrl } from '../lib/kit-utils';
 import { useCluster } from './use-cluster';
 import { useConnectorClient } from '../ui/connector-provider';
 import type { ClusterType } from '../utils/cluster';
 import { createLogger } from '../lib/utils/secure-logger';
 
-const logger = createLogger('useGillSolanaClient');
+const logger = createLogger('useSolanaClient');
 
 /**
- * Return value from useGillSolanaClient hook
+ * Return value from useSolanaClient hook
  */
-export interface UseGillSolanaClientReturn {
+export interface UseSolanaClientReturn {
     /**
-     * Gill SolanaClient instance with RPC and subscriptions (null if not available)
-     * Includes: rpc, rpcSubscriptions, sendAndConfirmTransaction, simulateTransaction
+     * Kit SolanaClient instance with RPC and subscriptions (null if not available)
+     * Includes: rpc, rpcSubscriptions
      */
     client: SolanaClient | null;
 
@@ -38,24 +38,27 @@ export interface UseGillSolanaClientReturn {
 }
 
 /**
- * Hook for Gill's SolanaClient with automatic RPC and WebSocket subscription management
+ * @deprecated Use `UseSolanaClientReturn` instead
+ */
+export type UseGillSolanaClientReturn = UseSolanaClientReturn;
+
+/**
+ * Hook for Kit's SolanaClient with automatic RPC and WebSocket subscription management
  *
  * Creates a fully configured SolanaClient based on the current cluster, providing:
  * - Type-safe RPC client
  * - WebSocket subscription client
- * - Built-in sendAndConfirmTransaction helper
- * - Built-in simulateTransaction helper
  *
  * The client is automatically recreated when the cluster changes.
  *
  * @example
  * ```tsx
- * import { useGillSolanaClient, useGillTransactionSigner } from '@solana/connector';
- * import { signTransactionMessageWithSigners } from 'gill';
+ * import { useSolanaClient, useKitTransactionSigner } from '@solana/connector';
+ * import { signTransactionMessageWithSigners } from '@solana/kit';
  *
  * function SendTransaction() {
- *   const { client, ready } = useGillSolanaClient();
- *   const { signer } = useGillTransactionSigner();
+ *   const { client, ready } = useSolanaClient();
+ *   const { signer } = useKitTransactionSigner();
  *
  *   const handleSend = async (transaction) => {
  *     if (!client || !signer) return;
@@ -63,10 +66,8 @@ export interface UseGillSolanaClientReturn {
  *     // Sign the transaction
  *     const signed = await signTransactionMessageWithSigners(transaction);
  *
- *     // Send and confirm using Gill's built-in helper
- *     await client.sendAndConfirmTransaction(signed, {
- *       commitment: 'confirmed'
- *     });
+ *     // Send using RPC client
+ *     const signature = await client.rpc.sendTransaction(signed).send();
  *   };
  *
  *   return (
@@ -79,28 +80,9 @@ export interface UseGillSolanaClientReturn {
  *
  * @example
  * ```tsx
- * // Simulating a transaction
- * function SimulateTransaction() {
- *   const { client } = useGillSolanaClient();
- *
- *   const handleSimulate = async (transaction) => {
- *     if (!client) return;
- *
- *     const simulation = await client.simulateTransaction(transaction, {
- *       sigVerify: false,
- *       commitment: 'processed'
- *     });
- *
- *     console.log('Simulation result:', simulation);
- *   };
- * }
- * ```
- *
- * @example
- * ```tsx
  * // Direct RPC access
  * function GetBalance() {
- *   const { client } = useGillSolanaClient();
+ *   const { client } = useSolanaClient();
  *
  *   const fetchBalance = async (address: Address) => {
  *     if (!client) return;
@@ -111,7 +93,7 @@ export interface UseGillSolanaClientReturn {
  * }
  * ```
  */
-export function useGillSolanaClient(): UseGillSolanaClientReturn {
+export function useSolanaClient(): UseSolanaClientReturn {
     const { type } = useCluster();
     const connectorClient = useConnectorClient();
 
@@ -134,7 +116,7 @@ export function useGillSolanaClient(): UseGillSolanaClientReturn {
                 urlOrMoniker: rpcUrl as ModifiedClusterUrl,
             });
         } catch (error) {
-            logger.error('Failed to create Gill Solana client', { error });
+            logger.error('Failed to create Solana client', { error });
             return null;
         }
     }, [type, connectorClient]);
@@ -145,3 +127,9 @@ export function useGillSolanaClient(): UseGillSolanaClientReturn {
         clusterType: type,
     };
 }
+
+/**
+ * @deprecated Use `useSolanaClient` instead. This alias is provided for backward compatibility.
+ */
+export const useGillSolanaClient = useSolanaClient;
+

@@ -9,7 +9,7 @@
  */
 
 import type { SolanaClusterId } from '@wallet-ui/core';
-import { getPublicSolanaRpcUrl, type SolanaClusterMoniker } from 'gill';
+import { getPublicSolanaRpcUrl, type SolanaClusterMoniker } from '../lib/kit-utils';
 
 /**
  * Normalized Solana network names
