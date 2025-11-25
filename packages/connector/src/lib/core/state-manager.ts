@@ -63,6 +63,9 @@ export class StateManager {
     private arraysEqual<T>(a: readonly T[], b: readonly T[]): boolean {
         if (a.length !== b.length) return false;
 
+        // Empty arrays are equal
+        if (a.length === 0) return true;
+
         if (a[0] && typeof a[0] === 'object' && 'name' in a[0] && b[0] && typeof b[0] === 'object' && 'name' in b[0]) {
             return a.every((item, i) => {
                 const aItem = item as Record<string, unknown>;
