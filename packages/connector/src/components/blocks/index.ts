@@ -1,7 +1,7 @@
 /**
  * Block components for wallet UI
  * 
- * Blocks are composable UI pieces that can be placed inside containers.
+ * Blocks are composable UI pieces that can be used to build custom wallet interfaces.
  * Each block provides a specific piece of functionality.
  */
 
@@ -9,6 +9,7 @@
 export { DisconnectBlock, type DisconnectBlockProps } from './disconnect-block';
 export { AccountBlock, type AccountBlockProps } from './account-block';
 export { ClusterBlock, type ClusterBlockProps } from './cluster-block';
+export { WalletListBlock, type WalletListBlockProps } from './wallet-list-block';
 
 // Data blocks (require data fetching hooks)
 export { BalanceBlock, type BalanceBlockProps } from './balance-block';
