@@ -1,7 +1,7 @@
 import type { Address } from '@solana/addresses';
+import { getBase58Decoder, getBase58Encoder } from '@solana/codecs';
 import type { SignatureBytes } from '@solana/keys';
 import type { SignatureDictionary } from '@solana/signers';
-import bs58 from 'bs58';
 
 function toSignatureBytes(bytes: Uint8Array): SignatureBytes {
     return bytes as SignatureBytes;
@@ -53,11 +53,11 @@ export function freezeSigner<T extends object>(signer: T): Readonly<T> {
 
 export function base58ToSignatureBytes(signature: string): SignatureBytes {
     try {
-        const bytes = bs58.decode(signature);
+        const bytes = getBase58Encoder().encode(signature);
         if (bytes.length !== 64) {
             throw new Error(`Invalid signature length: expected 64 bytes, got ${bytes.length}`);
         }
-        return new Uint8Array(bytes) as SignatureBytes;
+        return bytes as SignatureBytes;
     } catch (error) {
         throw new Error(`Failed to decode base58 signature: ${error instanceof Error ? error.message : String(error)}`);
     }
@@ -68,7 +68,7 @@ export function signatureBytesToBase58(bytes: SignatureBytes): string {
         if (bytes.length !== 64) {
             throw new Error(`Invalid signature length: expected 64 bytes, got ${bytes.length}`);
         }
-        return bs58.encode(bytes);
+        return getBase58Decoder().decode(bytes);
     } catch (error) {
         throw new Error(`Failed to encode signature to base58: ${error instanceof Error ? error.message : String(error)}`);
     }
