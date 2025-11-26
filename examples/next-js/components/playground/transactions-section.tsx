@@ -1,6 +1,6 @@
 'use client';
 
-import { useConnector, useAccount, ClusterBlock } from '@solana/connector';
+import { useConnector, useAccount, ClusterElement } from '@solana/connector';
 import { Alert } from '@/components/ui/alert';
 import { Info, ChevronDown, User, Check } from 'lucide-react';
 import {
@@ -269,8 +269,8 @@ export function TransactionsSection() {
 
                 {connected && (
                     <div className="flex items-center gap-3 mt-6">
-                        {/* ClusterBlock as network selector */}
-                        <ClusterBlock
+                        {/* ClusterElement as network selector */}
+                        <ClusterElement
                             render={({ cluster, clusters, setCluster }) => (
                                 <Select value={cluster?.id} onValueChange={setCluster}>
                                     <SelectTrigger className="w-auto h-9 cursor-pointer bg-white border border-sand-300 rounded-lg">

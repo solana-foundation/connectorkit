@@ -3,7 +3,7 @@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import {
     FeaturedSection,
-    BlockExamplesSection,
+    ElementExamplesSection,
     HooksExamplesSection,
     TransactionsSection,
 } from '@/components/playground';
@@ -28,8 +28,8 @@ export default function PlaygroundPage() {
                 <div className="max-w-7xl mx-auto px-4 lg:px-6">
                     <h1 className="text-h2 text-sand-1500 mb-3 text-center">Playground</h1>
                     <p className="text-body-xl text-sand-800 text-center max-w-xl mx-auto">
-                        Explore components, blocks, hooks, and test transactions. Copy any example and customize it for
-                        your app.
+                        Explore components, elements, hooks, and test transactions. Copy any example and customize it
+                        for your app.
                     </p>
                 </div>
             </section>
@@ -47,11 +47,11 @@ export default function PlaygroundPage() {
                                 <span className="hidden sm:inline">Components</span>
                             </TabsTrigger>
                             <TabsTrigger
-                                value="blocks"
+                                value="elements"
                                 className="h-14 px-4 rounded-none border-b-2 border-transparent data-[state=active]:border-sand-1500 data-[state=active]:bg-transparent data-[state=active]:shadow-none gap-2"
                             >
                                 <Code2 className="h-4 w-4" />
-                                <span className="hidden sm:inline">Blocks</span>
+                                <span className="hidden sm:inline">Elements</span>
                             </TabsTrigger>
                             <TabsTrigger
                                 value="hooks"
@@ -75,8 +75,8 @@ export default function PlaygroundPage() {
                     <FeaturedSection />
                 </TabsContent>
 
-                <TabsContent value="blocks" className="mt-0">
-                    <BlockExamplesSection />
+                <TabsContent value="elements" className="mt-0">
+                    <ElementExamplesSection />
                 </TabsContent>
 
                 <TabsContent value="hooks" className="mt-0">

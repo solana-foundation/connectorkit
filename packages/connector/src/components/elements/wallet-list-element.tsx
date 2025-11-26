@@ -5,20 +5,20 @@ import type { ReactNode } from 'react';
 import { useWalletInfo, type WalletDisplayInfo } from '../../hooks/use-wallet-info';
 import { useConnector } from '../../ui/connector-provider';
 
-export interface WalletListBlockRenderProps {
+export interface WalletListElementRenderProps {
     wallets: WalletDisplayInfo[];
     installedWallets: WalletDisplayInfo[];
     select: (walletName: string) => Promise<void>;
     connecting: boolean;
 }
 
-export interface WalletListBlockWalletProps {
+export interface WalletListElementWalletProps {
     wallet: WalletDisplayInfo;
     select: () => Promise<void>;
     connecting: boolean;
 }
 
-export interface WalletListBlockProps {
+export interface WalletListElementProps {
     /** Filter to only show installed wallets */
     installedOnly?: boolean;
     /** Custom className */
@@ -30,32 +30,32 @@ export interface WalletListBlockProps {
     /** Callback when a wallet is selected */
     onSelect?: (walletName: string) => void;
     /** Custom render function for full control */
-    render?: (props: WalletListBlockRenderProps) => ReactNode;
+    render?: (props: WalletListElementRenderProps) => ReactNode;
     /** Custom render function for individual wallet items */
-    renderWallet?: (props: WalletListBlockWalletProps) => ReactNode;
+    renderWallet?: (props: WalletListElementWalletProps) => ReactNode;
 }
 
 /**
- * Block for displaying available wallets and selecting one to connect.
+ * Element for displaying available wallets and selecting one to connect.
  *
  * @example Basic usage
  * ```tsx
- * <WalletListBlock />
+ * <WalletListElement />
  * ```
  *
  * @example Installed wallets only (most common)
  * ```tsx
- * <WalletListBlock installedOnly />
+ * <WalletListElement installedOnly />
  * ```
  *
  * @example Grid layout
  * ```tsx
- * <WalletListBlock variant="grid" installedOnly />
+ * <WalletListElement variant="grid" installedOnly />
  * ```
  *
  * @example With custom wallet render
  * ```tsx
- * <WalletListBlock
+ * <WalletListElement
  *   installedOnly
  *   renderWallet={({ wallet, select }) => (
  *     <Button key={wallet.name} onClick={select}>
@@ -68,7 +68,7 @@ export interface WalletListBlockProps {
  *
  * @example Full custom render
  * ```tsx
- * <WalletListBlock
+ * <WalletListElement
  *   render={({ installedWallets, select, connecting }) => (
  *     <div className="grid grid-cols-2 gap-2">
  *       {installedWallets.map(w => (
@@ -81,7 +81,7 @@ export interface WalletListBlockProps {
  * />
  * ```
  */
-export function WalletListBlock({
+export function WalletListElement({
     installedOnly = false,
     className,
     variant = 'list',
@@ -89,7 +89,7 @@ export function WalletListBlock({
     onSelect,
     render,
     renderWallet,
-}: WalletListBlockProps) {
+}: WalletListElementProps) {
     const { wallets, connecting } = useWalletInfo();
     const { select } = useConnector();
 
@@ -110,7 +110,7 @@ export function WalletListBlock({
         return (
             <div
                 className={`ck-wallet-list-block ck-wallet-list-block--empty ${className || ''}`}
-                data-slot="wallet-list-block"
+                data-slot="wallet-list-element"
                 data-empty="true"
             >
                 <div className="ck-wallet-list-empty" data-slot="wallet-list-empty">
@@ -163,7 +163,7 @@ export function WalletListBlock({
         return (
             <div
                 className={`ck-wallet-list-block ck-wallet-list-block--grid ${className || ''}`}
-                data-slot="wallet-list-block"
+                data-slot="wallet-list-element"
                 data-variant="grid"
             >
                 {displayWallets.map(wallet => {
@@ -213,7 +213,7 @@ export function WalletListBlock({
         return (
             <div
                 className={`ck-wallet-list-block ck-wallet-list-block--compact ${className || ''}`}
-                data-slot="wallet-list-block"
+                data-slot="wallet-list-element"
                 data-variant="compact"
             >
                 {displayWallets.map(wallet => {
@@ -257,7 +257,7 @@ export function WalletListBlock({
     return (
         <div
             className={`ck-wallet-list-block ck-wallet-list-block--list ${className || ''}`}
-            data-slot="wallet-list-block"
+            data-slot="wallet-list-element"
             data-variant="list"
         >
             {displayWallets.map(wallet => {
@@ -322,4 +322,4 @@ export function WalletListBlock({
     );
 }
 
-WalletListBlock.displayName = 'WalletListBlock';
+WalletListElement.displayName = 'WalletListElement';

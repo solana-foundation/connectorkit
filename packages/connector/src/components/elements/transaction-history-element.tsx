@@ -4,7 +4,7 @@ import React from 'react';
 import type { ReactNode } from 'react';
 import { useTransactions, type TransactionInfo } from '../../hooks/use-transactions';
 
-export interface TransactionHistoryBlockRenderProps {
+export interface TransactionHistoryElementRenderProps {
     transactions: TransactionInfo[];
     isLoading: boolean;
     error: Error | null;
@@ -13,7 +13,7 @@ export interface TransactionHistoryBlockRenderProps {
     refetch: () => Promise<void>;
 }
 
-export interface TransactionHistoryBlockProps {
+export interface TransactionHistoryElementProps {
     /** Number of transactions to display */
     limit?: number;
     /** Show transaction status */
@@ -29,27 +29,27 @@ export interface TransactionHistoryBlockProps {
     /** Show skeleton while loading */
     showSkeleton?: boolean;
     /** Custom render function for full control */
-    render?: (props: TransactionHistoryBlockRenderProps) => ReactNode;
+    render?: (props: TransactionHistoryElementRenderProps) => ReactNode;
     /** Custom render for individual transaction item */
     renderItem?: (transaction: TransactionInfo) => ReactNode;
 }
 
 /**
- * Block for displaying recent transaction history.
+ * Element for displaying recent transaction history.
  *
  * @example Basic usage
  * ```tsx
- * <TransactionHistoryBlock limit={5} />
+ * <TransactionHistoryElement limit={5} />
  * ```
  *
  * @example With load more
  * ```tsx
- * <TransactionHistoryBlock limit={10} showLoadMore />
+ * <TransactionHistoryElement limit={10} showLoadMore />
  * ```
  *
  * @example Custom item render
  * ```tsx
- * <TransactionHistoryBlock
+ * <TransactionHistoryElement
  *   renderItem={(tx) => (
  *     <a href={tx.explorerUrl} target="_blank">
  *       {tx.signature.slice(0, 8)}... - {tx.status}
@@ -58,7 +58,7 @@ export interface TransactionHistoryBlockProps {
  * />
  * ```
  */
-export function TransactionHistoryBlock({
+export function TransactionHistoryElement({
     limit = 5,
     showStatus = true,
     showTime = true,
@@ -68,7 +68,7 @@ export function TransactionHistoryBlock({
     showSkeleton = true,
     render,
     renderItem,
-}: TransactionHistoryBlockProps) {
+}: TransactionHistoryElementProps) {
     const { transactions, isLoading, error, hasMore, loadMore, refetch } = useTransactions({ limit });
 
     // Custom render
@@ -125,7 +125,7 @@ export function TransactionHistoryBlock({
         return (
             <div
                 className={`ck-tx-history-block ck-tx-history-block--${variant} ck-tx-history-block--loading ${className || ''}`}
-                data-slot="tx-history-block"
+                data-slot="tx-history-element"
                 data-variant={variant}
                 data-loading="true"
             >
@@ -143,7 +143,7 @@ export function TransactionHistoryBlock({
         return (
             <div
                 className={`ck-tx-history-block ck-tx-history-block--${variant} ck-tx-history-block--error ${className || ''}`}
-                data-slot="tx-history-block"
+                data-slot="tx-history-element"
                 data-variant={variant}
                 data-error="true"
             >
@@ -167,7 +167,7 @@ export function TransactionHistoryBlock({
         return (
             <div
                 className={`ck-tx-history-block ck-tx-history-block--${variant} ck-tx-history-block--empty ${className || ''}`}
-                data-slot="tx-history-block"
+                data-slot="tx-history-element"
                 data-variant={variant}
                 data-empty="true"
             >
@@ -219,7 +219,7 @@ export function TransactionHistoryBlock({
     return (
         <div
             className={`ck-tx-history-block ck-tx-history-block--${variant} ${className || ''}`}
-            data-slot="tx-history-block"
+            data-slot="tx-history-element"
             data-variant={variant}
         >
             {variant === 'expanded' && (
@@ -252,4 +252,4 @@ export function TransactionHistoryBlock({
     );
 }
 
-TransactionHistoryBlock.displayName = 'TransactionHistoryBlock';
+TransactionHistoryElement.displayName = 'TransactionHistoryElement';

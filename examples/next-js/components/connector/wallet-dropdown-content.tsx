@@ -5,11 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import {
-    BalanceBlock,
-    ClusterBlock,
-    TokenListBlock,
-    TransactionHistoryBlock,
-    DisconnectBlock,
+    BalanceElement,
+    ClusterElement,
+    TokenListElement,
+    TransactionHistoryElement,
+    DisconnectElement,
 } from '@solana/connector/react';
 import {
     DropdownMenu,
@@ -85,7 +85,7 @@ export function WalletDropdownContent({ selectedAccount, walletIcon, walletName 
                     </Button>
 
                     {/* Network Selector Globe Button */}
-                    <ClusterBlock
+                    <ClusterElement
                         render={({ cluster, clusters, setCluster }) => (
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
@@ -124,7 +124,7 @@ export function WalletDropdownContent({ selectedAccount, walletIcon, walletName 
             </div>
 
             {/* Full Width Balance */}
-            <BalanceBlock
+            <BalanceElement
                 render={({ solBalance, isLoading, refetch }) => (
                     <div className="rounded-[12px] border bg-muted/50 p-4">
                         <div className="flex items-center justify-between mb-1">
@@ -163,7 +163,7 @@ export function WalletDropdownContent({ selectedAccount, walletIcon, walletName 
                         </div>
                     </AccordionTrigger>
                     <AccordionContent>
-                        <TokenListBlock
+                        <TokenListElement
                             limit={5}
                             render={({ tokens, isLoading }) => (
                                 <div className="space-y-2 pb-2">
@@ -222,7 +222,7 @@ export function WalletDropdownContent({ selectedAccount, walletIcon, walletName 
                         </div>
                     </AccordionTrigger>
                     <AccordionContent>
-                        <TransactionHistoryBlock
+                        <TransactionHistoryElement
                             limit={5}
                             render={({ transactions, isLoading }) => (
                                 <div className="space-y-2 pb-2">
@@ -307,7 +307,7 @@ export function WalletDropdownContent({ selectedAccount, walletIcon, walletName 
             </Accordion>
 
             {/* Disconnect Button */}
-            <DisconnectBlock
+            <DisconnectElement
                 render={({ disconnect, disconnecting }) => (
                     <Button
                         variant="destructive"

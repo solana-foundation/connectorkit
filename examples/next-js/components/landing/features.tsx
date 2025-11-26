@@ -23,9 +23,9 @@ const features = [
     },
     {
         icon: Blocks,
-        title: 'Composable Blocks',
+        title: 'Composable Elements',
         description:
-            'Pre-built AccountBlock, BalanceBlock, TokenListBlock, TransactionHistoryBlock, and more. Mix and match to build any wallet UI.',
+            'Pre-built AccountElement, BalanceElement, TokenListElement, TransactionHistoryElement, and more. Mix and match to build any wallet UI.',
     },
     {
         icon: Paintbrush,

@@ -4,7 +4,7 @@ import React from 'react';
 import type { ReactNode } from 'react';
 import { useBalance, type TokenBalance } from '../../hooks/use-balance';
 
-export interface BalanceBlockRenderProps {
+export interface BalanceElementRenderProps {
     solBalance: number;
     formattedSol: string;
     tokens: TokenBalance[];
@@ -13,7 +13,7 @@ export interface BalanceBlockRenderProps {
     refetch: () => Promise<void>;
 }
 
-export interface BalanceBlockProps {
+export interface BalanceElementProps {
     /** Show SOL balance */
     showSol?: boolean;
     /** Show token balances */
@@ -29,25 +29,25 @@ export interface BalanceBlockProps {
     /** Show loading skeleton */
     showSkeleton?: boolean;
     /** Custom render function for full control */
-    render?: (props: BalanceBlockRenderProps) => ReactNode;
+    render?: (props: BalanceElementRenderProps) => ReactNode;
 }
 
 /**
- * Block for displaying wallet balance (SOL and tokens).
+ * Element for displaying wallet balance (SOL and tokens).
  *
  * @example Basic usage
  * ```tsx
- * <BalanceBlock />
+ * <BalanceElement />
  * ```
  *
  * @example With tokens
  * ```tsx
- * <BalanceBlock showTokens tokenCount={5} />
+ * <BalanceElement showTokens tokenCount={5} />
  * ```
  *
  * @example Custom render
  * ```tsx
- * <BalanceBlock
+ * <BalanceElement
  *   render={({ formattedSol, isLoading }) => (
  *     <div className="text-2xl font-bold">
  *       {isLoading ? 'Loading...' : formattedSol}
@@ -56,7 +56,7 @@ export interface BalanceBlockProps {
  * />
  * ```
  */
-export function BalanceBlock({
+export function BalanceElement({
     showSol = true,
     showTokens = false,
     tokenCount = 3,
@@ -65,7 +65,7 @@ export function BalanceBlock({
     showRefresh = false,
     showSkeleton = true,
     render,
-}: BalanceBlockProps) {
+}: BalanceElementProps) {
     const { solBalance, formattedSol, tokens, isLoading, error, refetch } = useBalance();
 
     // Custom render
@@ -86,7 +86,7 @@ export function BalanceBlock({
             strokeLinecap="round"
             strokeLinejoin="round"
             className={`ck-block-icon ${isLoading ? 'ck-block-icon--spinning' : ''}`}
-            data-slot="balance-block-refresh-icon"
+            data-slot="balance-element-refresh-icon"
         >
             <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
             <path d="M3 3v5h5" />
@@ -100,11 +100,11 @@ export function BalanceBlock({
         return (
             <div
                 className={`ck-balance-block ck-balance-block--${variant} ck-balance-block--loading ${className || ''}`}
-                data-slot="balance-block"
+                data-slot="balance-element"
                 data-variant={variant}
                 data-loading="true"
             >
-                <div className="ck-balance-block-skeleton" data-slot="balance-block-skeleton">
+                <div className="ck-balance-block-skeleton" data-slot="balance-element-skeleton">
                     <div className="ck-skeleton ck-skeleton--text" />
                     {showTokens && (
                         <>
@@ -122,11 +122,11 @@ export function BalanceBlock({
         return (
             <div
                 className={`ck-balance-block ck-balance-block--${variant} ck-balance-block--error ${className || ''}`}
-                data-slot="balance-block"
+                data-slot="balance-element"
                 data-variant={variant}
                 data-error="true"
             >
-                <span className="ck-balance-block-error" data-slot="balance-block-error">
+                <span className="ck-balance-block-error" data-slot="balance-element-error">
                     Failed to load balance
                 </span>
                 {showRefresh && (
@@ -134,7 +134,7 @@ export function BalanceBlock({
                         type="button"
                         className="ck-balance-block-refresh"
                         onClick={() => refetch()}
-                        data-slot="balance-block-refresh"
+                        data-slot="balance-element-refresh"
                     >
                         {refreshIcon}
                     </button>
@@ -148,11 +148,11 @@ export function BalanceBlock({
         return (
             <div
                 className={`ck-balance-block ck-balance-block--inline ${className || ''}`}
-                data-slot="balance-block"
+                data-slot="balance-element"
                 data-variant="inline"
             >
                 {showSol && (
-                    <span className="ck-balance-block-sol" data-slot="balance-block-sol">
+                    <span className="ck-balance-block-sol" data-slot="balance-element-sol">
                         {formattedSol}
                     </span>
                 )}
@@ -162,7 +162,7 @@ export function BalanceBlock({
                         className="ck-balance-block-refresh"
                         onClick={() => refetch()}
                         disabled={isLoading}
-                        data-slot="balance-block-refresh"
+                        data-slot="balance-element-refresh"
                     >
                         {refreshIcon}
                     </button>
@@ -176,50 +176,53 @@ export function BalanceBlock({
         return (
             <div
                 className={`ck-balance-block ck-balance-block--expanded ${className || ''}`}
-                data-slot="balance-block"
+                data-slot="balance-element"
                 data-variant="expanded"
             >
                 {showSol && (
-                    <div className="ck-balance-block-sol-section" data-slot="balance-block-sol-section">
-                        <span className="ck-balance-block-label" data-slot="balance-block-label">
+                    <div className="ck-balance-block-sol-section" data-slot="balance-element-sol-section">
+                        <span className="ck-balance-block-label" data-slot="balance-element-label">
                             SOL Balance
                         </span>
-                        <span className="ck-balance-block-sol" data-slot="balance-block-sol">
+                        <span className="ck-balance-block-sol" data-slot="balance-element-sol">
                             {formattedSol}
                         </span>
                     </div>
                 )}
 
                 {showTokens && displayTokens.length > 0 && (
-                    <div className="ck-balance-block-tokens-section" data-slot="balance-block-tokens-section">
-                        <span className="ck-balance-block-label" data-slot="balance-block-label">
+                    <div className="ck-balance-block-tokens-section" data-slot="balance-element-tokens-section">
+                        <span className="ck-balance-block-label" data-slot="balance-element-label">
                             Tokens ({tokens.length})
                         </span>
-                        <div className="ck-balance-block-tokens" data-slot="balance-block-tokens">
+                        <div className="ck-balance-block-tokens" data-slot="balance-element-tokens">
                             {displayTokens.map(token => (
                                 <div
                                     key={token.mint}
                                     className="ck-balance-block-token"
-                                    data-slot="balance-block-token"
+                                    data-slot="balance-element-token"
                                 >
                                     {token.logo && (
                                         <img
                                             src={token.logo}
                                             alt={token.symbol || 'Token'}
                                             className="ck-balance-block-token-logo"
-                                            data-slot="balance-block-token-logo"
+                                            data-slot="balance-element-token-logo"
                                         />
                                     )}
-                                    <span className="ck-balance-block-token-info" data-slot="balance-block-token-info">
+                                    <span
+                                        className="ck-balance-block-token-info"
+                                        data-slot="balance-element-token-info"
+                                    >
                                         <span
                                             className="ck-balance-block-token-symbol"
-                                            data-slot="balance-block-token-symbol"
+                                            data-slot="balance-element-token-symbol"
                                         >
                                             {token.symbol || token.mint.slice(0, 4) + '...' + token.mint.slice(-4)}
                                         </span>
                                         <span
                                             className="ck-balance-block-token-amount"
-                                            data-slot="balance-block-token-amount"
+                                            data-slot="balance-element-token-amount"
                                         >
                                             {token.formatted}
                                         </span>
@@ -227,7 +230,7 @@ export function BalanceBlock({
                                 </div>
                             ))}
                             {tokens.length > tokenCount && (
-                                <div className="ck-balance-block-more" data-slot="balance-block-more">
+                                <div className="ck-balance-block-more" data-slot="balance-element-more">
                                     +{tokens.length - tokenCount} more
                                 </div>
                             )}
@@ -241,7 +244,7 @@ export function BalanceBlock({
                         className="ck-balance-block-refresh"
                         onClick={() => refetch()}
                         disabled={isLoading}
-                        data-slot="balance-block-refresh"
+                        data-slot="balance-element-refresh"
                     >
                         {refreshIcon}
                         <span>Refresh</span>
@@ -255,17 +258,17 @@ export function BalanceBlock({
     return (
         <div
             className={`ck-balance-block ck-balance-block--compact ${className || ''}`}
-            data-slot="balance-block"
+            data-slot="balance-element"
             data-variant="compact"
         >
             {showSol && (
-                <span className="ck-balance-block-sol" data-slot="balance-block-sol">
+                <span className="ck-balance-block-sol" data-slot="balance-element-sol">
                     {formattedSol}
                 </span>
             )}
 
             {showTokens && displayTokens.length > 0 && (
-                <span className="ck-balance-block-token-count" data-slot="balance-block-token-count">
+                <span className="ck-balance-block-token-count" data-slot="balance-element-token-count">
                     +{tokens.length} tokens
                 </span>
             )}
@@ -276,7 +279,7 @@ export function BalanceBlock({
                     className="ck-balance-block-refresh"
                     onClick={() => refetch()}
                     disabled={isLoading}
-                    data-slot="balance-block-refresh"
+                    data-slot="balance-element-refresh"
                 >
                     {refreshIcon}
                 </button>
@@ -285,4 +288,4 @@ export function BalanceBlock({
     );
 }
 
-BalanceBlock.displayName = 'BalanceBlock';
+BalanceElement.displayName = 'BalanceElement';

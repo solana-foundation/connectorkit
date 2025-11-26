@@ -5,7 +5,7 @@ import type { ReactNode } from 'react';
 import { useAccount } from '../../hooks/use-account';
 import { useWalletInfo } from '../../hooks/use-wallet-info';
 
-export interface AccountBlockRenderProps {
+export interface AccountElementRenderProps {
     address: string | null;
     formatted: string;
     walletName: string | null;
@@ -14,7 +14,7 @@ export interface AccountBlockRenderProps {
     copied: boolean;
 }
 
-export interface AccountBlockProps {
+export interface AccountElementProps {
     /** Show wallet avatar/icon */
     showAvatar?: boolean;
     /** Show copy button */
@@ -28,25 +28,25 @@ export interface AccountBlockProps {
     /** Layout variant */
     variant?: 'compact' | 'expanded' | 'inline';
     /** Custom render function for full control */
-    render?: (props: AccountBlockRenderProps) => ReactNode;
+    render?: (props: AccountElementRenderProps) => ReactNode;
 }
 
 /**
- * Block for displaying connected account information.
+ * Element for displaying connected account information.
  *
  * @example Basic usage
  * ```tsx
- * <AccountBlock />
+ * <AccountElement />
  * ```
  *
  * @example With full address
  * ```tsx
- * <AccountBlock showFullAddress />
+ * <AccountElement showFullAddress />
  * ```
  *
  * @example Custom render
  * ```tsx
- * <AccountBlock
+ * <AccountElement
  *   render={({ formatted, walletIcon, copy, copied }) => (
  *     <DropdownMenuLabel>
  *       <img src={walletIcon} className="w-5 h-5" />
@@ -58,7 +58,7 @@ export interface AccountBlockProps {
  * />
  * ```
  */
-export function AccountBlock({
+export function AccountElement({
     showAvatar = true,
     showCopy = true,
     showFullAddress = false,
@@ -66,7 +66,7 @@ export function AccountBlock({
     avatarSize = 32,
     variant = 'compact',
     render,
-}: AccountBlockProps) {
+}: AccountElementProps) {
     const { address, formatted, copy, copied } = useAccount();
     const { name: walletName, icon: walletIcon } = useWalletInfo();
 
@@ -95,7 +95,7 @@ export function AccountBlock({
             strokeLinecap="round"
             strokeLinejoin="round"
             className="ck-block-icon"
-            data-slot="account-block-copy-icon"
+            data-slot="account-element-copy-icon"
         >
             {copied ? (
                 <polyline points="20 6 9 17 4 12" />
@@ -113,7 +113,7 @@ export function AccountBlock({
         return (
             <div
                 className={`ck-account-block ck-account-block--inline ${className || ''}`}
-                data-slot="account-block"
+                data-slot="account-element"
                 data-variant="inline"
             >
                 {showAvatar && walletIcon && (
@@ -122,10 +122,10 @@ export function AccountBlock({
                         alt={walletName || 'Wallet'}
                         className="ck-account-block-avatar"
                         style={{ width: avatarSize, height: avatarSize }}
-                        data-slot="account-block-avatar"
+                        data-slot="account-element-avatar"
                     />
                 )}
-                <span className="ck-account-block-address" data-slot="account-block-address">
+                <span className="ck-account-block-address" data-slot="account-element-address">
                     {displayAddress}
                 </span>
                 {showCopy && (
@@ -134,7 +134,7 @@ export function AccountBlock({
                         className="ck-account-block-copy"
                         onClick={handleCopy}
                         title={copied ? 'Copied!' : 'Copy address'}
-                        data-slot="account-block-copy"
+                        data-slot="account-element-copy"
                         data-copied={copied}
                     >
                         {copyIcon}
@@ -149,26 +149,26 @@ export function AccountBlock({
         return (
             <div
                 className={`ck-account-block ck-account-block--expanded ${className || ''}`}
-                data-slot="account-block"
+                data-slot="account-element"
                 data-variant="expanded"
             >
-                <div className="ck-account-block-header" data-slot="account-block-header">
+                <div className="ck-account-block-header" data-slot="account-element-header">
                     {showAvatar && walletIcon && (
                         <img
                             src={walletIcon}
                             alt={walletName || 'Wallet'}
                             className="ck-account-block-avatar"
                             style={{ width: avatarSize, height: avatarSize }}
-                            data-slot="account-block-avatar"
+                            data-slot="account-element-avatar"
                         />
                     )}
-                    <div className="ck-account-block-info" data-slot="account-block-info">
+                    <div className="ck-account-block-info" data-slot="account-element-info">
                         {walletName && (
-                            <span className="ck-account-block-wallet-name" data-slot="account-block-wallet-name">
+                            <span className="ck-account-block-wallet-name" data-slot="account-element-wallet-name">
                                 {walletName}
                             </span>
                         )}
-                        <span className="ck-account-block-address" data-slot="account-block-address">
+                        <span className="ck-account-block-address" data-slot="account-element-address">
                             {displayAddress}
                         </span>
                     </div>
@@ -178,7 +178,7 @@ export function AccountBlock({
                         type="button"
                         className="ck-account-block-copy"
                         onClick={handleCopy}
-                        data-slot="account-block-copy"
+                        data-slot="account-element-copy"
                         data-copied={copied}
                     >
                         {copyIcon}
@@ -193,7 +193,7 @@ export function AccountBlock({
     return (
         <div
             className={`ck-account-block ck-account-block--compact ${className || ''}`}
-            data-slot="account-block"
+            data-slot="account-element"
             data-variant="compact"
         >
             {showAvatar && walletIcon && (
@@ -202,16 +202,16 @@ export function AccountBlock({
                     alt={walletName || 'Wallet'}
                     className="ck-account-block-avatar"
                     style={{ width: avatarSize, height: avatarSize }}
-                    data-slot="account-block-avatar"
+                    data-slot="account-element-avatar"
                 />
             )}
-            <div className="ck-account-block-content" data-slot="account-block-content">
+            <div className="ck-account-block-content" data-slot="account-element-content">
                 {walletName && (
-                    <span className="ck-account-block-wallet-name" data-slot="account-block-wallet-name">
+                    <span className="ck-account-block-wallet-name" data-slot="account-element-wallet-name">
                         {walletName}
                     </span>
                 )}
-                <span className="ck-account-block-address" data-slot="account-block-address">
+                <span className="ck-account-block-address" data-slot="account-element-address">
                     {displayAddress}
                 </span>
             </div>
@@ -221,7 +221,7 @@ export function AccountBlock({
                     className="ck-account-block-copy"
                     onClick={handleCopy}
                     title={copied ? 'Copied!' : 'Copy address'}
-                    data-slot="account-block-copy"
+                    data-slot="account-element-copy"
                     data-copied={copied}
                 >
                     {copyIcon}
@@ -231,4 +231,4 @@ export function AccountBlock({
     );
 }
 
-AccountBlock.displayName = 'AccountBlock';
+AccountElement.displayName = 'AccountElement';

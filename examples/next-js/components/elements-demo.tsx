@@ -1,31 +1,31 @@
 'use client';
 
 /**
- * Demo component showcasing all available blocks.
+ * Demo component showcasing all available elements.
  */
 
 import React from 'react';
 import { useConnector } from '@solana/connector';
 import {
-    AccountBlock,
-    BalanceBlock,
-    ClusterBlock,
-    DisconnectBlock,
-    TransactionHistoryBlock,
-    TokenListBlock,
+    AccountElement,
+    BalanceElement,
+    ClusterElement,
+    DisconnectElement,
+    TransactionHistoryElement,
+    TokenListElement,
 } from '@solana/connector/react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 
-export function BlocksDemo() {
+export function ElementsDemo() {
     const { connected } = useConnector();
 
     if (!connected) {
         return (
             <Card>
                 <CardHeader>
-                    <CardTitle>Blocks Demo</CardTitle>
-                    <CardDescription>Connect your wallet to see the blocks in action</CardDescription>
+                    <CardTitle>Elements Demo</CardTitle>
+                    <CardDescription>Connect your wallet to see the elements in action</CardDescription>
                 </CardHeader>
             </Card>
         );
@@ -33,122 +33,122 @@ export function BlocksDemo() {
 
     return (
         <div className="grid gap-6 md:grid-cols-2">
-            {/* Account Block Demo */}
+            {/* Account Element Demo */}
             <Card>
                 <CardHeader>
-                    <CardTitle className="text-lg">AccountBlock</CardTitle>
+                    <CardTitle className="text-lg">AccountElement</CardTitle>
                     <CardDescription>Displays connected account information</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div>
                         <p className="text-sm text-muted-foreground mb-2">Compact variant:</p>
-                        <AccountBlock variant="compact" />
+                        <AccountElement variant="compact" />
                     </div>
                     <Separator />
                     <div>
                         <p className="text-sm text-muted-foreground mb-2">Expanded variant:</p>
-                        <AccountBlock variant="expanded" />
+                        <AccountElement variant="expanded" />
                     </div>
                     <Separator />
                     <div>
                         <p className="text-sm text-muted-foreground mb-2">Inline variant:</p>
-                        <AccountBlock variant="inline" />
+                        <AccountElement variant="inline" />
                     </div>
                 </CardContent>
             </Card>
 
-            {/* Balance Block Demo */}
+            {/* Balance Element Demo */}
             <Card>
                 <CardHeader>
-                    <CardTitle className="text-lg">BalanceBlock</CardTitle>
+                    <CardTitle className="text-lg">BalanceElement</CardTitle>
                     <CardDescription>Shows SOL and token balances</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div>
                         <p className="text-sm text-muted-foreground mb-2">Compact (SOL only):</p>
-                        <BalanceBlock variant="compact" />
+                        <BalanceElement variant="compact" />
                     </div>
                     <Separator />
                     <div>
                         <p className="text-sm text-muted-foreground mb-2">Inline with refresh:</p>
-                        <BalanceBlock variant="inline" showRefresh />
+                        <BalanceElement variant="inline" showRefresh />
                     </div>
                     <Separator />
                     <div>
                         <p className="text-sm text-muted-foreground mb-2">Expanded with tokens:</p>
-                        <BalanceBlock variant="expanded" showTokens showRefresh />
+                        <BalanceElement variant="expanded" showTokens showRefresh />
                     </div>
                 </CardContent>
             </Card>
 
-            {/* Cluster Block Demo */}
+            {/* Cluster Element Demo */}
             <Card>
                 <CardHeader>
-                    <CardTitle className="text-lg">ClusterBlock</CardTitle>
+                    <CardTitle className="text-lg">ClusterElement</CardTitle>
                     <CardDescription>Displays and optionally changes network</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div>
                         <p className="text-sm text-muted-foreground mb-2">Badge variant:</p>
-                        <ClusterBlock variant="badge" />
+                        <ClusterElement variant="badge" />
                     </div>
                     <Separator />
                     <div>
                         <p className="text-sm text-muted-foreground mb-2">Select variant (changeable):</p>
-                        <ClusterBlock variant="select" allowChange />
+                        <ClusterElement variant="select" allowChange />
                     </div>
                 </CardContent>
             </Card>
 
-            {/* Disconnect Block Demo */}
+            {/* Disconnect Element Demo */}
             <Card>
                 <CardHeader>
-                    <CardTitle className="text-lg">DisconnectBlock</CardTitle>
+                    <CardTitle className="text-lg">DisconnectElement</CardTitle>
                     <CardDescription>Button to disconnect wallet</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div>
                         <p className="text-sm text-muted-foreground mb-2">Button variant:</p>
-                        <DisconnectBlock variant="button" />
+                        <DisconnectElement variant="button" />
                     </div>
                     <Separator />
                     <div>
                         <p className="text-sm text-muted-foreground mb-2">Link variant:</p>
-                        <DisconnectBlock variant="link" />
+                        <DisconnectElement variant="link" />
                     </div>
                     <Separator />
                     <div>
                         <p className="text-sm text-muted-foreground mb-2">Menu item variant:</p>
                         <div className="border rounded-md p-2">
-                            <DisconnectBlock variant="menuitem" />
+                            <DisconnectElement variant="menuitem" />
                         </div>
                     </div>
                 </CardContent>
             </Card>
 
-            {/* Transaction History Block Demo */}
+            {/* Transaction History Element Demo */}
             <Card className="md:col-span-2">
                 <CardHeader>
-                    <CardTitle className="text-lg">TransactionHistoryBlock</CardTitle>
+                    <CardTitle className="text-lg">TransactionHistoryElement</CardTitle>
                     <CardDescription>Shows recent transactions</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <TransactionHistoryBlock limit={5} variant="expanded" showLoadMore />
+                    <TransactionHistoryElement limit={5} variant="expanded" showLoadMore />
                 </CardContent>
             </Card>
 
-            {/* Token List Block Demo */}
+            {/* Token List Element Demo */}
             <Card className="md:col-span-2">
                 <CardHeader>
-                    <CardTitle className="text-lg">TokenListBlock</CardTitle>
+                    <CardTitle className="text-lg">TokenListElement</CardTitle>
                     <CardDescription>Displays token holdings</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <TokenListBlock limit={6} variant="expanded" showRefresh />
+                    <TokenListElement limit={6} variant="expanded" showRefresh />
                 </CardContent>
             </Card>
         </div>
     );
 }
 
-BlocksDemo.displayName = 'BlocksDemo';
+ElementsDemo.displayName = 'ElementsDemo';

@@ -34,7 +34,7 @@ export {
 } from './hooks/use-kit-solana-client';
 export { useTransactionPreparer } from './hooks/use-transaction-preparer';
 
-// Data fetching hooks for blocks
+// Data fetching hooks for elements
 export { useBalance, type UseBalanceReturn, type TokenBalance } from './hooks/use-balance';
 export {
     useTransactions,
@@ -44,7 +44,7 @@ export {
 } from './hooks/use-transactions';
 export { useTokens, type UseTokensReturn, type UseTokensOptions, type Token } from './hooks/use-tokens';
 
-// Block system components
+// Element system components
 export * from './components';
 
 export type { UseClusterReturn } from './hooks/use-cluster';

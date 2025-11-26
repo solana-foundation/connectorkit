@@ -170,7 +170,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { BalanceBlock, ClusterBlock, TokenListBlock, TransactionHistoryBlock, DisconnectBlock } from '@solana/connector/react';
+import { BalanceElement, ClusterElement, TokenListElement, TransactionHistoryElement, DisconnectElement } from '@solana/connector/react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Wallet, Copy, Globe, Check, RefreshCw, Coins, History, ExternalLink, LogOut } from 'lucide-react';
 import { useState } from 'react';
@@ -203,7 +203,7 @@ export function WalletDropdownContent({ selectedAccount, walletIcon, walletName 
                     <Button variant="outline" size="icon" onClick={handleCopy}>
                         {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                     </Button>
-                    <ClusterBlock
+                    <ClusterElement
                         render={({ cluster, clusters, setCluster }) => (
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
@@ -223,7 +223,7 @@ export function WalletDropdownContent({ selectedAccount, walletIcon, walletName 
             </div>
 
             {/* Balance */}
-            <BalanceBlock
+            <BalanceElement
                 render={({ solBalance, isLoading, refetch }) => (
                     <div className="rounded-[12px] border p-4">
                         <div className="flex justify-between">
@@ -240,7 +240,7 @@ export function WalletDropdownContent({ selectedAccount, walletIcon, walletName 
                 <AccordionItem value="tokens">
                     <AccordionTrigger><Coins /> Tokens</AccordionTrigger>
                     <AccordionContent>
-                        <TokenListBlock limit={5} render={({ tokens }) => (
+                        <TokenListElement limit={5} render={({ tokens }) => (
                             tokens.map(t => <div key={t.mint}>{t.symbol}: {t.formatted}</div>)
                         )} />
                     </AccordionContent>
@@ -248,7 +248,7 @@ export function WalletDropdownContent({ selectedAccount, walletIcon, walletName 
                 <AccordionItem value="transactions">
                     <AccordionTrigger><History /> Activity</AccordionTrigger>
                     <AccordionContent>
-                        <TransactionHistoryBlock limit={5} render={({ transactions }) => (
+                        <TransactionHistoryElement limit={5} render={({ transactions }) => (
                             transactions.map(tx => <a key={tx.signature} href={tx.explorerUrl}>{tx.type}</a>)
                         )} />
                     </AccordionContent>
@@ -256,7 +256,7 @@ export function WalletDropdownContent({ selectedAccount, walletIcon, walletName 
             </Accordion>
 
             {/* Disconnect */}
-            <DisconnectBlock
+            <DisconnectElement
                 render={({ disconnect, disconnecting }) => (
                     <Button variant="destructive" className="w-full" onClick={disconnect} disabled={disconnecting}>
                         <LogOut /> {disconnecting ? 'Disconnecting...' : 'Disconnect'}

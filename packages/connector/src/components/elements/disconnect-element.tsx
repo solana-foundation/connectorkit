@@ -4,7 +4,7 @@ import React from 'react';
 import type { ReactNode } from 'react';
 import { useConnector } from '../../ui/connector-provider';
 
-export interface DisconnectBlockProps {
+export interface DisconnectElementProps {
     /** Display variant */
     variant?: 'button' | 'menuitem' | 'link';
     /** Custom className */
@@ -22,21 +22,21 @@ export interface DisconnectBlockProps {
 }
 
 /**
- * Block for disconnecting the current wallet.
+ * Element for disconnecting the current wallet.
  *
  * @example Basic usage
  * ```tsx
- * <DisconnectBlock />
+ * <DisconnectElement />
  * ```
  *
  * @example Button variant
  * ```tsx
- * <DisconnectBlock variant="button" />
+ * <DisconnectElement variant="button" />
  * ```
  *
  * @example Custom render
  * ```tsx
- * <DisconnectBlock
+ * <DisconnectElement
  *   render={({ disconnect }) => (
  *     <DropdownMenuItem onClick={disconnect}>
  *       <LogOut className="mr-2 h-4 w-4" />
@@ -46,7 +46,7 @@ export interface DisconnectBlockProps {
  * />
  * ```
  */
-export function DisconnectBlock({
+export function DisconnectElement({
     variant = 'menuitem',
     className,
     label = 'Disconnect',
@@ -54,7 +54,7 @@ export function DisconnectBlock({
     showIcon = true,
     onDisconnect,
     render,
-}: DisconnectBlockProps) {
+}: DisconnectElementProps) {
     const { disconnect, connecting } = useConnector();
     const [disconnecting, setDisconnecting] = React.useState(false);
 
@@ -86,7 +86,7 @@ export function DisconnectBlock({
             strokeLinecap="round"
             strokeLinejoin="round"
             className="ck-block-icon"
-            data-slot="disconnect-block-icon"
+            data-slot="disconnect-element-icon"
         >
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
             <polyline points="16 17 21 12 16 7" />
@@ -97,7 +97,7 @@ export function DisconnectBlock({
     const content = (
         <>
             {showIcon && (icon || defaultIcon)}
-            <span data-slot="disconnect-block-label">{label}</span>
+            <span data-slot="disconnect-element-label">{label}</span>
         </>
     );
 
@@ -109,7 +109,7 @@ export function DisconnectBlock({
                 className={`ck-disconnect-block ck-disconnect-block--button ${className || ''}`}
                 onClick={handleDisconnect}
                 disabled={isDisabled}
-                data-slot="disconnect-block"
+                data-slot="disconnect-element"
                 data-variant="button"
                 data-disconnecting={disconnecting}
             >
@@ -126,7 +126,7 @@ export function DisconnectBlock({
                 className={`ck-disconnect-block ck-disconnect-block--link ${className || ''}`}
                 onClick={handleDisconnect}
                 disabled={isDisabled}
-                data-slot="disconnect-block"
+                data-slot="disconnect-element"
                 data-variant="link"
                 data-disconnecting={disconnecting}
             >
@@ -143,7 +143,7 @@ export function DisconnectBlock({
             className={`ck-disconnect-block ck-disconnect-block--menuitem ${className || ''}`}
             onClick={handleDisconnect}
             disabled={isDisabled}
-            data-slot="disconnect-block"
+            data-slot="disconnect-element"
             data-variant="menuitem"
             data-disconnecting={disconnecting}
         >
@@ -152,4 +152,4 @@ export function DisconnectBlock({
     );
 }
 
-DisconnectBlock.displayName = 'DisconnectBlock';
+DisconnectElement.displayName = 'DisconnectElement';

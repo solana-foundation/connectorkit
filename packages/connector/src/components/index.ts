@@ -1,8 +1,8 @@
 /**
  * @solana/connector - React Components
  *
- * Composable blocks for building custom wallet connection UI.
+ * Composable elements for building custom wallet connection UI.
  */
 
-// Blocks (composable UI pieces)
-export * from './blocks';
+// Elements (composable UI pieces)
+export * from './elements';

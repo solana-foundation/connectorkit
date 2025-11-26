@@ -121,7 +121,7 @@ interface AccountKey {
 }
 
 interface UiTokenAmount {
-    amount: string;
+    amount: string | bigint;
     decimals: number;
     uiAmount: number | null;
     uiAmountString?: string;
@@ -137,13 +137,13 @@ interface TokenBalance {
 
 interface TransactionMeta {
     err: unknown;
-    fee: number;
+    fee: number | bigint;
     innerInstructions?: unknown[];
     loadedAddresses?: unknown;
     logMessages?: string[];
-    postBalances: number[];
+    postBalances: (number | bigint)[];
     postTokenBalances?: TokenBalance[];
-    preBalances: number[];
+    preBalances: (number | bigint)[];
     preTokenBalances?: TokenBalance[];
     rewards?: unknown[];
     returnData?: unknown;
@@ -196,14 +196,19 @@ function isAccountKey(value: unknown): value is AccountKey {
 }
 
 function isTransactionMeta(value: unknown): value is TransactionMeta {
-    return (
-        typeof value === 'object' &&
-        value !== null &&
-        'preBalances' in value &&
-        'postBalances' in value &&
-        Array.isArray((value as TransactionMeta).preBalances) &&
-        Array.isArray((value as TransactionMeta).postBalances)
-    );
+    if (typeof value !== 'object' || value === null || !('preBalances' in value) || !('postBalances' in value)) {
+        return false;
+    }
+
+    const meta = value as TransactionMeta;
+    if (!Array.isArray(meta.preBalances) || !Array.isArray(meta.postBalances)) {
+        return false;
+    }
+
+    // Validate that balance arrays contain numbers or bigints
+    const isValidBalance = (b: unknown): b is number | bigint => typeof b === 'number' || typeof b === 'bigint';
+
+    return meta.preBalances.every(isValidBalance) && meta.postBalances.every(isValidBalance);
 }
 
 function isTokenBalance(value: unknown): value is TokenBalance {
@@ -289,6 +294,13 @@ function detectProgramIds(message: TransactionMessage, accountKeys: string[]): S
             else if (typeof instruction.programId === 'string') {
                 programIds.add(instruction.programId);
             }
+            // Handle case where programId might be an Address object (Web3.js 2.0 kit)
+            else if (instruction.programId && typeof instruction.programId === 'object') {
+                const programIdStr = String(instruction.programId);
+                if (programIdStr && programIdStr !== '[object Object]') {
+                    programIds.add(programIdStr);
+                }
+            }
         }
     }
 
@@ -300,9 +312,24 @@ function parseSolChange(meta: TransactionMeta, walletIndex: number): { balanceCh
         return { balanceChange: 0, solChange: 0 };
     }
 
-    const preBalance = typeof meta.preBalances[walletIndex] === 'number' ? meta.preBalances[walletIndex] : 0;
-    const postBalance = typeof meta.postBalances[walletIndex] === 'number' ? meta.postBalances[walletIndex] : 0;
-    const balanceChange = Number(postBalance) - Number(preBalance);
+    const preBalanceRaw = meta.preBalances[walletIndex];
+    const postBalanceRaw = meta.postBalances[walletIndex];
+
+    // Handle both number and bigint (Web3.js 2.0 returns bigint)
+    const preBalance =
+        typeof preBalanceRaw === 'number'
+            ? preBalanceRaw
+            : typeof preBalanceRaw === 'bigint'
+              ? Number(preBalanceRaw)
+              : 0;
+    const postBalance =
+        typeof postBalanceRaw === 'number'
+            ? postBalanceRaw
+            : typeof postBalanceRaw === 'bigint'
+              ? Number(postBalanceRaw)
+              : 0;
+
+    const balanceChange = postBalance - preBalance;
     const solChange = balanceChange / LAMPORTS_PER_SOL;
 
     return { balanceChange, solChange };

@@ -4,7 +4,7 @@ import React from 'react';
 import type { ReactNode } from 'react';
 import { useTokens, type Token } from '../../hooks/use-tokens';
 
-export interface TokenListBlockRenderProps {
+export interface TokenListElementRenderProps {
     tokens: Token[];
     isLoading: boolean;
     error: Error | null;
@@ -12,7 +12,7 @@ export interface TokenListBlockRenderProps {
     totalAccounts: number;
 }
 
-export interface TokenListBlockProps {
+export interface TokenListElementProps {
     /** Maximum number of tokens to display */
     limit?: number;
     /** Show USD value (requires price API integration) */
@@ -26,27 +26,27 @@ export interface TokenListBlockProps {
     /** Show skeleton while loading */
     showSkeleton?: boolean;
     /** Custom render function for full control */
-    render?: (props: TokenListBlockRenderProps) => ReactNode;
+    render?: (props: TokenListElementRenderProps) => ReactNode;
     /** Custom render for individual token item */
     renderItem?: (token: Token) => ReactNode;
 }
 
 /**
- * Block for displaying token holdings.
+ * Element for displaying token holdings.
  *
  * @example Basic usage
  * ```tsx
- * <TokenListBlock limit={10} />
+ * <TokenListElement limit={10} />
  * ```
  *
  * @example Grid layout
  * ```tsx
- * <TokenListBlock variant="grid" limit={6} />
+ * <TokenListElement variant="grid" limit={6} />
  * ```
  *
  * @example Custom item render
  * ```tsx
- * <TokenListBlock
+ * <TokenListElement
  *   renderItem={(token) => (
  *     <div className="token-card">
  *       <img src={token.logo} alt={token.symbol} />
@@ -56,7 +56,7 @@ export interface TokenListBlockProps {
  * />
  * ```
  */
-export function TokenListBlock({
+export function TokenListElement({
     limit = 10,
     showValue = false,
     className,
@@ -65,7 +65,7 @@ export function TokenListBlock({
     showSkeleton = true,
     render,
     renderItem,
-}: TokenListBlockProps) {
+}: TokenListElementProps) {
     const { tokens, isLoading, error, refetch, totalAccounts } = useTokens();
 
     // Custom render
@@ -119,7 +119,7 @@ export function TokenListBlock({
         return (
             <div
                 className={`ck-token-list-block ck-token-list-block--${variant} ck-token-list-block--loading ${className || ''}`}
-                data-slot="token-list-block"
+                data-slot="token-list-element"
                 data-variant={variant}
                 data-loading="true"
             >
@@ -137,7 +137,7 @@ export function TokenListBlock({
         return (
             <div
                 className={`ck-token-list-block ck-token-list-block--${variant} ck-token-list-block--error ${className || ''}`}
-                data-slot="token-list-block"
+                data-slot="token-list-element"
                 data-variant={variant}
                 data-error="true"
             >
@@ -161,7 +161,7 @@ export function TokenListBlock({
         return (
             <div
                 className={`ck-token-list-block ck-token-list-block--${variant} ck-token-list-block--empty ${className || ''}`}
-                data-slot="token-list-block"
+                data-slot="token-list-element"
                 data-variant={variant}
                 data-empty="true"
             >
@@ -218,7 +218,7 @@ export function TokenListBlock({
     return (
         <div
             className={`ck-token-list-block ck-token-list-block--${variant} ${className || ''}`}
-            data-slot="token-list-block"
+            data-slot="token-list-element"
             data-variant={variant}
         >
             {variant === 'expanded' && (
@@ -256,4 +256,4 @@ export function TokenListBlock({
     );
 }
 
-TokenListBlock.displayName = 'TokenListBlock';
+TokenListElement.displayName = 'TokenListElement';

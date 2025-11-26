@@ -1,12 +1,12 @@
 'use client';
 
 import {
-    AccountBlock,
-    BalanceBlock,
-    ClusterBlock,
-    DisconnectBlock,
-    TransactionHistoryBlock,
-    TokenListBlock,
+    AccountElement,
+    BalanceElement,
+    ClusterElement,
+    DisconnectElement,
+    TransactionHistoryElement,
+    TokenListElement,
 } from '@solana/connector/react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -14,17 +14,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Wallet, Copy, Check, RefreshCw, LogOut, Coins, ExternalLink } from 'lucide-react';
 import { ExampleCard, type ExampleConfig } from './example-card';
 
-const blockExamples: ExampleConfig[] = [
+const elementExamples: ExampleConfig[] = [
     {
-        id: 'account-block',
-        name: 'AccountBlock',
+        id: 'account-element',
+        name: 'AccountElement',
         description:
             'Display connected wallet address with copy functionality. Use render props for full control over the UI.',
-        code: `import { AccountBlock } from '@solana/connector/react';
+        code: `import { AccountElement } from '@solana/connector/react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Wallet, Copy, Check } from 'lucide-react';
 
-<AccountBlock
+<AccountElement
     render={({ formatted, walletName, walletIcon, copy, copied }) => (
         <div className="flex items-center gap-3 p-3 rounded-lg border bg-card">
             <Avatar className="h-10 w-10">
@@ -44,7 +44,7 @@ import { Wallet, Copy, Check } from 'lucide-react';
     )}
 />`,
         render: () => (
-            <AccountBlock
+            <AccountElement
                 render={({ formatted, walletName, walletIcon, copy, copied }) => (
                     <div className="flex items-center gap-3 p-3 rounded-lg border bg-card min-w-[250px]">
                         <Avatar className="h-10 w-10">
@@ -70,14 +70,14 @@ import { Wallet, Copy, Check } from 'lucide-react';
         ),
     },
     {
-        id: 'balance-block',
-        name: 'BalanceBlock',
+        id: 'balance-element',
+        name: 'BalanceElement',
         description:
             'Show SOL balance with optional refresh. Access loading state and refetch function via render props.',
-        code: `import { BalanceBlock } from '@solana/connector/react';
+        code: `import { BalanceElement } from '@solana/connector/react';
 import { RefreshCw } from 'lucide-react';
 
-<BalanceBlock
+<BalanceElement
     render={({ solBalance, isLoading, refetch }) => (
         <div className="flex items-center gap-3 p-3 rounded-lg border bg-card">
             <div className="flex-1">
@@ -91,7 +91,7 @@ import { RefreshCw } from 'lucide-react';
     )}
 />`,
         render: () => (
-            <BalanceBlock
+            <BalanceElement
                 render={({ solBalance, isLoading, refetch }) => (
                     <div className="flex items-center gap-3 p-3 rounded-lg border bg-card min-w-[250px]">
                         <div className="flex-1">
@@ -111,10 +111,10 @@ import { RefreshCw } from 'lucide-react';
         ),
     },
     {
-        id: 'cluster-block',
-        name: 'ClusterBlock',
+        id: 'cluster-element',
+        name: 'ClusterElement',
         description: 'Network selector with all available clusters. Use setCluster to change networks dynamically.',
-        code: `import { ClusterBlock } from '@solana/connector/react';
+        code: `import { ClusterElement } from '@solana/connector/react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const clusterColors: Record<string, string> = {
@@ -124,7 +124,7 @@ const clusterColors: Record<string, string> = {
     'solana:localnet': 'bg-red-500',
 };
 
-<ClusterBlock
+<ClusterElement
     render={({ cluster, clusters, setCluster }) => (
         <Select value={cluster?.id} onValueChange={setCluster}>
             <SelectTrigger className="w-[200px]">
@@ -156,7 +156,7 @@ const clusterColors: Record<string, string> = {
                 'solana:localnet': 'bg-red-500',
             };
             return (
-                <ClusterBlock
+                <ClusterElement
                     render={({ cluster, clusters, setCluster }) => (
                         <Select value={cluster?.id} onValueChange={setCluster}>
                             <SelectTrigger className="p-3 rounded-lg border bg-card w-[220px] cursor-pointer">
@@ -188,14 +188,14 @@ const clusterColors: Record<string, string> = {
         },
     },
     {
-        id: 'disconnect-block',
-        name: 'DisconnectBlock',
+        id: 'disconnect-element',
+        name: 'DisconnectElement',
         description: 'Disconnect button with loading state. Style it as a button, link, or menu item.',
-        code: `import { DisconnectBlock } from '@solana/connector/react';
+        code: `import { DisconnectElement } from '@solana/connector/react';
 import { Button } from '@/components/ui/button';
 import { LogOut } from 'lucide-react';
 
-<DisconnectBlock
+<DisconnectElement
     render={({ disconnect, disconnecting }) => (
         <Button 
             variant="destructive" 
@@ -208,7 +208,7 @@ import { LogOut } from 'lucide-react';
     )}
 />`,
         render: () => (
-            <DisconnectBlock
+            <DisconnectElement
                 render={({ disconnect, disconnecting }) => (
                     <Button
                         variant="destructive"
@@ -224,13 +224,13 @@ import { LogOut } from 'lucide-react';
         ),
     },
     {
-        id: 'token-list-block',
-        name: 'TokenListBlock',
+        id: 'token-list-element',
+        name: 'TokenListElement',
         description: 'Display token holdings with metadata from Jupiter. Includes loading states and refetch.',
-        code: `import { TokenListBlock } from '@solana/connector/react';
+        code: `import { TokenListElement } from '@solana/connector/react';
 import { Coins, RefreshCw } from 'lucide-react';
 
-<TokenListBlock
+<TokenListElement
     limit={5}
     render={({ tokens, isLoading, refetch }) => (
         <div className="rounded-lg border bg-card w-[350px]">
@@ -262,7 +262,7 @@ import { Coins, RefreshCw } from 'lucide-react';
     )}
 />`,
         render: () => (
-            <TokenListBlock
+            <TokenListElement
                 limit={5}
                 render={({ tokens, isLoading, refetch }) => (
                     <div className="rounded-lg border bg-card min-w-[350px]">
@@ -300,13 +300,13 @@ import { Coins, RefreshCw } from 'lucide-react';
         fullWidth: true,
     },
     {
-        id: 'transaction-history-block',
-        name: 'TransactionHistoryBlock',
+        id: 'transaction-history-element',
+        name: 'TransactionHistoryElement',
         description: 'Show recent transactions with status, time, and explorer links. Supports pagination.',
-        code: `import { TransactionHistoryBlock } from '@solana/connector/react';
+        code: `import { TransactionHistoryElement } from '@solana/connector/react';
 import { ExternalLink, Coins } from 'lucide-react';
 
-<TransactionHistoryBlock
+<TransactionHistoryElement
     limit={5}
     render={({ transactions, isLoading, hasMore, loadMore }) => (
         <div className="rounded-lg border bg-card w-[400px]">
@@ -350,7 +350,7 @@ import { ExternalLink, Coins } from 'lucide-react';
     )}
 />`,
         render: () => (
-            <TransactionHistoryBlock
+            <TransactionHistoryElement
                 limit={5}
                 render={({ transactions, isLoading, hasMore, loadMore }) => (
                     <div className="rounded-lg border bg-card min-w-[380px]">
@@ -407,7 +407,7 @@ import { ExternalLink, Coins } from 'lucide-react';
     },
 ];
 
-export function BlockExamplesSection() {
+export function ElementExamplesSection() {
     return (
         <section>
             <div
@@ -424,17 +424,17 @@ export function BlockExamplesSection() {
             >
                 <div className="inline-flex items-center gap-2 mb-3">
                     <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-inter-medium rounded">
-                        Individual Blocks
+                        Individual Elements
                     </span>
                 </div>
-                <h2 className="text-h3 font-diatype-medium text-sand-1500 mb-2">Block Components</h2>
+                <h2 className="text-h3 font-diatype-medium text-sand-1500 mb-2">Element Components</h2>
                 <p className="text-body-lg font-inter text-sand-700 max-w-2xl">
-                    Headless block components with render props. Each block manages its own state and data fetching—you
-                    just provide the UI. Copy any example and customize the styling.
+                    Headless element components with render props. Each element manages its own state and data
+                    fetching—you just provide the UI. Copy any example and customize the styling.
                 </p>
             </div>
 
-            {blockExamples.map(example => (
+            {elementExamples.map(example => (
                 <ExampleCard key={example.id} example={example} />
             ))}
         </section>
