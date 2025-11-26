@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { address as toAddress } from '@solana/addresses';
 import { signature as toSignature } from '@solana/keys';
+import type { SolanaCluster } from '@wallet-ui/core';
 import { useAccount } from './use-account';
 import { useCluster } from './use-cluster';
 import { useSolanaClient } from './use-kit-solana-client';
@@ -112,6 +113,328 @@ const KNOWN_PROGRAMS: Record<string, string> = {
     metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s: 'Metaplex',
 };
 
+// TypeScript interfaces for RPC transaction structures
+interface AccountKey {
+    pubkey: string;
+    writable?: boolean;
+    signer?: boolean;
+}
+
+interface UiTokenAmount {
+    amount: string;
+    decimals: number;
+    uiAmount: number | null;
+    uiAmountString?: string;
+}
+
+interface TokenBalance {
+    accountIndex: number;
+    mint: string;
+    owner?: string;
+    programId?: string;
+    uiTokenAmount: UiTokenAmount;
+}
+
+interface TransactionMeta {
+    err: unknown;
+    fee: number;
+    innerInstructions?: unknown[];
+    loadedAddresses?: unknown;
+    logMessages?: string[];
+    postBalances: number[];
+    postTokenBalances?: TokenBalance[];
+    preBalances: number[];
+    preTokenBalances?: TokenBalance[];
+    rewards?: unknown[];
+    returnData?: unknown;
+}
+
+interface Instruction {
+    programId?: string;
+    programIdIndex?: number;
+    accounts?: unknown[];
+    data?: string;
+    parsed?: unknown;
+}
+
+interface TransactionMessage {
+    accountKeys: (string | AccountKey)[];
+    instructions?: Instruction[];
+    recentBlockhash?: string;
+    header?: {
+        numReadonlySignedAccounts?: number;
+        numReadonlyUnsignedAccounts?: number;
+        numRequiredSignatures?: number;
+    };
+}
+
+interface RpcTransaction {
+    meta: TransactionMeta | null;
+    transaction: {
+        message: TransactionMessage;
+        signatures?: string[];
+    };
+    version?: 'legacy' | number;
+}
+
+interface ParsedTokenTransfer {
+    tokenMint: string;
+    tokenAmount: number;
+    tokenDecimals: number;
+    direction: 'in' | 'out';
+    type: 'sent' | 'received';
+}
+
+// Type guards
+function isAccountKey(value: unknown): value is AccountKey {
+    return (
+        typeof value === 'object' &&
+        value !== null &&
+        'pubkey' in value &&
+        typeof (value as AccountKey).pubkey === 'string'
+    );
+}
+
+function isTransactionMeta(value: unknown): value is TransactionMeta {
+    return (
+        typeof value === 'object' &&
+        value !== null &&
+        'preBalances' in value &&
+        'postBalances' in value &&
+        Array.isArray((value as TransactionMeta).preBalances) &&
+        Array.isArray((value as TransactionMeta).postBalances)
+    );
+}
+
+function isTokenBalance(value: unknown): value is TokenBalance {
+    return (
+        typeof value === 'object' &&
+        value !== null &&
+        'accountIndex' in value &&
+        'mint' in value &&
+        'uiTokenAmount' in value &&
+        typeof (value as TokenBalance).accountIndex === 'number' &&
+        typeof (value as TokenBalance).mint === 'string' &&
+        typeof (value as TokenBalance).uiTokenAmount === 'object' &&
+        (value as TokenBalance).uiTokenAmount !== null
+    );
+}
+
+function isUiTokenAmount(value: unknown): value is UiTokenAmount {
+    return (
+        typeof value === 'object' &&
+        value !== null &&
+        'amount' in value &&
+        'decimals' in value &&
+        typeof (value as UiTokenAmount).amount === 'string' &&
+        typeof (value as UiTokenAmount).decimals === 'number'
+    );
+}
+
+function isTransactionWithMeta(value: unknown): value is RpcTransaction {
+    return (
+        typeof value === 'object' &&
+        value !== null &&
+        'meta' in value &&
+        'transaction' in value &&
+        (value as RpcTransaction).meta !== null &&
+        typeof (value as RpcTransaction).transaction === 'object' &&
+        (value as RpcTransaction).transaction !== null &&
+        'message' in (value as RpcTransaction).transaction
+    );
+}
+
+function isTransactionMessage(value: unknown): value is TransactionMessage {
+    return (
+        typeof value === 'object' &&
+        value !== null &&
+        'accountKeys' in value &&
+        Array.isArray((value as TransactionMessage).accountKeys)
+    );
+}
+
+// Helper functions
+function getAccountKeys(message: TransactionMessage): string[] {
+    if (!Array.isArray(message.accountKeys)) {
+        return [];
+    }
+
+    return message.accountKeys
+        .map(key => {
+            if (typeof key === 'string') {
+                return key;
+            }
+            if (isAccountKey(key)) {
+                return key.pubkey;
+            }
+            return '';
+        })
+        .filter(Boolean);
+}
+
+function detectProgramIds(message: TransactionMessage, accountKeys: string[]): Set<string> {
+    const programIds = new Set<string>();
+
+    if (!Array.isArray(message.instructions)) {
+        return programIds;
+    }
+
+    for (const instruction of message.instructions) {
+        if (typeof instruction === 'object' && instruction !== null) {
+            // Try programIdIndex first
+            if (typeof instruction.programIdIndex === 'number' && accountKeys[instruction.programIdIndex]) {
+                programIds.add(accountKeys[instruction.programIdIndex]);
+            }
+            // Fallback to programId string
+            else if (typeof instruction.programId === 'string') {
+                programIds.add(instruction.programId);
+            }
+        }
+    }
+
+    return programIds;
+}
+
+function parseSolChange(meta: TransactionMeta, walletIndex: number): { balanceChange: number; solChange: number } {
+    if (!isTransactionMeta(meta) || !Array.isArray(meta.preBalances) || !Array.isArray(meta.postBalances)) {
+        return { balanceChange: 0, solChange: 0 };
+    }
+
+    const preBalance = typeof meta.preBalances[walletIndex] === 'number' ? meta.preBalances[walletIndex] : 0;
+    const postBalance = typeof meta.postBalances[walletIndex] === 'number' ? meta.postBalances[walletIndex] : 0;
+    const balanceChange = Number(postBalance) - Number(preBalance);
+    const solChange = balanceChange / LAMPORTS_PER_SOL;
+
+    return { balanceChange, solChange };
+}
+
+function parseTokenTransfers(
+    meta: TransactionMeta,
+    accountKeys: string[],
+    walletAddress: string,
+): ParsedTokenTransfer | null {
+    if (!isTransactionMeta(meta)) {
+        return null;
+    }
+
+    const preTokenBalances = Array.isArray(meta.preTokenBalances) ? meta.preTokenBalances : [];
+    const postTokenBalances = Array.isArray(meta.postTokenBalances) ? meta.postTokenBalances : [];
+
+    // Filter token balances for our wallet
+    const ourPreTokens = preTokenBalances.filter(balance => {
+        if (!isTokenBalance(balance)) return false;
+        const accountKey = accountKeys[balance.accountIndex];
+        return (
+            (accountKey && accountKey.trim() === walletAddress.trim()) ||
+            (balance.owner && balance.owner.trim() === walletAddress.trim())
+        );
+    });
+
+    const ourPostTokens = postTokenBalances.filter(balance => {
+        if (!isTokenBalance(balance)) return false;
+        const accountKey = accountKeys[balance.accountIndex];
+        return (
+            (accountKey && accountKey.trim() === walletAddress.trim()) ||
+            (balance.owner && balance.owner.trim() === walletAddress.trim())
+        );
+    });
+
+    // Collect all unique mints
+    const allMints = new Set<string>();
+    for (const token of ourPreTokens) {
+        if (isTokenBalance(token)) {
+            allMints.add(token.mint);
+        }
+    }
+    for (const token of ourPostTokens) {
+        if (isTokenBalance(token)) {
+            allMints.add(token.mint);
+        }
+    }
+
+    // Check for token balance changes
+    for (const mint of allMints) {
+        const preBal = ourPreTokens.find(b => isTokenBalance(b) && b.mint === mint);
+        const postBal = ourPostTokens.find(b => isTokenBalance(b) && b.mint === mint);
+
+        if (!isTokenBalance(preBal) && !isTokenBalance(postBal)) {
+            continue;
+        }
+
+        const preAmount =
+            isTokenBalance(preBal) && isUiTokenAmount(preBal.uiTokenAmount) ? Number(preBal.uiTokenAmount.amount) : 0;
+        const postAmount =
+            isTokenBalance(postBal) && isUiTokenAmount(postBal.uiTokenAmount)
+                ? Number(postBal.uiTokenAmount.amount)
+                : 0;
+
+        const change = postAmount - preAmount;
+
+        if (change !== 0) {
+            const decimals =
+                isTokenBalance(postBal) && isUiTokenAmount(postBal.uiTokenAmount)
+                    ? postBal.uiTokenAmount.decimals
+                    : isTokenBalance(preBal) && isUiTokenAmount(preBal.uiTokenAmount)
+                      ? preBal.uiTokenAmount.decimals
+                      : 0;
+
+            if (typeof decimals !== 'number' || decimals < 0) {
+                continue;
+            }
+
+            return {
+                tokenMint: mint,
+                tokenAmount: Math.abs(change) / Math.pow(10, decimals),
+                tokenDecimals: decimals,
+                direction: change > 0 ? 'in' : 'out',
+                type: change > 0 ? 'received' : 'sent',
+            };
+        }
+    }
+
+    // If no change detected but new token account created
+    if (ourPostTokens.length > ourPreTokens.length) {
+        const newToken = ourPostTokens.find(
+            b => isTokenBalance(b) && !ourPreTokens.some(p => isTokenBalance(p) && p.mint === b.mint),
+        );
+
+        if (isTokenBalance(newToken) && isUiTokenAmount(newToken.uiTokenAmount)) {
+            const decimals = newToken.uiTokenAmount.decimals;
+            if (typeof decimals === 'number' && decimals >= 0) {
+                const amount = Number(newToken.uiTokenAmount.amount) / Math.pow(10, decimals);
+                return {
+                    tokenMint: newToken.mint,
+                    tokenAmount: amount,
+                    tokenDecimals: decimals,
+                    direction: 'in',
+                    type: 'received',
+                };
+            }
+        }
+    }
+
+    return null;
+}
+
+function formatAmount(
+    tokenAmount: number | undefined,
+    tokenDecimals: number | undefined,
+    direction: 'in' | 'out' | undefined,
+    solChange: number,
+): string | undefined {
+    if (tokenAmount !== undefined && tokenDecimals !== undefined && direction !== undefined) {
+        const sign = direction === 'in' ? '+' : '-';
+        const maxDecimals = Math.min(tokenDecimals, 6);
+        return `${sign}${tokenAmount.toLocaleString(undefined, { maximumFractionDigits: maxDecimals })}`;
+    }
+
+    if (solChange !== 0) {
+        return `${solChange > 0 ? '+' : ''}${solChange.toFixed(4)} SOL`;
+    }
+
+    return undefined;
+}
+
 // Cache for token metadata
 const tokenMetadataCache = new Map<string, { symbol: string; icon: string }>();
 
@@ -194,20 +517,22 @@ export function useTransactions(options: UseTransactionsOptions = {}): UseTransa
     const [error, setError] = useState<Error | null>(null);
     const [hasMore, setHasMore] = useState(true);
     const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-    const [beforeSignature, setBeforeSignature] = useState<string | undefined>(undefined);
     const beforeSignatureRef = useRef<string | undefined>(undefined);
+    const prevDepsRef = useRef<{ connected: boolean; address: string | null; cluster: SolanaCluster | null } | null>(
+        null,
+    );
 
     // Extract the actual client to use as a stable dependency
     const rpcClient = client?.client ?? null;
 
     const parseTransaction = useCallback(
         (
-            tx: any,
+            tx: unknown,
             walletAddress: string,
             sig: string,
             blockTime: number | null,
             slot: number,
-            err: any,
+            err: unknown,
             explorerUrl: string,
         ): TransactionInfo => {
             const { date, time } = formatDate(blockTime);
@@ -224,37 +549,41 @@ export function useTransactions(options: UseTransactionsOptions = {}): UseTransa
                 explorerUrl,
             };
 
-            if (!tx?.meta || !tx?.transaction) {
+            // Early return if transaction structure is invalid
+            if (!isTransactionWithMeta(tx)) {
                 return baseInfo;
             }
 
             try {
-                const meta = tx.meta;
-                const message = tx.transaction.message;
+                const { meta, transaction } = tx;
 
-                // Get account keys
-                const accountKeys: string[] =
-                    message.accountKeys?.map((k: any) => (typeof k === 'string' ? k : k.pubkey)) || [];
+                // Type guard ensures meta is not null, but double-check for safety
+                if (!isTransactionMeta(meta)) {
+                    return baseInfo;
+                }
+
+                const { message } = transaction;
+
+                // Early return if message structure is invalid
+                if (!isTransactionMessage(message)) {
+                    return baseInfo;
+                }
+
+                // Get account keys using helper
+                const accountKeys = getAccountKeys(message);
 
                 // Find wallet index
-                const walletIndex = accountKeys.findIndex((key: string) => key.trim() === walletAddress.trim());
+                const walletIndex = accountKeys.findIndex(key => key.trim() === walletAddress.trim());
 
                 if (walletIndex === -1) {
                     return baseInfo;
                 }
 
-                // Calculate SOL balance change
-                const preBalance = meta.preBalances?.[walletIndex] || 0;
-                const postBalance = meta.postBalances?.[walletIndex] || 0;
-                const balanceChange = Number(postBalance) - Number(preBalance);
-                const solChange = balanceChange / LAMPORTS_PER_SOL;
+                // Calculate SOL balance change using helper
+                const { balanceChange, solChange } = parseSolChange(meta, walletIndex);
 
-                // Detect transaction type based on programs involved
-                const programIds = new Set(
-                    (message.instructions || [])
-                        .map((ix: any) => accountKeys[ix.programIdIndex] || ix.programId)
-                        .filter(Boolean),
-                );
+                // Detect program IDs using helper
+                const programIds = detectProgramIds(message, accountKeys);
 
                 // Check for known programs
                 const hasJupiter = programIds.has('JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4');
@@ -265,14 +594,13 @@ export function useTransactions(options: UseTransactionsOptions = {}): UseTransa
                 const hasSystemProgram = programIds.has('11111111111111111111111111111111');
                 const hasTokenProgram = programIds.has('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
 
-                // Determine type
+                // Determine transaction type
                 let type: TransactionInfo['type'] = 'unknown';
                 let direction: 'in' | 'out' | undefined;
                 let counterparty: string | undefined;
                 let tokenMint: string | undefined;
                 let tokenAmount: number | undefined;
                 let tokenDecimals: number | undefined;
-                let tokenSymbol: string | undefined;
 
                 if (hasJupiter || hasOrca || hasRaydium) {
                     type = 'swap';
@@ -282,98 +610,34 @@ export function useTransactions(options: UseTransactionsOptions = {}): UseTransa
                     type = 'nft';
                 } else if (hasSystemProgram && Math.abs(balanceChange) > 0) {
                     // Simple SOL transfer
-                    if (balanceChange > 0) {
-                        type = 'received';
-                        direction = 'in';
-                    } else {
-                        type = 'sent';
-                        direction = 'out';
-                    }
+                    type = balanceChange > 0 ? 'received' : 'sent';
+                    direction = balanceChange > 0 ? 'in' : 'out';
                     // SOL is native, use wrapped SOL mint for icon
                     tokenMint = 'So11111111111111111111111111111111111111112';
 
                     // Try to find counterparty
                     if (accountKeys.length >= 2) {
                         counterparty = accountKeys.find(
-                            (key: string, idx: number) =>
-                                idx !== walletIndex && key !== '11111111111111111111111111111111',
+                            (key, idx) => idx !== walletIndex && key !== '11111111111111111111111111111111',
                         );
                     }
                 } else if (hasTokenProgram) {
-                    // Token transfer - check token balance changes
-                    const preTokenBalances = meta.preTokenBalances || [];
-                    const postTokenBalances = meta.postTokenBalances || [];
+                    // Token transfer - parse using helper
+                    const tokenTransfer = parseTokenTransfers(meta, accountKeys, walletAddress);
 
-                    // Find token balances for our wallet
-                    const ourPreTokens = preTokenBalances.filter(
-                        (b: any) =>
-                            accountKeys[b.accountIndex]?.trim() === walletAddress.trim() ||
-                            b.owner?.trim() === walletAddress.trim(),
-                    );
-                    const ourPostTokens = postTokenBalances.filter(
-                        (b: any) =>
-                            accountKeys[b.accountIndex]?.trim() === walletAddress.trim() ||
-                            b.owner?.trim() === walletAddress.trim(),
-                    );
-
-                    // Check all token balance changes
-                    const allMints = new Set([
-                        ...ourPreTokens.map((b: any) => b.mint),
-                        ...ourPostTokens.map((b: any) => b.mint),
-                    ]);
-
-                    for (const mint of allMints) {
-                        const preBal = ourPreTokens.find((b: any) => b.mint === mint);
-                        const postBal = ourPostTokens.find((b: any) => b.mint === mint);
-
-                        const preAmount = Number(preBal?.uiTokenAmount?.amount || 0);
-                        const postAmount = Number(postBal?.uiTokenAmount?.amount || 0);
-                        const change = postAmount - preAmount;
-
-                        if (change !== 0) {
-                            tokenMint = mint as string;
-                            const decimals = postBal?.uiTokenAmount?.decimals || preBal?.uiTokenAmount?.decimals || 0;
-                            tokenDecimals = decimals;
-                            tokenAmount = Math.abs(change) / Math.pow(10, decimals);
-
-                            if (change > 0) {
-                                type = 'received';
-                                direction = 'in';
-                            } else {
-                                type = 'sent';
-                                direction = 'out';
-                            }
-                            break; // Use first significant change
-                        }
-                    }
-
-                    // If no change detected but tokens involved, mark as received for new accounts
-                    if (!tokenMint && ourPostTokens.length > ourPreTokens.length) {
-                        type = 'received';
-                        direction = 'in';
-                        const newToken = ourPostTokens.find(
-                            (b: any) => !ourPreTokens.some((p: any) => p.mint === b.mint),
-                        );
-                        if (newToken) {
-                            tokenMint = newToken.mint;
-                            const decimals = newToken.uiTokenAmount?.decimals || 0;
-                            tokenDecimals = decimals;
-                            tokenAmount = Number(newToken.uiTokenAmount?.amount || 0) / Math.pow(10, decimals);
-                        }
+                    if (tokenTransfer) {
+                        type = tokenTransfer.type;
+                        direction = tokenTransfer.direction;
+                        tokenMint = tokenTransfer.tokenMint;
+                        tokenAmount = tokenTransfer.tokenAmount;
+                        tokenDecimals = tokenTransfer.tokenDecimals;
                     }
                 } else if (programIds.size > 0) {
                     type = 'program';
                 }
 
-                // Format amount string
-                let formattedAmount: string | undefined;
-                if (tokenAmount !== undefined && tokenDecimals !== undefined) {
-                    const sign = direction === 'in' ? '+' : '-';
-                    const maxDecimals = Math.min(tokenDecimals ?? 6, 6);
-                    formattedAmount = `${sign}${tokenAmount.toLocaleString(undefined, { maximumFractionDigits: maxDecimals })}`;
-                } else if (solChange !== 0) {
-                    formattedAmount = `${solChange > 0 ? '+' : ''}${solChange.toFixed(4)} SOL`;
-                }
+                // Format amount string using helper
+                const formattedAmount = formatAmount(tokenAmount, tokenDecimals, direction, solChange);
 
                 return {
                     ...baseInfo,
@@ -382,7 +646,6 @@ export function useTransactions(options: UseTransactionsOptions = {}): UseTransa
                     amount: tokenAmount ?? Math.abs(solChange),
                     formattedAmount,
                     tokenMint,
-                    tokenSymbol,
                     counterparty: counterparty ? `${counterparty.slice(0, 4)}...${counterparty.slice(-4)}` : undefined,
                 };
             } catch (parseError) {
@@ -410,7 +673,9 @@ export function useTransactions(options: UseTransactionsOptions = {}): UseTransa
                 const signaturesResult = await rpc
                     .getSignaturesForAddress(walletAddress, {
                         limit,
-                        ...(loadMore && beforeSignature ? { before: toSignature(beforeSignature) } : {}),
+                        ...(loadMore && beforeSignatureRef.current
+                            ? { before: toSignature(beforeSignatureRef.current) }
+                            : {}),
                     })
                     .send();
 
@@ -507,13 +772,14 @@ export function useTransactions(options: UseTransactionsOptions = {}): UseTransa
                     }
                 }
 
-            // Update pagination
-            if (newTransactions.length > 0) {
-                const newBeforeSignature = newTransactions[newTransactions.length - 1].signature;
-                setBeforeSignature(newBeforeSignature);
-                beforeSignatureRef.current = newBeforeSignature;
-            }
-            setHasMore(newTransactions.length === limit);
+                // Update pagination
+                if (typeof newTransactions !== 'undefined' && Array.isArray(newTransactions)) {
+                    if (newTransactions.length > 0) {
+                        const newBeforeSignature = newTransactions[newTransactions.length - 1].signature;
+                        beforeSignatureRef.current = newBeforeSignature;
+                    }
+                    setHasMore(newTransactions.length === limit);
+                }
 
                 setLastUpdated(new Date());
             } catch (err) {
@@ -527,7 +793,6 @@ export function useTransactions(options: UseTransactionsOptions = {}): UseTransa
     );
 
     const refetch = useCallback(async () => {
-        setBeforeSignature(undefined);
         beforeSignatureRef.current = undefined;
         await fetchTransactions(false);
     }, [fetchTransactions]);
@@ -540,9 +805,21 @@ export function useTransactions(options: UseTransactionsOptions = {}): UseTransa
 
     // Fetch on mount and when dependencies change
     useEffect(() => {
-        setBeforeSignature(undefined);
-        beforeSignatureRef.current = undefined;
-        fetchTransactions(false);
+        const prevDeps = prevDepsRef.current;
+        const currentDeps = { connected, address, cluster };
+
+        // Only reset and fetch if connected, address, or cluster actually changed
+        const shouldReset =
+            !prevDeps ||
+            prevDeps.connected !== connected ||
+            prevDeps.address !== address ||
+            prevDeps.cluster !== cluster;
+
+        if (shouldReset) {
+            prevDepsRef.current = currentDeps;
+            beforeSignatureRef.current = undefined;
+            fetchTransactions(false);
+        }
     }, [connected, address, cluster, fetchTransactions]);
 
     // Auto-refresh

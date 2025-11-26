@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { LogoPlain } from './logo-plain';
 
 const navLinks = [
     { href: '/', label: 'Home' },
@@ -13,13 +14,11 @@ export function AppNav() {
 
     return (
         <header className="sticky top-0 z-50 w-full border-b border-border-low bg-bg1/80 backdrop-blur-sm">
-            <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+            <div className="mx-auto flex h-16 max-w-7xl items-center justify-between">
                 {/* Logo & Brand */}
                 <div className="w-full flex items-center justify-between gap-8">
                     <Link href="/" className="flex items-center gap-2">
-                        <div className="h-8 w-8 rounded-lg bg-sand-1500 flex items-center justify-center">
-                            <span className="text-white font-diatype-bold text-sm">CK</span>
-                        </div>
+                        <LogoPlain width={32} height={32} className="flex-shrink-0" />
                         <span className="font-diatype-bold text-title-5 text-sand-1500 hidden sm:block">
                             Connector Kit
                         </span>

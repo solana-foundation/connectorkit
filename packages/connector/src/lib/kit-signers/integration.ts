@@ -172,7 +172,7 @@ export function createKitSignersFromWallet(
                               account,
                               transactions: [transaction],
                               ...(chain ? { chain } : {}),
-                              ...(connection ? { chain: chain } : {}),
+                              ...(connection ? { connection } : {}),
                           })) as { signatures: string[] };
 
                           // Return first signature (wallet limitation: single transaction)
