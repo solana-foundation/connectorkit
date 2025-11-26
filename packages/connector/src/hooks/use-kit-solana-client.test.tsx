@@ -3,10 +3,13 @@ import { renderHook } from '@testing-library/react';
 import { useSolanaClient, useGillSolanaClient } from './use-kit-solana-client';
 import { ConnectorProvider } from '../ui/connector-provider';
 import type { ReactNode } from 'react';
+import type { ExtendedConnectorConfig } from '../config/default-config';
 
 describe('useSolanaClient', () => {
-    const mockConfig = {
-        clusters: [{ id: 'solana:devnet', name: 'Devnet', rpcUrl: 'https://api.devnet.solana.com' }],
+    const mockConfig: ExtendedConnectorConfig = {
+        cluster: {
+            clusters: [{ id: 'solana:devnet', label: 'Devnet', url: 'https://api.devnet.solana.com' }],
+        },
     };
 
     const wrapper = ({ children }: { children: ReactNode }) => (

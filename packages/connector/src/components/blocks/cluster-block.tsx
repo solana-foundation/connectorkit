@@ -5,6 +5,16 @@ import type { ReactNode } from 'react';
 import { useCluster } from '../../hooks/use-cluster';
 import type { SolanaCluster, SolanaClusterId } from '@wallet-ui/core';
 
+export interface ClusterBlockRenderProps {
+    cluster: SolanaCluster | null;
+    clusters: SolanaCluster[];
+    setCluster: (id: SolanaClusterId) => Promise<void>;
+    isMainnet: boolean;
+    isDevnet: boolean;
+    isTestnet: boolean;
+    isLocal: boolean;
+}
+
 export interface ClusterBlockProps {
     /** Display variant */
     variant?: 'badge' | 'select' | 'menuitem';
@@ -17,15 +27,7 @@ export interface ClusterBlockProps {
     /** Custom cluster labels */
     labels?: Partial<Record<string, string>>;
     /** Custom render function for full control */
-    render?: (props: {
-        cluster: SolanaCluster | null;
-        clusters: SolanaCluster[];
-        setCluster: (id: SolanaClusterId) => Promise<void>;
-        isMainnet: boolean;
-        isDevnet: boolean;
-        isTestnet: boolean;
-        isLocal: boolean;
-    }) => ReactNode;
+    render?: (props: ClusterBlockRenderProps) => ReactNode;
 }
 
 const DEFAULT_LABELS: Record<string, string> = {
@@ -306,3 +308,5 @@ export function ClusterBlock({
 }
 
 ClusterBlock.displayName = 'ClusterBlock';
+
+

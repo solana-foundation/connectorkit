@@ -5,6 +5,15 @@ import type { ReactNode } from 'react';
 import { useAccount } from '../../hooks/use-account';
 import { useWalletInfo } from '../../hooks/use-wallet-info';
 
+export interface AccountBlockRenderProps {
+    address: string | null;
+    formatted: string;
+    walletName: string | null;
+    walletIcon: string | null;
+    copy: () => Promise<{ success: boolean }>;
+    copied: boolean;
+}
+
 export interface AccountBlockProps {
     /** Show wallet avatar/icon */
     showAvatar?: boolean;
@@ -19,14 +28,7 @@ export interface AccountBlockProps {
     /** Layout variant */
     variant?: 'compact' | 'expanded' | 'inline';
     /** Custom render function for full control */
-    render?: (props: {
-        address: string | null;
-        formatted: string;
-        walletName: string | null;
-        walletIcon: string | null;
-        copy: () => Promise<{ success: boolean }>;
-        copied: boolean;
-    }) => ReactNode;
+    render?: (props: AccountBlockRenderProps) => ReactNode;
 }
 
 /**
@@ -245,3 +247,5 @@ export function AccountBlock({
 }
 
 AccountBlock.displayName = 'AccountBlock';
+
+

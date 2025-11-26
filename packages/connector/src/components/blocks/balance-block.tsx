@@ -4,6 +4,15 @@ import React from 'react';
 import type { ReactNode } from 'react';
 import { useBalance, type TokenBalance } from '../../hooks/use-balance';
 
+export interface BalanceBlockRenderProps {
+    solBalance: number;
+    formattedSol: string;
+    tokens: TokenBalance[];
+    isLoading: boolean;
+    error: Error | null;
+    refetch: () => Promise<void>;
+}
+
 export interface BalanceBlockProps {
     /** Show SOL balance */
     showSol?: boolean;
@@ -20,14 +29,7 @@ export interface BalanceBlockProps {
     /** Show loading skeleton */
     showSkeleton?: boolean;
     /** Custom render function for full control */
-    render?: (props: {
-        solBalance: number;
-        formattedSol: string;
-        tokens: TokenBalance[];
-        isLoading: boolean;
-        error: Error | null;
-        refetch: () => Promise<void>;
-    }) => ReactNode;
+    render?: (props: BalanceBlockRenderProps) => ReactNode;
 }
 
 /**
@@ -290,3 +292,5 @@ export function BalanceBlock({
 }
 
 BalanceBlock.displayName = 'BalanceBlock';
+
+

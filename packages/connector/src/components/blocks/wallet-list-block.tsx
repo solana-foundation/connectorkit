@@ -5,6 +5,19 @@ import type { ReactNode } from 'react';
 import { useWalletInfo, type WalletDisplayInfo } from '../../hooks/use-wallet-info';
 import { useConnector } from '../../ui/connector-provider';
 
+export interface WalletListBlockRenderProps {
+    wallets: WalletDisplayInfo[];
+    installedWallets: WalletDisplayInfo[];
+    select: (walletName: string) => Promise<void>;
+    connecting: boolean;
+}
+
+export interface WalletListBlockWalletProps {
+    wallet: WalletDisplayInfo;
+    select: () => Promise<void>;
+    connecting: boolean;
+}
+
 export interface WalletListBlockProps {
     /** Filter to only show installed wallets */
     installedOnly?: boolean;
@@ -17,18 +30,9 @@ export interface WalletListBlockProps {
     /** Callback when a wallet is selected */
     onSelect?: (walletName: string) => void;
     /** Custom render function for full control */
-    render?: (props: {
-        wallets: WalletDisplayInfo[];
-        installedWallets: WalletDisplayInfo[];
-        select: (walletName: string) => Promise<void>;
-        connecting: boolean;
-    }) => ReactNode;
+    render?: (props: WalletListBlockRenderProps) => ReactNode;
     /** Custom render function for individual wallet items */
-    renderWallet?: (props: {
-        wallet: WalletDisplayInfo;
-        select: () => Promise<void>;
-        connecting: boolean;
-    }) => ReactNode;
+    renderWallet?: (props: WalletListBlockWalletProps) => ReactNode;
 }
 
 /**
@@ -325,4 +329,6 @@ export function WalletListBlock({
 }
 
 WalletListBlock.displayName = 'WalletListBlock';
+
+
 

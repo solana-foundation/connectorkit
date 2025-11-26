@@ -4,6 +4,14 @@ import React from 'react';
 import type { ReactNode } from 'react';
 import { useTokens, type Token } from '../../hooks/use-tokens';
 
+export interface TokenListBlockRenderProps {
+    tokens: Token[];
+    isLoading: boolean;
+    error: Error | null;
+    refetch: () => Promise<void>;
+    totalAccounts: number;
+}
+
 export interface TokenListBlockProps {
     /** Maximum number of tokens to display */
     limit?: number;
@@ -18,13 +26,7 @@ export interface TokenListBlockProps {
     /** Show skeleton while loading */
     showSkeleton?: boolean;
     /** Custom render function for full control */
-    render?: (props: {
-        tokens: Token[];
-        isLoading: boolean;
-        error: Error | null;
-        refetch: () => Promise<void>;
-        totalAccounts: number;
-    }) => ReactNode;
+    render?: (props: TokenListBlockRenderProps) => ReactNode;
     /** Custom render for individual token item */
     renderItem?: (token: Token) => ReactNode;
 }
@@ -263,3 +265,5 @@ export function TokenListBlock({
 }
 
 TokenListBlock.displayName = 'TokenListBlock';
+
+

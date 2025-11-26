@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { AppProvider } from '@solana/connector/react';
-import { ConnectorDebugPanel } from '@solana/connector-debugger/react';
+// import { ConnectorDebugPanel } from '@solana/connector-debugger/react';
 import { getDefaultConfig, getDefaultMobileConfig } from '@solana/connector/headless';
 import type { ReactNode } from 'react';
 
@@ -58,7 +58,7 @@ export function Providers({ children }: { children: ReactNode }) {
         <AppProvider connectorConfig={connectorConfig} mobile={mobile}>
             {children}
             {/* Debug panel - only visible in development */}
-            {process.env.NODE_ENV === 'development' && <ConnectorDebugPanel />}
+            {/* {process.env.NODE_ENV === 'development' && <ConnectorDebugPanel />} */}
         </AppProvider>
     );
 }

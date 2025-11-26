@@ -4,6 +4,15 @@ import React from 'react';
 import type { ReactNode } from 'react';
 import { useTransactions, type TransactionInfo } from '../../hooks/use-transactions';
 
+export interface TransactionHistoryBlockRenderProps {
+    transactions: TransactionInfo[];
+    isLoading: boolean;
+    error: Error | null;
+    hasMore: boolean;
+    loadMore: () => Promise<void>;
+    refetch: () => Promise<void>;
+}
+
 export interface TransactionHistoryBlockProps {
     /** Number of transactions to display */
     limit?: number;
@@ -20,14 +29,7 @@ export interface TransactionHistoryBlockProps {
     /** Show skeleton while loading */
     showSkeleton?: boolean;
     /** Custom render function for full control */
-    render?: (props: {
-        transactions: TransactionInfo[];
-        isLoading: boolean;
-        error: Error | null;
-        hasMore: boolean;
-        loadMore: () => Promise<void>;
-        refetch: () => Promise<void>;
-    }) => ReactNode;
+    render?: (props: TransactionHistoryBlockRenderProps) => ReactNode;
     /** Custom render for individual transaction item */
     renderItem?: (transaction: TransactionInfo) => ReactNode;
 }
@@ -251,3 +253,5 @@ export function TransactionHistoryBlock({
 }
 
 TransactionHistoryBlock.displayName = 'TransactionHistoryBlock';
+
+
