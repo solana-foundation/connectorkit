@@ -44,8 +44,8 @@ export function ExampleCard({ example, requiresConnection = true }: ExampleCardP
                     <Tabs defaultValue="preview" className="w-full">
                         <div className="flex justify-end mb-4">
                             <TabsList>
-                                <TabsTrigger value="preview">Preview</TabsTrigger>
-                                <TabsTrigger value="code">Code</TabsTrigger>
+                                <TabsTrigger className="text-xs" value="preview">Preview</TabsTrigger>
+                                <TabsTrigger className="text-xs" value="code">Code</TabsTrigger>
                             </TabsList>
                         </div>
 

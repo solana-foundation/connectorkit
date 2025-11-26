@@ -402,7 +402,7 @@ export function HooksExamplesSection() {
     return (
         <section>
             <div 
-                className="px-4 lg:px-6 py-8 border-b border-t border-sand-200"
+                className="px-4 lg:px-6 py-8 border-b border-sand-200"
                 style={{
                     backgroundImage: `repeating-linear-gradient(
                         45deg,
