@@ -408,7 +408,8 @@ export function createKitTransactionSigner<TAddress extends string = string>(
                         const walletTransaction = decoder.decode(signedTxBytes);
 
                         // Preserve lifetimeConstraint from original if present
-                        const originalWithLifetime = originalTransaction as TransactionWithOptionalLifetime<Transaction>;
+                        const originalWithLifetime =
+                            originalTransaction as TransactionWithOptionalLifetime<Transaction>;
                         const result = {
                             ...walletTransaction,
                             ...(originalWithLifetime.lifetimeConstraint
@@ -469,4 +470,3 @@ export function createKitTransactionSigner<TAddress extends string = string>(
  * @deprecated Use `createKitTransactionSigner` instead. This alias is provided for backward compatibility.
  */
 export const createGillTransactionSigner = createKitTransactionSigner;
-

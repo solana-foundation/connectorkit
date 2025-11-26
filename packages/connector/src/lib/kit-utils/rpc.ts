@@ -37,7 +37,9 @@ export function localnet(putativeString: string): LocalnetUrl {
  * @param cluster - Cluster moniker
  * @returns Public RPC URL for the cluster
  */
-export function getPublicSolanaRpcUrl(cluster: SolanaClusterMoniker | 'mainnet-beta' | 'localhost'): ModifiedClusterUrl {
+export function getPublicSolanaRpcUrl(
+    cluster: SolanaClusterMoniker | 'mainnet-beta' | 'localhost',
+): ModifiedClusterUrl {
     switch (cluster) {
         case 'devnet':
             return 'https://api.devnet.solana.com' as DevnetUrl;
@@ -71,7 +73,3 @@ export function getWebSocketUrl(rpcUrl: string): string {
 
     return url.toString();
 }
-
-
-
-

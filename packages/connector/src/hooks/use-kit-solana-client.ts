@@ -101,38 +101,40 @@ export function useSolanaClient(): UseSolanaClientReturn {
         if (!type || !connectorClient) return null;
 
         try {
-            // For non-custom clusters, use moniker
+            // ALWAYS prefer the configured RPC URL from cluster config
+            const rpcUrl = connectorClient.getRpcUrl();
+            if (rpcUrl) {
+                return createSolanaClient({
+                    urlOrMoniker: rpcUrl as ModifiedClusterUrl,
+                });
+            }
+
+            // Fallback to moniker only if no RPC URL configured
             if (type !== 'custom') {
                 return createSolanaClient({
                     urlOrMoniker: type,
                 });
             }
 
-            // For custom clusters, get RPC URL from connector client
-            const rpcUrl = connectorClient.getRpcUrl();
-            if (!rpcUrl) return null;
-
-            return createSolanaClient({
-                urlOrMoniker: rpcUrl as ModifiedClusterUrl,
-            });
+            return null;
         } catch (error) {
             logger.error('Failed to create Solana client', { error });
             return null;
         }
     }, [type, connectorClient]);
 
-    return {
-        client,
-        ready: Boolean(client),
-        clusterType: type,
-    };
+    // Memoize return object to prevent infinite re-renders in consumers
+    return useMemo(
+        () => ({
+            client,
+            ready: Boolean(client),
+            clusterType: type,
+        }),
+        [client, type],
+    );
 }
 
 /**
  * @deprecated Use `useSolanaClient` instead. This alias is provided for backward compatibility.
  */
 export const useGillSolanaClient = useSolanaClient;
-
-
-
-

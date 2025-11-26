@@ -6,7 +6,10 @@ export type KitRpc = {
     getLatestBlockhash(options?: { commitment?: Commitment }): {
         send(): Promise<{ value: { blockhash: string; lastValidBlockHeight: number } }>;
     };
-    sendTransaction(bytes: Uint8Array | string, options?: any): {
+    sendTransaction(
+        bytes: Uint8Array | string,
+        options?: any,
+    ): {
         send(): Promise<string>;
     };
     send?: () => unknown;
@@ -22,11 +25,7 @@ export function isKitConnection(conn: DualConnection): conn is KitRpc {
     if ('rpcEndpoint' in conn) {
         return false;
     }
-    
-    const asKitRpc = conn as KitRpc;
-    return (
-        typeof asKitRpc.getLatestBlockhash === 'function' &&
-        typeof asKitRpc.sendTransaction === 'function'
-    );
-}
 
+    const asKitRpc = conn as KitRpc;
+    return typeof asKitRpc.getLatestBlockhash === 'function' && typeof asKitRpc.sendTransaction === 'function';
+}

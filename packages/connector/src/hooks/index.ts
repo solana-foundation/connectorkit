@@ -11,3 +11,8 @@ export * from './use-transaction-signer';
 export * from './use-kit-transaction-signer';
 export * from './use-kit-solana-client';
 export * from './use-transaction-preparer';
+
+// Data fetching hooks for blocks
+export * from './use-balance';
+export * from './use-transactions';
+export * from './use-tokens';

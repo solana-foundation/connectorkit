@@ -18,9 +18,7 @@ export function TransactionDemo() {
                 <Info className="h-4 w-4" />
                 <div className="ml-2">
                     <p className="font-medium">Connect your wallet to get started</p>
-                    <p className="text-sm text-muted-foreground mt-1">
-                        Works on devnet and mainnet
-                    </p>
+                    <p className="text-sm text-muted-foreground mt-1">Works on devnet and mainnet</p>
                 </div>
             </Alert>
         );

@@ -74,7 +74,7 @@ export function ConnectionAbstractionDemo() {
             const rpc = createSolanaRpc(rpcUrl);
             // Cast to DualConnection - kit's Rpc is compatible with our KitRpc structural type
             const dualRpc = rpc as unknown as Parameters<typeof getLatestBlockhash>[0];
-            
+
             // Debug: Check what properties the rpc has
             console.log('Kit Rpc object inspection:', {
                 hasRpcEndpoint: 'rpcEndpoint' in rpc,
@@ -86,7 +86,7 @@ export function ConnectionAbstractionDemo() {
                 allKeys: Object.keys(rpc),
                 getLatestBlockhashType: typeof rpc.getLatestBlockhash,
             });
-            
+
             setConnectionType(isKitConnection(dualRpc) ? 'kit' : null);
 
             // Use abstraction helper - works with Kit Rpc
@@ -147,4 +147,3 @@ export function ConnectionAbstractionDemo() {
         </Card>
     );
 }
-

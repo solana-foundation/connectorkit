@@ -118,7 +118,9 @@ export function createSolanaClient<TCluster extends ModifiedClusterUrl>({
         } catch {
             // Not a valid URL, try as moniker
             try {
-                parsedUrl = new URL(getPublicSolanaRpcUrl(urlOrMoniker.toString() as 'mainnet' | 'devnet' | 'testnet' | 'localnet'));
+                parsedUrl = new URL(
+                    getPublicSolanaRpcUrl(urlOrMoniker.toString() as 'mainnet' | 'devnet' | 'testnet' | 'localnet'),
+                );
             } catch {
                 throw new Error('Invalid URL or cluster moniker');
             }
@@ -147,7 +149,9 @@ export function createSolanaClient<TCluster extends ModifiedClusterUrl>({
         parsedUrl.port = '8900';
     }
 
-    const rpcSubscriptions = createSolanaRpcSubscriptions(parsedUrl.toString()) as RpcSubscriptions<SolanaRpcSubscriptionsApi>;
+    const rpcSubscriptions = createSolanaRpcSubscriptions(
+        parsedUrl.toString(),
+    ) as RpcSubscriptions<SolanaRpcSubscriptionsApi>;
 
     return {
         rpc,
@@ -155,7 +159,3 @@ export function createSolanaClient<TCluster extends ModifiedClusterUrl>({
         urlOrMoniker: rpcUrl as TCluster,
     };
 }
-
-
-
-

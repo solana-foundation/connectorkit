@@ -7,8 +7,12 @@
 
 'use client';
 
-import { useCallback } from 'react';
-import type { TransactionMessage, TransactionMessageWithFeePayer, TransactionMessageWithBlockhashLifetime } from '@solana/kit';
+import { useCallback, useMemo } from 'react';
+import type {
+    TransactionMessage,
+    TransactionMessageWithFeePayer,
+    TransactionMessageWithBlockhashLifetime,
+} from '@solana/kit';
 
 /**
  * A transaction message that can be compiled for signing.
@@ -170,8 +174,12 @@ export function useTransactionPreparer(): UseTransactionPreparerReturn {
         [client],
     );
 
-    return {
-        prepare,
-        ready,
-    };
+    // Memoize return object to prevent unnecessary re-renders in consumers
+    return useMemo(
+        () => ({
+            prepare,
+            ready,
+        }),
+        [prepare, ready],
+    );
 }

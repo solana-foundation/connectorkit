@@ -191,4 +191,3 @@ export function createTransactionSendingSignerFromWallet(
 
     return freezeSigner(signer);
 }
-

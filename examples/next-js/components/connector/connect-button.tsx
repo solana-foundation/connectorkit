@@ -1,19 +1,15 @@
 'use client';
 
-import { useConnector, useAccount } from '@solana/connector';
+import { useConnector } from '@solana/connector';
 import { Button } from '@/components/ui/button';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useState } from 'react';
+import { motion } from 'motion/react';
 import { WalletModal } from './wallet-modal';
-import { Wallet, Copy, LogOut, ChevronDown, Check } from 'lucide-react';
+import { WalletDropdownContent } from './wallet-dropdown-content';
+import { Wallet, ChevronDown } from 'lucide-react';
+import { Spinner } from '../ui/spinner';
 
 interface ConnectButtonProps {
     className?: string;
@@ -21,14 +17,14 @@ interface ConnectButtonProps {
 
 export function ConnectButton({ className }: ConnectButtonProps) {
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const { connected, connecting, selectedWallet, selectedAccount, disconnect, wallets } = useConnector();
-    const { copied, copy } = useAccount();
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const { connected, connecting, selectedWallet, selectedAccount, wallets } = useConnector();
 
     if (connecting) {
         return (
-            <Button disabled className={className}>
-                <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                Connecting...
+            <Button size="sm" variant="outline" disabled className={className}>
+                <Spinner className="h-4 w-4" />
+                <span className="text-xs">Connecting...</span>
             </Button>
         );
     }
@@ -41,44 +37,30 @@ export function ConnectButton({ className }: ConnectButtonProps) {
         const walletIcon = walletWithIcon?.wallet.icon || selectedWallet.icon;
 
         return (
-            <DropdownMenu>
+            <DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
                 <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className={className}>
-                        <Avatar className="mr-2 h-5 w-5">
+                    <Button variant="outline" size="sm" className={className}>
+                        <Avatar className="h-5 w-5">
                             {walletIcon && <AvatarImage src={walletIcon} alt={selectedWallet.name} />}
                             <AvatarFallback>
                                 <Wallet className="h-3 w-3" />
                             </AvatarFallback>
                         </Avatar>
-                        <span className="font-mono text-sm">{shortAddress}</span>
-                        <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
+                        <span className="text-xs">{shortAddress}</span>
+                        <motion.div
+                            animate={{ rotate: isDropdownOpen ? -180 : 0 }}
+                            transition={{ duration: 0.2, ease: 'easeInOut' }}
+                        >
+                            <ChevronDown className="h-4 w-4 opacity-50" />
+                        </motion.div>
                     </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                    <DropdownMenuLabel>
-                        <div className="flex flex-col space-y-1">
-                            <p className="text-sm font-medium leading-none">{selectedWallet.name}</p>
-                            <p className="text-xs font-mono text-muted-foreground">{shortAddress}</p>
-                        </div>
-                    </DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={copy}>
-                        {copied ? (
-                            <>
-                                <Check className="mr-2 h-4 w-4" />
-                                Copied!
-                            </>
-                        ) : (
-                            <>
-                                <Copy className="mr-2 h-4 w-4" />
-                                Copy Address
-                            </>
-                        )}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => disconnect()} className="text-red-600">
-                        <LogOut className="mr-2 h-4 w-4" />
-                        Disconnect
-                    </DropdownMenuItem>
+                <DropdownMenuContent align="end" side="bottom" className="p-0 rounded-[20px]">
+                    <WalletDropdownContent
+                        selectedAccount={selectedAccount}
+                        walletIcon={walletIcon}
+                        walletName={selectedWallet.name}
+                    />
                 </DropdownMenuContent>
             </DropdownMenu>
         );
@@ -86,8 +68,7 @@ export function ConnectButton({ className }: ConnectButtonProps) {
 
     return (
         <>
-            <Button onClick={() => setIsModalOpen(true)} className={className}>
-                <Wallet className="mr-2 h-4 w-4" />
+            <Button size="sm" variant="outline" onClick={() => setIsModalOpen(true)} className={className}>
                 Connect Wallet
             </Button>
             <WalletModal open={isModalOpen} onOpenChange={setIsModalOpen} />

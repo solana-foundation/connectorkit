@@ -34,7 +34,3 @@ export function lamportsToSol(lamports: number | bigint): number {
 export function solToLamports(sol: number): bigint {
     return BigInt(Math.floor(sol * LAMPORTS_PER_SOL));
 }
-
-
-
-

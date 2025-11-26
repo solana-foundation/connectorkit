@@ -26,7 +26,11 @@ describe('TransactionTracker', () => {
             connecting: false,
             accounts: [],
             selectedAccount: null,
-            cluster: { id: 'solana:mainnet-beta', label: 'Mainnet Beta', url: 'https://api.mainnet-beta.solana.com' } as any,
+            cluster: {
+                id: 'solana:mainnet-beta',
+                label: 'Mainnet Beta',
+                url: 'https://api.mainnet-beta.solana.com',
+            } as any,
             clusters: [],
         };
 

@@ -92,4 +92,3 @@ export async function sendRawTransaction(
 
     throw new Error('Unsupported connection type');
 }
-
