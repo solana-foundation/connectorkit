@@ -2,21 +2,15 @@
 
 import { useConnector, useAccount, ClusterBlock } from '@solana/connector';
 import { Alert } from '@/components/ui/alert';
-import { Info, Globe, ChevronDown, User, Check } from 'lucide-react';
-import { 
-    LegacySolTransfer, 
-    ModernSolTransfer, 
-    KitSignerDemo, 
-    ChainUtilitiesDemo, 
-    ConnectionAbstractionDemo 
-} from '@/components/transactions';
+import { Info, ChevronDown, User, Check } from 'lucide-react';
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
+    LegacySolTransfer,
+    ModernSolTransfer,
+    KitSignerDemo,
+    ChainUtilitiesDemo,
+    ConnectionAbstractionDemo,
+} from '@/components/transactions';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -30,7 +24,8 @@ const transactionExamples: ExampleConfig[] = [
     {
         id: 'legacy-sol-transfer',
         name: 'Legacy SOL Transfer',
-        description: 'Transfer SOL using @solana/web3.js v1 with the wallet adapter compatibility layer. Shows how ConnectorKit integrates with existing legacy codebases.',
+        description:
+            'Transfer SOL using @solana/web3.js v1 with the wallet adapter compatibility layer. Shows how ConnectorKit integrates with existing legacy codebases.',
         code: `import { Connection, Transaction, SystemProgram, PublicKey, LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { useWalletAdapterCompat } from '@solana/connector/compat';
 import { useTransactionSigner, useConnector, useCluster, useConnectorClient } from '@solana/connector';
@@ -73,7 +68,8 @@ function LegacySolTransfer() {
     {
         id: 'modern-sol-transfer',
         name: 'Modern SOL Transfer',
-        description: 'Transfer SOL using @solana/kit (web3.js 2.0) with the modern pipe-based transaction builder. Type-safe and fully compatible with Kit signers.',
+        description:
+            'Transfer SOL using @solana/kit (web3.js 2.0) with the modern pipe-based transaction builder. Type-safe and fully compatible with Kit signers.',
         code: `import { 
     address, createSolanaRpc, pipe, createTransactionMessage,
     setTransactionMessageFeePayerSigner, setTransactionMessageLifetimeUsingBlockhash,
@@ -118,7 +114,8 @@ function ModernSolTransfer() {
     {
         id: 'kit-signer',
         name: 'Kit Signers',
-        description: 'Create framework-agnostic signers from wallet connections. Supports both transaction signing and message signing with modern Kit APIs.',
+        description:
+            'Create framework-agnostic signers from wallet connections. Supports both transaction signing and message signing with modern Kit APIs.',
         code: `import { 
     createKitSignersFromWallet, 
     createMessageSignerFromWallet, 
@@ -161,7 +158,8 @@ function KitSignerDemo() {
     {
         id: 'chain-utilities',
         name: 'Chain Utilities',
-        description: 'Convert between Wallet Standard chain IDs and cluster types. Bidirectional utilities for working with different network identifiers.',
+        description:
+            'Convert between Wallet Standard chain IDs and cluster types. Bidirectional utilities for working with different network identifiers.',
         code: `import { useConnector } from '@solana/connector';
 import {
     getChainIdFromCluster,
@@ -200,7 +198,8 @@ function ChainUtilitiesDemo() {
     {
         id: 'connection-abstraction',
         name: 'Connection Abstraction',
-        description: 'Dual-architecture helpers that work with both legacy @solana/web3.js Connection and modern @solana/kit Rpc clients.',
+        description:
+            'Dual-architecture helpers that work with both legacy @solana/web3.js Connection and modern @solana/kit Rpc clients.',
         code: `import { useConnectorClient } from '@solana/connector';
 import { getLatestBlockhash, isLegacyConnection, isKitConnection } from '@solana/connector/headless';
 import { createSolanaRpc } from '@solana/kit';
@@ -245,7 +244,7 @@ export function TransactionsSection() {
     return (
         <section>
             {/* Section Header */}
-            <div 
+            <div
                 className="px-4 lg:px-6 py-8 border-b border-sand-200"
                 style={{
                     backgroundImage: `repeating-linear-gradient(
@@ -254,7 +253,7 @@ export function TransactionsSection() {
                         transparent 10px,
                         rgba(233, 231, 222, 0.5) 10px,
                         rgba(233, 231, 222, 0.5) 11px
-                    )`
+                    )`,
                 }}
             >
                 <div className="inline-flex items-center gap-2 mb-3">
@@ -262,14 +261,12 @@ export function TransactionsSection() {
                         Interactive
                     </span>
                 </div>
-                <h2 className="text-h3 font-diatype-medium text-sand-1500 mb-2">
-                    Transaction Examples
-                </h2>
+                <h2 className="text-h3 font-diatype-medium text-sand-1500 mb-2">Transaction Examples</h2>
                 <p className="text-body-lg font-inter text-sand-700 max-w-2xl">
-                    Test real transactions on devnet or mainnet. Compare legacy web3.js patterns 
-                    with modern Kit-based approaches using ConnectorKit&apos;s unified signer interface.
+                    Test real transactions on devnet or mainnet. Compare legacy web3.js patterns with modern Kit-based
+                    approaches using ConnectorKit&apos;s unified signer interface.
                 </p>
-                
+
                 {connected && (
                     <div className="flex items-center gap-3 mt-6">
                         {/* ClusterBlock as network selector */}
@@ -280,15 +277,20 @@ export function TransactionsSection() {
                                         <SelectValue placeholder="Select network" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {clusters.map((c) => (
+                                        {clusters.map(c => (
                                             <SelectItem key={c.id} value={c.id}>
                                                 <div className="flex items-center gap-2">
-                                                    <span className={`h-2 w-2 rounded-full ${
-                                                        c.id === 'solana:mainnet' ? 'bg-green-500' :
-                                                        c.id === 'solana:devnet' ? 'bg-blue-500' :
-                                                        c.id === 'solana:testnet' ? 'bg-yellow-500' :
-                                                        'bg-purple-500'
-                                                    }`} />
+                                                    <span
+                                                        className={`h-2 w-2 rounded-full ${
+                                                            c.id === 'solana:mainnet'
+                                                                ? 'bg-green-500'
+                                                                : c.id === 'solana:devnet'
+                                                                  ? 'bg-blue-500'
+                                                                  : c.id === 'solana:testnet'
+                                                                    ? 'bg-yellow-500'
+                                                                    : 'bg-purple-500'
+                                                        }`}
+                                                    />
                                                     {c.label}
                                                 </div>
                                             </SelectItem>
@@ -297,7 +299,7 @@ export function TransactionsSection() {
                                 </Select>
                             )}
                         />
-                        
+
                         {/* Account switcher (when multiple accounts) */}
                         {accounts && accounts.length > 1 && (
                             <DropdownMenu>
@@ -309,12 +311,12 @@ export function TransactionsSection() {
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="start">
-                                    {accounts.map((account) => {
+                                    {accounts.map(account => {
                                         const addr = account.address;
                                         const shortAddr = `${addr.slice(0, 4)}...${addr.slice(-4)}`;
                                         return (
-                                            <DropdownMenuItem 
-                                                key={addr} 
+                                            <DropdownMenuItem
+                                                key={addr}
                                                 onClick={() => selectAccount(addr)}
                                                 className="flex items-center justify-between"
                                             >
@@ -340,7 +342,8 @@ export function TransactionsSection() {
                         <div className="ml-2">
                             <p className="font-medium">Connect your wallet to test transactions</p>
                             <p className="text-sm text-muted-foreground mt-1">
-                                Works on devnet and mainnet. Switch networks using the cluster selector after connecting.
+                                Works on devnet and mainnet. Switch networks using the cluster selector after
+                                connecting.
                             </p>
                         </div>
                     </Alert>
@@ -348,7 +351,7 @@ export function TransactionsSection() {
             )}
 
             {/* Transaction Examples */}
-            {transactionExamples.map((example) => (
+            {transactionExamples.map(example => (
                 <ExampleCard key={example.id} example={example} requiresConnection={true} />
             ))}
         </section>

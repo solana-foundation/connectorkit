@@ -341,13 +341,21 @@ function WalletModalContent() {
                                         >
                                             <div className="flex items-center gap-2">
                                                 <span className="font-semibold">{walletInfo.wallet.name}</span>
-                                                {isRecent && <Badge variant="secondary" className="text-xs">Recent</Badge>}
+                                                {isRecent && (
+                                                    <Badge variant="secondary" className="text-xs">
+                                                        Recent
+                                                    </Badge>
+                                                )}
                                             </div>
                                             <div className="flex items-center gap-2">
                                                 {isConnecting && <Spinner className="h-4 w-4" />}
                                                 <Avatar className="h-10 w-10">
-                                                    {walletInfo.wallet.icon && <AvatarImage src={walletInfo.wallet.icon} />}
-                                                    <AvatarFallback><Wallet className="h-5 w-5" /></AvatarFallback>
+                                                    {walletInfo.wallet.icon && (
+                                                        <AvatarImage src={walletInfo.wallet.icon} />
+                                                    )}
+                                                    <AvatarFallback>
+                                                        <Wallet className="h-5 w-5" />
+                                                    </AvatarFallback>
                                                 </Avatar>
                                             </div>
                                         </Button>
@@ -375,8 +383,12 @@ function WalletModalContent() {
                                                     >
                                                         <span>{walletInfo.wallet.name}</span>
                                                         <Avatar className="h-8 w-8">
-                                                            {walletInfo.wallet.icon && <AvatarImage src={walletInfo.wallet.icon} />}
-                                                            <AvatarFallback><Wallet className="h-4 w-4" /></AvatarFallback>
+                                                            {walletInfo.wallet.icon && (
+                                                                <AvatarImage src={walletInfo.wallet.icon} />
+                                                            )}
+                                                            <AvatarFallback>
+                                                                <Wallet className="h-4 w-4" />
+                                                            </AvatarFallback>
                                                         </Avatar>
                                                     </Button>
                                                 ))}
@@ -398,16 +410,26 @@ function WalletModalContent() {
                                                 key={walletInfo.wallet.name}
                                                 variant="outline"
                                                 className="h-auto justify-between p-4 rounded-[16px]"
-                                                onClick={() => window.open(getInstallUrl(walletInfo.wallet.name), '_blank')}
+                                                onClick={() =>
+                                                    window.open(getInstallUrl(walletInfo.wallet.name), '_blank')
+                                                }
                                             >
                                                 <div className="flex items-center gap-3">
                                                     <Avatar className="h-8 w-8">
-                                                        {walletInfo.wallet.icon && <AvatarImage src={walletInfo.wallet.icon} />}
-                                                        <AvatarFallback><Wallet className="h-4 w-4" /></AvatarFallback>
+                                                        {walletInfo.wallet.icon && (
+                                                            <AvatarImage src={walletInfo.wallet.icon} />
+                                                        )}
+                                                        <AvatarFallback>
+                                                            <Wallet className="h-4 w-4" />
+                                                        </AvatarFallback>
                                                     </Avatar>
                                                     <div className="text-left">
-                                                        <div className="font-medium text-sm">{walletInfo.wallet.name}</div>
-                                                        <div className="text-xs text-muted-foreground">Not installed</div>
+                                                        <div className="font-medium text-sm">
+                                                            {walletInfo.wallet.name}
+                                                        </div>
+                                                        <div className="text-xs text-muted-foreground">
+                                                            Not installed
+                                                        </div>
                                                     </div>
                                                 </div>
                                                 <ExternalLink className="h-4 w-4 text-muted-foreground" />
@@ -422,7 +444,9 @@ function WalletModalContent() {
                             <div className="rounded-lg border border-dashed p-8 text-center">
                                 <Wallet className="mx-auto h-12 w-12 text-muted-foreground mb-3" />
                                 <h3 className="font-semibold mb-2">No Wallets Detected</h3>
-                                <p className="text-sm text-muted-foreground mb-4">Install a Solana wallet to get started</p>
+                                <p className="text-sm text-muted-foreground mb-4">
+                                    Install a Solana wallet to get started
+                                </p>
                                 <Button onClick={() => window.open('https://phantom.app', '_blank')}>
                                     Get Phantom
                                 </Button>
@@ -436,13 +460,13 @@ function WalletModalContent() {
 }
 
 // Component section helper
-function ComponentSection({ 
-    title, 
-    description, 
-    code, 
+function ComponentSection({
+    title,
+    description,
+    code,
     fileName,
-    children 
-}: { 
+    children,
+}: {
     title: string;
     description: string;
     badge: string;
@@ -455,25 +479,25 @@ function ComponentSection({
         <section className="py-12 border-b border-sand-200">
             <div className="grid grid-cols-12 gap-6 lg:gap-8">
                 <div className="col-span-12 lg:col-span-4 flex flex-col justify-start px-4 lg:px-6">
-                    <h3 className="text-title-5 font-diatype-medium text-sand-1500 mb-2">
-                        {title}
-                    </h3>
-                    <p className="text-body-md font-inter text-sand-700">
-                        {description}
-                    </p>
+                    <h3 className="text-title-5 font-diatype-medium text-sand-1500 mb-2">{title}</h3>
+                    <p className="text-body-md font-inter text-sand-700">{description}</p>
                 </div>
 
                 <div className="col-span-12 lg:col-span-8 px-4 lg:px-6">
                     <Tabs defaultValue="preview" className="w-full">
                         <div className="flex justify-end mb-4">
                             <TabsList>
-                                <TabsTrigger className="text-xs" value="preview">Preview</TabsTrigger>
-                                <TabsTrigger className="text-xs" value="code">Code</TabsTrigger>
+                                <TabsTrigger className="text-xs" value="preview">
+                                    Preview
+                                </TabsTrigger>
+                                <TabsTrigger className="text-xs" value="code">
+                                    Code
+                                </TabsTrigger>
                             </TabsList>
                         </div>
 
                         <TabsContent value="preview">
-                            <Card 
+                            <Card
                                 className="border-sand-300 bg-sand-100/30 rounded-xl"
                                 style={{
                                     backgroundImage: `repeating-linear-gradient(
@@ -482,7 +506,7 @@ function ComponentSection({
                                         transparent 10px,
                                         rgba(233, 231, 222, 0.5) 10px,
                                         rgba(233, 231, 222, 0.5) 11px
-                                    )`
+                                    )`,
                                 }}
                             >
                                 <CardContent className="p-6 flex items-center justify-center min-h-[300px]">
@@ -496,7 +520,7 @@ function ComponentSection({
                                 <CardContent className="p-0">
                                     <div className="flex items-center justify-between px-4 py-2 border-b border-white/10">
                                         <span className="text-xs text-sand-500 font-inter">{fileName}</span>
-                                        <CopyButton 
+                                        <CopyButton
                                             textToCopy={code}
                                             showText={false}
                                             iconClassName="text-sand-500 group-hover:text-sand-300"
@@ -543,28 +567,27 @@ export function FeaturedSection() {
     return (
         <div>
             {/* Section Header */}
-            <div 
-            className="px-4 lg:px-6 py-8 border-b border-sand-200"
-            style={{
-                backgroundImage: `repeating-linear-gradient(
+            <div
+                className="px-4 lg:px-6 py-8 border-b border-sand-200"
+                style={{
+                    backgroundImage: `repeating-linear-gradient(
                     45deg,
                     transparent,
                     transparent 10px,
                     rgba(233, 231, 222, 0.5) 10px,
                     rgba(233, 231, 222, 0.5) 11px
-                )`
-            }}
+                )`,
+                }}
             >
                 <div className="inline-flex items-center gap-2 mb-3">
                     <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-inter-medium rounded">
                         Full Components
                     </span>
                 </div>
-                <h2 className="text-h3 font-diatype-medium text-sand-1500 mb-2">
-                    Complete Block Examples
-                </h2>
+                <h2 className="text-h3 font-diatype-medium text-sand-1500 mb-2">Complete Block Examples</h2>
                 <p className="text-body-lg font-inter text-sand-700 max-w-lg">
-                    Complete block examples built with ConnectorKit blocks and radix. Copy any example and customize it for your app.
+                    Complete block examples built with ConnectorKit blocks and radix. Copy any example and customize it
+                    for your app.
                 </p>
             </div>
 

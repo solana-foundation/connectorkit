@@ -18,7 +18,8 @@ const blockExamples: ExampleConfig[] = [
     {
         id: 'account-block',
         name: 'AccountBlock',
-        description: 'Display connected wallet address with copy functionality. Use render props for full control over the UI.',
+        description:
+            'Display connected wallet address with copy functionality. Use render props for full control over the UI.',
         code: `import { AccountBlock } from '@solana/connector/react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Wallet, Copy, Check } from 'lucide-react';
@@ -57,7 +58,11 @@ import { Wallet, Copy, Check } from 'lucide-react';
                             <p className="text-xs text-muted-foreground font-mono">{formatted}</p>
                         </div>
                         <button onClick={copy} className="p-2 hover:bg-muted rounded-md transition-colors">
-                            {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4 text-muted-foreground" />}
+                            {copied ? (
+                                <Check className="h-4 w-4 text-green-500" />
+                            ) : (
+                                <Copy className="h-4 w-4 text-muted-foreground" />
+                            )}
                         </button>
                     </div>
                 )}
@@ -67,7 +72,8 @@ import { Wallet, Copy, Check } from 'lucide-react';
     {
         id: 'balance-block',
         name: 'BalanceBlock',
-        description: 'Show SOL balance with optional refresh. Access loading state and refetch function via render props.',
+        description:
+            'Show SOL balance with optional refresh. Access loading state and refetch function via render props.',
         code: `import { BalanceBlock } from '@solana/connector/react';
 import { RefreshCw } from 'lucide-react';
 
@@ -92,7 +98,11 @@ import { RefreshCw } from 'lucide-react';
                             <p className="text-xs text-muted-foreground font-medium">SOL Balance</p>
                             <p className="text-2xl font-bold">{solBalance?.toFixed(4) ?? '--'} SOL</p>
                         </div>
-                        <button onClick={refetch} disabled={isLoading} className="p-2 hover:bg-muted rounded-md transition-colors disabled:opacity-50">
+                        <button
+                            onClick={refetch}
+                            disabled={isLoading}
+                            className="p-2 hover:bg-muted rounded-md transition-colors disabled:opacity-50"
+                        >
                             <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
                         </button>
                     </div>
@@ -152,16 +162,20 @@ const clusterColors: Record<string, string> = {
                             <SelectTrigger className="p-3 rounded-lg border bg-card w-[220px] cursor-pointer">
                                 <SelectValue>
                                     <div className="flex items-center gap-2">
-                                        <span className={`h-2 w-2 rounded-full ${clusterColors[cluster?.id || ''] || 'bg-purple-500'}`} />
+                                        <span
+                                            className={`h-2 w-2 rounded-full ${clusterColors[cluster?.id || ''] || 'bg-purple-500'}`}
+                                        />
                                         {cluster?.label || 'Select network'}
                                     </div>
                                 </SelectValue>
                             </SelectTrigger>
                             <SelectContent>
-                                {clusters.map((c) => (
+                                {clusters.map(c => (
                                     <SelectItem key={c.id} value={c.id}>
                                         <div className="flex items-center gap-2">
-                                            <span className={`h-2 w-2 rounded-full ${clusterColors[c.id] || 'bg-purple-500'}`} />
+                                            <span
+                                                className={`h-2 w-2 rounded-full ${clusterColors[c.id] || 'bg-purple-500'}`}
+                                            />
                                             {c.label}
                                         </div>
                                     </SelectItem>
@@ -196,7 +210,12 @@ import { LogOut } from 'lucide-react';
         render: () => (
             <DisconnectBlock
                 render={({ disconnect, disconnecting }) => (
-                    <Button variant="destructive" onClick={disconnect} disabled={disconnecting} className="min-w-[200px]">
+                    <Button
+                        variant="destructive"
+                        onClick={disconnect}
+                        disabled={disconnecting}
+                        className="min-w-[200px]"
+                    >
                         <LogOut className="mr-2 h-4 w-4" />
                         {disconnecting ? 'Disconnecting...' : 'Disconnect Wallet'}
                     </Button>
@@ -359,7 +378,9 @@ import { ExternalLink, Coins } from 'lucide-react';
                                         <p className="text-xs text-muted-foreground">{tx.formattedTime}</p>
                                     </div>
                                     {tx.formattedAmount && (
-                                        <span className={`text-sm font-medium ${tx.direction === 'in' ? 'text-green-600' : 'text-orange-600'}`}>
+                                        <span
+                                            className={`text-sm font-medium ${tx.direction === 'in' ? 'text-green-600' : 'text-orange-600'}`}
+                                        >
                                             {tx.formattedAmount}
                                         </span>
                                     )}
@@ -370,7 +391,10 @@ import { ExternalLink, Coins } from 'lucide-react';
                                 <p className="p-4 text-center text-muted-foreground text-sm">No transactions yet</p>
                             )}
                             {hasMore && (
-                                <button onClick={loadMore} className="w-full p-2 text-sm text-muted-foreground hover:bg-muted">
+                                <button
+                                    onClick={loadMore}
+                                    className="w-full p-2 text-sm text-muted-foreground hover:bg-muted"
+                                >
                                     Load more...
                                 </button>
                             )}
@@ -386,7 +410,7 @@ import { ExternalLink, Coins } from 'lucide-react';
 export function BlockExamplesSection() {
     return (
         <section>
-            <div 
+            <div
                 className="px-4 lg:px-6 py-8 border-b border-sand-200"
                 style={{
                     backgroundImage: `repeating-linear-gradient(
@@ -395,27 +419,24 @@ export function BlockExamplesSection() {
                         transparent 10px,
                         rgba(233, 231, 222, 0.5) 10px,
                         rgba(233, 231, 222, 0.5) 11px
-                    )`
+                    )`,
                 }}
-                >
+            >
                 <div className="inline-flex items-center gap-2 mb-3">
                     <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-inter-medium rounded">
                         Individual Blocks
                     </span>
                 </div>
-                <h2 className="text-h3 font-diatype-medium text-sand-1500 mb-2">
-                    Block Components
-                </h2>
+                <h2 className="text-h3 font-diatype-medium text-sand-1500 mb-2">Block Components</h2>
                 <p className="text-body-lg font-inter text-sand-700 max-w-2xl">
-                    Headless block components with render props. Each block manages its own state and data fetching—you 
+                    Headless block components with render props. Each block manages its own state and data fetching—you
                     just provide the UI. Copy any example and customize the styling.
                 </p>
             </div>
 
-            {blockExamples.map((example) => (
+            {blockExamples.map(example => (
                 <ExampleCard key={example.id} example={example} />
             ))}
         </section>
     );
 }
-

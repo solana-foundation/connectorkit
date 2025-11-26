@@ -238,5 +238,3 @@ describe('debug logger', () => {
         });
     });
 });
-
-

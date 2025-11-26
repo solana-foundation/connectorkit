@@ -32,9 +32,9 @@ export interface ClusterBlockProps {
 
 const DEFAULT_LABELS: Record<string, string> = {
     'mainnet-beta': 'Mainnet',
-    'devnet': 'Devnet',
-    'testnet': 'Testnet',
-    'localnet': 'Localnet',
+    devnet: 'Devnet',
+    testnet: 'Testnet',
+    localnet: 'Localnet',
 };
 
 function getClusterColor(clusterId: string): string {
@@ -54,17 +54,17 @@ function getClusterColor(clusterId: string): string {
 
 /**
  * Block for displaying and optionally changing the current cluster/network.
- * 
+ *
  * @example Badge (read-only)
  * ```tsx
  * <ClusterBlock variant="badge" />
  * ```
- * 
+ *
  * @example Select (changeable)
  * ```tsx
  * <ClusterBlock variant="select" allowChange />
  * ```
- * 
+ *
  * @example Custom render
  * ```tsx
  * <ClusterBlock
@@ -90,31 +90,31 @@ export function ClusterBlock({
 }: ClusterBlockProps) {
     const { cluster, clusters, setCluster, isMainnet, isDevnet, isTestnet, isLocal } = useCluster();
     const [isOpen, setIsOpen] = React.useState(false);
-    
+
     // Custom render
     if (render) {
         return <>{render({ cluster, clusters, setCluster, isMainnet, isDevnet, isTestnet, isLocal })}</>;
     }
-    
+
     if (!cluster) return null;
-    
+
     const allLabels = { ...DEFAULT_LABELS, ...labels };
     const displayLabel = allLabels[cluster.id] || cluster.label || cluster.id;
     const color = getClusterColor(cluster.id);
-    
+
     const indicator = showIndicator && (
-        <span 
+        <span
             className="ck-cluster-indicator"
             style={{ backgroundColor: color }}
             data-slot="cluster-block-indicator"
             aria-hidden="true"
         />
     );
-    
+
     // Badge variant
     if (variant === 'badge') {
         return (
-            <span 
+            <span
                 className={`ck-cluster-block ck-cluster-block--badge ${className || ''}`}
                 data-slot="cluster-block"
                 data-variant="badge"
@@ -125,12 +125,12 @@ export function ClusterBlock({
             </span>
         );
     }
-    
+
     // Menu item variant (for dropdowns)
     if (variant === 'menuitem') {
         if (!allowChange) {
             return (
-                <div 
+                <div
                     className={`ck-cluster-block ck-cluster-block--menuitem ${className || ''}`}
                     role="menuitem"
                     data-slot="cluster-block"
@@ -142,10 +142,10 @@ export function ClusterBlock({
                 </div>
             );
         }
-        
+
         // Submenu for changing cluster
         return (
-            <div 
+            <div
                 className={`ck-cluster-block ck-cluster-block--menuitem ${className || ''}`}
                 data-slot="cluster-block"
                 data-variant="menuitem"
@@ -159,11 +159,11 @@ export function ClusterBlock({
                 >
                     {indicator}
                     <span data-slot="cluster-block-label">{displayLabel}</span>
-                    <svg 
-                        width="12" 
-                        height="12" 
-                        viewBox="0 0 24 24" 
-                        fill="none" 
+                    <svg
+                        width="12"
+                        height="12"
+                        viewBox="0 0 24 24"
+                        fill="none"
                         stroke="currentColor"
                         strokeWidth="2"
                         className={`ck-cluster-block-chevron ${isOpen ? 'ck-cluster-block-chevron--open' : ''}`}
@@ -178,7 +178,7 @@ export function ClusterBlock({
                             const cLabel = allLabels[c.id] || c.label || c.id;
                             const cColor = getClusterColor(c.id);
                             const isSelected = c.id === cluster.id;
-                            
+
                             return (
                                 <button
                                     key={c.id}
@@ -191,18 +191,18 @@ export function ClusterBlock({
                                     data-slot="cluster-block-option"
                                     data-selected={isSelected}
                                 >
-                                    <span 
+                                    <span
                                         className="ck-cluster-indicator"
                                         style={{ backgroundColor: cColor }}
                                         data-slot="cluster-block-indicator"
                                     />
                                     <span>{cLabel}</span>
                                     {isSelected && (
-                                        <svg 
-                                            width="12" 
-                                            height="12" 
-                                            viewBox="0 0 24 24" 
-                                            fill="none" 
+                                        <svg
+                                            width="12"
+                                            height="12"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
                                             stroke="currentColor"
                                             strokeWidth="3"
                                             className="ck-cluster-block-check"
@@ -219,10 +219,10 @@ export function ClusterBlock({
             </div>
         );
     }
-    
+
     // Select variant
     return (
-        <div 
+        <div
             className={`ck-cluster-block ck-cluster-block--select ${className || ''}`}
             data-slot="cluster-block"
             data-variant="select"
@@ -238,11 +238,11 @@ export function ClusterBlock({
                 {indicator}
                 <span data-slot="cluster-block-label">{displayLabel}</span>
                 {allowChange && (
-                    <svg 
-                        width="12" 
-                        height="12" 
-                        viewBox="0 0 24 24" 
-                        fill="none" 
+                    <svg
+                        width="12"
+                        height="12"
+                        viewBox="0 0 24 24"
+                        fill="none"
                         stroke="currentColor"
                         strokeWidth="2"
                         className={`ck-cluster-block-chevron ${isOpen ? 'ck-cluster-block-chevron--open' : ''}`}
@@ -254,17 +254,13 @@ export function ClusterBlock({
             </button>
             {isOpen && allowChange && (
                 <>
-                    <div 
-                        className="ck-cluster-block-backdrop"
-                        onClick={() => setIsOpen(false)}
-                        aria-hidden="true"
-                    />
+                    <div className="ck-cluster-block-backdrop" onClick={() => setIsOpen(false)} aria-hidden="true" />
                     <div className="ck-cluster-block-options" data-slot="cluster-block-options">
                         {clusters.map((c: SolanaCluster) => {
                             const cLabel = allLabels[c.id] || c.label || c.id;
                             const cColor = getClusterColor(c.id);
                             const isSelected = c.id === cluster.id;
-                            
+
                             return (
                                 <button
                                     key={c.id}
@@ -277,18 +273,18 @@ export function ClusterBlock({
                                     data-slot="cluster-block-option"
                                     data-selected={isSelected}
                                 >
-                                    <span 
+                                    <span
                                         className="ck-cluster-indicator"
                                         style={{ backgroundColor: cColor }}
                                         data-slot="cluster-block-indicator"
                                     />
                                     <span>{cLabel}</span>
                                     {isSelected && (
-                                        <svg 
-                                            width="12" 
-                                            height="12" 
-                                            viewBox="0 0 24 24" 
-                                            fill="none" 
+                                        <svg
+                                            width="12"
+                                            height="12"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
                                             stroke="currentColor"
                                             strokeWidth="3"
                                             className="ck-cluster-block-check"
@@ -308,5 +304,3 @@ export function ClusterBlock({
 }
 
 ClusterBlock.displayName = 'ClusterBlock';
-
-

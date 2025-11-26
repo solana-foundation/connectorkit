@@ -56,7 +56,9 @@ describe('Headless Entry Point (headless.ts)', () => {
         it('should export createGillTransactionSigner (deprecated alias)', () => {
             expect(ConnectorKitHeadless.createGillTransactionSigner).toBeDefined();
             expect(typeof ConnectorKitHeadless.createGillTransactionSigner).toBe('function');
-            expect(ConnectorKitHeadless.createGillTransactionSigner).toBe(ConnectorKitHeadless.createKitTransactionSigner);
+            expect(ConnectorKitHeadless.createGillTransactionSigner).toBe(
+                ConnectorKitHeadless.createKitTransactionSigner,
+            );
         });
 
         it('should export TransactionSignerError', () => {

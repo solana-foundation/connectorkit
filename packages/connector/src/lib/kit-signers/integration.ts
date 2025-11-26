@@ -124,93 +124,86 @@ export function createKitSignersFromWallet(
 
     // Create message signer if wallet supports message signing
     const messageSigner: MessageModifyingSigner<string> | null = hasSignMessage
-        ? createMessageSignerFromWallet(
-              walletAddress,
-              async (message: Uint8Array) => {
-                  if (!hasSignMessage) {
-                      throw Errors.featureNotSupported('message signing');
+        ? createMessageSignerFromWallet(walletAddress, async (message: Uint8Array) => {
+              if (!hasSignMessage) {
+                  throw Errors.featureNotSupported('message signing');
+              }
+
+              try {
+                  const signFeature = features['solana:signMessage'];
+
+                  // Ensure message is a Uint8Array
+                  const messageBytes = message instanceof Uint8Array ? message : new Uint8Array(message);
+
+                  // Wallet Standard returns an array of signed messages
+                  const results = (await signFeature.signMessage({
+                      account,
+                      message: messageBytes,
+                      ...(chain ? { chain } : {}),
+                  })) as Array<{ signature: Uint8Array; signedMessage?: Uint8Array }>;
+
+                  if (!Array.isArray(results) || results.length === 0) {
+                      throw new Error('Wallet returned empty results array');
                   }
 
-                  try {
-                      const signFeature = features['solana:signMessage'];
-                      
-                      // Ensure message is a Uint8Array
-                      const messageBytes = message instanceof Uint8Array ? message : new Uint8Array(message);
-                      
-                      // Wallet Standard returns an array of signed messages
-                      const results = (await signFeature.signMessage({
-                          account,
-                          message: messageBytes,
-                          ...(chain ? { chain } : {}),
-                      })) as Array<{ signature: Uint8Array; signedMessage?: Uint8Array }>;
-
-                      if (!Array.isArray(results) || results.length === 0) {
-                          throw new Error('Wallet returned empty results array');
-                      }
-
-                      const firstResult = results[0];
-                      if (!firstResult?.signature) {
-                          throw new Error('Wallet returned no signature in first result');
-                      }
-
-                      return firstResult.signature;
-                  } catch (error) {
-                      console.error('signMessage error:', error);
-                      throw error instanceof Error ? error : new Error(String(error));
+                  const firstResult = results[0];
+                  if (!firstResult?.signature) {
+                      throw new Error('Wallet returned no signature in first result');
                   }
-              },
-          )
+
+                  return firstResult.signature;
+              } catch (error) {
+                  console.error('signMessage error:', error);
+                  throw error instanceof Error ? error : new Error(String(error));
+              }
+          })
         : null;
 
     // Create transaction sending signer if wallet supports sending transactions
     // Prefer signAndSendTransaction over sendTransaction as it's more efficient
     const transactionSigner: TransactionSendingSigner<string> | null =
         hasSignAndSendTransaction || hasSendTransaction
-            ? createTransactionSendingSignerFromWallet(
-                  walletAddress,
-                  chain,
-                  async (transaction: any) => {
-                      // Prefer signAndSendTransaction (sign + send in one call)
-                      if (hasSignAndSendTransaction) {
-                          try {
-                              const signAndSendFeature = features['solana:signAndSendTransaction'];
-                              const result = (await signAndSendFeature.signAndSendTransaction({
-                                  account,
-                                  transactions: [transaction],
-                                  ...(chain ? { chain } : {}),
-                                  ...(connection ? { chain: chain } : {}),
-                              })) as { signatures: string[] };
+            ? createTransactionSendingSignerFromWallet(walletAddress, chain, async (transaction: any) => {
+                  // Prefer signAndSendTransaction (sign + send in one call)
+                  if (hasSignAndSendTransaction) {
+                      try {
+                          const signAndSendFeature = features['solana:signAndSendTransaction'];
+                          const result = (await signAndSendFeature.signAndSendTransaction({
+                              account,
+                              transactions: [transaction],
+                              ...(chain ? { chain } : {}),
+                              ...(connection ? { chain: chain } : {}),
+                          })) as { signatures: string[] };
 
-                              // Return first signature (wallet limitation: single transaction)
-                              return result.signatures[0] || '';
-                          } catch (error) {
-                              throw error instanceof Error ? error : new Error(String(error));
-                          }
+                          // Return first signature (wallet limitation: single transaction)
+                          return result.signatures[0] || '';
+                      } catch (error) {
+                          throw error instanceof Error ? error : new Error(String(error));
                       }
+                  }
 
-                      // Fallback to sendTransaction (if wallet supports it but not signAndSendTransaction)
-                      // Note: sendTransaction in Wallet Standard typically just signs, but some wallets
-                      // may implement it to also send if connection is available
-                      if (hasSendTransaction) {
-                          try {
-                              const sendFeature = features['solana:sendTransaction'];
-                              const result = (await sendFeature.sendTransaction({
-                                  account,
-                                  transactions: [transaction],
-                                  ...(chain ? { chain } : {}),
-                              })) as { signatures: string[] };
+                  // Fallback to sendTransaction (if wallet supports it but not signAndSendTransaction)
+                  // Note: sendTransaction in Wallet Standard typically just signs, but some wallets
+                  // may implement it to also send if connection is available
+                  if (hasSendTransaction) {
+                      try {
+                          const sendFeature = features['solana:sendTransaction'];
+                          const result = (await sendFeature.sendTransaction({
+                              account,
+                              transactions: [transaction],
+                              ...(chain ? { chain } : {}),
+                          })) as { signatures: string[] };
 
-                              // Return first signature
-                              // Note: Actual sending should be handled by the caller or wallet implementation
-                              return result.signatures[0] || '';
-                          } catch (error) {
-                              throw error instanceof Error ? error : new Error(String(error));
-                          }
+                          // Return first signature
+                          // Note: Actual sending should be handled by the caller or wallet implementation
+                          return result.signatures[0] || '';
+                      } catch (error) {
+                          throw error instanceof Error ? error : new Error(String(error));
                       }
+                  }
 
-                      throw Errors.featureNotSupported('transaction sending');
-                  },
-              )
+                  throw Errors.featureNotSupported('transaction sending');
+              })
             : null;
 
     return {
@@ -220,4 +213,3 @@ export function createKitSignersFromWallet(
         transactionSigner,
     };
 }
-

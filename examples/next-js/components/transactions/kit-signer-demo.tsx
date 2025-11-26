@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { 
-    createKitSignersFromWallet, 
-    createMessageSignerFromWallet, 
-    createSignableMessage, 
-    address 
+import {
+    createKitSignersFromWallet,
+    createMessageSignerFromWallet,
+    createSignableMessage,
+    address,
 } from '@solana/connector/headless';
 import { useConnector, useConnectorClient } from '@solana/connector';
 import { Connection } from '@solana/web3.js';
@@ -16,12 +16,12 @@ import { Alert } from '@/components/ui/alert';
 export function KitSignerDemo() {
     const { selectedWallet, accounts, selectedAccount, cluster } = useConnector();
     const client = useConnectorClient();
-    
+
     const account = useMemo(() => {
         if (!selectedAccount || !accounts.length) return null;
         return accounts.find(acc => acc.address === selectedAccount)?.raw || null;
     }, [selectedAccount, accounts]);
-    
+
     const [messageToSign, setMessageToSign] = useState('Hello from ConnectorKit!');
     const [signedMessage, setSignedMessage] = useState<string | null>(null);
     const [isSigning, setIsSigning] = useState(false);
@@ -38,15 +38,15 @@ export function KitSignerDemo() {
 
     const manualSigner = useMemo(() => {
         if (!selectedWallet || !account) return null;
-        
+
         // Validate features structure
         if (!selectedWallet.features || typeof selectedWallet.features !== 'object') {
             return null;
         }
-        
+
         const features = selectedWallet.features as Record<string, unknown>;
         const signMessageFeature = features['solana:signMessage'];
-        
+
         // Validate signMessage feature exists and has the expected structure
         if (
             !signMessageFeature ||
@@ -59,41 +59,38 @@ export function KitSignerDemo() {
 
         const signMessageFn = (signMessageFeature as { signMessage: (args: unknown) => Promise<unknown> }).signMessage;
 
-        return createMessageSignerFromWallet(
-            address(account.address),
-            async (message: Uint8Array) => {
-                try {
-                    const result = await signMessageFn({
-                        account,
-                        message,
-                    });
+        return createMessageSignerFromWallet(address(account.address), async (message: Uint8Array) => {
+            try {
+                const result = await signMessageFn({
+                    account,
+                    message,
+                });
 
-                    // Validate result structure
-                    if (!Array.isArray(result)) {
-                        throw new Error('Wallet signMessage did not return an array');
-                    }
-
-                    if (result.length === 0) {
-                        throw new Error('Wallet returned empty results array');
-                    }
-
-                    const firstResult = result[0];
-                    if (
-                        !firstResult ||
-                        typeof firstResult !== 'object' ||
-                        !('signature' in firstResult) ||
-                        !(firstResult.signature instanceof Uint8Array)
-                    ) {
-                        throw new Error('Wallet returned invalid result structure - expected { signature: Uint8Array }');
-                    }
-
-                    return firstResult.signature;
-                } catch (error) {
-                    console.error('Manual signer message signing error:', error);
-                    throw error instanceof Error ? error : new Error(String(error));
+                // Validate result structure
+                if (!Array.isArray(result)) {
+                    throw new Error('Wallet signMessage did not return an array');
                 }
-            },
-        );
+
+                if (result.length === 0) {
+                    throw new Error('Wallet returned empty results array');
+                }
+
+                const firstResult = result[0];
+                if (
+                    !firstResult ||
+                    typeof firstResult !== 'object' ||
+                    !('signature' in firstResult) ||
+                    !(firstResult.signature instanceof Uint8Array)
+                ) {
+                    throw new Error('Wallet returned invalid result structure - expected { signature: Uint8Array }');
+                }
+
+                return firstResult.signature;
+            } catch (error) {
+                console.error('Manual signer message signing error:', error);
+                throw error instanceof Error ? error : new Error(String(error));
+            }
+        });
     }, [selectedWallet, account]);
 
     const handleSignMessage = async () => {
@@ -111,7 +108,7 @@ export function KitSignerDemo() {
             const signableMessage = createSignableMessage(messageBytes);
 
             const signedMessages = await kitSigners.messageSigner.modifyAndSignMessages([signableMessage]);
-            
+
             if (!Array.isArray(signedMessages) || signedMessages.length === 0) {
                 throw new Error('Signer did not return signed messages');
             }
@@ -154,9 +151,9 @@ export function KitSignerDemo() {
 
         try {
             const signedMessages = await manualSigner.modifyAndSignMessages([
-                createSignableMessage(new TextEncoder().encode(messageToSign))
+                createSignableMessage(new TextEncoder().encode(messageToSign)),
             ]);
-            
+
             if (!Array.isArray(signedMessages) || signedMessages.length === 0) {
                 throw new Error('Signer did not return signed messages');
             }
@@ -209,21 +206,26 @@ export function KitSignerDemo() {
                     <input
                         type="text"
                         value={messageToSign}
-                        onChange={(e) => setMessageToSign(e.target.value)}
+                        onChange={e => setMessageToSign(e.target.value)}
                         className="w-full px-3 py-2 border rounded-md text-sm"
                         placeholder="Enter message to sign"
                     />
                     <div className="flex gap-2">
                         {kitSigners?.messageSigner && (
-                            <Button onClick={handleSignMessage} disabled={isSigning || !messageToSign.trim()} size="sm" className="flex-1">
+                            <Button
+                                onClick={handleSignMessage}
+                                disabled={isSigning || !messageToSign.trim()}
+                                size="sm"
+                                className="flex-1"
+                            >
                                 {isSigning ? 'Signing...' : 'Modern'}
                             </Button>
                         )}
                         {manualSigner && (
-                            <Button 
-                                onClick={handleSignMessageManual} 
-                                disabled={isSigning || !messageToSign.trim()} 
-                                size="sm" 
+                            <Button
+                                onClick={handleSignMessageManual}
+                                disabled={isSigning || !messageToSign.trim()}
+                                size="sm"
                                 variant="outline"
                                 className="flex-1"
                             >
@@ -245,9 +247,7 @@ export function KitSignerDemo() {
                     </Alert>
                 )}
 
-                {!kitSigners?.messageSigner && !manualSigner && (
-                    <Alert>Message signing not supported</Alert>
-                )}
+                {!kitSigners?.messageSigner && !manualSigner && <Alert>Message signing not supported</Alert>}
             </CardContent>
         </Card>
     );

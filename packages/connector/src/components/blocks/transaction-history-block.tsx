@@ -36,17 +36,17 @@ export interface TransactionHistoryBlockProps {
 
 /**
  * Block for displaying recent transaction history.
- * 
+ *
  * @example Basic usage
  * ```tsx
  * <TransactionHistoryBlock limit={5} />
  * ```
- * 
+ *
  * @example With load more
  * ```tsx
  * <TransactionHistoryBlock limit={10} showLoadMore />
  * ```
- * 
+ *
  * @example Custom item render
  * ```tsx
  * <TransactionHistoryBlock
@@ -70,19 +70,19 @@ export function TransactionHistoryBlock({
     renderItem,
 }: TransactionHistoryBlockProps) {
     const { transactions, isLoading, error, hasMore, loadMore, refetch } = useTransactions({ limit });
-    
+
     // Custom render
     if (render) {
         return <>{render({ transactions, isLoading, error, hasMore, loadMore, refetch })}</>;
     }
-    
+
     const statusIcon = (status: 'success' | 'failed') => (
-        <svg 
-            width="12" 
-            height="12" 
-            viewBox="0 0 24 24" 
-            fill="none" 
-            stroke="currentColor" 
+        <svg
+            width="12"
+            height="12"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -100,14 +100,14 @@ export function TransactionHistoryBlock({
             )}
         </svg>
     );
-    
+
     const externalLinkIcon = (
-        <svg 
-            width="12" 
-            height="12" 
-            viewBox="0 0 24 24" 
-            fill="none" 
-            stroke="currentColor" 
+        <svg
+            width="12"
+            height="12"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -119,11 +119,11 @@ export function TransactionHistoryBlock({
             <line x1="10" y1="14" x2="21" y2="3" />
         </svg>
     );
-    
+
     // Loading skeleton
     if (isLoading && showSkeleton && transactions.length === 0) {
         return (
-            <div 
+            <div
                 className={`ck-tx-history-block ck-tx-history-block--${variant} ck-tx-history-block--loading ${className || ''}`}
                 data-slot="tx-history-block"
                 data-variant={variant}
@@ -137,11 +137,11 @@ export function TransactionHistoryBlock({
             </div>
         );
     }
-    
+
     // Error state
     if (error) {
         return (
-            <div 
+            <div
                 className={`ck-tx-history-block ck-tx-history-block--${variant} ck-tx-history-block--error ${className || ''}`}
                 data-slot="tx-history-block"
                 data-variant={variant}
@@ -161,11 +161,11 @@ export function TransactionHistoryBlock({
             </div>
         );
     }
-    
+
     // Empty state
     if (transactions.length === 0) {
         return (
-            <div 
+            <div
                 className={`ck-tx-history-block ck-tx-history-block--${variant} ck-tx-history-block--empty ${className || ''}`}
                 data-slot="tx-history-block"
                 data-variant={variant}
@@ -177,7 +177,7 @@ export function TransactionHistoryBlock({
             </div>
         );
     }
-    
+
     // Default item renderer
     const defaultRenderItem = (tx: TransactionInfo) => (
         <a
@@ -191,7 +191,7 @@ export function TransactionHistoryBlock({
         >
             <div className="ck-tx-item-main" data-slot="tx-item-main">
                 {showStatus && (
-                    <span 
+                    <span
                         className={`ck-tx-status ck-tx-status--${tx.status}`}
                         data-slot="tx-status"
                         data-status={tx.status}
@@ -213,11 +213,11 @@ export function TransactionHistoryBlock({
             </div>
         </a>
     );
-    
+
     const itemRenderer = renderItem || defaultRenderItem;
-    
+
     return (
-        <div 
+        <div
             className={`ck-tx-history-block ck-tx-history-block--${variant} ${className || ''}`}
             data-slot="tx-history-block"
             data-variant={variant}
@@ -232,11 +232,11 @@ export function TransactionHistoryBlock({
                     </span>
                 </div>
             )}
-            
+
             <div className="ck-tx-history-list" data-slot="tx-history-list">
                 {transactions.map(itemRenderer)}
             </div>
-            
+
             {showLoadMore && hasMore && (
                 <button
                     type="button"
@@ -253,5 +253,3 @@ export function TransactionHistoryBlock({
 }
 
 TransactionHistoryBlock.displayName = 'TransactionHistoryBlock';
-
-

@@ -43,7 +43,7 @@ export function updateSignatureDictionary(
         ...originalSignatures,
         ...newSignatures,
     };
-    
+
     return merged as SignatureDictionary;
 }
 
@@ -70,7 +70,8 @@ export function signatureBytesToBase58(bytes: SignatureBytes): string {
         }
         return getBase58Decoder().decode(bytes);
     } catch (error) {
-        throw new Error(`Failed to encode signature to base58: ${error instanceof Error ? error.message : String(error)}`);
+        throw new Error(
+            `Failed to encode signature to base58: ${error instanceof Error ? error.message : String(error)}`,
+        );
     }
 }
-

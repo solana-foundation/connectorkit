@@ -27,7 +27,7 @@ export function AppNav() {
 
                     {/* Navigation Links */}
                     <nav className="hidden md:flex items-center gap-1">
-                        {navLinks.map((link) => {
+                        {navLinks.map(link => {
                             const isActive = pathname === link.href;
                             return (
                                 <Link
@@ -35,9 +35,10 @@ export function AppNav() {
                                     href={link.href}
                                     className={`
                                         text-nav-item px-3 py-2 rounded-md transition-colors
-                                        ${isActive 
-                                            ? 'bg-sand-200 text-sand-1500' 
-                                            : 'text-sand-900 hover:text-sand-1500 hover:bg-sand-100'
+                                        ${
+                                            isActive
+                                                ? 'bg-sand-200 text-sand-1500'
+                                                : 'text-sand-900 hover:text-sand-1500 hover:bg-sand-100'
                                         }
                                     `}
                                 >
@@ -51,4 +52,3 @@ export function AppNav() {
         </header>
     );
 }
-

@@ -26,11 +26,11 @@ export function CodeComparison({
         <section className="py-16 border-b border-sand-200">
             <div className="px-4 lg:px-6">
                 <div className="text-center mb-12">
-                    <h2 className="text-h2 text-sand-1500 mb-3">
-                        Zero to production in minutes
-                    </h2>
+                    <h2 className="text-h2 text-sand-1500 mb-3">Zero to production in minutes</h2>
                     <p className="text-body-xl text-sand-800 max-w-4xl mx-auto">
-                        Skip the boilerplate. ConnectorKit auto-detects wallets via Wallet Standard, no manual adapter imports, no CSS files, no nested providers. Just one more provider, a few blocks, and you&apos;re set.
+                        Skip the boilerplate. ConnectorKit auto-detects wallets via Wallet Standard, no manual adapter
+                        imports, no CSS files, no nested providers. Just one more provider, a few blocks, and
+                        you&apos;re set.
                     </p>
                 </div>
 
@@ -45,7 +45,7 @@ export function CodeComparison({
                             <CardContent className="p-0">
                                 <div className="flex items-center justify-between px-4 py-2 border-b border-white/10">
                                     <span className="text-xs text-sand-500 font-inter">TypeScript</span>
-                                    <CopyButton 
+                                    <CopyButton
                                         textToCopy={beforeCode}
                                         showText={false}
                                         iconClassName="text-sand-500 group-hover:text-sand-300"
@@ -91,7 +91,7 @@ export function CodeComparison({
                                         <span className="text-xs text-sand-500 font-inter">TypeScript</span>
                                         <span className="text-xs text-green-400 font-inter-medium">✓ Recommended</span>
                                     </div>
-                                    <CopyButton 
+                                    <CopyButton
                                         textToCopy={afterCode}
                                         showText={false}
                                         iconClassName="text-sand-500 group-hover:text-sand-300"

@@ -57,7 +57,9 @@ export function getClusterExplorerUrl(cluster: SolanaCluster, path?: string): st
     const base = isMainnet ? 'https://explorer.solana.com' : `https://explorer.solana.com?cluster=${clusterSegment}`;
 
     if (path) {
-        return isMainnet ? `https://explorer.solana.com/${path}` : `https://explorer.solana.com/${path}?cluster=${clusterSegment}`;
+        return isMainnet
+            ? `https://explorer.solana.com/${path}`
+            : `https://explorer.solana.com/${path}?cluster=${clusterSegment}`;
     }
 
     return base;

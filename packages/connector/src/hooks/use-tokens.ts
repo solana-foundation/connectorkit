@@ -82,9 +82,9 @@ const metadataCache = new Map<string, JupiterTokenMetadata>();
  */
 async function fetchJupiterMetadata(mints: string[]): Promise<Map<string, JupiterTokenMetadata>> {
     const results = new Map<string, JupiterTokenMetadata>();
-    
+
     if (mints.length === 0) return results;
-    
+
     // Check cache first
     const uncachedMints: string[] = [];
     for (const mint of mints) {
@@ -95,24 +95,24 @@ async function fetchJupiterMetadata(mints: string[]): Promise<Map<string, Jupite
             uncachedMints.push(mint);
         }
     }
-    
+
     // If all mints are cached, return early
     if (uncachedMints.length === 0) return results;
-    
+
     try {
         const url = new URL('https://lite-api.jup.ag/tokens/v2/search');
         url.searchParams.append('query', uncachedMints.join(','));
-        
+
         const response = await fetch(url.toString(), {
             signal: AbortSignal.timeout(10000),
         });
-        
+
         if (!response.ok) {
             throw new Error(`Jupiter API error: ${response.status}`);
         }
-        
+
         const items: JupiterTokenMetadata[] = await response.json();
-        
+
         for (const item of items) {
             const metadata: JupiterTokenMetadata = {
                 id: item.id,
@@ -122,14 +122,14 @@ async function fetchJupiterMetadata(mints: string[]): Promise<Map<string, Jupite
                 icon: item.icon,
                 usdPrice: item.usdPrice,
             };
-            
+
             results.set(item.id, metadata);
             metadataCache.set(item.id, metadata);
         }
     } catch (error) {
         console.warn('[useTokens] Jupiter API failed:', error);
     }
-    
+
     return results;
 }
 
@@ -160,14 +160,14 @@ function formatUsd(amount: bigint, decimals: number, usdPrice: number): string {
 /**
  * Hook for fetching wallet token holdings.
  * Fetches metadata (name, symbol, icon, USD price) from Jupiter's API.
- * 
+ *
  * @example Basic usage
  * ```tsx
  * function TokenList() {
  *   const { tokens, isLoading } = useTokens();
- *   
+ *
  *   if (isLoading) return <div>Loading...</div>;
- *   
+ *
  *   return (
  *     <div>
  *       {tokens.map(token => (
@@ -190,47 +190,45 @@ export function useTokens(options: UseTokensOptions = {}): UseTokensReturn {
         fetchMetadata = true,
         includeNativeSol = true,
     } = options;
-    
+
     const { address, connected } = useAccount();
     const client = useSolanaClient();
-    
+
     const [tokens, setTokens] = useState<Token[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<Error | null>(null);
     const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
     const [totalAccounts, setTotalAccounts] = useState(0);
-    
+
     // Extract the actual client to use as a stable dependency
     const rpcClient = client?.client ?? null;
-    
+
     const fetchTokens = useCallback(async () => {
         if (!connected || !address || !rpcClient) {
             setTokens([]);
             setTotalAccounts(0);
             return;
         }
-        
+
         setIsLoading(true);
         setError(null);
-        
+
         try {
             const rpc = rpcClient.rpc;
             const walletAddress = toAddress(address);
             const tokenProgramId = toAddress('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
-            
+
             // Fetch SOL balance and token accounts in parallel
             const [balanceResult, tokenAccountsResult] = await Promise.all([
                 includeNativeSol ? rpc.getBalance(walletAddress).send() : Promise.resolve(null),
-                rpc.getTokenAccountsByOwner(
-                    walletAddress,
-                    { programId: tokenProgramId },
-                    { encoding: 'jsonParsed' }
-                ).send(),
+                rpc
+                    .getTokenAccountsByOwner(walletAddress, { programId: tokenProgramId }, { encoding: 'jsonParsed' })
+                    .send(),
             ]);
-            
+
             const tokenList: Token[] = [];
             const mints: string[] = [];
-            
+
             // Add native SOL if requested
             if (includeNativeSol && balanceResult !== null) {
                 const solBalance = balanceResult.value;
@@ -247,7 +245,7 @@ export function useTokens(options: UseTokensOptions = {}): UseTokensReturn {
                     mints.push(NATIVE_MINT);
                 }
             }
-            
+
             // Add SPL tokens
             for (const account of tokenAccountsResult.value) {
                 const parsed = account.account.data as any;
@@ -255,12 +253,12 @@ export function useTokens(options: UseTokensOptions = {}): UseTokensReturn {
                     const info = parsed.parsed.info;
                     const amount = BigInt(info.tokenAmount?.amount || '0');
                     const decimals = info.tokenAmount?.decimals || 0;
-                    
+
                     // Skip zero balance tokens unless requested
                     if (!includeZeroBalance && amount === 0n) {
                         continue;
                     }
-                    
+
                     tokenList.push({
                         mint: info.mint,
                         tokenAccount: account.pubkey,
@@ -270,20 +268,20 @@ export function useTokens(options: UseTokensOptions = {}): UseTokensReturn {
                         isFrozen: info.state === 'frozen',
                         owner: info.owner,
                     });
-                    
+
                     mints.push(info.mint);
                 }
             }
-            
+
             // Set initial tokens immediately so UI is responsive
             setTokens([...tokenList]);
             setTotalAccounts(tokenAccountsResult.value.length + (includeNativeSol ? 1 : 0));
             setLastUpdated(new Date());
-            
+
             // Fetch metadata from Jupiter
             if (fetchMetadata && mints.length > 0) {
                 const metadata = await fetchJupiterMetadata(mints);
-                
+
                 // Apply metadata to tokens
                 for (let i = 0; i < tokenList.length; i++) {
                     const meta = metadata.get(tokenList[i].mint);
@@ -298,19 +296,19 @@ export function useTokens(options: UseTokensOptions = {}): UseTokensReturn {
                         };
                     }
                 }
-                
+
                 // Sort by USD value (highest first), tokens with metadata first
                 tokenList.sort((a, b) => {
                     // Tokens with metadata come first
                     const metadataSort = (b.logo ? 1 : 0) - (a.logo ? 1 : 0);
                     if (metadataSort !== 0) return metadataSort;
-                    
+
                     // Then sort by USD value
                     const aValue = (Number(a.amount) / Math.pow(10, a.decimals)) * (a.usdPrice ?? 0);
                     const bValue = (Number(b.amount) / Math.pow(10, b.decimals)) * (b.usdPrice ?? 0);
                     return bValue - aValue;
                 });
-                
+
                 setTokens([...tokenList]);
             }
         } catch (err) {
@@ -320,26 +318,29 @@ export function useTokens(options: UseTokensOptions = {}): UseTokensReturn {
             setIsLoading(false);
         }
     }, [connected, address, rpcClient, includeZeroBalance, fetchMetadata, includeNativeSol]);
-    
+
     // Fetch on mount and when dependencies change
     useEffect(() => {
         fetchTokens();
     }, [fetchTokens]);
-    
+
     // Auto-refresh
     useEffect(() => {
         if (!connected || !autoRefresh) return;
-        
+
         const interval = setInterval(fetchTokens, refreshInterval);
         return () => clearInterval(interval);
     }, [connected, autoRefresh, refreshInterval, fetchTokens]);
-    
-    return useMemo(() => ({
-        tokens,
-        isLoading,
-        error,
-        refetch: fetchTokens,
-        lastUpdated,
-        totalAccounts,
-    }), [tokens, isLoading, error, fetchTokens, lastUpdated, totalAccounts]);
+
+    return useMemo(
+        () => ({
+            tokens,
+            isLoading,
+            error,
+            refetch: fetchTokens,
+            lastUpdated,
+            totalAccounts,
+        }),
+        [tokens, isLoading, error, fetchTokens, lastUpdated, totalAccounts],
+    );
 }

@@ -19,29 +19,25 @@ import { Separator } from '@/components/ui/separator';
 
 export function BlocksDemo() {
     const { connected } = useConnector();
-    
+
     if (!connected) {
         return (
             <Card>
                 <CardHeader>
                     <CardTitle>Blocks Demo</CardTitle>
-                    <CardDescription>
-                        Connect your wallet to see the blocks in action
-                    </CardDescription>
+                    <CardDescription>Connect your wallet to see the blocks in action</CardDescription>
                 </CardHeader>
             </Card>
         );
     }
-    
+
     return (
         <div className="grid gap-6 md:grid-cols-2">
             {/* Account Block Demo */}
             <Card>
                 <CardHeader>
                     <CardTitle className="text-lg">AccountBlock</CardTitle>
-                    <CardDescription>
-                        Displays connected account information
-                    </CardDescription>
+                    <CardDescription>Displays connected account information</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div>
@@ -60,14 +56,12 @@ export function BlocksDemo() {
                     </div>
                 </CardContent>
             </Card>
-            
+
             {/* Balance Block Demo */}
             <Card>
                 <CardHeader>
                     <CardTitle className="text-lg">BalanceBlock</CardTitle>
-                    <CardDescription>
-                        Shows SOL and token balances
-                    </CardDescription>
+                    <CardDescription>Shows SOL and token balances</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div>
@@ -86,14 +80,12 @@ export function BlocksDemo() {
                     </div>
                 </CardContent>
             </Card>
-            
+
             {/* Cluster Block Demo */}
             <Card>
                 <CardHeader>
                     <CardTitle className="text-lg">ClusterBlock</CardTitle>
-                    <CardDescription>
-                        Displays and optionally changes network
-                    </CardDescription>
+                    <CardDescription>Displays and optionally changes network</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div>
@@ -107,14 +99,12 @@ export function BlocksDemo() {
                     </div>
                 </CardContent>
             </Card>
-            
+
             {/* Disconnect Block Demo */}
             <Card>
                 <CardHeader>
                     <CardTitle className="text-lg">DisconnectBlock</CardTitle>
-                    <CardDescription>
-                        Button to disconnect wallet
-                    </CardDescription>
+                    <CardDescription>Button to disconnect wallet</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div>
@@ -135,38 +125,26 @@ export function BlocksDemo() {
                     </div>
                 </CardContent>
             </Card>
-            
+
             {/* Transaction History Block Demo */}
             <Card className="md:col-span-2">
                 <CardHeader>
                     <CardTitle className="text-lg">TransactionHistoryBlock</CardTitle>
-                    <CardDescription>
-                        Shows recent transactions
-                    </CardDescription>
+                    <CardDescription>Shows recent transactions</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <TransactionHistoryBlock 
-                        limit={5} 
-                        variant="expanded"
-                        showLoadMore
-                    />
+                    <TransactionHistoryBlock limit={5} variant="expanded" showLoadMore />
                 </CardContent>
             </Card>
-            
+
             {/* Token List Block Demo */}
             <Card className="md:col-span-2">
                 <CardHeader>
                     <CardTitle className="text-lg">TokenListBlock</CardTitle>
-                    <CardDescription>
-                        Displays token holdings
-                    </CardDescription>
+                    <CardDescription>Displays token holdings</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <TokenListBlock 
-                        limit={6} 
-                        variant="expanded"
-                        showRefresh
-                    />
+                    <TokenListBlock limit={6} variant="expanded" showRefresh />
                 </CardContent>
             </Card>
         </div>
@@ -174,5 +152,3 @@ export function BlocksDemo() {
 }
 
 BlocksDemo.displayName = 'BlocksDemo';
-
-

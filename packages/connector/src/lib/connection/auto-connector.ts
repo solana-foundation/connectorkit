@@ -84,7 +84,7 @@ export class AutoConnector {
                             const publicKeyBytes = legacyResult.publicKey.toBytes
                                 ? legacyResult.publicKey.toBytes()
                                 : new Uint8Array();
-                            
+
                             return {
                                 accounts: [
                                     {
@@ -102,7 +102,7 @@ export class AutoConnector {
                             const publicKeyBytes = directWallet.publicKey.toBytes
                                 ? directWallet.publicKey.toBytes()
                                 : new Uint8Array();
-                            
+
                             if (this.debug) {
                                 logger.debug('Using legacy wallet pattern - publicKey from wallet object');
                             }
@@ -128,7 +128,7 @@ export class AutoConnector {
                             const publicKeyBytes = publicKeyResult.toBytes
                                 ? publicKeyResult.toBytes()
                                 : new Uint8Array();
-                            
+
                             return {
                                 accounts: [
                                     {

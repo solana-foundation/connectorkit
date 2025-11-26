@@ -37,22 +37,22 @@ export interface WalletListBlockProps {
 
 /**
  * Block for displaying available wallets and selecting one to connect.
- * 
+ *
  * @example Basic usage
  * ```tsx
  * <WalletListBlock />
  * ```
- * 
+ *
  * @example Installed wallets only (most common)
  * ```tsx
  * <WalletListBlock installedOnly />
  * ```
- * 
+ *
  * @example Grid layout
  * ```tsx
  * <WalletListBlock variant="grid" installedOnly />
  * ```
- * 
+ *
  * @example With custom wallet render
  * ```tsx
  * <WalletListBlock
@@ -65,7 +65,7 @@ export interface WalletListBlockProps {
  *   )}
  * />
  * ```
- * 
+ *
  * @example Full custom render
  * ```tsx
  * <WalletListBlock
@@ -92,34 +92,34 @@ export function WalletListBlock({
 }: WalletListBlockProps) {
     const { wallets, connecting } = useWalletInfo();
     const { select } = useConnector();
-    
+
     const installedWallets = wallets.filter(w => w.installed);
     const displayWallets = installedOnly ? installedWallets : wallets;
-    
+
     const handleSelect = async (walletName: string) => {
         await select(walletName);
         onSelect?.(walletName);
     };
-    
+
     // Full custom render
     if (render) {
         return <>{render({ wallets, installedWallets, select: handleSelect, connecting })}</>;
     }
-    
+
     if (displayWallets.length === 0) {
         return (
-            <div 
+            <div
                 className={`ck-wallet-list-block ck-wallet-list-block--empty ${className || ''}`}
                 data-slot="wallet-list-block"
                 data-empty="true"
             >
                 <div className="ck-wallet-list-empty" data-slot="wallet-list-empty">
-                    <svg 
-                        width="48" 
-                        height="48" 
-                        viewBox="0 0 24 24" 
-                        fill="none" 
-                        stroke="currentColor" 
+                    <svg
+                        width="48"
+                        height="48"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
                         strokeWidth="1.5"
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -139,14 +139,14 @@ export function WalletListBlock({
             </div>
         );
     }
-    
+
     const walletIcon = (
-        <svg 
-            width="20" 
-            height="20" 
-            viewBox="0 0 24 24" 
-            fill="none" 
-            stroke="currentColor" 
+        <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -157,11 +157,11 @@ export function WalletListBlock({
             <path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4" />
         </svg>
     );
-    
+
     // Grid variant
     if (variant === 'grid') {
         return (
-            <div 
+            <div
                 className={`ck-wallet-list-block ck-wallet-list-block--grid ${className || ''}`}
                 data-slot="wallet-list-block"
                 data-variant="grid"
@@ -170,15 +170,15 @@ export function WalletListBlock({
                     if (renderWallet) {
                         return (
                             <React.Fragment key={wallet.name}>
-                                {renderWallet({ 
-                                    wallet, 
+                                {renderWallet({
+                                    wallet,
                                     select: () => handleSelect(wallet.name),
                                     connecting,
                                 })}
                             </React.Fragment>
                         );
                     }
-                    
+
                     return (
                         <button
                             key={wallet.name}
@@ -191,9 +191,7 @@ export function WalletListBlock({
                             data-installed={wallet.installed}
                         >
                             <div className="ck-wallet-list-item-icon" data-slot="wallet-list-item-icon">
-                                {wallet.icon ? (
-                                    <img src={wallet.icon} alt={wallet.name} />
-                                ) : walletIcon}
+                                {wallet.icon ? <img src={wallet.icon} alt={wallet.name} /> : walletIcon}
                             </div>
                             <span className="ck-wallet-list-item-name" data-slot="wallet-list-item-name">
                                 {wallet.name}
@@ -209,11 +207,11 @@ export function WalletListBlock({
             </div>
         );
     }
-    
+
     // Compact variant
     if (variant === 'compact') {
         return (
-            <div 
+            <div
                 className={`ck-wallet-list-block ck-wallet-list-block--compact ${className || ''}`}
                 data-slot="wallet-list-block"
                 data-variant="compact"
@@ -222,15 +220,15 @@ export function WalletListBlock({
                     if (renderWallet) {
                         return (
                             <React.Fragment key={wallet.name}>
-                                {renderWallet({ 
-                                    wallet, 
+                                {renderWallet({
+                                    wallet,
                                     select: () => handleSelect(wallet.name),
                                     connecting,
                                 })}
                             </React.Fragment>
                         );
                     }
-                    
+
                     return (
                         <button
                             key={wallet.name}
@@ -243,9 +241,7 @@ export function WalletListBlock({
                             data-installed={wallet.installed}
                         >
                             <div className="ck-wallet-list-item-icon" data-slot="wallet-list-item-icon">
-                                {wallet.icon ? (
-                                    <img src={wallet.icon} alt={wallet.name} />
-                                ) : walletIcon}
+                                {wallet.icon ? <img src={wallet.icon} alt={wallet.name} /> : walletIcon}
                             </div>
                             <span className="ck-wallet-list-item-name" data-slot="wallet-list-item-name">
                                 {wallet.name}
@@ -256,10 +252,10 @@ export function WalletListBlock({
             </div>
         );
     }
-    
+
     // List variant (default)
     return (
-        <div 
+        <div
             className={`ck-wallet-list-block ck-wallet-list-block--list ${className || ''}`}
             data-slot="wallet-list-block"
             data-variant="list"
@@ -268,15 +264,15 @@ export function WalletListBlock({
                 if (renderWallet) {
                     return (
                         <React.Fragment key={wallet.name}>
-                            {renderWallet({ 
-                                wallet, 
+                            {renderWallet({
+                                wallet,
                                 select: () => handleSelect(wallet.name),
                                 connecting,
                             })}
                         </React.Fragment>
                     );
                 }
-                
+
                 return (
                     <button
                         key={wallet.name}
@@ -289,17 +285,15 @@ export function WalletListBlock({
                         data-installed={wallet.installed}
                     >
                         <div className="ck-wallet-list-item-icon" data-slot="wallet-list-item-icon">
-                            {wallet.icon ? (
-                                <img src={wallet.icon} alt={wallet.name} />
-                            ) : walletIcon}
+                            {wallet.icon ? <img src={wallet.icon} alt={wallet.name} /> : walletIcon}
                         </div>
                         <div className="ck-wallet-list-item-info" data-slot="wallet-list-item-info">
                             <span className="ck-wallet-list-item-name" data-slot="wallet-list-item-name">
                                 {wallet.name}
                             </span>
                             {showStatus && (
-                                <span 
-                                    className="ck-wallet-list-item-status" 
+                                <span
+                                    className="ck-wallet-list-item-status"
                                     data-slot="wallet-list-item-status"
                                     data-installed={wallet.installed}
                                 >
@@ -307,12 +301,12 @@ export function WalletListBlock({
                                 </span>
                             )}
                         </div>
-                        <svg 
-                            width="16" 
-                            height="16" 
-                            viewBox="0 0 24 24" 
-                            fill="none" 
-                            stroke="currentColor" 
+                        <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
                             strokeWidth="2"
                             strokeLinecap="round"
                             strokeLinejoin="round"
@@ -329,6 +323,3 @@ export function WalletListBlock({
 }
 
 WalletListBlock.displayName = 'WalletListBlock';
-
-
-

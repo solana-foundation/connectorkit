@@ -18,25 +18,22 @@ export interface DisconnectBlockProps {
     /** Callback after disconnect */
     onDisconnect?: () => void;
     /** Custom render function for full control */
-    render?: (props: {
-        disconnect: () => Promise<void>;
-        disconnecting: boolean;
-    }) => ReactNode;
+    render?: (props: { disconnect: () => Promise<void>; disconnecting: boolean }) => ReactNode;
 }
 
 /**
  * Block for disconnecting the current wallet.
- * 
+ *
  * @example Basic usage
  * ```tsx
  * <DisconnectBlock />
  * ```
- * 
+ *
  * @example Button variant
  * ```tsx
  * <DisconnectBlock variant="button" />
  * ```
- * 
+ *
  * @example Custom render
  * ```tsx
  * <DisconnectBlock
@@ -60,7 +57,7 @@ export function DisconnectBlock({
 }: DisconnectBlockProps) {
     const { disconnect, connecting } = useConnector();
     const [disconnecting, setDisconnecting] = React.useState(false);
-    
+
     const handleDisconnect = async () => {
         setDisconnecting(true);
         try {
@@ -70,21 +67,21 @@ export function DisconnectBlock({
             setDisconnecting(false);
         }
     };
-    
+
     // Custom render
     if (render) {
         return <>{render({ disconnect: handleDisconnect, disconnecting })}</>;
     }
-    
+
     const isDisabled = connecting || disconnecting;
-    
+
     const defaultIcon = showIcon && !icon && (
-        <svg 
-            width="16" 
-            height="16" 
-            viewBox="0 0 24 24" 
-            fill="none" 
-            stroke="currentColor" 
+        <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -96,14 +93,14 @@ export function DisconnectBlock({
             <line x1="21" y1="12" x2="9" y2="12" />
         </svg>
     );
-    
+
     const content = (
         <>
             {showIcon && (icon || defaultIcon)}
             <span data-slot="disconnect-block-label">{label}</span>
         </>
     );
-    
+
     // Button variant
     if (variant === 'button') {
         return (
@@ -120,7 +117,7 @@ export function DisconnectBlock({
             </button>
         );
     }
-    
+
     // Link variant
     if (variant === 'link') {
         return (
@@ -137,7 +134,7 @@ export function DisconnectBlock({
             </button>
         );
     }
-    
+
     // Menu item variant (default)
     return (
         <button
@@ -156,5 +153,3 @@ export function DisconnectBlock({
 }
 
 DisconnectBlock.displayName = 'DisconnectBlock';
-
-

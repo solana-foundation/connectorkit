@@ -76,7 +76,12 @@ export class ConfigurationError extends ConnectorError {
     readonly code: ConfigurationErrorCode;
     readonly recoverable = false;
 
-    constructor(code: ConfigurationErrorCode, message: string, context?: Record<string, unknown>, originalError?: Error) {
+    constructor(
+        code: ConfigurationErrorCode,
+        message: string,
+        context?: Record<string, unknown>,
+        originalError?: Error,
+    ) {
         super(message, context, originalError);
         this.code = code;
     }
@@ -154,7 +159,9 @@ export const Errors = {
         new ConnectionError('WALLET_NOT_CONNECTED', 'No wallet connected', context),
 
     walletNotFound: (walletName?: string) =>
-        new ConnectionError('WALLET_NOT_FOUND', `Wallet not found${walletName ? `: ${walletName}` : ''}`, { walletName }),
+        new ConnectionError('WALLET_NOT_FOUND', `Wallet not found${walletName ? `: ${walletName}` : ''}`, {
+            walletName,
+        }),
 
     connectionFailed: (originalError?: Error) =>
         new ConnectionError('CONNECTION_FAILED', 'Failed to connect to wallet', undefined, originalError),
@@ -166,7 +173,10 @@ export const Errors = {
         new ValidationError('INVALID_TRANSACTION', `Invalid transaction: ${reason}`, context),
 
     invalidFormat: (expectedFormat: string, actualFormat?: string) =>
-        new ValidationError('INVALID_FORMAT', `Invalid format: expected ${expectedFormat}`, { expectedFormat, actualFormat }),
+        new ValidationError('INVALID_FORMAT', `Invalid format: expected ${expectedFormat}`, {
+            expectedFormat,
+            actualFormat,
+        }),
 
     unsupportedFormat: (format: string) =>
         new ValidationError('UNSUPPORTED_FORMAT', `Unsupported format: ${format}`, { format }),
@@ -188,8 +198,7 @@ export const Errors = {
     rpcError: (message: string, originalError?: Error) =>
         new NetworkError('RPC_ERROR', message, undefined, originalError),
 
-    networkTimeout: () =>
-        new NetworkError('NETWORK_TIMEOUT', 'Network request timed out'),
+    networkTimeout: () => new NetworkError('NETWORK_TIMEOUT', 'Network request timed out'),
 
     signingFailed: (originalError?: Error) =>
         new TransactionError('SIGNING_FAILED', 'Failed to sign transaction', undefined, originalError),

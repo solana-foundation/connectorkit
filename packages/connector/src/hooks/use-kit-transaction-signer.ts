@@ -106,9 +106,3 @@ export function useKitTransactionSigner(): UseKitTransactionSignerReturn {
  * @deprecated Use `useKitTransactionSigner` instead. This alias is provided for backward compatibility.
  */
 export const useGillTransactionSigner = useKitTransactionSigner;
-
-
-
-
-
-

@@ -34,17 +34,17 @@ export interface BalanceBlockProps {
 
 /**
  * Block for displaying wallet balance (SOL and tokens).
- * 
+ *
  * @example Basic usage
  * ```tsx
  * <BalanceBlock />
  * ```
- * 
+ *
  * @example With tokens
  * ```tsx
  * <BalanceBlock showTokens tokenCount={5} />
  * ```
- * 
+ *
  * @example Custom render
  * ```tsx
  * <BalanceBlock
@@ -67,21 +67,21 @@ export function BalanceBlock({
     render,
 }: BalanceBlockProps) {
     const { solBalance, formattedSol, tokens, isLoading, error, refetch } = useBalance();
-    
+
     // Custom render
     if (render) {
         return <>{render({ solBalance, formattedSol, tokens, isLoading, error, refetch })}</>;
     }
-    
+
     const displayTokens = tokens.slice(0, tokenCount);
-    
+
     const refreshIcon = (
-        <svg 
-            width="14" 
-            height="14" 
-            viewBox="0 0 24 24" 
-            fill="none" 
-            stroke="currentColor" 
+        <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -94,11 +94,11 @@ export function BalanceBlock({
             <path d="M16 16h5v5" />
         </svg>
     );
-    
+
     // Loading skeleton
     if (isLoading && showSkeleton && solBalance === 0) {
         return (
-            <div 
+            <div
                 className={`ck-balance-block ck-balance-block--${variant} ck-balance-block--loading ${className || ''}`}
                 data-slot="balance-block"
                 data-variant={variant}
@@ -116,11 +116,11 @@ export function BalanceBlock({
             </div>
         );
     }
-    
+
     // Error state
     if (error) {
         return (
-            <div 
+            <div
                 className={`ck-balance-block ck-balance-block--${variant} ck-balance-block--error ${className || ''}`}
                 data-slot="balance-block"
                 data-variant={variant}
@@ -142,20 +142,17 @@ export function BalanceBlock({
             </div>
         );
     }
-    
+
     // Inline variant
     if (variant === 'inline') {
         return (
-            <div 
+            <div
                 className={`ck-balance-block ck-balance-block--inline ${className || ''}`}
                 data-slot="balance-block"
                 data-variant="inline"
             >
                 {showSol && (
-                    <span 
-                        className="ck-balance-block-sol"
-                        data-slot="balance-block-sol"
-                    >
+                    <span className="ck-balance-block-sol" data-slot="balance-block-sol">
                         {formattedSol}
                     </span>
                 )}
@@ -173,11 +170,11 @@ export function BalanceBlock({
             </div>
         );
     }
-    
+
     // Expanded variant
     if (variant === 'expanded') {
         return (
-            <div 
+            <div
                 className={`ck-balance-block ck-balance-block--expanded ${className || ''}`}
                 data-slot="balance-block"
                 data-variant="expanded"
@@ -192,49 +189,52 @@ export function BalanceBlock({
                         </span>
                     </div>
                 )}
-                
+
                 {showTokens && displayTokens.length > 0 && (
                     <div className="ck-balance-block-tokens-section" data-slot="balance-block-tokens-section">
                         <span className="ck-balance-block-label" data-slot="balance-block-label">
                             Tokens ({tokens.length})
                         </span>
                         <div className="ck-balance-block-tokens" data-slot="balance-block-tokens">
-                            {displayTokens.map((token) => (
-                                <div 
+                            {displayTokens.map(token => (
+                                <div
                                     key={token.mint}
                                     className="ck-balance-block-token"
                                     data-slot="balance-block-token"
                                 >
                                     {token.logo && (
-                                        <img 
-                                            src={token.logo} 
+                                        <img
+                                            src={token.logo}
                                             alt={token.symbol || 'Token'}
                                             className="ck-balance-block-token-logo"
                                             data-slot="balance-block-token-logo"
                                         />
                                     )}
                                     <span className="ck-balance-block-token-info" data-slot="balance-block-token-info">
-                                        <span className="ck-balance-block-token-symbol" data-slot="balance-block-token-symbol">
+                                        <span
+                                            className="ck-balance-block-token-symbol"
+                                            data-slot="balance-block-token-symbol"
+                                        >
                                             {token.symbol || token.mint.slice(0, 4) + '...' + token.mint.slice(-4)}
                                         </span>
-                                        <span className="ck-balance-block-token-amount" data-slot="balance-block-token-amount">
+                                        <span
+                                            className="ck-balance-block-token-amount"
+                                            data-slot="balance-block-token-amount"
+                                        >
                                             {token.formatted}
                                         </span>
                                     </span>
                                 </div>
                             ))}
                             {tokens.length > tokenCount && (
-                                <div 
-                                    className="ck-balance-block-more"
-                                    data-slot="balance-block-more"
-                                >
+                                <div className="ck-balance-block-more" data-slot="balance-block-more">
                                     +{tokens.length - tokenCount} more
                                 </div>
                             )}
                         </div>
                     </div>
                 )}
-                
+
                 {showRefresh && (
                     <button
                         type="button"
@@ -250,32 +250,26 @@ export function BalanceBlock({
             </div>
         );
     }
-    
+
     // Compact variant (default)
     return (
-        <div 
+        <div
             className={`ck-balance-block ck-balance-block--compact ${className || ''}`}
             data-slot="balance-block"
             data-variant="compact"
         >
             {showSol && (
-                <span 
-                    className="ck-balance-block-sol"
-                    data-slot="balance-block-sol"
-                >
+                <span className="ck-balance-block-sol" data-slot="balance-block-sol">
                     {formattedSol}
                 </span>
             )}
-            
+
             {showTokens && displayTokens.length > 0 && (
-                <span 
-                    className="ck-balance-block-token-count"
-                    data-slot="balance-block-token-count"
-                >
+                <span className="ck-balance-block-token-count" data-slot="balance-block-token-count">
                     +{tokens.length} tokens
                 </span>
             )}
-            
+
             {showRefresh && (
                 <button
                     type="button"
@@ -292,5 +286,3 @@ export function BalanceBlock({
 }
 
 BalanceBlock.displayName = 'BalanceBlock';
-
-

@@ -36,7 +36,12 @@ export { useTransactionPreparer } from './hooks/use-transaction-preparer';
 
 // Data fetching hooks for blocks
 export { useBalance, type UseBalanceReturn, type TokenBalance } from './hooks/use-balance';
-export { useTransactions, type UseTransactionsReturn, type UseTransactionsOptions, type TransactionInfo } from './hooks/use-transactions';
+export {
+    useTransactions,
+    type UseTransactionsReturn,
+    type UseTransactionsOptions,
+    type TransactionInfo,
+} from './hooks/use-transactions';
 export { useTokens, type UseTokensReturn, type UseTokensOptions, type Token } from './hooks/use-tokens';
 
 // Block system components

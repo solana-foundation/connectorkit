@@ -77,7 +77,9 @@ export function isSolanaChain(chain: string): chain is `solana:${string}` {
 }
 
 export function isKnownSolanaChain(chain: string): boolean {
-    return chain === SOLANA_CHAIN_IDS.mainnet || chain === SOLANA_CHAIN_IDS.devnet || chain === SOLANA_CHAIN_IDS.testnet;
+    return (
+        chain === SOLANA_CHAIN_IDS.mainnet || chain === SOLANA_CHAIN_IDS.devnet || chain === SOLANA_CHAIN_IDS.testnet
+    );
 }
 
 export function validateKnownSolanaChain(chain: string): asserts chain is `solana:${string}` {
@@ -143,4 +145,3 @@ export function chainIdToClusterType(chainId: string): ClusterType | null {
 export function chainIdToClusterId(chainId: string): SolanaClusterId | null {
     return getClusterIdFromChainId(chainId);
 }
-

@@ -8,10 +8,10 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Wallet, ExternalLink} from 'lucide-react';
-import { 
-    //IconQuestionmark, 
-    IconXmark 
+import { Wallet, ExternalLink } from 'lucide-react';
+import {
+    //IconQuestionmark,
+    IconXmark,
 } from 'symbols-react';
 import { useState, useEffect } from 'react';
 import { Spinner } from '../ui/spinner';
@@ -182,14 +182,17 @@ export function WalletModal({ open, onOpenChange }: WalletModalProps) {
                                             <AccordionContent>
                                                 <div className="grid gap-2 pt-2">
                                                     {otherWallets.map(walletInfo => {
-                                                        const isConnecting = connectingWallet === walletInfo.wallet.name;
+                                                        const isConnecting =
+                                                            connectingWallet === walletInfo.wallet.name;
                                                         const isRecent = recentlyConnected === walletInfo.wallet.name;
                                                         return (
                                                             <Button
                                                                 key={walletInfo.wallet.name}
                                                                 variant="outline"
                                                                 className="h-auto justify-between p-4 rounded-[16px]"
-                                                                onClick={() => handleSelectWallet(walletInfo.wallet.name)}
+                                                                onClick={() =>
+                                                                    handleSelectWallet(walletInfo.wallet.name)
+                                                                }
                                                                 disabled={connecting || isConnecting}
                                                             >
                                                                 <div className="flex items-center gap-3 flex-1">
@@ -199,7 +202,10 @@ export function WalletModal({ open, onOpenChange }: WalletModalProps) {
                                                                                 {walletInfo.wallet.name}
                                                                             </span>
                                                                             {isRecent && (
-                                                                                <Badge variant="secondary" className="text-xs">
+                                                                                <Badge
+                                                                                    variant="secondary"
+                                                                                    className="text-xs"
+                                                                                >
                                                                                     Recent
                                                                                 </Badge>
                                                                             )}
@@ -219,7 +225,8 @@ export function WalletModal({ open, onOpenChange }: WalletModalProps) {
                                                                                 src={walletInfo.wallet.icon}
                                                                                 alt={walletInfo.wallet.name}
                                                                                 onError={e => {
-                                                                                    e.currentTarget.style.display = 'none';
+                                                                                    e.currentTarget.style.display =
+                                                                                        'none';
                                                                                 }}
                                                                             />
                                                                         )}

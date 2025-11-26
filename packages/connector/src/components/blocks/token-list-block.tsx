@@ -33,17 +33,17 @@ export interface TokenListBlockProps {
 
 /**
  * Block for displaying token holdings.
- * 
+ *
  * @example Basic usage
  * ```tsx
  * <TokenListBlock limit={10} />
  * ```
- * 
+ *
  * @example Grid layout
  * ```tsx
  * <TokenListBlock variant="grid" limit={6} />
  * ```
- * 
+ *
  * @example Custom item render
  * ```tsx
  * <TokenListBlock
@@ -67,21 +67,21 @@ export function TokenListBlock({
     renderItem,
 }: TokenListBlockProps) {
     const { tokens, isLoading, error, refetch, totalAccounts } = useTokens();
-    
+
     // Custom render
     if (render) {
         return <>{render({ tokens, isLoading, error, refetch, totalAccounts })}</>;
     }
-    
+
     const displayTokens = tokens.slice(0, limit);
-    
+
     const refreshIcon = (
-        <svg 
-            width="14" 
-            height="14" 
-            viewBox="0 0 24 24" 
-            fill="none" 
-            stroke="currentColor" 
+        <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -94,14 +94,14 @@ export function TokenListBlock({
             <path d="M16 16h5v5" />
         </svg>
     );
-    
+
     const tokenIcon = (
-        <svg 
-            width="20" 
-            height="20" 
-            viewBox="0 0 24 24" 
-            fill="none" 
-            stroke="currentColor" 
+        <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -113,11 +113,11 @@ export function TokenListBlock({
             <path d="M6 12h12" />
         </svg>
     );
-    
+
     // Loading skeleton
     if (isLoading && showSkeleton && tokens.length === 0) {
         return (
-            <div 
+            <div
                 className={`ck-token-list-block ck-token-list-block--${variant} ck-token-list-block--loading ${className || ''}`}
                 data-slot="token-list-block"
                 data-variant={variant}
@@ -131,11 +131,11 @@ export function TokenListBlock({
             </div>
         );
     }
-    
+
     // Error state
     if (error) {
         return (
-            <div 
+            <div
                 className={`ck-token-list-block ck-token-list-block--${variant} ck-token-list-block--error ${className || ''}`}
                 data-slot="token-list-block"
                 data-variant={variant}
@@ -155,11 +155,11 @@ export function TokenListBlock({
             </div>
         );
     }
-    
+
     // Empty state
     if (tokens.length === 0) {
         return (
-            <div 
+            <div
                 className={`ck-token-list-block ck-token-list-block--${variant} ck-token-list-block--empty ${className || ''}`}
                 data-slot="token-list-block"
                 data-variant={variant}
@@ -171,22 +171,18 @@ export function TokenListBlock({
             </div>
         );
     }
-    
+
     // Default item renderer
     const defaultRenderItem = (token: Token) => (
-        <div
-            key={token.mint}
-            className="ck-token-item"
-            data-slot="token-item"
-        >
+        <div key={token.mint} className="ck-token-item" data-slot="token-item">
             <div className="ck-token-item-icon" data-slot="token-item-icon">
                 {token.logo ? (
-                    <img 
-                        src={token.logo} 
+                    <img
+                        src={token.logo}
                         alt={token.symbol || 'Token'}
                         className="ck-token-logo"
                         data-slot="token-logo"
-                        onError={(e) => {
+                        onError={e => {
                             e.currentTarget.style.display = 'none';
                         }}
                     />
@@ -210,18 +206,17 @@ export function TokenListBlock({
                 </span>
                 {showValue && (
                     <span className="ck-token-value" data-slot="token-value">
-                        {/* Price integration would go here */}
-                        -
+                        {/* Price integration would go here */}-
                     </span>
                 )}
             </div>
         </div>
     );
-    
+
     const itemRenderer = renderItem || defaultRenderItem;
-    
+
     return (
-        <div 
+        <div
             className={`ck-token-list-block ck-token-list-block--${variant} ${className || ''}`}
             data-slot="token-list-block"
             data-variant={variant}
@@ -247,14 +242,11 @@ export function TokenListBlock({
                     )}
                 </div>
             )}
-            
-            <div 
-                className={`ck-token-list ${variant === 'grid' ? 'ck-token-list--grid' : ''}`}
-                data-slot="token-list"
-            >
+
+            <div className={`ck-token-list ${variant === 'grid' ? 'ck-token-list--grid' : ''}`} data-slot="token-list">
                 {displayTokens.map(itemRenderer)}
             </div>
-            
+
             {tokens.length > limit && (
                 <div className="ck-token-list-more" data-slot="token-list-more">
                     +{tokens.length - limit} more tokens
@@ -265,5 +257,3 @@ export function TokenListBlock({
 }
 
 TokenListBlock.displayName = 'TokenListBlock';
-
-

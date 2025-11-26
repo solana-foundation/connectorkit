@@ -31,12 +31,8 @@ export function ExampleCard({ example, requiresConnection = true }: ExampleCardP
             <div className="grid grid-cols-12 gap-6 lg:gap-8">
                 {/* Left column: Title and Description */}
                 <div className="col-span-12 lg:col-span-4 flex flex-col justify-start px-4 lg:px-6">
-                    <h3 className="text-title-5 font-diatype-medium text-sand-1500 mb-2">
-                        {example.name}
-                    </h3>
-                    <p className="text-body-md font-inter text-sand-700">
-                        {example.description}
-                    </p>
+                    <h3 className="text-title-5 font-diatype-medium text-sand-1500 mb-2">{example.name}</h3>
+                    <p className="text-body-md font-inter text-sand-700">{example.description}</p>
                 </div>
 
                 {/* Right column: Tabs with Preview and Code */}
@@ -44,13 +40,17 @@ export function ExampleCard({ example, requiresConnection = true }: ExampleCardP
                     <Tabs defaultValue="preview" className="w-full">
                         <div className="flex justify-end mb-4">
                             <TabsList>
-                                <TabsTrigger className="text-xs" value="preview">Preview</TabsTrigger>
-                                <TabsTrigger className="text-xs" value="code">Code</TabsTrigger>
+                                <TabsTrigger className="text-xs" value="preview">
+                                    Preview
+                                </TabsTrigger>
+                                <TabsTrigger className="text-xs" value="code">
+                                    Code
+                                </TabsTrigger>
                             </TabsList>
                         </div>
 
                         <TabsContent value="preview">
-                            <Card 
+                            <Card
                                 className="border-sand-300 bg-sand-100/30 rounded-xl min-h-[180px]"
                                 style={{
                                     backgroundImage: `repeating-linear-gradient(
@@ -59,7 +59,7 @@ export function ExampleCard({ example, requiresConnection = true }: ExampleCardP
                                         transparent 10px,
                                         rgba(233, 231, 222, 0.5) 10px,
                                         rgba(233, 231, 222, 0.5) 11px
-                                    )`
+                                    )`,
                                 }}
                             >
                                 <CardContent className="p-6 flex items-center justify-center min-h-[200px]">
@@ -85,7 +85,7 @@ export function ExampleCard({ example, requiresConnection = true }: ExampleCardP
                                                 {example.fileName || 'TypeScript'}
                                             </span>
                                         </div>
-                                        <CopyButton 
+                                        <CopyButton
                                             textToCopy={example.code}
                                             showText={false}
                                             iconClassName="text-sand-500 group-hover:text-sand-300"
@@ -123,4 +123,3 @@ export function ExampleCard({ example, requiresConnection = true }: ExampleCardP
         </section>
     );
 }
-

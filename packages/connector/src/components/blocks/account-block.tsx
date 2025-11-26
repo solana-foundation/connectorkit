@@ -33,17 +33,17 @@ export interface AccountBlockProps {
 
 /**
  * Block for displaying connected account information.
- * 
+ *
  * @example Basic usage
  * ```tsx
  * <AccountBlock />
  * ```
- * 
+ *
  * @example With full address
  * ```tsx
  * <AccountBlock showFullAddress />
  * ```
- * 
+ *
  * @example Custom render
  * ```tsx
  * <AccountBlock
@@ -69,28 +69,28 @@ export function AccountBlock({
 }: AccountBlockProps) {
     const { address, formatted, copy, copied } = useAccount();
     const { name: walletName, icon: walletIcon } = useWalletInfo();
-    
+
     // Custom render
     if (render) {
         return <>{render({ address, formatted, walletName, walletIcon, copy, copied })}</>;
     }
-    
+
     if (!address) return null;
-    
+
     const displayAddress = showFullAddress ? address : formatted;
-    
+
     const handleCopy = async (e: React.MouseEvent) => {
         e.stopPropagation();
         await copy();
     };
-    
+
     const copyIcon = (
-        <svg 
-            width="14" 
-            height="14" 
-            viewBox="0 0 24 24" 
-            fill="none" 
-            stroke="currentColor" 
+        <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -107,28 +107,25 @@ export function AccountBlock({
             )}
         </svg>
     );
-    
+
     // Inline variant
     if (variant === 'inline') {
         return (
-            <div 
+            <div
                 className={`ck-account-block ck-account-block--inline ${className || ''}`}
                 data-slot="account-block"
                 data-variant="inline"
             >
                 {showAvatar && walletIcon && (
-                    <img 
-                        src={walletIcon} 
+                    <img
+                        src={walletIcon}
                         alt={walletName || 'Wallet'}
                         className="ck-account-block-avatar"
                         style={{ width: avatarSize, height: avatarSize }}
                         data-slot="account-block-avatar"
                     />
                 )}
-                <span 
-                    className="ck-account-block-address"
-                    data-slot="account-block-address"
-                >
+                <span className="ck-account-block-address" data-slot="account-block-address">
                     {displayAddress}
                 </span>
                 {showCopy && (
@@ -146,19 +143,19 @@ export function AccountBlock({
             </div>
         );
     }
-    
+
     // Expanded variant
     if (variant === 'expanded') {
         return (
-            <div 
+            <div
                 className={`ck-account-block ck-account-block--expanded ${className || ''}`}
                 data-slot="account-block"
                 data-variant="expanded"
             >
                 <div className="ck-account-block-header" data-slot="account-block-header">
                     {showAvatar && walletIcon && (
-                        <img 
-                            src={walletIcon} 
+                        <img
+                            src={walletIcon}
                             alt={walletName || 'Wallet'}
                             className="ck-account-block-avatar"
                             style={{ width: avatarSize, height: avatarSize }}
@@ -167,17 +164,11 @@ export function AccountBlock({
                     )}
                     <div className="ck-account-block-info" data-slot="account-block-info">
                         {walletName && (
-                            <span 
-                                className="ck-account-block-wallet-name"
-                                data-slot="account-block-wallet-name"
-                            >
+                            <span className="ck-account-block-wallet-name" data-slot="account-block-wallet-name">
                                 {walletName}
                             </span>
                         )}
-                        <span 
-                            className="ck-account-block-address"
-                            data-slot="account-block-address"
-                        >
+                        <span className="ck-account-block-address" data-slot="account-block-address">
                             {displayAddress}
                         </span>
                     </div>
@@ -197,17 +188,17 @@ export function AccountBlock({
             </div>
         );
     }
-    
+
     // Compact variant (default)
     return (
-        <div 
+        <div
             className={`ck-account-block ck-account-block--compact ${className || ''}`}
             data-slot="account-block"
             data-variant="compact"
         >
             {showAvatar && walletIcon && (
-                <img 
-                    src={walletIcon} 
+                <img
+                    src={walletIcon}
                     alt={walletName || 'Wallet'}
                     className="ck-account-block-avatar"
                     style={{ width: avatarSize, height: avatarSize }}
@@ -216,17 +207,11 @@ export function AccountBlock({
             )}
             <div className="ck-account-block-content" data-slot="account-block-content">
                 {walletName && (
-                    <span 
-                        className="ck-account-block-wallet-name"
-                        data-slot="account-block-wallet-name"
-                    >
+                    <span className="ck-account-block-wallet-name" data-slot="account-block-wallet-name">
                         {walletName}
                     </span>
                 )}
-                <span 
-                    className="ck-account-block-address"
-                    data-slot="account-block-address"
-                >
+                <span className="ck-account-block-address" data-slot="account-block-address">
                     {displayAddress}
                 </span>
             </div>
@@ -247,5 +232,3 @@ export function AccountBlock({
 }
 
 AccountBlock.displayName = 'AccountBlock';
-
-

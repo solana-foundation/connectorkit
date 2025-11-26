@@ -37,10 +37,16 @@ function getMinLogLevel(): LogLevel {
     if (typeof process !== 'undefined' && process.env?.CONNECTOR_DEBUG_LEVEL) {
         return process.env.CONNECTOR_DEBUG_LEVEL as LogLevel;
     }
-    if (typeof globalThis !== 'undefined' && (globalThis as typeof globalThis & { __CONNECTOR_DEBUG_LEVEL__?: LogLevel }).__CONNECTOR_DEBUG_LEVEL__) {
+    if (
+        typeof globalThis !== 'undefined' &&
+        (globalThis as typeof globalThis & { __CONNECTOR_DEBUG_LEVEL__?: LogLevel }).__CONNECTOR_DEBUG_LEVEL__
+    ) {
         return (globalThis as typeof globalThis & { __CONNECTOR_DEBUG_LEVEL__?: LogLevel }).__CONNECTOR_DEBUG_LEVEL__!;
     }
-    if (typeof window !== 'undefined' && (window as Window & { __CONNECTOR_DEBUG_LEVEL__?: LogLevel }).__CONNECTOR_DEBUG_LEVEL__) {
+    if (
+        typeof window !== 'undefined' &&
+        (window as Window & { __CONNECTOR_DEBUG_LEVEL__?: LogLevel }).__CONNECTOR_DEBUG_LEVEL__
+    ) {
         return (window as Window & { __CONNECTOR_DEBUG_LEVEL__?: LogLevel }).__CONNECTOR_DEBUG_LEVEL__!;
     }
     return 'info';
@@ -117,7 +123,3 @@ export function debug(message: unknown, level: LogLevel = 'info', prefix: string
             break;
     }
 }
-
-
-
-

@@ -124,18 +124,17 @@ export function useSolanaClient(): UseSolanaClientReturn {
     }, [type, connectorClient]);
 
     // Memoize return object to prevent infinite re-renders in consumers
-    return useMemo(() => ({
-        client,
-        ready: Boolean(client),
-        clusterType: type,
-    }), [client, type]);
+    return useMemo(
+        () => ({
+            client,
+            ready: Boolean(client),
+            clusterType: type,
+        }),
+        [client, type],
+    );
 }
 
 /**
  * @deprecated Use `useSolanaClient` instead. This alias is provided for backward compatibility.
  */
 export const useGillSolanaClient = useSolanaClient;
-
-
-
-

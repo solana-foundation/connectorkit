@@ -1,16 +1,10 @@
 'use client';
 
-import { 
-    useConnector, 
-    useBalance, 
-    useCluster, 
-    useTokens, 
-    useTransactions 
-} from '@solana/connector';
+import { useConnector, useBalance, useCluster, useTokens, useTransactions } from '@solana/connector';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Wallet, Copy, Check, RefreshCw, Coins, ExternalLink, Globe, LogOut } from 'lucide-react';
+import { Wallet, Copy, Check, RefreshCw, Coins, ExternalLink, LogOut } from 'lucide-react';
 import { ExampleCard, type ExampleConfig } from './example-card';
 import { useState } from 'react';
 
@@ -45,7 +39,9 @@ function UseConnectorExample() {
                 <div className="flex items-center gap-3">
                     <Avatar className="h-10 w-10">
                         {selectedWallet.icon && <AvatarImage src={selectedWallet.icon} />}
-                        <AvatarFallback><Wallet className="h-5 w-5" /></AvatarFallback>
+                        <AvatarFallback>
+                            <Wallet className="h-5 w-5" />
+                        </AvatarFallback>
                     </Avatar>
                     <div className="flex-1">
                         <p className="font-medium text-sm">{selectedWallet.name}</p>
@@ -66,15 +62,26 @@ function UseConnectorExample() {
     return (
         <div className="p-4 rounded-lg border bg-card min-w-[280px] space-y-2">
             <p className="text-sm text-muted-foreground mb-2">Select a wallet:</p>
-            {wallets.filter(w => w.installed).slice(0, 3).map(w => (
-                <Button key={w.wallet.name} variant="outline" size="sm" className="w-full justify-start" onClick={() => select(w.wallet.name)}>
-                    <Avatar className="h-5 w-5 mr-2">
-                        {w.wallet.icon && <AvatarImage src={w.wallet.icon} />}
-                        <AvatarFallback><Wallet className="h-3 w-3" /></AvatarFallback>
-                    </Avatar>
-                    {w.wallet.name}
-                </Button>
-            ))}
+            {wallets
+                .filter(w => w.installed)
+                .slice(0, 3)
+                .map(w => (
+                    <Button
+                        key={w.wallet.name}
+                        variant="outline"
+                        size="sm"
+                        className="w-full justify-start"
+                        onClick={() => select(w.wallet.name)}
+                    >
+                        <Avatar className="h-5 w-5 mr-2">
+                            {w.wallet.icon && <AvatarImage src={w.wallet.icon} />}
+                            <AvatarFallback>
+                                <Wallet className="h-3 w-3" />
+                            </AvatarFallback>
+                        </Avatar>
+                        {w.wallet.name}
+                    </Button>
+                ))}
         </div>
     );
 }
@@ -116,7 +123,9 @@ function UseClusterExample() {
             <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Current Network</span>
                 <Badge variant={isMainnet ? 'default' : 'secondary'}>
-                    <span className={`h-2 w-2 rounded-full mr-1.5 ${clusterColors[cluster?.id || ''] || 'bg-purple-500'}`} />
+                    <span
+                        className={`h-2 w-2 rounded-full mr-1.5 ${clusterColors[cluster?.id || ''] || 'bg-purple-500'}`}
+                    />
                     {cluster?.label}
                 </Badge>
             </div>
@@ -226,7 +235,9 @@ function UseTransactionsExample() {
                                 <p className="text-xs text-muted-foreground">{tx.formattedTime}</p>
                             </div>
                             {tx.formattedAmount && (
-                                <span className={`text-sm font-medium ${tx.direction === 'in' ? 'text-green-600' : 'text-orange-600'}`}>
+                                <span
+                                    className={`text-sm font-medium ${tx.direction === 'in' ? 'text-green-600' : 'text-orange-600'}`}
+                                >
                                     {tx.formattedAmount}
                                 </span>
                             )}
@@ -245,7 +256,8 @@ const hookExamples: ExampleConfig[] = [
     {
         id: 'use-connector',
         name: 'useConnector',
-        description: 'Core hook for wallet connection state. Access connected status, wallets, select/disconnect functions.',
+        description:
+            'Core hook for wallet connection state. Access connected status, wallets, select/disconnect functions.',
         code: `import { useConnector } from '@solana/connector';
 
 function WalletStatus() {
@@ -401,7 +413,7 @@ function TransactionHistory() {
 export function HooksExamplesSection() {
     return (
         <section>
-            <div 
+            <div
                 className="px-4 lg:px-6 py-8 border-b border-sand-200"
                 style={{
                     backgroundImage: `repeating-linear-gradient(
@@ -410,27 +422,24 @@ export function HooksExamplesSection() {
                         transparent 10px,
                         rgba(233, 231, 222, 0.5) 10px,
                         rgba(233, 231, 222, 0.5) 11px
-                    )`
+                    )`,
                 }}
-                >
+            >
                 <div className="inline-flex items-center gap-2 mb-3">
                     <span className="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs font-inter-medium rounded">
                         Headless Hooks
                     </span>
                 </div>
-                <h2 className="text-h3 font-diatype-medium text-sand-1500 mb-2">
-                    React Hooks
-                </h2>
+                <h2 className="text-h3 font-diatype-medium text-sand-1500 mb-2">React Hooks</h2>
                 <p className="text-body-lg font-inter text-sand-700 max-w-2xl">
-                    Use hooks directly for complete control. Same data and state management as blocks, 
-                    but you handle all the rendering. Perfect for custom implementations.
+                    Use hooks directly for complete control. Same data and state management as blocks, but you handle
+                    all the rendering. Perfect for custom implementations.
                 </p>
             </div>
 
-            {hookExamples.map((example) => (
+            {hookExamples.map(example => (
                 <ExampleCard key={example.id} example={example} />
             ))}
         </section>
     );
 }
-
