@@ -643,9 +643,9 @@ client.destroy();
 
 Storage uses nanostores with built-in enhancements that are **automatically applied**:
 
-- ✅ Validation (Solana address format checking)
-- ✅ Error handling (catches localStorage quota errors, private browsing)
-- ✅ SSR fallback (uses memory storage when localStorage unavailable)
+- Validation (Solana address format checking)
+- Error handling (catches localStorage quota errors, private browsing)
+- SSR fallback (uses memory storage when localStorage unavailable)
 
 **Most users don't need to configure storage.** Only customize for:
 

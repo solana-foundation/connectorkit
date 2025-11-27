@@ -2,7 +2,7 @@
 
 Thank you for your interest in contributing! This document provides guidelines for contributing to the connector package.
 
-## 🚀 Getting Started
+## Getting Started
 
 1. **Fork the repository**
 
@@ -27,7 +27,7 @@ Thank you for your interest in contributing! This document provides guidelines f
     git checkout -b fix/your-bug-fix
     ```
 
-## 📦 Project Structure
+## Project Structure
 
 ```
 packages/connector/
@@ -50,7 +50,7 @@ packages/connector/
 └── dist/                 # Build output (gitignored)
 ```
 
-## 🔧 Development Workflow
+## Development Workflow
 
 ### Code Style
 
@@ -105,7 +105,7 @@ cd examples/next-js
 pnpm dev
 ```
 
-## 📝 Pull Request Guidelines
+## Pull Request Guidelines
 
 1. **Clear Description**: Explain what changes you made and why
 2. **Link Issues**: Reference any related issues (e.g., "Fixes #123")
@@ -124,7 +124,7 @@ pnpm dev
 - [ ] Bundle size impact considered
 - [ ] No breaking changes (or clearly documented if intentional)
 
-## 🎯 Development Guidelines
+## Development Guidelines
 
 ### Wallet Standard Compliance
 
@@ -156,7 +156,7 @@ pnpm dev
 - Use proper memoization where needed
 - Keep bundle size small (check with `pnpm size`)
 
-## 🐛 Bug Reports
+## Bug Reports
 
 Include:
 
@@ -171,7 +171,7 @@ Include:
 - Relevant logs or error messages
 - Minimal reproduction if possible
 
-## 💡 Feature Requests
+## Feature Requests
 
 - Check existing issues first
 - Provide clear use case and requirements
@@ -180,7 +180,7 @@ Include:
 - Consider bundle size implications
 - Think about backward compatibility
 
-## 🧪 Testing Guidelines
+## Testing Guidelines
 
 ### Writing Tests
 
@@ -224,21 +224,21 @@ describe('useYourHook', () => {
 });
 ```
 
-## 📚 Documentation
+## Documentation
 
 - Update README.md for user-facing changes
 - Add JSDoc comments for public APIs
 - Include code examples in documentation
 - Keep examples in sync with actual usage
 
-## 🔍 Code Review Process
+## Code Review Process
 
 1. All PRs require at least one approval
 2. Address review comments promptly
 3. Keep PRs up to date with main branch
 4. Squash commits before merging (if requested)
 
-## 🪙 Wallet Standard Guidelines
+## Wallet Standard Guidelines
 
 When working with wallet integration:
 
@@ -248,17 +248,17 @@ When working with wallet integration:
 - Support multi-account wallets properly
 - Test on devnet before mainnet
 
-## 📄 License
+## License
 
 By contributing, you agree that your contributions will be licensed under the MIT License.
 
-## ❓ Questions
+## Questions
 
 - Open an issue for questions
 - Check existing documentation in README.md
 - Review [Wallet Standard specification](https://github.com/wallet-standard/wallet-standard)
 - Check examples in `examples/next-js` directory
 
-## 🎉 Thank You!
+## Thank You!
 
 Your contributions help make ConnectorKit better for everyone. Thank you for taking the time to contribute!
