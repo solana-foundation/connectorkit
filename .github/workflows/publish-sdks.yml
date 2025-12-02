@@ -13,7 +13,7 @@ on:
 
 permissions:
   contents: read
-  id-token: write # Required for npm trusted publishing (OIDC)
+  id-token: write
 
 jobs:
   publish-packages:
@@ -36,7 +36,6 @@ jobs:
         with:
           version: 9.12.3
 
-      # Ensure npm 11.5.1+ for trusted publishing with OIDC
       - name: Update npm for trusted publishing
         run: npm install -g npm@latest
 
@@ -57,7 +56,6 @@ jobs:
       - name: Run tests (skip for now)
         run: echo "Skipping tests for initial publish"
 
-      # Trusted publishing uses OIDC - no NODE_AUTH_TOKEN needed
       - name: Publish @solana/connector
         working-directory: packages/connector
         run: npm publish --access public
