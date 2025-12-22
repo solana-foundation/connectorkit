@@ -1,8 +1,5 @@
 'use client';
 
-import { useConnector, useAccount, ClusterElement } from '@solana/connector';
-import { Alert } from '@/components/ui/alert';
-import { Info, ChevronDown, User, Check } from 'lucide-react';
 import {
     LegacySolTransfer,
     ModernSolTransfer,
@@ -10,14 +7,6 @@ import {
     ChainUtilitiesDemo,
     ConnectionAbstractionDemo,
 } from '@/components/transactions';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Button } from '@/components/ui/button';
 import { ExampleCard, type ExampleConfig } from './example-card';
 
 const transactionExamples: ExampleConfig[] = [
@@ -238,8 +227,6 @@ function ConnectionAbstractionDemo() {
 ];
 
 export function TransactionsSection() {
-    const { connected, accounts, selectedAccount, selectAccount } = useConnector();
-    const { formatted } = useAccount();
 
     return (
         <section>
@@ -266,89 +253,7 @@ export function TransactionsSection() {
                     Test real transactions on devnet or mainnet. Compare legacy web3.js patterns with modern Kit-based
                     approaches using ConnectorKit&apos;s unified signer interface.
                 </p>
-
-                {connected && (
-                    <div className="flex items-center gap-3 mt-6">
-                        {/* ClusterElement as network selector */}
-                        <ClusterElement
-                            render={({ cluster, clusters, setCluster }) => (
-                                <Select value={cluster?.id} onValueChange={setCluster}>
-                                    <SelectTrigger className="w-auto h-9 cursor-pointer bg-white border border-sand-300 rounded-lg">
-                                        <SelectValue placeholder="Select network" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {clusters.map(c => (
-                                            <SelectItem key={c.id} value={c.id}>
-                                                <div className="flex items-center gap-2">
-                                                    <span
-                                                        className={`h-2 w-2 rounded-full ${
-                                                            c.id === 'solana:mainnet'
-                                                                ? 'bg-green-500'
-                                                                : c.id === 'solana:devnet'
-                                                                  ? 'bg-blue-500'
-                                                                  : c.id === 'solana:testnet'
-                                                                    ? 'bg-yellow-500'
-                                                                    : 'bg-purple-500'
-                                                        }`}
-                                                    />
-                                                    {c.label}
-                                                </div>
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            )}
-                        />
-
-                        {/* Account switcher (when multiple accounts) */}
-                        {accounts && accounts.length > 1 && (
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Button variant="outline" size="sm" className="h-9">
-                                        <User className="h-4 w-4 mr-2" />
-                                        {formatted || 'Account'}
-                                        <ChevronDown className="h-4 w-4 ml-2 opacity-50" />
-                                    </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="start">
-                                    {accounts.map(account => {
-                                        const addr = account.address;
-                                        const shortAddr = `${addr.slice(0, 4)}...${addr.slice(-4)}`;
-                                        return (
-                                            <DropdownMenuItem
-                                                key={addr}
-                                                onClick={() => selectAccount(addr)}
-                                                className="flex items-center justify-between"
-                                            >
-                                                <span className="font-mono text-sm">{shortAddr}</span>
-                                                {addr === selectedAccount && (
-                                                    <Check className="h-4 w-4 text-green-500" />
-                                                )}
-                                            </DropdownMenuItem>
-                                        );
-                                    })}
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                        )}
-                    </div>
-                )}
             </div>
-
-            {/* Not connected alert */}
-            {!connected && (
-                <div className="px-4 lg:px-6 py-8 border-b border-sand-200">
-                    <Alert className="max-w-xl">
-                        <Info className="h-4 w-4" />
-                        <div className="ml-2">
-                            <p className="font-medium">Connect your wallet to test transactions</p>
-                            <p className="text-sm text-muted-foreground mt-1">
-                                Works on devnet and mainnet. Switch networks using the cluster selector after
-                                connecting.
-                            </p>
-                        </div>
-                    </Alert>
-                </div>
-            )}
 
             {/* Transaction Examples */}
             {transactionExamples.map(example => (

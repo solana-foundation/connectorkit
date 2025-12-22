@@ -12,15 +12,10 @@ import {
     DisconnectElement,
 } from '@solana/connector/react';
 import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
     Wallet,
     Copy,
     Globe,
+    ChevronLeft,
     Check,
     RefreshCw,
     Coins,
@@ -31,12 +26,15 @@ import {
     LogOut,
 } from 'lucide-react';
 import { useState } from 'react';
+import { motion } from 'motion/react';
 
 interface WalletDropdownContentProps {
     selectedAccount: string;
     walletIcon?: string;
     walletName: string;
 }
+
+type DropdownView = 'wallet' | 'network';
 
 const clusterColors: Record<string, string> = {
     'solana:mainnet': 'bg-green-500',
@@ -46,6 +44,7 @@ const clusterColors: Record<string, string> = {
 };
 
 export function WalletDropdownContent({ selectedAccount, walletIcon, walletName }: WalletDropdownContentProps) {
+    const [view, setView] = useState<DropdownView>('wallet');
     const [copied, setCopied] = useState(false);
 
     const shortAddress = `${selectedAccount.slice(0, 4)}...${selectedAccount.slice(-4)}`;
@@ -56,72 +55,63 @@ export function WalletDropdownContent({ selectedAccount, walletIcon, walletName 
         setTimeout(() => setCopied(false), 2000);
     }
 
-    return (
-        <div className="w-[360px] p-4 space-y-4">
-            {/* Header with Avatar and Address */}
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <Avatar className="h-12 w-12">
-                        {walletIcon && <AvatarImage src={walletIcon} alt={walletName} />}
-                        <AvatarFallback>
-                            <Wallet className="h-6 w-6" />
-                        </AvatarFallback>
-                    </Avatar>
-                    <div>
-                        <div className="font-semibold text-lg">{shortAddress}</div>
-                        <div className="text-xs text-muted-foreground">{walletName}</div>
+    // Wallet View
+    if (view === 'wallet') {
+        return (
+            <motion.div
+                key="wallet"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
+                className="w-[360px] p-4 space-y-4"
+            >
+                {/* Header with Avatar and Address */}
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <Avatar className="h-12 w-12">
+                            {walletIcon && <AvatarImage src={walletIcon} alt={walletName} />}
+                            <AvatarFallback>
+                                <Wallet className="h-6 w-6" />
+                            </AvatarFallback>
+                        </Avatar>
+                        <div>
+                            <div className="font-semibold text-lg">{shortAddress}</div>
+                            <div className="text-xs text-muted-foreground">{walletName}</div>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Button
+                            type="button"
+                            onClick={handleCopy}
+                            variant="outline"
+                            size="icon"
+                            className="rounded-full"
+                            title={copied ? 'Copied!' : 'Copy address'}
+                        >
+                            {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                        </Button>
+
+                        {/* Network Selector Globe Button */}
+                        <ClusterElement
+                            render={({ cluster }) => (
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="icon"
+                                    className="rounded-full relative"
+                                    onClick={() => setView('network')}
+                                    title={`Network: ${cluster?.label || 'Unknown'}`}
+                                >
+                                    <Globe className="h-4 w-4" />
+                                    <span
+                                        className={`absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-background ${clusterColors[cluster?.id || ''] || 'bg-emerald-500'}`}
+                                    />
+                                </Button>
+                            )}
+                        />
                     </div>
                 </div>
-                <div className="flex items-center gap-2">
-                    <Button
-                        type="button"
-                        onClick={handleCopy}
-                        variant="outline"
-                        size="icon"
-                        className="rounded-full"
-                        title={copied ? 'Copied!' : 'Copy address'}
-                    >
-                        {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
-                    </Button>
-
-                    {/* Network Selector Globe Button */}
-                    <ClusterElement
-                        render={({ cluster, clusters, setCluster }) => (
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="icon"
-                                        className="rounded-full relative"
-                                        title={`Network: ${cluster?.label || 'Unknown'}`}
-                                    >
-                                        <Globe className="h-4 w-4" />
-                                        <span
-                                            className={`absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-background ${clusterColors[cluster?.id || ''] || 'bg-emerald-500'}`}
-                                        />
-                                    </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="w-auto rounded-[16px]">
-                                    {clusters.map(c => (
-                                        <DropdownMenuItem
-                                            key={c.id}
-                                            onClick={() => setCluster(c.id)}
-                                            className="flex items-center gap-2 cursor-pointer rounded-[13px]"
-                                        >
-                                            <span
-                                                className={`h-2 w-2 rounded-full ${clusterColors[c.id] || 'bg-purple-500'}`}
-                                            />
-                                            <span className="flex-1">{c.label}</span>
-                                            {cluster?.id === c.id && <Check className="h-4 w-4" />}
-                                        </DropdownMenuItem>
-                                    ))}
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                        )}
-                    />
-                </div>
-            </div>
 
             {/* Full Width Balance */}
             <BalanceElement
@@ -306,20 +296,90 @@ export function WalletDropdownContent({ selectedAccount, walletIcon, walletName 
                 </AccordionItem>
             </Accordion>
 
-            {/* Disconnect Button */}
-            <DisconnectElement
-                render={({ disconnect, disconnecting }) => (
-                    <Button
-                        variant="destructive"
-                        className="w-full h-11 text-base rounded-[12px]"
-                        onClick={disconnect}
-                        disabled={disconnecting}
-                    >
-                        <LogOut className="h-4 w-4 mr-2" />
-                        {disconnecting ? 'Disconnecting...' : 'Disconnect'}
-                    </Button>
-                )}
+                {/* Disconnect Button */}
+                <DisconnectElement
+                    render={({ disconnect, disconnecting }) => (
+                        <Button
+                            variant="destructive"
+                            className="w-full h-11 text-base rounded-[12px]"
+                            onClick={disconnect}
+                            disabled={disconnecting}
+                        >
+                            <LogOut className="h-4 w-4 mr-2" />
+                            {disconnecting ? 'Disconnecting...' : 'Disconnect'}
+                        </Button>
+                    )}
+                />
+            </motion.div>
+        );
+    }
+
+    // Network Settings View
+    return (
+        <motion.div
+            key="network"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="w-[360px] p-4 space-y-4"
+        >
+            {/* Header */}
+            <div className="flex items-center gap-3">
+                <button
+                    type="button"
+                    onClick={() => setView('wallet')}
+                    className="rounded-full border border-border p-2 hover:bg-accent transition-colors"
+                >
+                    <ChevronLeft className="h-4 w-4" />
+                </button>
+                <span className="font-semibold text-lg">Network Settings</span>
+            </div>
+
+            {/* Network Options */}
+            <ClusterElement
+                render={({ cluster, clusters, setCluster }) => {
+                    const currentClusterId = (cluster as { id?: string })?.id || 'solana:mainnet';
+                    return (
+                        <div className="rounded-[12px] border bg-muted/50 overflow-hidden">
+                            {clusters.map((network, index) => {
+                                const isSelected = currentClusterId === network.id;
+                                return (
+                                    <div
+                                        key={network.id}
+                                        role="button"
+                                        tabIndex={0}
+                                        onClick={() => setCluster(network.id)}
+                                        onKeyDown={e => {
+                                            if (e.key === 'Enter' || e.key === ' ') {
+                                                e.preventDefault();
+                                                setCluster(network.id);
+                                            }
+                                        }}
+                                        className={`w-full flex items-center justify-between p-4 hover:bg-accent/50 transition-colors cursor-pointer ${
+                                            index !== clusters.length - 1 ? 'border-b border-border' : ''
+                                        }`}
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <span
+                                                className={`h-2 w-2 rounded-full ${clusterColors[network.id] || 'bg-purple-500'}`}
+                                            />
+                                            <span className="font-medium">{network.label}</span>
+                                        </div>
+                                        <div
+                                            className={`h-5 w-5 rounded-full border-2 flex items-center justify-center transition-colors ${
+                                                isSelected ? 'bg-primary border-primary' : 'border-muted-foreground/30'
+                                            }`}
+                                        >
+                                            {isSelected && <Check className="h-3 w-3 text-primary-foreground" />}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    );
+                }}
             />
-        </div>
+        </motion.div>
     );
 }

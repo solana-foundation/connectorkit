@@ -12,6 +12,7 @@ import {
 } from '@/components/playground';
 import { Blocks, Code2, Anchor, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ConnectButton } from '@/components/connector/connect-button';
 
 export default function Home() {
     const npmCommand = 'npm i @solana/connector';
@@ -100,8 +101,8 @@ export default function Home() {
             {/* Tabbed Navigation */}
             <Tabs defaultValue="components" className="w-full">
                 <div className="sticky top-16 z-40 bg-bg1/95 backdrop-blur-sm border-b border-sand-200">
-                    <div className="max-w-7xl mx-auto">
-                        <TabsList className="h-14 w-full justify-start gap-0 bg-transparent p-0 rounded-none">
+                    <div className="max-w-7xl mx-auto flex items-center justify-between px-4 lg:px-6">
+                        <TabsList className="h-14 justify-start gap-0 bg-transparent p-0 rounded-none">
                             <TabsTrigger
                                 value="components"
                                 className="h-14 px-4 rounded-none border-b-2 border-transparent data-[state=active]:border-sand-1500 data-[state=active]:bg-transparent data-[state=active]:shadow-none gap-2"
@@ -131,6 +132,7 @@ export default function Home() {
                                 <span className="hidden sm:inline">Transactions</span>
                             </TabsTrigger>
                         </TabsList>
+                        <ConnectButton />
                     </div>
                 </div>
 
