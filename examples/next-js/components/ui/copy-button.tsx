@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Check, Copy } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { Button } from './button';
 
 interface CopyButtonProps {
     textToCopy: string;
@@ -37,11 +38,11 @@ export function CopyButton({
     };
 
     return (
-        <button
+        <Button
             onClick={handleCopy}
             disabled={disabled}
             className={cn(
-                'group flex items-center justify-between gap-2 hover:opacity-80 hover:cursor-pointer',
+                'group flex items-center justify-between',
                 className,
                 disabled && 'opacity-50 cursor-not-allowed',
             )}
@@ -82,6 +83,6 @@ export function CopyButton({
                     )}
                 </AnimatePresence>
             </div>
-        </button>
+        </Button>
     );
 }
