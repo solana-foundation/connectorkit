@@ -292,7 +292,7 @@ function UseTokensExample() {
                     {sampleToken && (
                         <div className="border border-sand-300 rounded-xl p-2 bg-sand-50">
                             <span className="text-[10px] font-mono text-sand-700 mb-2 block">
-                                tokens[0] properties:
+                                tokens properties:
                             </span>
                             <div className="grid grid-cols-2 gap-1.5">
                                 <div className="flex flex-col gap-1 p-2 rounded-lg border bg-card">
@@ -410,7 +410,7 @@ function UseTransactionsExample() {
                     {sampleTx && (
                         <div className="border border-sand-300 rounded-xl p-2 bg-sand-50">
                             <span className="text-[10px] font-mono text-sand-700 mb-2 block">
-                                transactions[0] properties:
+                                transactions properties:
                             </span>
                             <div className="grid grid-cols-2 gap-1.5">
                                 <div className="flex flex-col gap-1 p-2 rounded-lg border bg-card">

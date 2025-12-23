@@ -14,12 +14,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Wallet, Copy, Check, RefreshCw, LogOut, Coins, ExternalLink } from 'lucide-react';
 import { ExampleCard, type ExampleConfig } from './example-card';
 
-// Helper component for displaying individual render props
-function PropCard({ label, children }: { label: string; children: React.ReactNode }) {
+// Helper component for displaying render props in badge style (matches hooks-examples)
+function RenderPropValue({ name, children }: { name: string; children: React.ReactNode }) {
     return (
-        <div className="flex flex-col gap-1.5 p-3 rounded-xl border bg-card">
-            <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-wide">{label}</span>
-            <div className="min-h-[32px] flex items-center">{children}</div>
+        <div className="flex items-center justify-between py-1.5 gap-2">
+            <span className="px-2 py-0.5 text-[11px] font-mono text-sand-700 bg-white border border-sand-300 rounded-md">
+                {name}
+            </span>
+            <div className="flex items-center text-xs font-mono text-sand-600 truncate">{children}</div>
         </div>
     );
 }
@@ -63,35 +65,36 @@ import { Wallet, Copy, Check } from 'lucide-react';
                             <span className="absolute -top-2.5 left-3 bg-sand-100 px-2 text-xs font-mono font-medium text-sand-700">
                                 {'<AccountElement />'}
                             </span>
-                            <div className="grid grid-cols-2 gap-2">
-                                <PropCard label="walletIcon">
-                                    <Avatar className="h-8 w-8">
+                            <div className="space-y-0.5 pt-1">
+                                <RenderPropValue name="walletIcon">
+                                    <Avatar className="h-5 w-5">
                                         {walletIcon && <AvatarImage src={walletIcon} />}
                                         <AvatarFallback className="bg-muted">
-                                            <Wallet className="h-4 w-4" />
+                                            <Wallet className="h-3 w-3" />
                                         </AvatarFallback>
                                     </Avatar>
-                                </PropCard>
-                                <PropCard label="walletName">
-                                    <span className="text-sm font-medium truncate">{walletName || '—'}</span>
-                                </PropCard>
-                                <PropCard label="formatted">
-                                    <span className="text-xs font-mono text-muted-foreground truncate">
-                                        {formatted || '—'}
-                                    </span>
-                                </PropCard>
-                                <PropCard label="copy / copied">
+                                </RenderPropValue>
+                                <RenderPropValue name="walletName">
+                                    {walletName || '—'}
+                                </RenderPropValue>
+                                <RenderPropValue name="formatted">
+                                    {formatted || '—'}
+                                </RenderPropValue>
+                                <RenderPropValue name="copy">
                                     <button
                                         onClick={copy}
-                                        className="p-1.5 hover:bg-muted rounded-md transition-colors"
+                                        className="p-1 hover:bg-muted rounded-md transition-colors"
                                     >
                                         {copied ? (
-                                            <Check className="h-4 w-4 text-green-500" />
+                                            <Check className="h-3.5 w-3.5 text-green-500" />
                                         ) : (
-                                            <Copy className="h-4 w-4 text-muted-foreground" />
+                                            <Copy className="h-3.5 w-3.5 text-muted-foreground" />
                                         )}
                                     </button>
-                                </PropCard>
+                                </RenderPropValue>
+                                <RenderPropValue name="copied">
+                                    {String(copied)}
+                                </RenderPropValue>
                             </div>
                         </div>
 
@@ -168,24 +171,22 @@ import { RefreshCw } from 'lucide-react';
                             <span className="absolute -top-2.5 left-3 bg-sand-100 px-2 text-xs font-mono font-medium text-sand-700">
                                 {'<BalanceElement />'}
                             </span>
-                            <div className="grid grid-cols-3 gap-2">
-                                <PropCard label="solBalance">
-                                    <span className="text-sm font-bold">{solBalance?.toFixed(4) ?? '—'}</span>
-                                </PropCard>
-                                <PropCard label="isLoading">
-                                    <span className="text-xs font-mono text-muted-foreground">
-                                        {isLoading ? 'true' : 'false'}
-                                    </span>
-                                </PropCard>
-                                <PropCard label="refetch">
+                            <div className="space-y-0.5 pt-1">
+                                <RenderPropValue name="solBalance">
+                                    {solBalance?.toFixed(4) ?? '—'}
+                                </RenderPropValue>
+                                <RenderPropValue name="isLoading">
+                                    {String(isLoading)}
+                                </RenderPropValue>
+                                <RenderPropValue name="refetch">
                                     <button
                                         onClick={refetch}
                                         disabled={isLoading}
-                                        className="p-1.5 hover:bg-muted rounded-md transition-colors disabled:opacity-50"
+                                        className="p-1 hover:bg-muted rounded-md transition-colors disabled:opacity-50"
                                     >
-                                        <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                                        <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} />
                                     </button>
-                                </PropCard>
+                                </RenderPropValue>
                             </div>
                         </div>
 
@@ -280,25 +281,21 @@ const clusterColors: Record<string, string> = {
                                 <span className="absolute -top-2.5 left-3 bg-sand-100 px-2 text-xs font-mono font-medium text-sand-700">
                                     {'<ClusterElement />'}
                                 </span>
-                                <div className="grid grid-cols-3 gap-2">
-                                    <PropCard label="cluster">
+                                <div className="space-y-0.5 pt-1">
+                                    <RenderPropValue name="cluster">
                                         <div className="flex items-center gap-1.5">
                                             <span
                                                 className={`h-2 w-2 rounded-full ${clusterColors[cluster?.id || ''] || 'bg-purple-500'}`}
                                             />
-                                            <span className="text-xs font-medium truncate">
-                                                {cluster?.label || '—'}
-                                            </span>
+                                            {cluster?.label || '—'}
                                         </div>
-                                    </PropCard>
-                                    <PropCard label="clusters">
-                                        <span className="text-xs font-mono text-muted-foreground">
-                                            [{clusters.length}]
-                                        </span>
-                                    </PropCard>
-                                    <PropCard label="setCluster">
-                                        <span className="text-xs font-mono text-muted-foreground">fn()</span>
-                                    </PropCard>
+                                    </RenderPropValue>
+                                    <RenderPropValue name="clusters">
+                                        [{clusters.length} items]
+                                    </RenderPropValue>
+                                    <RenderPropValue name="setCluster">
+                                        fn()
+                                    </RenderPropValue>
                                 </div>
                             </div>
 
@@ -380,20 +377,18 @@ import { LogOut } from 'lucide-react';
                             <span className="absolute -top-2.5 left-3 bg-sand-100 px-2 text-xs font-mono font-medium text-sand-700">
                                 {'<DisconnectElement />'}
                             </span>
-                            <div className="grid grid-cols-2 gap-2">
-                                <PropCard label="disconnect">
+                            <div className="space-y-0.5 pt-1">
+                                <RenderPropValue name="disconnect">
                                     <button
                                         onClick={disconnect}
-                                        className="p-1.5 hover:bg-muted rounded-md transition-colors"
+                                        className="p-1 hover:bg-muted rounded-md transition-colors"
                                     >
-                                        <LogOut className="h-4 w-4 text-muted-foreground" />
+                                        <LogOut className="h-3.5 w-3.5 text-muted-foreground" />
                                     </button>
-                                </PropCard>
-                                <PropCard label="disconnecting">
-                                    <span className="text-xs font-mono text-muted-foreground">
-                                        {disconnecting ? 'true' : 'false'}
-                                    </span>
-                                </PropCard>
+                                </RenderPropValue>
+                                <RenderPropValue name="disconnecting">
+                                    {String(disconnecting)}
+                                </RenderPropValue>
                             </div>
                         </div>
 
@@ -482,35 +477,31 @@ import { Coins, RefreshCw } from 'lucide-react';
                                 </span>
                                 <div className="space-y-3">
                                     {/* Top-level props */}
-                                    <div className="grid grid-cols-3 gap-2">
-                                        <PropCard label="tokens">
-                                            <span className="text-xs font-mono text-muted-foreground">
-                                                [{tokens.length} items]
-                                            </span>
-                                        </PropCard>
-                                        <PropCard label="isLoading">
-                                            <span className="text-xs font-mono text-muted-foreground">
-                                                {isLoading ? 'true' : 'false'}
-                                            </span>
-                                        </PropCard>
-                                        <PropCard label="refetch">
+                                    <div className="space-y-0.5 pt-1">
+                                        <RenderPropValue name="tokens">
+                                            [{tokens.length} items]
+                                        </RenderPropValue>
+                                        <RenderPropValue name="isLoading">
+                                            {String(isLoading)}
+                                        </RenderPropValue>
+                                        <RenderPropValue name="refetch">
                                             <button
                                                 onClick={refetch}
                                                 disabled={isLoading}
-                                                className="p-1.5 hover:bg-muted rounded-md transition-colors disabled:opacity-50"
+                                                className="p-1 hover:bg-muted rounded-md transition-colors disabled:opacity-50"
                                             >
                                                 <RefreshCw
-                                                    className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`}
+                                                    className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`}
                                                 />
                                             </button>
-                                        </PropCard>
+                                        </RenderPropValue>
                                     </div>
 
                                     {/* Sample token item breakdown */}
                                     {sampleToken && (
                                         <div className="border border border-sand-300 rounded-xl p-2 bg-sand-50">
                                             <span className="text-[10px] font-mono text-sand-700 mb-2 block">
-                                                tokens[0] properties:
+                                                tokens properties:
                                             </span>
                                             <div className="grid grid-cols-2 gap-1.5">
                                                 <div className="flex flex-col gap-1 p-2 rounded-lg border bg-card">
@@ -689,38 +680,26 @@ import { ExternalLink, Coins } from 'lucide-react';
                                 </span>
                                 <div className="space-y-3">
                                     {/* Top-level props */}
-                                    <div className="grid grid-cols-2 gap-2">
-                                        <PropCard label="transactions">
-                                            <span className="text-xs font-mono text-muted-foreground">
-                                                [{transactions.length} items]
-                                            </span>
-                                        </PropCard>
-                                        <PropCard label="isLoading">
-                                            <span className="text-xs font-mono text-muted-foreground">
-                                                {isLoading ? 'true' : 'false'}
-                                            </span>
-                                        </PropCard>
-                                        <PropCard label="hasMore">
-                                            <span className="text-xs font-mono text-muted-foreground">
-                                                {hasMore ? 'true' : 'false'}
-                                            </span>
-                                        </PropCard>
-                                        <PropCard label="loadMore">
-                                            <button
-                                                onClick={loadMore}
-                                                disabled={!hasMore || isLoading}
-                                                className="text-xs font-mono text-muted-foreground hover:text-foreground disabled:opacity-50"
-                                            >
-                                                fn()
-                                            </button>
-                                        </PropCard>
+                                    <div className="space-y-0.5 pt-1">
+                                        <RenderPropValue name="transactions">
+                                            [{transactions.length} items]
+                                        </RenderPropValue>
+                                        <RenderPropValue name="isLoading">
+                                            {String(isLoading)}
+                                        </RenderPropValue>
+                                        <RenderPropValue name="hasMore">
+                                            {String(hasMore)}
+                                        </RenderPropValue>
+                                        <RenderPropValue name="loadMore">
+                                            fn()
+                                        </RenderPropValue>
                                     </div>
 
                                     {/* Sample transaction item breakdown */}
                                     {sampleTx && (
                                         <div className="border border border-sand-300 rounded-xl p-2 bg-sand-50">
                                             <span className="text-[10px] font-mono text-sand-700 mb-2 block">
-                                                transactions[0] properties:
+                                                transactions properties:
                                             </span>
                                             <div className="grid grid-cols-2 gap-1.5">
                                                 <div className="flex flex-col gap-1 p-2 rounded-lg border bg-card">
