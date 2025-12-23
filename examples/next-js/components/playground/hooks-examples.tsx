@@ -8,12 +8,14 @@ import { Wallet, Copy, Check, RefreshCw, Coins, ExternalLink, LogOut } from 'luc
 import { ExampleCard, type ExampleConfig } from './example-card';
 import { useState } from 'react';
 
-// Helper component for displaying hook return values
+// Helper component for displaying hook return values as mini badge
 function HookReturnValue({ name, value }: { name: string; value: string }) {
     return (
-        <div className="flex items-center justify-between py-1">
-            <span className="text-xs font-mono text-sand-600">{name}:</span>
-            <span className="text-xs font-mono text-sand-800 truncate max-w-[120px]">{value}</span>
+        <div className="flex items-center justify-between py-1.5 gap-2">
+            <span className="px-2 py-0.5 text-[11px] font-mono text-sand-700 bg-white border border-sand-300 rounded-md">
+                {name}
+            </span>
+            <span className="text-xs font-mono text-sand-600 truncate max-w-[120px]">{value}</span>
         </div>
     );
 }
@@ -267,6 +269,7 @@ function UseClusterExample() {
 function UseTokensExample() {
     const { tokens, isLoading, refetch } = useTokens();
     const displayTokens = tokens.slice(0, 3);
+    const sampleToken = tokens[0];
 
     return (
         <div className="flex flex-col lg:flex-row gap-6 w-full items-stretch">
@@ -275,12 +278,50 @@ function UseTokensExample() {
                 <span className="absolute -top-2.5 left-3 bg-sand-100 px-2 text-xs font-mono font-medium text-sand-700">
                     useTokens()
                 </span>
-                <div className="space-y-0.5 pt-1">
-                    <HookReturnValue name="tokens" value={`[${tokens.length} items]`} />
-                    <HookReturnValue name="isLoading" value={String(isLoading)} />
-                    <HookReturnValue name="refetch" value="fn()" />
-                    <HookReturnValue name="hasMore" value="boolean" />
-                    <HookReturnValue name="loadMore" value="fn()" />
+                <div className="space-y-3 pt-1">
+                    {/* Top-level returns */}
+                    <div className="space-y-0.5">
+                        <HookReturnValue name="tokens" value={`[${tokens.length} items]`} />
+                        <HookReturnValue name="isLoading" value={String(isLoading)} />
+                        <HookReturnValue name="refetch" value="fn()" />
+                        <HookReturnValue name="hasMore" value="boolean" />
+                        <HookReturnValue name="loadMore" value="fn()" />
+                    </div>
+
+                    {/* Sample token item breakdown */}
+                    {sampleToken && (
+                        <div className="border border-sand-300 rounded-xl p-2 bg-sand-50">
+                            <span className="text-[10px] font-mono text-sand-700 mb-2 block">
+                                tokens[0] properties:
+                            </span>
+                            <div className="grid grid-cols-2 gap-1.5">
+                                <div className="flex flex-col gap-1 p-2 rounded-lg border bg-card">
+                                    <span className="text-[9px] font-mono text-muted-foreground uppercase">logo</span>
+                                    {sampleToken.logo ? (
+                                        <img src={sampleToken.logo} className="h-6 w-6 rounded-full" alt="" />
+                                    ) : (
+                                        <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center">
+                                            <Coins className="h-3 w-3" />
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="flex flex-col gap-1 p-2 rounded-lg border bg-card">
+                                    <span className="text-[9px] font-mono text-muted-foreground uppercase">symbol</span>
+                                    <span className="text-xs font-medium truncate">{sampleToken.symbol}</span>
+                                </div>
+                                <div className="flex flex-col gap-1 p-2 rounded-lg border bg-card">
+                                    <span className="text-[9px] font-mono text-muted-foreground uppercase">name</span>
+                                    <span className="text-xs text-muted-foreground truncate">{sampleToken.name}</span>
+                                </div>
+                                <div className="flex flex-col gap-1 p-2 rounded-lg border bg-card">
+                                    <span className="text-[9px] font-mono text-muted-foreground uppercase">
+                                        formatted
+                                    </span>
+                                    <span className="text-xs font-mono">{sampleToken.formatted}</span>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -347,6 +388,7 @@ function UseTokensExample() {
 
 function UseTransactionsExample() {
     const { transactions, isLoading, hasMore, loadMore } = useTransactions({ limit: 3 });
+    const sampleTx = transactions[0];
 
     return (
         <div className="flex flex-col lg:flex-row gap-6 w-full items-stretch">
@@ -355,11 +397,67 @@ function UseTransactionsExample() {
                 <span className="absolute -top-2.5 left-3 bg-sand-100 px-2 text-xs font-mono font-medium text-sand-700">
                     useTransactions()
                 </span>
-                <div className="space-y-0.5 pt-1">
-                    <HookReturnValue name="transactions" value={`[${transactions.length} items]`} />
-                    <HookReturnValue name="isLoading" value={String(isLoading)} />
-                    <HookReturnValue name="hasMore" value={String(hasMore)} />
-                    <HookReturnValue name="loadMore" value="fn()" />
+                <div className="space-y-3 pt-1">
+                    {/* Top-level returns */}
+                    <div className="space-y-0.5">
+                        <HookReturnValue name="transactions" value={`[${transactions.length} items]`} />
+                        <HookReturnValue name="isLoading" value={String(isLoading)} />
+                        <HookReturnValue name="hasMore" value={String(hasMore)} />
+                        <HookReturnValue name="loadMore" value="fn()" />
+                    </div>
+
+                    {/* Sample transaction item breakdown */}
+                    {sampleTx && (
+                        <div className="border border-sand-300 rounded-xl p-2 bg-sand-50">
+                            <span className="text-[10px] font-mono text-sand-700 mb-2 block">
+                                transactions[0] properties:
+                            </span>
+                            <div className="grid grid-cols-2 gap-1.5">
+                                <div className="flex flex-col gap-1 p-2 rounded-lg border bg-card">
+                                    <span className="text-[9px] font-mono text-muted-foreground uppercase">type</span>
+                                    <span className="text-xs font-medium">{sampleTx.type}</span>
+                                </div>
+                                <div className="flex flex-col gap-1 p-2 rounded-lg border bg-card">
+                                    <span className="text-[9px] font-mono text-muted-foreground uppercase">
+                                        direction
+                                    </span>
+                                    <span
+                                        className={`text-xs font-medium ${sampleTx.direction === 'in' ? 'text-green-600' : 'text-orange-600'}`}
+                                    >
+                                        {sampleTx.direction}
+                                    </span>
+                                </div>
+                                <div className="flex flex-col gap-1 p-2 rounded-lg border bg-card">
+                                    <span className="text-[9px] font-mono text-muted-foreground uppercase">
+                                        formattedAmount
+                                    </span>
+                                    <span className="text-xs font-mono">{sampleTx.formattedAmount || '—'}</span>
+                                </div>
+                                <div className="flex flex-col gap-1 p-2 rounded-lg border bg-card">
+                                    <span className="text-[9px] font-mono text-muted-foreground uppercase">
+                                        formattedTime
+                                    </span>
+                                    <span className="text-xs text-muted-foreground truncate">
+                                        {sampleTx.formattedTime}
+                                    </span>
+                                </div>
+                                <div className="flex flex-col gap-1 p-2 rounded-lg border bg-card col-span-2">
+                                    <span className="text-[9px] font-mono text-muted-foreground uppercase">
+                                        explorerUrl
+                                    </span>
+                                    <a
+                                        href={sampleTx.explorerUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-xs text-blue-600 hover:underline truncate flex items-center gap-1"
+                                    >
+                                        <ExternalLink className="h-3 w-3 flex-shrink-0" />
+                                        <span className="truncate">View on explorer</span>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
 
