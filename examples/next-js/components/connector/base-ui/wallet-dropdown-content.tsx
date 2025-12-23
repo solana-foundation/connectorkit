@@ -77,10 +77,15 @@ export function WalletDropdownContent({ selectedAccount, walletIcon, walletName 
 
     const shortAddress = `${selectedAccount.slice(0, 4)}...${selectedAccount.slice(-4)}`;
 
-    function handleCopy() {
-        navigator.clipboard.writeText(selectedAccount);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
+    async function handleCopy() {
+        try {
+            await navigator.clipboard.writeText(selectedAccount);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        } catch (error) {
+            setCopied(false);
+            console.error('Failed to copy to clipboard:', error);
+        }
     }
 
     // Wallet View

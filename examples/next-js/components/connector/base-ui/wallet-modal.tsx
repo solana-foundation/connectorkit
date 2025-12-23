@@ -60,12 +60,33 @@ function Separator({ className }: { className?: string }) {
     return <div className={`shrink-0 bg-border h-[1px] w-full ${className || ''}`} />;
 }
 
+// Error Alert component
+function ErrorAlert({ message, onDismiss }: { message: string; onDismiss: () => void }) {
+    return (
+        <div className="flex items-start gap-3 rounded-[12px] border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+            <div className="flex-1">
+                <p className="font-medium">Connection failed</p>
+                <p className="text-xs opacity-90 mt-0.5">{message}</p>
+            </div>
+            <button 
+                onClick={onDismiss}
+                className="shrink-0 rounded-md p-1 hover:bg-destructive/20 transition-colors"
+                aria-label="Dismiss error"
+            >
+                <X className="h-3 w-3" />
+            </button>
+        </div>
+    );
+}
+
 export function WalletModal({ open, onOpenChange }: WalletModalProps) {
     const { wallets, select, connecting } = useConnector();
     const [connectingWallet, setConnectingWallet] = useState<string | null>(null);
     const [isClient, setIsClient] = useState(false);
     const [recentlyConnected, setRecentlyConnected] = useState<string | null>(null);
     const [isOtherWalletsOpen, setIsOtherWalletsOpen] = useState(false);
+    const [errorWallet, setErrorWallet] = useState<string | null>(null);
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
     useEffect(() => {
         setIsClient(true);
@@ -78,7 +99,14 @@ export function WalletModal({ open, onOpenChange }: WalletModalProps) {
         }
     }, []);
 
+    // Clear error state when modal closes or user tries another wallet
+    const clearError = () => {
+        setErrorWallet(null);
+        setErrorMessage(null);
+    };
+
     const handleSelectWallet = async (walletName: string) => {
+        clearError();
         setConnectingWallet(walletName);
         try {
             await select(walletName);
@@ -86,7 +114,22 @@ export function WalletModal({ open, onOpenChange }: WalletModalProps) {
             setRecentlyConnected(walletName);
             onOpenChange(false);
         } catch (error) {
-            console.error('Failed to connect wallet:', error);
+            // Extract user-friendly error message
+            const message = error instanceof Error 
+                ? error.message 
+                : 'An unexpected error occurred';
+            
+            // Set error state for UI feedback
+            setErrorWallet(walletName);
+            setErrorMessage(message);
+            
+            // Log for telemetry/debugging (includes full error details)
+            console.error('Failed to connect wallet:', {
+                wallet: walletName,
+                error,
+                message,
+                timestamp: new Date().toISOString(),
+            });
         } finally {
             setConnectingWallet(null);
         }
@@ -106,17 +149,34 @@ export function WalletModal({ open, onOpenChange }: WalletModalProps) {
     const primaryWallets = sortedInstalledWallets.slice(0, 3);
     const otherWallets = sortedInstalledWallets.slice(3);
 
-    const getInstallUrl = (walletName: string) => {
+    const getInstallUrl = (walletName: string, walletUrl?: string): string | undefined => {
+        // Prefer wallet metadata URL if available
+        if (walletUrl) return walletUrl;
+        
+        // Known wallet install URLs
         const name = walletName.toLowerCase();
         if (name.includes('phantom')) return 'https://phantom.app';
         if (name.includes('solflare')) return 'https://solflare.com';
         if (name.includes('backpack')) return 'https://backpack.app';
         if (name.includes('glow')) return 'https://glow.app';
-        return 'https://phantom.app';
+        if (name.includes('coinbase')) return 'https://www.coinbase.com/wallet';
+        if (name.includes('ledger')) return 'https://www.ledger.com';
+        if (name.includes('trust')) return 'https://trustwallet.com';
+        if (name.includes('exodus')) return 'https://www.exodus.com';
+        
+        // Return undefined for unknown wallets to avoid misleading users
+        return undefined;
+    };
+
+    const handleOpenChange = (isOpen: boolean) => {
+        if (!isOpen) {
+            clearError();
+        }
+        onOpenChange(isOpen);
     };
 
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
+        <Dialog open={open} onOpenChange={handleOpenChange}>
             <DialogContent
                 showCloseButton={false}
                 className="max-w-md rounded-[24px] p-6"
@@ -132,6 +192,11 @@ export function WalletModal({ open, onOpenChange }: WalletModalProps) {
                 </div>
 
                 <div className="space-y-4">
+                    {/* Error Alert */}
+                    {errorMessage && (
+                        <ErrorAlert message={errorMessage} onDismiss={clearError} />
+                    )}
+
                     {!isClient ? (
                         <div className="text-center py-8">
                             <Spinner className="h-6 w-6 mx-auto mb-2" />
@@ -145,11 +210,16 @@ export function WalletModal({ open, onOpenChange }: WalletModalProps) {
                                         {primaryWallets.map(walletInfo => {
                                             const isConnecting = connectingWallet === walletInfo.wallet.name;
                                             const isRecent = recentlyConnected === walletInfo.wallet.name;
+                                            const hasError = errorWallet === walletInfo.wallet.name;
                                             return (
                                                 <Button
                                                     key={walletInfo.wallet.name}
                                                     variant="outline"
-                                                    className="h-auto justify-between p-4 rounded-[16px] w-full"
+                                                    className={`h-auto justify-between p-4 rounded-[16px] w-full ${
+                                                        hasError 
+                                                            ? 'border-destructive/50 bg-destructive/5 hover:bg-destructive/10' 
+                                                            : ''
+                                                    }`}
                                                     onClick={() => handleSelectWallet(walletInfo.wallet.name)}
                                                     disabled={connecting || isConnecting}
                                                 >
@@ -168,6 +238,11 @@ export function WalletModal({ open, onOpenChange }: WalletModalProps) {
                                                             {isConnecting && (
                                                                 <div className="text-xs text-muted-foreground">
                                                                     Connecting...
+                                                                </div>
+                                                            )}
+                                                            {hasError && !isConnecting && (
+                                                                <div className="text-xs text-destructive">
+                                                                    Click to retry
                                                                 </div>
                                                             )}
                                                         </div>
@@ -201,11 +276,16 @@ export function WalletModal({ open, onOpenChange }: WalletModalProps) {
                                                 {otherWallets.map(walletInfo => {
                                                     const isConnecting = connectingWallet === walletInfo.wallet.name;
                                                     const isRecent = recentlyConnected === walletInfo.wallet.name;
+                                                    const hasError = errorWallet === walletInfo.wallet.name;
                                                     return (
                                                         <Button
                                                             key={walletInfo.wallet.name}
                                                             variant="outline"
-                                                            className="h-auto justify-between p-4 rounded-[16px] w-full"
+                                                            className={`h-auto justify-between p-4 rounded-[16px] w-full ${
+                                                                hasError 
+                                                                    ? 'border-destructive/50 bg-destructive/5 hover:bg-destructive/10' 
+                                                                    : ''
+                                                            }`}
                                                             onClick={() => handleSelectWallet(walletInfo.wallet.name)}
                                                             disabled={connecting || isConnecting}
                                                         >
@@ -224,6 +304,11 @@ export function WalletModal({ open, onOpenChange }: WalletModalProps) {
                                                                     {isConnecting && (
                                                                         <div className="text-xs text-muted-foreground">
                                                                             Connecting...
+                                                                        </div>
+                                                                    )}
+                                                                    {hasError && !isConnecting && (
+                                                                        <div className="text-xs text-destructive">
+                                                                            Click to retry
                                                                         </div>
                                                                     )}
                                                                 </div>
@@ -254,34 +339,46 @@ export function WalletModal({ open, onOpenChange }: WalletModalProps) {
                                             {installedWallets.length > 0 ? 'Other Wallets' : 'Popular Wallets'}
                                         </h3>
                                         <div className="grid gap-2">
-                                            {notInstalledWallets.slice(0, 3).map(walletInfo => (
-                                                <Button
-                                                    key={walletInfo.wallet.name}
-                                                    variant="outline"
-                                                    className="h-auto justify-between p-4 rounded-[16px] w-full cursor-pointer"
-                                                    onClick={() =>
-                                                        window.open(getInstallUrl(walletInfo.wallet.name), '_blank')
-                                                    }
-                                                >
-                                                    <div className="flex items-center gap-3">
-                                                        <Avatar
-                                                            src={walletInfo.wallet.icon}
-                                                            alt={walletInfo.wallet.name}
-                                                            fallback={<Wallet className="h-4 w-4" />}
-                                                            className="h-8 w-8"
-                                                        />
-                                                        <div className="text-left">
-                                                            <div className="font-medium text-sm">
-                                                                {walletInfo.wallet.name}
-                                                            </div>
-                                                            <div className="text-xs text-muted-foreground">
-                                                                Not installed
+                                            {notInstalledWallets.slice(0, 3).map(walletInfo => {
+                                                const installUrl = getInstallUrl(
+                                                    walletInfo.wallet.name,
+                                                    (walletInfo.wallet as { url?: string }).url
+                                                );
+                                                
+                                                return (
+                                                    <div
+                                                        key={walletInfo.wallet.name}
+                                                        className="flex items-center justify-between p-4 rounded-[16px] w-full border bg-background shadow-xs"
+                                                    >
+                                                        <div className="flex items-center gap-3">
+                                                            <Avatar
+                                                                src={walletInfo.wallet.icon}
+                                                                alt={walletInfo.wallet.name}
+                                                                fallback={<Wallet className="h-4 w-4" />}
+                                                                className="h-8 w-8"
+                                                            />
+                                                            <div className="text-left">
+                                                                <div className="font-medium text-sm">
+                                                                    {walletInfo.wallet.name}
+                                                                </div>
+                                                                <div className="text-xs text-muted-foreground">
+                                                                    Not installed
+                                                                </div>
                                                             </div>
                                                         </div>
+                                                        {installUrl && (
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                className="h-8 px-2 cursor-pointer"
+                                                                onClick={() => window.open(installUrl, '_blank')}
+                                                            >
+                                                                <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                                                            </Button>
+                                                        )}
                                                     </div>
-                                                    <ExternalLink className="h-4 w-4 text-muted-foreground" />
-                                                </Button>
-                                            ))}
+                                                );
+                                            })}
                                         </div>
                                     </div>
                                 </>

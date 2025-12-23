@@ -49,10 +49,19 @@ export function WalletDropdownContent({ selectedAccount, walletIcon, walletName 
 
     const shortAddress = `${selectedAccount.slice(0, 4)}...${selectedAccount.slice(-4)}`;
 
-    function handleCopy() {
-        navigator.clipboard.writeText(selectedAccount);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
+    async function handleCopy() {
+        if (!navigator.clipboard) {
+            console.error('Clipboard API not available');
+            return;
+        }
+
+        try {
+            await navigator.clipboard.writeText(selectedAccount);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        } catch (error) {
+            console.error('Failed to copy address to clipboard:', error);
+        }
     }
 
     // Wallet View

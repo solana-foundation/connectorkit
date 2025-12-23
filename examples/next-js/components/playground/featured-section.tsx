@@ -834,11 +834,6 @@ function WalletModalContentBaseUI() {
         </button>
     );
 
-    // Dynamic import for Collapsible to avoid SSR issues
-    const CollapsibleRoot = ({ children, open, onOpenChange, className }: { children: React.ReactNode; open: boolean; onOpenChange: (open: boolean) => void; className?: string }) => (
-        <div className={className}>{children}</div>
-    );
-
     return (
         <div className="w-full max-w-md mx-auto p-6 rounded-[24px] border bg-card shadow-lg">
             <div className="flex items-center justify-between mb-4">

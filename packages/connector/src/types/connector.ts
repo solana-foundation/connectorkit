@@ -10,6 +10,53 @@ import type { Wallet } from './wallets';
 import type { Address } from '@solana/addresses';
 
 /**
+ * CoinGecko API configuration for price fetching.
+ *
+ * Rate Limits (as of 2024):
+ * - Free tier (no API key): 10-30 requests/minute (varies by endpoint)
+ * - Demo tier (free API key): 30 requests/minute
+ * - Paid tiers: Higher limits based on plan
+ *
+ * @see https://docs.coingecko.com/reference/introduction
+ */
+export interface CoinGeckoConfig {
+    /**
+     * CoinGecko API key for higher rate limits.
+     * Get a free Demo API key at https://www.coingecko.com/en/api/pricing
+     * - Without key: ~10-30 requests/minute (public rate limit)
+     * - With Demo key: 30 requests/minute
+     */
+    apiKey?: string;
+
+    /**
+     * Whether the API key is for the Pro API (api.coingecko.com with x-cg-pro-api-key header)
+     * or the Demo API (api.coingecko.com with x-cg-demo-api-key header).
+     * @default false (uses Demo API header)
+     */
+    isPro?: boolean;
+
+    /**
+     * Maximum number of retry attempts when rate limited (429 response).
+     * @default 3
+     */
+    maxRetries?: number;
+
+    /**
+     * Base delay in milliseconds for exponential backoff.
+     * Actual delay = baseDelay * 2^attempt + random jitter
+     * @default 1000 (1 second)
+     */
+    baseDelay?: number;
+
+    /**
+     * Maximum total timeout in milliseconds for all retry attempts combined.
+     * Prevents blocking the caller for too long.
+     * @default 30000 (30 seconds)
+     */
+    maxTimeout?: number;
+}
+
+/**
  * Core connector state
  */
 export interface ConnectorState {
@@ -56,6 +103,12 @@ export interface ConnectorConfig {
      * @example '/cdn-cgi/image/width=64,quality=75/' // Cloudflare Image Resizing
      */
     imageProxy?: string;
+
+    /**
+     * CoinGecko API configuration for token price fetching.
+     * Configure API key for higher rate limits and retry behavior for 429 responses.
+     */
+    coingecko?: CoinGeckoConfig;
 }
 
 /**

@@ -1,4 +1,4 @@
-import type { ConnectorConfig } from '../types/connector';
+import type { ConnectorConfig, CoinGeckoConfig } from '../types/connector';
 import type { SolanaCluster, SolanaClusterId } from '@wallet-ui/core';
 import { createSolanaMainnet, createSolanaDevnet, createSolanaTestnet, createSolanaLocalnet } from '@wallet-ui/core';
 import {
@@ -53,6 +53,12 @@ export interface DefaultConfigOptions {
      * @example '/cdn-cgi/image/width=64,quality=75/' // Cloudflare Image Resizing
      */
     imageProxy?: string;
+    /**
+     * CoinGecko API configuration for token price fetching.
+     * Configure API key for higher rate limits and retry behavior for 429 responses.
+     * @see https://docs.coingecko.com/reference/introduction for rate limit details
+     */
+    coingecko?: CoinGeckoConfig;
 }
 
 /** Extended ConnectorConfig with app metadata */
@@ -82,6 +88,10 @@ export interface ExtendedConnectorConfig extends ConnectorConfig {
      * This prevents direct image fetching which can leak user IPs to untrusted hosts.
      */
     imageProxy?: string;
+    /**
+     * CoinGecko API configuration for token price fetching.
+     */
+    coingecko?: CoinGeckoConfig;
 }
 
 /**
@@ -104,6 +114,7 @@ export function getDefaultConfig(options: DefaultConfigOptions): ExtendedConnect
         maxRetries = DEFAULT_MAX_RETRIES,
         onError,
         imageProxy,
+        coingecko,
     } = options;
 
     const defaultClusters: SolanaCluster[] = clusters ?? [
@@ -201,6 +212,7 @@ export function getDefaultConfig(options: DefaultConfigOptions): ExtendedConnect
             onError,
         },
         imageProxy,
+        coingecko,
     };
 
     return config;

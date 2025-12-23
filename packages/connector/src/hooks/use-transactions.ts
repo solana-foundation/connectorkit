@@ -582,7 +582,11 @@ export function useTransactions(options: UseTransactionsOptions = {}): UseTransa
                 blockTime,
                 slot,
                 status: err ? 'failed' : 'success',
-                error: err ? JSON.stringify(err) : undefined,
+                error: err
+                    ? JSON.stringify(err, (_key, value) =>
+                          typeof value === 'bigint' ? value.toString() : value,
+                      )
+                    : undefined,
                 type: 'unknown',
                 formattedDate: date,
                 formattedTime: time,
