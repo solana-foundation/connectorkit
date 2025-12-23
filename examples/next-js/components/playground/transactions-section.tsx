@@ -244,13 +244,13 @@ export function TransactionsSection() {
                 }}
             >
                 <div className="inline-flex items-center gap-2 mb-3">
-                    <span className="px-2 py-0.5 bg-orange-100 text-orange-700 text-xs font-inter-medium rounded">
-                        Interactive
+                    <span className="px-2 py-0.5 bg-rose-200 text-rose-900 text-xs font-inter-medium rounded">
+                        Transaction
                     </span>
                 </div>
-                <h2 className="text-h3 font-diatype-medium text-sand-1500 mb-2">Transaction Examples</h2>
+                <h2 className="text-h3 font-diatype-medium text-sand-1500 mb-2">Interactive Real Examples</h2>
                 <p className="text-body-lg font-inter text-sand-700 max-w-2xl">
-                    Test real transactions on devnet or mainnet. Compare legacy web3.js patterns with modern Kit-based
+                    Test real-world transactions on devnet or mainnet. Compare legacy web3.js patterns with modern Kit-based
                     approaches using ConnectorKit&apos;s unified signer interface.
                 </p>
             </div>

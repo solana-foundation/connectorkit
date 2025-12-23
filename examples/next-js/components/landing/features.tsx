@@ -43,7 +43,7 @@ const features = [
         icon: Code2,
         title: 'Transaction Signer',
         description:
-            'Unified API for signing, sending, and batching transactions. Clean error handling with typed exceptions.',
+            'Dual API support for modern @solana/kit and legacy @solana/web3.js. Unified signing, sending, and batching.',
     },
     {
         icon: Network,
@@ -73,9 +73,9 @@ const features = [
     },
     {
         icon: Lock,
-        title: 'Robust Error Handling',
+        title: 'Production Diagnostics',
         description:
-            'Production-ready error handling with React error boundaries. Graceful fallbacks for wallet errors.',
+            'Health checks, debug metrics, and React error boundaries. Built-in image proxy to protect user privacy.',
     },
     {
         icon: Zap,

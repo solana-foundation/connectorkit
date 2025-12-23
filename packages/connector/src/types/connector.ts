@@ -47,6 +47,15 @@ export interface ConnectorConfig {
         persistSelection?: boolean;
         initialCluster?: SolanaClusterId;
     };
+
+    /**
+     * Image proxy URL prefix for token images.
+     * When set, token image URLs will be transformed to: `${imageProxy}${encodeURIComponent(originalUrl)}`
+     * This prevents direct image fetching which can leak user IPs to untrusted hosts.
+     * @example '/_next/image?w=64&q=75&url=' // Next.js Image Optimization
+     * @example '/cdn-cgi/image/width=64,quality=75/' // Cloudflare Image Resizing
+     */
+    imageProxy?: string;
 }
 
 /**

@@ -251,6 +251,13 @@ export class ConnectorClient {
         };
     }
 
+    /**
+     * Get the current connector configuration
+     */
+    getConfig(): ConnectorConfig {
+        return this.config;
+    }
+
     resetDebugMetrics(): void {
         this.debugMetrics.resetMetrics();
     }

@@ -7,6 +7,7 @@ import type { SolanaCluster } from '@wallet-ui/core';
 import { useAccount } from './use-account';
 import { useCluster } from './use-cluster';
 import { useSolanaClient } from './use-kit-solana-client';
+import { useConnectorClient } from '../ui/connector-provider';
 import { getTransactionUrl } from '../utils/cluster';
 import { LAMPORTS_PER_SOL } from '../lib/kit-utils';
 
@@ -466,6 +467,15 @@ function formatAmount(
 const tokenMetadataCache = new Map<string, { symbol: string; icon: string }>();
 
 /**
+ * Transform an image URL through a proxy if configured
+ */
+function transformImageUrl(url: string | undefined, imageProxy: string | undefined): string | undefined {
+    if (!url) return undefined;
+    if (!imageProxy) return url;
+    return `${imageProxy}${encodeURIComponent(url)}`;
+}
+
+/**
  * Fetch token metadata from Solana Token List API for transaction display
  */
 async function fetchTokenMetadata(mints: string[]): Promise<Map<string, { symbol: string; icon: string }>> {
@@ -538,6 +548,7 @@ export function useTransactions(options: UseTransactionsOptions = {}): UseTransa
     const { address, connected } = useAccount();
     const { cluster } = useCluster();
     const client = useSolanaClient();
+    const connectorClient = useConnectorClient();
 
     const [transactions, setTransactions] = useState<TransactionInfo[]>([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -551,6 +562,8 @@ export function useTransactions(options: UseTransactionsOptions = {}): UseTransa
 
     // Extract the actual client to use as a stable dependency
     const rpcClient = client?.client ?? null;
+    // Get imageProxy from connector config
+    const imageProxy = connectorClient?.getConfig().imageProxy;
 
     const parseTransaction = useCallback(
         (
@@ -777,7 +790,7 @@ export function useTransactions(options: UseTransactionsOptions = {}): UseTransa
                                 return {
                                     ...tx,
                                     tokenSymbol: meta.symbol,
-                                    tokenIcon: meta.icon,
+                                    tokenIcon: transformImageUrl(meta.icon, imageProxy),
                                     // Update formatted amount with symbol
                                     formattedAmount: tx.formattedAmount
                                         ? `${tx.formattedAmount} ${meta.symbol}`
@@ -816,7 +829,7 @@ export function useTransactions(options: UseTransactionsOptions = {}): UseTransa
                 setIsLoading(false);
             }
         },
-        [connected, address, rpcClient, cluster, limit, fetchDetails, parseTransaction],
+        [connected, address, rpcClient, cluster, limit, fetchDetails, parseTransaction, imageProxy],
     );
 
     const refetch = useCallback(async () => {

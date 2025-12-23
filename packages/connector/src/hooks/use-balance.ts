@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { address as toAddress } from '@solana/addresses';
 import { useAccount } from './use-account';
 import { useCluster } from './use-cluster';
@@ -95,6 +95,9 @@ export function useBalance(): UseBalanceReturn {
     const [error, setError] = useState<Error | null>(null);
     const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
+    // Track if we have successfully fetched data (for error handling)
+    const hasDataRef = useRef(false);
+
     // Extract the actual client to use as a stable dependency
     const rpcClient = client?.client ?? null;
 
@@ -102,6 +105,7 @@ export function useBalance(): UseBalanceReturn {
         if (!connected || !address || !rpcClient) {
             setLamports(0n);
             setTokens([]);
+            hasDataRef.current = false;
             return;
         }
 
@@ -155,10 +159,16 @@ export function useBalance(): UseBalanceReturn {
                 setTokens([]);
             }
 
+            hasDataRef.current = true;
             setLastUpdated(new Date());
         } catch (err) {
-            setError(err as Error);
-            console.error('Failed to fetch balance:', err);
+            // Only set error state if we don't already have balance data
+            // This prevents noisy errors on auto-refresh failures
+            if (!hasDataRef.current) {
+                setError(err as Error);
+                console.error('Failed to fetch balance:', err);
+            }
+            // Silently ignore refresh failures when we already have data
         } finally {
             setIsLoading(false);
         }

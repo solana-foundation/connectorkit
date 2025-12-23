@@ -1028,7 +1028,7 @@ function ComponentSection({
                     <Tabs defaultValue="preview" className="w-full">
                         <div className="flex items-center justify-between mb-4">
                             {/* Framework Toggle */}
-                            <div className="inline-flex items-center rounded-lg border bg-muted p-1">
+                            <div className="inline-flex items-center rounded-lg border bg-sand-100 p-1">
                                 <button
                                     onClick={() => setFramework('radix')}
                                     className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
@@ -1149,14 +1149,13 @@ export function FeaturedSection() {
                 }}
             >
                 <div className="inline-flex items-center gap-2 mb-3">
-                    <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-inter-medium rounded">
-                        Full Components
+                    <span className="px-2 py-0.5 bg-indigo-200 text-indigo-900 text-xs font-inter-medium rounded">
+                        Pre-built
                     </span>
                 </div>
-                <h2 className="text-h3 font-diatype-medium text-sand-1500 mb-2">Complete Block Examples</h2>
-                <p className="text-body-lg font-inter text-sand-700 max-w-lg">
-                    Complete block examples built with ConnectorKit blocks. Toggle between Radix UI and Base UI
-                    implementations. Copy any example and customize it for your app.
+                <h2 className="text-h3 font-diatype-medium text-sand-1500 mb-2">Complete Component Examples</h2>
+                <p className="text-body-lg font-inter text-sand-900 max-w-md">
+                    Complete components built with ConnectorKit's Elements based on Radix UI and Base UI.
                 </p>
 
                 {/* Supported UI Frameworks */}

@@ -22,7 +22,7 @@ import { isDebugEnabled, debug as connectorDebug } from '../kit-utils';
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
 export interface SecureLoggerConfig {
-    /** Enable logging (defaults to true in development, false in production) */
+    /** Enable logging (defaults to false - use __CONNECTOR_DEBUG__ flag to enable) */
     enabled?: boolean;
     /** Minimum log level to output */
     level?: LogLevel;
@@ -97,7 +97,8 @@ export class SecureLogger {
         const isDevelopment = typeof process !== 'undefined' && process.env?.NODE_ENV === 'development';
 
         this.config = {
-            enabled: config.enabled ?? isDevelopment,
+            // Default to disabled - logging is opt-in via __CONNECTOR_DEBUG__ or explicit config
+            enabled: config.enabled ?? false,
             level: config.level ?? 'debug',
             redactSensitive: config.redactSensitive ?? !isDevelopment,
             prefix: config.prefix ?? 'Connector',

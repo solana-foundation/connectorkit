@@ -51,9 +51,8 @@ export function installPolyfills(): void {
         install();
         installed = true;
 
-        if (process.env.NODE_ENV === 'development' && logger) {
-            logger.info('Browser compatibility polyfills installed');
-        }
+        // Only log if debug mode is explicitly enabled via __CONNECTOR_DEBUG__
+        logger.info('Browser compatibility polyfills installed');
     } catch (error) {
         // Polyfill installation failed, but don't crash
         // Most modern browsers won't need the polyfill anyway

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { address as toAddress } from '@solana/addresses';
 import { useAccount } from './use-account';
 import { useSolanaClient } from './use-kit-solana-client';
+import { useConnectorClient } from '../ui/connector-provider';
 
 export interface Token {
     /** Token mint address */
@@ -288,6 +289,15 @@ function formatUsd(amount: bigint, decimals: number, usdPrice: number): string {
 }
 
 /**
+ * Transform an image URL through a proxy if configured
+ */
+function transformImageUrl(url: string | undefined, imageProxy: string | undefined): string | undefined {
+    if (!url) return undefined;
+    if (!imageProxy) return url;
+    return `${imageProxy}${encodeURIComponent(url)}`;
+}
+
+/**
  * Hook for fetching wallet token holdings.
  * Fetches metadata (name, symbol, icon) from Solana Token List API and USD prices from CoinGecko.
  *
@@ -323,6 +333,7 @@ export function useTokens(options: UseTokensOptions = {}): UseTokensReturn {
 
     const { address, connected } = useAccount();
     const client = useSolanaClient();
+    const connectorClient = useConnectorClient();
 
     const [tokens, setTokens] = useState<Token[]>([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -332,6 +343,8 @@ export function useTokens(options: UseTokensOptions = {}): UseTokensReturn {
 
     // Extract the actual client to use as a stable dependency
     const rpcClient = client?.client ?? null;
+    // Get imageProxy from connector config
+    const imageProxy = connectorClient?.getConfig().imageProxy;
 
     const fetchTokens = useCallback(async () => {
         if (!connected || !address || !rpcClient) {
@@ -420,7 +433,7 @@ export function useTokens(options: UseTokensOptions = {}): UseTokensReturn {
                             ...tokenList[i],
                             name: meta.name,
                             symbol: meta.symbol,
-                            logo: meta.logoURI,
+                            logo: transformImageUrl(meta.logoURI, imageProxy),
                             usdPrice: meta.usdPrice,
                             formattedUsd: meta.usdPrice
                                 ? formatUsd(tokenList[i].amount, tokenList[i].decimals, meta.usdPrice)
@@ -449,7 +462,7 @@ export function useTokens(options: UseTokensOptions = {}): UseTokensReturn {
         } finally {
             setIsLoading(false);
         }
-    }, [connected, address, rpcClient, includeZeroBalance, fetchMetadata, includeNativeSol]);
+    }, [connected, address, rpcClient, includeZeroBalance, fetchMetadata, includeNativeSol, imageProxy]);
 
     // Fetch on mount and when dependencies change
     useEffect(() => {

@@ -709,14 +709,14 @@ export function HooksExamplesSection() {
                 }}
             >
                 <div className="inline-flex items-center gap-2 mb-3">
-                    <span className="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs font-inter-medium rounded">
-                        Headless Hooks
+                    <span className="px-2 py-0.5 bg-emerald-200 text-emerald-900 text-xs font-inter-medium rounded">
+                        Granular Composability
                     </span>
                 </div>
-                <h2 className="text-h3 font-diatype-medium text-sand-1500 mb-2">React Hooks</h2>
-                <p className="text-body-lg font-inter text-sand-700 max-w-2xl">
-                    Use hooks directly for complete control. Same data and state management as blocks, but you handle
-                    all the rendering. Perfect for custom implementations.
+                <h2 className="text-h3 font-diatype-medium text-sand-1500 mb-2">React Hooks Usage Examples</h2>
+                <p className="text-body-lg font-inter text-sand-700 max-w-xl">
+                    Use hooks directly for complete control. Same data and state management as elements, but you handle
+                    all the rendering and styling.
                 </p>
             </div>
 

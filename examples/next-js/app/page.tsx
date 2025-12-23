@@ -1,6 +1,5 @@
 'use client';
 
-import { ArrowRight } from 'lucide-react';
 import { CopyButton } from '@/components/ui/copy-button';
 import { Features } from '@/components/landing';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -66,7 +65,6 @@ export default function Home() {
                                 className="gap-2"
                             >
                                 View Playground
-                                <ArrowRight className="h-4 w-4" />
                             </Button>
                         </div>
                     </div>
@@ -102,7 +100,7 @@ export default function Home() {
             <Tabs defaultValue="components" className="w-full">
                 <div className="sticky top-16 z-40 bg-bg1/95 backdrop-blur-sm border-b border-sand-200">
                     <div className="max-w-7xl mx-auto flex items-center justify-between px-4 lg:px-6">
-                        <TabsList className="h-14 justify-start gap-0 bg-transparent p-0 rounded-none">
+                        <TabsList className="h-14 justify-start gap-0 bg-transparent border-transparent p-0 rounded-none">
                             <TabsTrigger
                                 value="components"
                                 className="h-14 px-4 rounded-none border-b-2 border-transparent data-[state=active]:border-sand-1500 data-[state=active]:bg-transparent data-[state=active]:shadow-none gap-2"

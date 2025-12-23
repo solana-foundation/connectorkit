@@ -45,6 +45,14 @@ export interface DefaultConfigOptions {
     maxRetries?: number;
     /** Custom error handler */
     onError?: (error: Error, errorInfo: React.ErrorInfo) => void;
+    /**
+     * Image proxy URL prefix for token images.
+     * When set, token image URLs will be transformed to: `${imageProxy}${encodeURIComponent(originalUrl)}`
+     * This prevents direct image fetching which can leak user IPs to untrusted hosts.
+     * @example '/_next/image?w=64&q=75&url=' // Next.js Image Optimization
+     * @example '/cdn-cgi/image/width=64,quality=75/' // Cloudflare Image Resizing
+     */
+    imageProxy?: string;
 }
 
 /** Extended ConnectorConfig with app metadata */
@@ -68,6 +76,12 @@ export interface ExtendedConnectorConfig extends ConnectorConfig {
         /** Custom fallback component */
         fallback?: (error: Error, retry: () => void) => React.ReactNode;
     };
+    /**
+     * Image proxy URL prefix for token images.
+     * When set, token image URLs will be transformed to: `${imageProxy}${encodeURIComponent(originalUrl)}`
+     * This prevents direct image fetching which can leak user IPs to untrusted hosts.
+     */
+    imageProxy?: string;
 }
 
 /**
@@ -89,6 +103,7 @@ export function getDefaultConfig(options: DefaultConfigOptions): ExtendedConnect
         enableErrorBoundary = true,
         maxRetries = DEFAULT_MAX_RETRIES,
         onError,
+        imageProxy,
     } = options;
 
     const defaultClusters: SolanaCluster[] = clusters ?? [
@@ -185,6 +200,7 @@ export function getDefaultConfig(options: DefaultConfigOptions): ExtendedConnect
             maxRetries,
             onError,
         },
+        imageProxy,
     };
 
     return config;

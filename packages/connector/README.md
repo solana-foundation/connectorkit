@@ -608,6 +608,78 @@ const mobile = getDefaultMobileConfig({
 
 ---
 
+## Security Considerations
+
+### Token Image Privacy
+
+When using `useTokens()` or `useTransactions()`, token metadata (including logo URLs) is fetched from external APIs. By default, these image URLs are returned directly, which means when your users' browsers fetch these images, the image host can see:
+
+- User IP addresses
+- Request timing (when users viewed their tokens)
+- User agent and browser information
+
+This could potentially be exploited by malicious token creators who set tracking URLs in their token metadata.
+
+### Image Proxy Configuration
+
+To protect user privacy, you can configure an image proxy that fetches images on behalf of your users:
+
+```typescript
+const config = getDefaultConfig({
+    appName: 'My App',
+    imageProxy: '/_next/image?w=64&q=75&url=', // Next.js Image Optimization
+});
+```
+
+When `imageProxy` is set, all token image URLs returned by `useTokens()` and `useTransactions()` will be automatically transformed:
+
+```
+// Original URL from token metadata
+https://raw.githubusercontent.com/.../token-logo.png
+
+// Transformed URL (when imageProxy is set)
+/_next/image?w=64&q=75&url=https%3A%2F%2Fraw.githubusercontent.com%2F...%2Ftoken-logo.png
+```
+
+### Common Proxy Options
+
+| Service | Configuration |
+|---------|---------------|
+| **Next.js Image** | `imageProxy: '/_next/image?w=64&q=75&url='` |
+| **Cloudflare** | `imageProxy: '/cdn-cgi/image/width=64,quality=75/'` |
+| **imgproxy** | `imageProxy: 'https://imgproxy.example.com/insecure/fill/64/64/'` |
+| **Custom API** | `imageProxy: '/api/image-proxy?url='` |
+
+### Custom Proxy API Route (Next.js Example)
+
+```typescript
+// app/api/image-proxy/route.ts
+import { NextRequest, NextResponse } from 'next/server';
+
+export async function GET(request: NextRequest) {
+    const url = request.nextUrl.searchParams.get('url');
+    if (!url) {
+        return new NextResponse('Missing URL', { status: 400 });
+    }
+
+    try {
+        const response = await fetch(url);
+        const buffer = await response.arrayBuffer();
+        
+        return new NextResponse(buffer, {
+            headers: {
+                'Content-Type': response.headers.get('Content-Type') || 'image/png',
+                'Cache-Control': 'public, max-age=86400',
+            },
+        });
+    } catch {
+        return new NextResponse('Failed to fetch image', { status: 500 });
+    }
+}
+```
+
+---
+
 ## Advanced Usage
 
 ### Headless Client (Vue, Svelte, Vanilla JS)
