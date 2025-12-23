@@ -466,7 +466,7 @@ function formatAmount(
 const tokenMetadataCache = new Map<string, { symbol: string; icon: string }>();
 
 /**
- * Fetch token metadata from Jupiter for transaction display
+ * Fetch token metadata from Solana Token List API for transaction display
  */
 async function fetchTokenMetadata(mints: string[]): Promise<Map<string, { symbol: string; icon: string }>> {
     const results = new Map<string, { symbol: string; icon: string }>();
@@ -486,21 +486,21 @@ async function fetchTokenMetadata(mints: string[]): Promise<Map<string, { symbol
     if (uncachedMints.length === 0) return results;
 
     try {
-        const url = new URL('https://lite-api.jup.ag/tokens/v2/search');
-        url.searchParams.append('query', uncachedMints.join(','));
-
-        const response = await fetch(url.toString(), {
+        const response = await fetch('https://token-list-api.solana.cloud/v1/mints?chainId=101', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ addresses: uncachedMints }),
             signal: AbortSignal.timeout(5000),
         });
 
         if (!response.ok) return results;
 
-        const items: Array<{ id: string; symbol: string; icon: string }> = await response.json();
+        const data: { content: Array<{ address: string; symbol: string; logoURI: string }> } = await response.json();
 
-        for (const item of items) {
-            const metadata = { symbol: item.symbol, icon: item.icon };
-            results.set(item.id, metadata);
-            tokenMetadataCache.set(item.id, metadata);
+        for (const item of data.content) {
+            const metadata = { symbol: item.symbol, icon: item.logoURI };
+            results.set(item.address, metadata);
+            tokenMetadataCache.set(item.address, metadata);
         }
     } catch (error) {
         console.warn('[useTransactions] Failed to fetch token metadata:', error);

@@ -8,6 +8,16 @@ import { Wallet, Copy, Check, RefreshCw, Coins, ExternalLink, LogOut } from 'luc
 import { ExampleCard, type ExampleConfig } from './example-card';
 import { useState } from 'react';
 
+// Helper component for displaying hook return values
+function HookReturnValue({ name, value }: { name: string; value: string }) {
+    return (
+        <div className="flex items-center justify-between py-1">
+            <span className="text-xs font-mono text-sand-600">{name}:</span>
+            <span className="text-xs font-mono text-sand-800 truncate max-w-[120px]">{value}</span>
+        </div>
+    );
+}
+
 // Hook example components
 function UseConnectorExample() {
     const { connected, connecting, selectedWallet, selectedAccount, wallets, select, disconnect } = useConnector();
@@ -21,67 +31,108 @@ function UseConnectorExample() {
         }
     };
 
-    if (connecting) {
-        return (
-            <div className="p-4 rounded-lg border bg-card min-w-[280px]">
-                <div className="flex items-center gap-2">
-                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                    <span className="text-sm">Connecting...</span>
-                </div>
-            </div>
-        );
-    }
+    const shortAddress = selectedAccount ? `${selectedAccount.slice(0, 4)}...${selectedAccount.slice(-4)}` : '—';
 
-    if (connected && selectedAccount && selectedWallet) {
-        const shortAddress = `${selectedAccount.slice(0, 4)}...${selectedAccount.slice(-4)}`;
-        return (
-            <div className="p-4 rounded-lg border bg-card min-w-[280px] space-y-3">
-                <div className="flex items-center gap-3">
-                    <Avatar className="h-10 w-10">
-                        {selectedWallet.icon && <AvatarImage src={selectedWallet.icon} />}
-                        <AvatarFallback>
-                            <Wallet className="h-5 w-5" />
-                        </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1">
-                        <p className="font-medium text-sm">{selectedWallet.name}</p>
-                        <p className="text-xs text-muted-foreground font-mono">{shortAddress}</p>
+    // Combined component render
+    const renderCombined = () => {
+        if (connecting) {
+            return (
+                <div className="p-4 rounded-lg border bg-card">
+                    <div className="flex items-center gap-2">
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                        <span className="text-sm">Connecting...</span>
                     </div>
-                    <button onClick={handleCopy} className="p-2 hover:bg-muted rounded-md">
-                        {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
-                    </button>
                 </div>
-                <Button variant="destructive" size="sm" className="w-full" onClick={() => disconnect()}>
-                    <LogOut className="h-4 w-4 mr-2" />
-                    Disconnect
-                </Button>
-            </div>
-        );
-    }
+            );
+        }
 
-    return (
-        <div className="p-4 rounded-lg border bg-card min-w-[280px] space-y-2">
-            <p className="text-sm text-muted-foreground mb-2">Select a wallet:</p>
-            {wallets
-                .filter(w => w.installed)
-                .slice(0, 3)
-                .map(w => (
-                    <Button
-                        key={w.wallet.name}
-                        variant="outline"
-                        size="sm"
-                        className="w-full justify-start"
-                        onClick={() => select(w.wallet.name)}
-                    >
-                        <Avatar className="h-5 w-5 mr-2">
-                            {w.wallet.icon && <AvatarImage src={w.wallet.icon} />}
+        if (connected && selectedAccount && selectedWallet) {
+            return (
+                <div className="p-4 rounded-lg border bg-card space-y-3">
+                    <div className="flex items-center gap-3">
+                        <Avatar className="h-10 w-10">
+                            {selectedWallet.icon && <AvatarImage src={selectedWallet.icon} />}
                             <AvatarFallback>
-                                <Wallet className="h-3 w-3" />
+                                <Wallet className="h-5 w-5" />
                             </AvatarFallback>
                         </Avatar>
-                        {w.wallet.name}
+                        <div className="flex-1">
+                            <p className="font-medium text-sm">{selectedWallet.name}</p>
+                            <p className="text-xs text-muted-foreground font-mono">{shortAddress}</p>
+                        </div>
+                        <button onClick={handleCopy} className="p-2 hover:bg-muted rounded-md">
+                            {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                        </button>
+                    </div>
+                    <Button variant="destructive" size="sm" className="w-full" onClick={() => disconnect()}>
+                        <LogOut className="h-4 w-4 mr-2" />
+                        Disconnect
                     </Button>
-                ))}
+                </div>
+            );
+        }
+
+        return (
+            <div className="p-4 rounded-lg border bg-card space-y-2">
+                <p className="text-sm text-muted-foreground mb-2">Select a wallet:</p>
+                {wallets
+                    .filter(w => w.installed)
+                    .slice(0, 3)
+                    .map(w => (
+                        <Button
+                            key={w.wallet.name}
+                            variant="outline"
+                            size="sm"
+                            className="w-full justify-start"
+                            onClick={() => select(w.wallet.name)}
+                        >
+                            <Avatar className="h-5 w-5 mr-2">
+                                {w.wallet.icon && <AvatarImage src={w.wallet.icon} />}
+                                <AvatarFallback>
+                                    <Wallet className="h-3 w-3" />
+                                </AvatarFallback>
+                            </Avatar>
+                            {w.wallet.name}
+                        </Button>
+                    ))}
+            </div>
+        );
+    };
+
+    return (
+        <div className="flex flex-col lg:flex-row gap-6 w-full items-stretch">
+            {/* Left: Hook Container with Return Values */}
+            <div className="flex-1 relative bg-sand-100 border border-dashed border-sand-500 rounded-2xl p-3">
+                <span className="absolute -top-2.5 left-3 bg-sand-100 px-2 text-xs font-mono font-medium text-sand-700">
+                    useConnector()
+                </span>
+                <div className="space-y-0.5 pt-1">
+                    <HookReturnValue name="connected" value={String(connected)} />
+                    <HookReturnValue name="connecting" value={String(connecting)} />
+                    <HookReturnValue name="selectedWallet" value={selectedWallet?.name ?? 'null'} />
+                    <HookReturnValue name="selectedAccount" value={shortAddress} />
+                    <HookReturnValue name="wallets" value={`[${wallets.length} items]`} />
+                    <HookReturnValue name="select" value="fn()" />
+                    <HookReturnValue name="disconnect" value="fn()" />
+                </div>
+            </div>
+
+            {/* Divider */}
+            <div className="hidden lg:flex flex-col items-center justify-center gap-1">
+                <div className="flex-1 border-l border-dashed border-sand-300" />
+                <span className="text-[10px] text-muted-foreground -rotate-90 whitespace-nowrap p-2 bg-sand-100">
+                    combined
+                </span>
+                <div className="flex-1 border-l border-dashed border-sand-300" />
+            </div>
+            <div className="lg:hidden flex items-center gap-2">
+                <div className="flex-1 border-t border-dashed border-sand-300" />
+                <span className="text-[10px] text-muted-foreground">combined</span>
+                <div className="flex-1 border-t border-dashed border-sand-300" />
+            </div>
+
+            {/* Right: Combined Component */}
+            <div className="flex-1 flex flex-col justify-center">{renderCombined()}</div>
         </div>
     );
 }
@@ -90,20 +141,51 @@ function UseBalanceExample() {
     const { solBalance, isLoading, refetch } = useBalance();
 
     return (
-        <div className="p-4 rounded-lg border bg-card min-w-[220px]">
-            <div className="flex items-center justify-between mb-1">
-                <span className="text-xs text-muted-foreground">SOL Balance</span>
-                <button onClick={refetch} disabled={isLoading} className="p-1 hover:bg-muted rounded">
-                    <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-                </button>
+        <div className="flex flex-col lg:flex-row gap-6 w-full items-stretch">
+            {/* Left: Hook Container with Return Values */}
+            <div className="flex-1 relative bg-sand-100 border border-dashed border-sand-500 rounded-2xl p-3">
+                <span className="absolute -top-2.5 left-3 bg-sand-100 px-2 text-xs font-mono font-medium text-sand-700">
+                    useBalance()
+                </span>
+                <div className="space-y-0.5 pt-1">
+                    <HookReturnValue name="solBalance" value={solBalance?.toFixed(4) ?? 'null'} />
+                    <HookReturnValue name="isLoading" value={String(isLoading)} />
+                    <HookReturnValue name="refetch" value="fn()" />
+                </div>
             </div>
-            <p className="text-2xl font-bold">
-                {isLoading ? (
-                    <span className="inline-block h-8 w-24 bg-muted animate-pulse rounded" />
-                ) : (
-                    `${solBalance?.toFixed(4) ?? '--'} SOL`
-                )}
-            </p>
+
+            {/* Divider */}
+            <div className="hidden lg:flex flex-col items-center justify-center gap-1">
+                <div className="flex-1 border-l border-dashed border-sand-300" />
+                <span className="text-[10px] text-muted-foreground -rotate-90 whitespace-nowrap p-2 bg-sand-100">
+                    combined
+                </span>
+                <div className="flex-1 border-l border-dashed border-sand-300" />
+            </div>
+            <div className="lg:hidden flex items-center gap-2">
+                <div className="flex-1 border-t border-dashed border-sand-300" />
+                <span className="text-[10px] text-muted-foreground">combined</span>
+                <div className="flex-1 border-t border-dashed border-sand-300" />
+            </div>
+
+            {/* Right: Combined Component */}
+            <div className="flex-1 flex flex-col justify-center">
+                <div className="p-4 rounded-lg border bg-card">
+                    <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs text-muted-foreground">SOL Balance</span>
+                        <button onClick={refetch} disabled={isLoading} className="p-1 hover:bg-muted rounded">
+                            <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+                        </button>
+                    </div>
+                    <p className="text-2xl font-bold">
+                        {isLoading ? (
+                            <span className="inline-block h-8 w-24 bg-muted animate-pulse rounded" />
+                        ) : (
+                            `${solBalance?.toFixed(4) ?? '--'} SOL`
+                        )}
+                    </p>
+                </div>
+            </div>
         </div>
     );
 }
@@ -119,29 +201,64 @@ function UseClusterExample() {
     };
 
     return (
-        <div className="p-4 rounded-lg border bg-card min-w-[250px] space-y-3">
-            <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Current Network</span>
-                <Badge variant={isMainnet ? 'default' : 'secondary'}>
-                    <span
-                        className={`h-2 w-2 rounded-full mr-1.5 ${clusterColors[cluster?.id || ''] || 'bg-purple-500'}`}
-                    />
-                    {cluster?.label}
-                </Badge>
+        <div className="flex flex-col lg:flex-row gap-6 w-full items-stretch">
+            {/* Left: Hook Container with Return Values */}
+            <div className="flex-1 relative bg-sand-100 border border-dashed border-sand-500 rounded-2xl p-3">
+                <span className="absolute -top-2.5 left-3 bg-sand-100 px-2 text-xs font-mono font-medium text-sand-700">
+                    useCluster()
+                </span>
+                <div className="space-y-0.5 pt-1">
+                    <HookReturnValue name="cluster" value={cluster?.label ?? 'null'} />
+                    <HookReturnValue name="clusters" value={`[${clusters.length} items]`} />
+                    <HookReturnValue name="setCluster" value="fn()" />
+                    <HookReturnValue name="isMainnet" value={String(isMainnet)} />
+                    <HookReturnValue name="isDevnet" value={String(isDevnet)} />
+                </div>
             </div>
-            <div className="flex flex-wrap gap-1">
-                {clusters.map(c => (
-                    <Button
-                        key={c.id}
-                        size="sm"
-                        variant={cluster?.id === c.id ? 'default' : 'outline'}
-                        onClick={() => setCluster(c.id)}
-                        className="text-xs"
-                    >
-                        <span className={`h-1.5 w-1.5 rounded-full mr-1.5 ${clusterColors[c.id] || 'bg-purple-500'}`} />
-                        {c.label}
-                    </Button>
-                ))}
+
+            {/* Divider */}
+            <div className="hidden lg:flex flex-col items-center justify-center gap-1">
+                <div className="flex-1 border-l border-dashed border-sand-300" />
+                <span className="text-[10px] text-muted-foreground -rotate-90 whitespace-nowrap p-2 bg-sand-100">
+                    combined
+                </span>
+                <div className="flex-1 border-l border-dashed border-sand-300" />
+            </div>
+            <div className="lg:hidden flex items-center gap-2">
+                <div className="flex-1 border-t border-dashed border-sand-300" />
+                <span className="text-[10px] text-muted-foreground">combined</span>
+                <div className="flex-1 border-t border-dashed border-sand-300" />
+            </div>
+
+            {/* Right: Combined Component */}
+            <div className="flex-1 flex flex-col justify-center">
+                <div className="p-4 rounded-lg border bg-card space-y-3">
+                    <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">Current Network</span>
+                        <Badge variant={isMainnet ? 'default' : 'secondary'}>
+                            <span
+                                className={`h-2 w-2 rounded-full mr-1.5 ${clusterColors[cluster?.id || ''] || 'bg-purple-500'}`}
+                            />
+                            {cluster?.label}
+                        </Badge>
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                        {clusters.map(c => (
+                            <Button
+                                key={c.id}
+                                size="sm"
+                                variant={cluster?.id === c.id ? 'default' : 'outline'}
+                                onClick={() => setCluster(c.id)}
+                                className="text-xs"
+                            >
+                                <span
+                                    className={`h-1.5 w-1.5 rounded-full mr-1.5 ${clusterColors[c.id] || 'bg-purple-500'}`}
+                                />
+                                {c.label}
+                            </Button>
+                        ))}
+                    </div>
+                </div>
             </div>
         </div>
     );
@@ -152,101 +269,166 @@ function UseTokensExample() {
     const displayTokens = tokens.slice(0, 3);
 
     return (
-        <div className="rounded-lg border bg-card min-w-[300px]">
-            <div className="flex items-center justify-between p-3 border-b">
-                <span className="text-sm font-medium">Tokens (useTokens)</span>
-                <button onClick={refetch} disabled={isLoading} className="p-1 hover:bg-muted rounded">
-                    <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-                </button>
+        <div className="flex flex-col lg:flex-row gap-6 w-full items-stretch">
+            {/* Left: Hook Container with Return Values */}
+            <div className="flex-1 relative bg-sand-100 border border-dashed border-sand-500 rounded-2xl p-3">
+                <span className="absolute -top-2.5 left-3 bg-sand-100 px-2 text-xs font-mono font-medium text-sand-700">
+                    useTokens()
+                </span>
+                <div className="space-y-0.5 pt-1">
+                    <HookReturnValue name="tokens" value={`[${tokens.length} items]`} />
+                    <HookReturnValue name="isLoading" value={String(isLoading)} />
+                    <HookReturnValue name="refetch" value="fn()" />
+                    <HookReturnValue name="hasMore" value="boolean" />
+                    <HookReturnValue name="loadMore" value="fn()" />
+                </div>
             </div>
-            <div className="divide-y">
-                {isLoading ? (
-                    [1, 2, 3].map(i => (
-                        <div key={i} className="flex items-center gap-3 p-3">
-                            <div className="h-8 w-8 rounded-full bg-muted animate-pulse" />
-                            <div className="flex-1">
-                                <div className="h-4 w-16 bg-muted animate-pulse rounded mb-1" />
-                                <div className="h-3 w-24 bg-muted animate-pulse rounded" />
-                            </div>
-                        </div>
-                    ))
-                ) : displayTokens.length > 0 ? (
-                    displayTokens.map(token => (
-                        <div key={token.mint} className="flex items-center gap-3 p-3">
-                            {token.logo ? (
-                                <img src={token.logo} className="h-8 w-8 rounded-full" alt={token.symbol} />
-                            ) : (
-                                <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
-                                    <Coins className="h-4 w-4" />
+
+            {/* Divider */}
+            <div className="hidden lg:flex flex-col items-center justify-center gap-1">
+                <div className="flex-1 border-l border-dashed border-sand-300" />
+                <span className="text-[10px] text-muted-foreground -rotate-90 whitespace-nowrap p-2 bg-sand-100">
+                    combined
+                </span>
+                <div className="flex-1 border-l border-dashed border-sand-300" />
+            </div>
+            <div className="lg:hidden flex items-center gap-2">
+                <div className="flex-1 border-t border-dashed border-sand-300" />
+                <span className="text-[10px] text-muted-foreground">combined</span>
+                <div className="flex-1 border-t border-dashed border-sand-300" />
+            </div>
+
+            {/* Right: Combined Component */}
+            <div className="flex-1 flex flex-col justify-center">
+                <div className="rounded-lg border bg-card">
+                    <div className="flex items-center justify-between p-3 border-b">
+                        <span className="text-sm font-medium">Tokens</span>
+                        <button onClick={refetch} disabled={isLoading} className="p-1 hover:bg-muted rounded">
+                            <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+                        </button>
+                    </div>
+                    <div className="divide-y max-h-[180px] overflow-y-auto">
+                        {isLoading ? (
+                            [1, 2, 3].map(i => (
+                                <div key={i} className="flex items-center gap-3 p-3">
+                                    <div className="h-8 w-8 rounded-full bg-muted animate-pulse" />
+                                    <div className="flex-1">
+                                        <div className="h-4 w-16 bg-muted animate-pulse rounded mb-1" />
+                                        <div className="h-3 w-24 bg-muted animate-pulse rounded" />
+                                    </div>
                                 </div>
-                            )}
-                            <div className="flex-1 min-w-0">
-                                <p className="font-medium text-sm truncate">{token.symbol}</p>
-                                <p className="text-xs text-muted-foreground truncate">{token.name}</p>
-                            </div>
-                            <p className="font-mono text-sm">{token.formatted}</p>
-                        </div>
-                    ))
-                ) : (
-                    <p className="p-4 text-center text-muted-foreground text-sm">No tokens found</p>
-                )}
+                            ))
+                        ) : displayTokens.length > 0 ? (
+                            displayTokens.map(token => (
+                                <div key={token.mint} className="flex items-center gap-3 p-3">
+                                    {token.logo ? (
+                                        <img src={token.logo} className="h-8 w-8 rounded-full" alt={token.symbol} />
+                                    ) : (
+                                        <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
+                                            <Coins className="h-4 w-4" />
+                                        </div>
+                                    )}
+                                    <div className="flex-1 min-w-0">
+                                        <p className="font-medium text-sm truncate">{token.symbol}</p>
+                                        <p className="text-xs text-muted-foreground truncate">{token.name}</p>
+                                    </div>
+                                    <p className="font-mono text-sm">{token.formatted}</p>
+                                </div>
+                            ))
+                        ) : (
+                            <p className="p-4 text-center text-muted-foreground text-sm">No tokens found</p>
+                        )}
+                    </div>
+                </div>
             </div>
         </div>
     );
 }
 
 function UseTransactionsExample() {
-    const { transactions, isLoading } = useTransactions({ limit: 3 });
+    const { transactions, isLoading, hasMore, loadMore } = useTransactions({ limit: 3 });
 
     return (
-        <div className="rounded-lg border bg-card min-w-[340px]">
-            <div className="p-3 border-b">
-                <span className="text-sm font-medium">Transactions (useTransactions)</span>
+        <div className="flex flex-col lg:flex-row gap-6 w-full items-stretch">
+            {/* Left: Hook Container with Return Values */}
+            <div className="flex-1 relative bg-sand-100 border border-dashed border-sand-500 rounded-2xl p-3">
+                <span className="absolute -top-2.5 left-3 bg-sand-100 px-2 text-xs font-mono font-medium text-sand-700">
+                    useTransactions()
+                </span>
+                <div className="space-y-0.5 pt-1">
+                    <HookReturnValue name="transactions" value={`[${transactions.length} items]`} />
+                    <HookReturnValue name="isLoading" value={String(isLoading)} />
+                    <HookReturnValue name="hasMore" value={String(hasMore)} />
+                    <HookReturnValue name="loadMore" value="fn()" />
+                </div>
             </div>
-            <div className="divide-y">
-                {isLoading ? (
-                    [1, 2, 3].map(i => (
-                        <div key={i} className="flex items-center gap-3 p-3">
-                            <div className="h-8 w-8 rounded-full bg-muted animate-pulse" />
-                            <div className="flex-1">
-                                <div className="h-4 w-20 bg-muted animate-pulse rounded mb-1" />
-                                <div className="h-3 w-16 bg-muted animate-pulse rounded" />
-                            </div>
-                        </div>
-                    ))
-                ) : transactions.length > 0 ? (
-                    transactions.map(tx => (
-                        <a
-                            key={tx.signature}
-                            href={tx.explorerUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-3 p-3 hover:bg-muted/50 transition-colors"
-                        >
-                            {tx.tokenIcon ? (
-                                <img src={tx.tokenIcon} className="h-8 w-8 rounded-full" alt="" />
-                            ) : (
-                                <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
-                                    <Coins className="h-4 w-4" />
+
+            {/* Divider */}
+            <div className="hidden lg:flex flex-col items-center justify-center gap-1">
+                <div className="flex-1 border-l border-dashed border-sand-300" />
+                <span className="text-[10px] text-muted-foreground -rotate-90 whitespace-nowrap p-2 bg-sand-100">
+                    combined
+                </span>
+                <div className="flex-1 border-l border-dashed border-sand-300" />
+            </div>
+            <div className="lg:hidden flex items-center gap-2">
+                <div className="flex-1 border-t border-dashed border-sand-300" />
+                <span className="text-[10px] text-muted-foreground">combined</span>
+                <div className="flex-1 border-t border-dashed border-sand-300" />
+            </div>
+
+            {/* Right: Combined Component */}
+            <div className="flex-1 flex flex-col justify-center">
+                <div className="rounded-lg border bg-card">
+                    <div className="p-3 border-b">
+                        <span className="text-sm font-medium">Transactions</span>
+                    </div>
+                    <div className="divide-y max-h-[180px] overflow-y-auto">
+                        {isLoading ? (
+                            [1, 2, 3].map(i => (
+                                <div key={i} className="flex items-center gap-3 p-3">
+                                    <div className="h-8 w-8 rounded-full bg-muted animate-pulse" />
+                                    <div className="flex-1">
+                                        <div className="h-4 w-20 bg-muted animate-pulse rounded mb-1" />
+                                        <div className="h-3 w-16 bg-muted animate-pulse rounded" />
+                                    </div>
                                 </div>
-                            )}
-                            <div className="flex-1 min-w-0">
-                                <p className="font-medium text-sm">{tx.type}</p>
-                                <p className="text-xs text-muted-foreground">{tx.formattedTime}</p>
-                            </div>
-                            {tx.formattedAmount && (
-                                <span
-                                    className={`text-sm font-medium ${tx.direction === 'in' ? 'text-green-600' : 'text-orange-600'}`}
+                            ))
+                        ) : transactions.length > 0 ? (
+                            transactions.map(tx => (
+                                <a
+                                    key={tx.signature}
+                                    href={tx.explorerUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-3 p-3 hover:bg-muted/50 transition-colors"
                                 >
-                                    {tx.formattedAmount}
-                                </span>
-                            )}
-                            <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
-                        </a>
-                    ))
-                ) : (
-                    <p className="p-4 text-center text-muted-foreground text-sm">No transactions yet</p>
-                )}
+                                    {tx.tokenIcon ? (
+                                        <img src={tx.tokenIcon} className="h-8 w-8 rounded-full" alt="" />
+                                    ) : (
+                                        <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
+                                            <Coins className="h-4 w-4" />
+                                        </div>
+                                    )}
+                                    <div className="flex-1 min-w-0">
+                                        <p className="font-medium text-sm">{tx.type}</p>
+                                        <p className="text-xs text-muted-foreground">{tx.formattedTime}</p>
+                                    </div>
+                                    {tx.formattedAmount && (
+                                        <span
+                                            className={`text-sm font-medium ${tx.direction === 'in' ? 'text-green-600' : 'text-orange-600'}`}
+                                        >
+                                            {tx.formattedAmount}
+                                        </span>
+                                    )}
+                                    <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
+                                </a>
+                            ))
+                        ) : (
+                            <p className="p-4 text-center text-muted-foreground text-sm">No transactions yet</p>
+                        )}
+                    </div>
+                </div>
             </div>
         </div>
     );
@@ -294,6 +476,7 @@ function WalletStatus() {
     );
 }`,
         render: () => <UseConnectorExample />,
+        fullWidth: true,
     },
     {
         id: 'use-balance',
@@ -314,6 +497,7 @@ function BalanceDisplay() {
     );
 }`,
         render: () => <UseBalanceExample />,
+        fullWidth: true,
     },
     {
         id: 'use-cluster',
@@ -347,6 +531,7 @@ function NetworkSelector() {
     );
 }`,
         render: () => <UseClusterExample />,
+        fullWidth: true,
     },
     {
         id: 'use-tokens',

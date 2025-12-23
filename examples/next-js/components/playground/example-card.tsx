@@ -51,7 +51,7 @@ export function ExampleCard({ example, requiresConnection = true }: ExampleCardP
 
                         <TabsContent value="preview">
                             <Card
-                                className="border-sand-300 bg-sand-100/30 rounded-xl min-h-[180px]"
+                                className="border-sand-300 bg-sand-100 rounded-xl min-h-[180px]"
                                 style={{
                                     backgroundImage: `repeating-linear-gradient(
                                         45deg,

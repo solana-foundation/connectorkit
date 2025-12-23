@@ -39,7 +39,7 @@ export interface UseTokensOptions {
     autoRefresh?: boolean;
     /** Refresh interval in milliseconds */
     refreshInterval?: number;
-    /** Fetch metadata (name, symbol, logo) from Jupiter */
+    /** Fetch metadata (name, symbol, logo) and USD prices */
     fetchMetadata?: boolean;
     /** Include native SOL balance */
     includeNativeSol?: boolean;
@@ -60,74 +60,204 @@ export interface UseTokensReturn {
     totalAccounts: number;
 }
 
-// Jupiter token metadata response
-interface JupiterTokenMetadata {
-    id: string;
+// Solana Token List API response
+interface SolanaTokenMetadata {
+    address: string;
     name: string;
     symbol: string;
     decimals: number;
-    icon: string;
-    usdPrice: number;
+    logoURI: string;
+    extensions?: {
+        coingeckoId?: string;
+    };
+}
+
+// Combined token metadata (Solana Token List + CoinGecko price)
+interface TokenMetadata {
+    address: string;
+    name: string;
+    symbol: string;
+    decimals: number;
+    logoURI: string;
+    coingeckoId?: string;
+    usdPrice?: number;
 }
 
 // Native SOL mint address
 const NATIVE_MINT = 'So11111111111111111111111111111111111111112';
 
 // Cache for metadata (to avoid refetching)
-const metadataCache = new Map<string, JupiterTokenMetadata>();
+const metadataCache = new Map<string, TokenMetadata>();
+
+// Price cache with TTL (prices change frequently)
+const priceCache = new Map<string, { price: number; timestamp: number }>();
+const PRICE_CACHE_TTL = 60000; // 60 seconds
 
 /**
- * Fetch token metadata from Jupiter's lite API
- * This API is fast and includes icons + USD prices
+ * Fetch token metadata from Solana Token List API
  */
-async function fetchJupiterMetadata(mints: string[]): Promise<Map<string, JupiterTokenMetadata>> {
-    const results = new Map<string, JupiterTokenMetadata>();
+async function fetchSolanaTokenMetadata(mints: string[]): Promise<Map<string, SolanaTokenMetadata>> {
+    const results = new Map<string, SolanaTokenMetadata>();
+
+    if (mints.length === 0) return results;
+
+    try {
+        const response = await fetch('https://token-list-api.solana.cloud/v1/mints?chainId=101', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ addresses: mints }),
+            signal: AbortSignal.timeout(10000),
+        });
+
+        if (!response.ok) {
+            throw new Error(`Solana Token List API error: ${response.status}`);
+        }
+
+        const data: { content: SolanaTokenMetadata[] } = await response.json();
+
+        for (const item of data.content) {
+            results.set(item.address, item);
+        }
+    } catch (error) {
+        console.warn('[useTokens] Solana Token List API failed:', error);
+    }
+
+    return results;
+}
+
+/**
+ * Fetch prices from CoinGecko API
+ */
+async function fetchCoinGeckoPrices(coingeckoIds: string[]): Promise<Map<string, number>> {
+    const results = new Map<string, number>();
+
+    if (coingeckoIds.length === 0) return results;
+
+    // Check price cache first
+    const now = Date.now();
+    const uncachedIds: string[] = [];
+
+    for (const id of coingeckoIds) {
+        const cached = priceCache.get(id);
+        if (cached && now - cached.timestamp < PRICE_CACHE_TTL) {
+            results.set(id, cached.price);
+        } else {
+            uncachedIds.push(id);
+        }
+    }
+
+    if (uncachedIds.length === 0) return results;
+
+    try {
+        const response = await fetch(
+            `https://api.coingecko.com/api/v3/simple/price?ids=${uncachedIds.join(',')}&vs_currencies=usd`,
+            { signal: AbortSignal.timeout(10000) },
+        );
+
+        if (!response.ok) {
+            throw new Error(`CoinGecko API error: ${response.status}`);
+        }
+
+        const data: Record<string, { usd: number }> = await response.json();
+
+        for (const [id, priceData] of Object.entries(data)) {
+            if (priceData?.usd !== undefined) {
+                results.set(id, priceData.usd);
+                priceCache.set(id, { price: priceData.usd, timestamp: now });
+            }
+        }
+    } catch (error) {
+        console.warn('[useTokens] CoinGecko API failed:', error);
+    }
+
+    return results;
+}
+
+/**
+ * Fetch token metadata from Solana Token List API and prices from CoinGecko
+ * Hybrid approach for vendor flexibility
+ */
+async function fetchTokenMetadataHybrid(mints: string[]): Promise<Map<string, TokenMetadata>> {
+    const results = new Map<string, TokenMetadata>();
 
     if (mints.length === 0) return results;
 
     // Check cache first
     const uncachedMints: string[] = [];
+    const now = Date.now();
+
     for (const mint of mints) {
         const cached = metadataCache.get(mint);
         if (cached) {
+            // Check if we need to refresh prices
+            const priceStale =
+                cached.coingeckoId && (!priceCache.get(cached.coingeckoId) || now - (priceCache.get(cached.coingeckoId)?.timestamp ?? 0) >= PRICE_CACHE_TTL);
+
+            if (priceStale && cached.coingeckoId) {
+                // Metadata is cached but price is stale - we'll refresh price later
+                uncachedMints.push(mint);
+            }
             results.set(mint, cached);
         } else {
             uncachedMints.push(mint);
         }
     }
 
-    // If all mints are cached, return early
+    // If all mints are fully cached, return early
     if (uncachedMints.length === 0) return results;
 
-    try {
-        const url = new URL('https://lite-api.jup.ag/tokens/v2/search');
-        url.searchParams.append('query', uncachedMints.join(','));
+    // 1. Fetch metadata from Solana Token List API
+    const solanaMetadata = await fetchSolanaTokenMetadata(uncachedMints);
 
-        const response = await fetch(url.toString(), {
-            signal: AbortSignal.timeout(10000),
-        });
-
-        if (!response.ok) {
-            throw new Error(`Jupiter API error: ${response.status}`);
+    // 2. Extract coingeckoIds for price lookup
+    const coingeckoIdToMint = new Map<string, string>();
+    for (const [mint, meta] of solanaMetadata) {
+        if (meta.extensions?.coingeckoId) {
+            coingeckoIdToMint.set(meta.extensions.coingeckoId, mint);
         }
+    }
 
-        const items: JupiterTokenMetadata[] = await response.json();
-
-        for (const item of items) {
-            const metadata: JupiterTokenMetadata = {
-                id: item.id,
-                name: item.id === NATIVE_MINT ? 'Solana' : item.name,
-                symbol: item.symbol,
-                decimals: item.decimals,
-                icon: item.icon,
-                usdPrice: item.usdPrice,
-            };
-
-            results.set(item.id, metadata);
-            metadataCache.set(item.id, metadata);
+    // Also check cached mints that need price refresh
+    for (const mint of mints) {
+        const cached = metadataCache.get(mint);
+        if (cached?.coingeckoId && !coingeckoIdToMint.has(cached.coingeckoId)) {
+            coingeckoIdToMint.set(cached.coingeckoId, mint);
         }
-    } catch (error) {
-        console.warn('[useTokens] Jupiter API failed:', error);
+    }
+
+    // 3. Fetch prices from CoinGecko
+    const prices = await fetchCoinGeckoPrices([...coingeckoIdToMint.keys()]);
+
+    // 4. Combine metadata with prices
+    for (const [mint, meta] of solanaMetadata) {
+        const coingeckoId = meta.extensions?.coingeckoId;
+        const usdPrice = coingeckoId ? prices.get(coingeckoId) : undefined;
+
+        const combined: TokenMetadata = {
+            address: meta.address,
+            name: meta.address === NATIVE_MINT ? 'Solana' : meta.name,
+            symbol: meta.symbol,
+            decimals: meta.decimals,
+            logoURI: meta.logoURI,
+            coingeckoId,
+            usdPrice,
+        };
+
+        results.set(mint, combined);
+        metadataCache.set(mint, combined);
+    }
+
+    // Update prices for cached mints
+    for (const [coingeckoId, mint] of coingeckoIdToMint) {
+        const cached = results.get(mint) ?? metadataCache.get(mint);
+        if (cached) {
+            const usdPrice = prices.get(coingeckoId);
+            if (usdPrice !== undefined) {
+                cached.usdPrice = usdPrice;
+                results.set(mint, cached);
+                metadataCache.set(mint, cached);
+            }
+        }
     }
 
     return results;
@@ -159,7 +289,7 @@ function formatUsd(amount: bigint, decimals: number, usdPrice: number): string {
 
 /**
  * Hook for fetching wallet token holdings.
- * Fetches metadata (name, symbol, icon, USD price) from Jupiter's API.
+ * Fetches metadata (name, symbol, icon) from Solana Token List API and USD prices from CoinGecko.
  *
  * @example Basic usage
  * ```tsx
@@ -278,9 +408,9 @@ export function useTokens(options: UseTokensOptions = {}): UseTokensReturn {
             setTotalAccounts(tokenAccountsResult.value.length + (includeNativeSol ? 1 : 0));
             setLastUpdated(new Date());
 
-            // Fetch metadata from Jupiter
+            // Fetch metadata from Solana Token List API + CoinGecko prices
             if (fetchMetadata && mints.length > 0) {
-                const metadata = await fetchJupiterMetadata(mints);
+                const metadata = await fetchTokenMetadataHybrid(mints);
 
                 // Apply metadata to tokens
                 for (let i = 0; i < tokenList.length; i++) {
@@ -290,9 +420,11 @@ export function useTokens(options: UseTokensOptions = {}): UseTokensReturn {
                             ...tokenList[i],
                             name: meta.name,
                             symbol: meta.symbol,
-                            logo: meta.icon,
+                            logo: meta.logoURI,
                             usdPrice: meta.usdPrice,
-                            formattedUsd: formatUsd(tokenList[i].amount, tokenList[i].decimals, meta.usdPrice),
+                            formattedUsd: meta.usdPrice
+                                ? formatUsd(tokenList[i].amount, tokenList[i].decimals, meta.usdPrice)
+                                : undefined,
                         };
                     }
                 }
