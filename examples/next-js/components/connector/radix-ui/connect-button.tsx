@@ -9,7 +9,8 @@ import { motion } from 'motion/react';
 import { WalletModal } from './wallet-modal';
 import { WalletDropdownContent } from './wallet-dropdown-content';
 import { Wallet, ChevronDown } from 'lucide-react';
-import { Spinner } from '../ui/spinner';
+import { Spinner } from '@/components/ui/spinner';
+import { cn } from '@/lib/utils';
 
 interface ConnectButtonProps {
     className?: string;
@@ -39,7 +40,7 @@ export function ConnectButton({ className }: ConnectButtonProps) {
         return (
             <DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
                 <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className={className}>
+                    <Button variant="outline" size="sm" className={cn('gap-2', className)}>
                         <Avatar className="h-5 w-5">
                             {walletIcon && <AvatarImage src={walletIcon} alt={selectedWallet.name} />}
                             <AvatarFallback>

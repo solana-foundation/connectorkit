@@ -14,7 +14,7 @@ import {
     IconXmark,
 } from 'symbols-react';
 import { useState, useEffect } from 'react';
-import { Spinner } from '../ui/spinner';
+import { Spinner } from '@/components/ui/spinner';
 
 interface WalletModalProps {
     open: boolean;

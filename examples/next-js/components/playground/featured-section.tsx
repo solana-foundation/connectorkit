@@ -1,12 +1,14 @@
 'use client';
 
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { CopyButton } from '@/components/ui/copy-button';
-import { ConnectButton } from '@/components/connector/connect-button';
-import { WalletDropdownContent } from '@/components/connector/wallet-dropdown-content';
+import { CodeBlock } from '@/components/ui/code-block';
+import { ConnectButton } from '@/components/connector/radix-ui/connect-button';
+import { WalletDropdownContent } from '@/components/connector/radix-ui/wallet-dropdown-content';
+import { ConnectButton as ConnectButtonBaseUI } from '@/components/connector/base-ui/connect-button';
+import { WalletDropdownContent as WalletDropdownContentBaseUI } from '@/components/connector/base-ui/wallet-dropdown-content';
 import { useConnector } from '@solana/connector';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -14,6 +16,8 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Wallet, ExternalLink, Plug } from 'lucide-react';
+import { BaseUILogo } from '@/components/icons/base-ui-logo';
+import { RadixUILogo } from '@/components/icons/radix-ui-logo';
 import { useState, useEffect } from 'react';
 import { Spinner } from '@/components/ui/spinner';
 
@@ -267,6 +271,289 @@ export function WalletDropdownContent({ selectedAccount, walletIcon, walletName 
     );
 }`;
 
+// Base UI Code Snippets
+const connectButtonCodeBaseUI = `'use client';
+
+import { useConnector } from '@solana/connector';
+import { Menu } from '@base-ui/react/menu';
+import { useState } from 'react';
+import { motion } from 'motion/react';
+import { WalletModalBaseUI } from './wallet-modal-baseui';
+import { WalletDropdownContentBaseUI } from './wallet-dropdown-content-baseui';
+import { Wallet, ChevronDown } from 'lucide-react';
+
+// Custom Avatar component for Base UI
+function Avatar({ src, alt, fallback, className }) {
+    const [hasError, setHasError] = useState(false);
+    return (
+        <div className={\`relative flex shrink-0 overflow-hidden rounded-full \${className}\`}>
+            {src && !hasError ? (
+                <img src={src} alt={alt} className="aspect-square h-full w-full object-cover" onError={() => setHasError(true)} />
+            ) : (
+                <div className="flex h-full w-full items-center justify-center bg-muted">{fallback}</div>
+            )}
+        </div>
+    );
+}
+
+export function ConnectButtonBaseUI({ className }) {
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const { connected, connecting, selectedWallet, selectedAccount, wallets } = useConnector();
+
+    if (connecting) {
+        return (
+            <button disabled className="inline-flex items-center gap-2 h-8 px-3 rounded-md border bg-background opacity-50">
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                <span className="text-xs">Connecting...</span>
+            </button>
+        );
+    }
+
+    if (connected && selectedAccount && selectedWallet) {
+        const shortAddress = \`\${selectedAccount.slice(0, 4)}...\${selectedAccount.slice(-4)}\`;
+        const walletWithIcon = wallets.find(w => w.wallet.name === selectedWallet.name);
+        const walletIcon = walletWithIcon?.wallet.icon || selectedWallet.icon;
+
+        return (
+            <Menu.Root>
+                <Menu.Trigger className="inline-flex items-center gap-2 h-8 px-3 rounded-md border bg-background hover:bg-accent">
+                    <Avatar src={walletIcon} alt={selectedWallet.name} fallback={<Wallet className="h-3 w-3" />} className="h-5 w-5" />
+                    <span className="text-xs">{shortAddress}</span>
+                    <ChevronDown className="h-4 w-4 opacity-50" />
+                </Menu.Trigger>
+                <Menu.Portal>
+                    <Menu.Positioner sideOffset={8} align="end">
+                        <Menu.Popup className="rounded-[20px] bg-background p-0 shadow-lg outline outline-1 outline-gray-200">
+                            <WalletDropdownContentBaseUI selectedAccount={selectedAccount} walletIcon={walletIcon} walletName={selectedWallet.name} />
+                        </Menu.Popup>
+                    </Menu.Positioner>
+                </Menu.Portal>
+            </Menu.Root>
+        );
+    }
+
+    return (
+        <>
+            <button onClick={() => setIsModalOpen(true)} className="inline-flex items-center h-8 px-3 rounded-md border bg-background hover:bg-accent">
+                Connect Wallet
+            </button>
+            <WalletModalBaseUI open={isModalOpen} onOpenChange={setIsModalOpen} />
+        </>
+    );
+}`;
+
+const walletModalCodeBaseUI = `'use client';
+
+import { useConnector } from '@solana/connector';
+import { Dialog } from '@base-ui/react/dialog';
+import { Collapsible } from '@base-ui/react/collapsible';
+import { Wallet, ExternalLink, ChevronDown, X } from 'lucide-react';
+import { useState, useEffect } from 'react';
+
+export function WalletModalBaseUI({ open, onOpenChange }) {
+    const { wallets, select, connecting } = useConnector();
+    const [connectingWallet, setConnectingWallet] = useState(null);
+    const [isOtherWalletsOpen, setIsOtherWalletsOpen] = useState(false);
+    const [recentlyConnected, setRecentlyConnected] = useState(null);
+
+    useEffect(() => {
+        const recent = localStorage.getItem('recentlyConnectedWallet');
+        if (recent) setRecentlyConnected(recent);
+    }, []);
+
+    const handleSelectWallet = async (walletName) => {
+        setConnectingWallet(walletName);
+        try {
+            await select(walletName);
+            localStorage.setItem('recentlyConnectedWallet', walletName);
+            onOpenChange(false);
+        } catch (error) {
+            console.error('Failed to connect:', error);
+        } finally {
+            setConnectingWallet(null);
+        }
+    };
+
+    const installedWallets = wallets.filter(w => w.installed);
+    const primaryWallets = installedWallets.slice(0, 3);
+    const otherWallets = installedWallets.slice(3);
+
+    return (
+        <Dialog.Root open={open} onOpenChange={onOpenChange}>
+            <Dialog.Portal>
+                <Dialog.Backdrop className="fixed inset-0 bg-black/80 transition-opacity" />
+                <Dialog.Popup className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md rounded-[24px] bg-background p-6 shadow-lg">
+                    <div className="flex items-center justify-between mb-4">
+                        <Dialog.Title className="text-lg font-semibold">Connect your wallet</Dialog.Title>
+                        <Dialog.Close className="rounded-[16px] h-8 w-8 p-2 border hover:bg-accent cursor-pointer">
+                            <X className="h-3 w-3" />
+                        </Dialog.Close>
+                    </div>
+                    <div className="space-y-4">
+                        {primaryWallets.map(wallet => (
+                            <button
+                                key={wallet.wallet.name}
+                                className="w-full flex justify-between items-center p-4 rounded-[16px] border hover:bg-accent"
+                                onClick={() => handleSelectWallet(wallet.wallet.name)}
+                                disabled={connecting}
+                            >
+                                <span className="font-semibold">{wallet.wallet.name}</span>
+                                <img src={wallet.wallet.icon} className="h-10 w-10 rounded-full" />
+                            </button>
+                        ))}
+                        {otherWallets.length > 0 && (
+                            <Collapsible.Root open={isOtherWalletsOpen} onOpenChange={setIsOtherWalletsOpen}>
+                                <Collapsible.Trigger className="w-full flex justify-between items-center px-4 py-3 rounded-[16px] border cursor-pointer">
+                                    <span>Other Wallets</span>
+                                    <ChevronDown className={\`h-4 w-4 transition-transform \${isOtherWalletsOpen ? 'rotate-180' : ''}\`} />
+                                </Collapsible.Trigger>
+                                <Collapsible.Panel className="overflow-hidden">
+                                    <div className="grid gap-2 pt-2">
+                                        {otherWallets.map(wallet => (
+                                            <button key={wallet.wallet.name} className="w-full flex justify-between items-center p-4 rounded-[16px] border">
+                                                <span>{wallet.wallet.name}</span>
+                                                <img src={wallet.wallet.icon} className="h-8 w-8 rounded-full" />
+                                            </button>
+                                        ))}
+                                    </div>
+                                </Collapsible.Panel>
+                            </Collapsible.Root>
+                        )}
+                    </div>
+                </Dialog.Popup>
+            </Dialog.Portal>
+        </Dialog.Root>
+    );
+}`;
+
+const walletDropdownCodeBaseUI = `'use client';
+
+import { Collapsible } from '@base-ui/react/collapsible';
+import { BalanceElement, ClusterElement, TokenListElement, TransactionHistoryElement, DisconnectElement } from '@solana/connector/react';
+import { Wallet, Copy, Globe, ChevronDown, Check, RefreshCw, Coins, History, LogOut } from 'lucide-react';
+import { useState } from 'react';
+
+export function WalletDropdownContentBaseUI({ selectedAccount, walletIcon, walletName }) {
+    const [copied, setCopied] = useState(false);
+    const [isTokensOpen, setIsTokensOpen] = useState(false);
+    const [isTransactionsOpen, setIsTransactionsOpen] = useState(false);
+    const shortAddress = \`\${selectedAccount.slice(0, 4)}...\${selectedAccount.slice(-4)}\`;
+
+    const handleCopy = () => {
+        navigator.clipboard.writeText(selectedAccount);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
+
+    return (
+        <div className="w-[360px] p-4 space-y-4">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                    <img src={walletIcon} className="h-12 w-12 rounded-full" />
+                    <div>
+                        <div className="font-semibold text-lg">{shortAddress}</div>
+                        <div className="text-xs text-muted-foreground">{walletName}</div>
+                    </div>
+                </div>
+                <div className="flex items-center gap-2">
+                    <button onClick={handleCopy} className="h-9 w-9 rounded-full border flex items-center justify-center hover:bg-accent">
+                        {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                    </button>
+                    <ClusterElement
+                        render={({ cluster }) => (
+                            <button className="h-9 w-9 rounded-full border flex items-center justify-center hover:bg-accent relative">
+                                <Globe className="h-4 w-4" />
+                                <span className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-green-500 border-2 border-background" />
+                            </button>
+                        )}
+                    />
+                </div>
+            </div>
+
+            {/* Balance */}
+            <BalanceElement
+                render={({ solBalance, isLoading, refetch }) => (
+                    <div className="rounded-[12px] border bg-muted/50 p-4">
+                        <div className="flex items-center justify-between mb-1">
+                            <span className="text-sm text-muted-foreground">Balance</span>
+                            <button onClick={refetch} className="p-1 hover:bg-accent rounded">
+                                <RefreshCw className={\`h-3.5 w-3.5 \${isLoading ? 'animate-spin' : ''}\`} />
+                            </button>
+                        </div>
+                        <div className="text-2xl font-bold">{solBalance?.toFixed(4)} SOL</div>
+                    </div>
+                )}
+            />
+
+            {/* Tokens - Base UI Collapsible */}
+            <Collapsible.Root open={isTokensOpen} onOpenChange={setIsTokensOpen} className="border rounded-[12px] px-3">
+                <Collapsible.Trigger className="w-full flex items-center justify-between py-3 cursor-pointer">
+                    <div className="flex items-center gap-2">
+                        <Coins className="h-4 w-4" />
+                        <span className="font-medium">Tokens</span>
+                    </div>
+                    <ChevronDown className={\`h-4 w-4 transition-transform \${isTokensOpen ? 'rotate-180' : ''}\`} />
+                </Collapsible.Trigger>
+                <Collapsible.Panel className="overflow-hidden">
+                    <TokenListElement limit={5} render={({ tokens }) => (
+                        <div className="space-y-2 pb-2">
+                            {tokens.map(token => (
+                                <div key={token.mint} className="flex items-center gap-3 py-1">
+                                    <img src={token.logo} className="h-8 w-8 rounded-full" />
+                                    <div className="flex-1">
+                                        <p className="font-medium text-sm">{token.symbol}</p>
+                                        <p className="text-xs text-muted-foreground">{token.name}</p>
+                                    </div>
+                                    <p className="font-mono text-sm">{token.formatted}</p>
+                                </div>
+                            ))}
+                        </div>
+                    )} />
+                </Collapsible.Panel>
+            </Collapsible.Root>
+
+            {/* Transactions - Base UI Collapsible */}
+            <Collapsible.Root open={isTransactionsOpen} onOpenChange={setIsTransactionsOpen} className="border rounded-[12px] px-3">
+                <Collapsible.Trigger className="w-full flex items-center justify-between py-3 cursor-pointer">
+                    <div className="flex items-center gap-2">
+                        <History className="h-4 w-4" />
+                        <span className="font-medium">Recent Activity</span>
+                    </div>
+                    <ChevronDown className={\`h-4 w-4 transition-transform \${isTransactionsOpen ? 'rotate-180' : ''}\`} />
+                </Collapsible.Trigger>
+                <Collapsible.Panel className="overflow-hidden">
+                    <TransactionHistoryElement limit={5} render={({ transactions }) => (
+                        <div className="space-y-2 pb-2">
+                            {transactions.map(tx => (
+                                <a key={tx.signature} href={tx.explorerUrl} target="_blank" className="flex items-center gap-3 py-1 hover:bg-muted/50 rounded-lg px-1 -mx-1">
+                                    <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
+                                        <History className="h-4 w-4" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="font-medium text-sm">{tx.type}</p>
+                                        <p className="text-xs text-muted-foreground">{tx.formattedTime}</p>
+                                    </div>
+                                </a>
+                            ))}
+                        </div>
+                    )} />
+                </Collapsible.Panel>
+            </Collapsible.Root>
+
+            {/* Disconnect */}
+            <DisconnectElement
+                render={({ disconnect, disconnecting }) => (
+                    <button onClick={disconnect} disabled={disconnecting} className="w-full h-11 rounded-[12px] bg-destructive text-destructive-foreground hover:bg-destructive/90 flex items-center justify-center gap-2">
+                        <LogOut className="h-4 w-4" />
+                        {disconnecting ? 'Disconnecting...' : 'Disconnect'}
+                    </button>
+                )}
+            />
+        </div>
+    );
+}`;
+
 // Inline WalletModalContent component (without Dialog wrapper)
 function WalletModalContent() {
     const { wallets, select, connecting, selectedWallet } = useConnector();
@@ -459,22 +746,275 @@ function WalletModalContent() {
     );
 }
 
-// Component section helper
+// Inline WalletModalContent for Base UI (without Dialog wrapper)
+function WalletModalContentBaseUI() {
+    const { wallets, select, connecting } = useConnector();
+    const [connectingWallet, setConnectingWallet] = useState<string | null>(null);
+    const [isClient, setIsClient] = useState(false);
+    const [recentlyConnected, setRecentlyConnected] = useState<string | null>(null);
+    const [isOtherWalletsOpen, setIsOtherWalletsOpen] = useState(false);
+
+    useEffect(() => {
+        setIsClient(true);
+    }, []);
+
+    useEffect(() => {
+        const recent = localStorage.getItem('recentlyConnectedWallet');
+        if (recent) setRecentlyConnected(recent);
+    }, []);
+
+    const handleSelectWallet = async (walletName: string) => {
+        setConnectingWallet(walletName);
+        try {
+            await select(walletName);
+        } catch (error) {
+            console.error('Failed to connect:', error);
+        } finally {
+            setConnectingWallet(null);
+        }
+    };
+
+    const installedWallets = wallets.filter(w => w.installed);
+    const notInstalledWallets = wallets.filter(w => !w.installed);
+    const sortedInstalledWallets = [...installedWallets].sort((a, b) => {
+        if (recentlyConnected === a.wallet.name) return -1;
+        if (recentlyConnected === b.wallet.name) return 1;
+        return 0;
+    });
+    const primaryWallets = sortedInstalledWallets.slice(0, 3);
+    const otherWallets = sortedInstalledWallets.slice(3);
+
+    const getInstallUrl = (walletName: string) => {
+        const name = walletName.toLowerCase();
+        if (name.includes('phantom')) return 'https://phantom.app';
+        if (name.includes('solflare')) return 'https://solflare.com';
+        if (name.includes('backpack')) return 'https://backpack.app';
+        return 'https://phantom.app';
+    };
+
+    // Custom Avatar for Base UI
+    const BaseUIAvatar = ({ src, alt, fallback, className }: { src?: string; alt?: string; fallback?: React.ReactNode; className?: string }) => {
+        const [hasError, setHasError] = useState(false);
+        return (
+            <div className={`relative flex shrink-0 overflow-hidden rounded-full ${className}`}>
+                {src && !hasError ? (
+                    <img src={src} alt={alt} className="aspect-square h-full w-full object-cover" onError={() => setHasError(true)} />
+                ) : (
+                    <div className="flex h-full w-full items-center justify-center bg-muted">{fallback}</div>
+                )}
+            </div>
+        );
+    };
+
+    // Custom Button for Base UI
+    const BaseUIButton = ({
+        children,
+        variant = 'outline',
+        disabled,
+        className,
+        onClick,
+    }: {
+        children: React.ReactNode;
+        variant?: 'default' | 'outline';
+        disabled?: boolean;
+        className?: string;
+        onClick?: () => void;
+    }) => (
+        <button
+            className={`inline-flex items-center gap-2 whitespace-nowrap text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 ${
+                variant === 'outline'
+                    ? 'border border-input bg-background shadow-xs hover:bg-accent hover:text-accent-foreground'
+                    : 'bg-primary text-primary-foreground shadow hover:bg-primary/90'
+            } ${className || ''}`}
+            disabled={disabled}
+            onClick={onClick}
+        >
+            {children}
+        </button>
+    );
+
+    // Dynamic import for Collapsible to avoid SSR issues
+    const CollapsibleRoot = ({ children, open, onOpenChange, className }: { children: React.ReactNode; open: boolean; onOpenChange: (open: boolean) => void; className?: string }) => (
+        <div className={className}>{children}</div>
+    );
+
+    return (
+        <div className="w-full max-w-md mx-auto p-6 rounded-[24px] border bg-card shadow-lg">
+            <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold">Connect your wallet</h2>
+            </div>
+
+            <div className="space-y-4">
+                {!isClient ? (
+                    <div className="text-center py-8">
+                        <Spinner className="h-6 w-6 mx-auto mb-2" />
+                        <p className="text-sm text-muted-foreground">Detecting wallets...</p>
+                    </div>
+                ) : (
+                    <>
+                        {primaryWallets.length > 0 && (
+                            <div className="grid gap-2">
+                                {primaryWallets.map(walletInfo => {
+                                    const isConnecting = connectingWallet === walletInfo.wallet.name;
+                                    const isRecent = recentlyConnected === walletInfo.wallet.name;
+                                    return (
+                                        <BaseUIButton
+                                            key={walletInfo.wallet.name}
+                                            variant="outline"
+                                            className="h-auto justify-between p-4 rounded-[16px] w-full"
+                                            onClick={() => handleSelectWallet(walletInfo.wallet.name)}
+                                            disabled={connecting || isConnecting}
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-semibold">{walletInfo.wallet.name}</span>
+                                                {isRecent && (
+                                                    <span className="inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold bg-secondary text-secondary-foreground">
+                                                        Recent
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                {isConnecting && <Spinner className="h-4 w-4" />}
+                                                <BaseUIAvatar
+                                                    src={walletInfo.wallet.icon}
+                                                    alt={walletInfo.wallet.name}
+                                                    fallback={<Wallet className="h-5 w-5" />}
+                                                    className="h-10 w-10"
+                                                />
+                                            </div>
+                                        </BaseUIButton>
+                                    );
+                                })}
+                            </div>
+                        )}
+
+                        {otherWallets.length > 0 && (
+                            <>
+                                <div className="shrink-0 bg-border h-[1px] w-full" />
+                                <div className="w-full">
+                                    <button
+                                        onClick={() => setIsOtherWalletsOpen(!isOtherWalletsOpen)}
+                                        className="w-full flex items-center justify-between border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50 rounded-[16px] px-4 py-2 cursor-pointer"
+                                    >
+                                        <span>Other Wallets</span>
+                                        <svg
+                                            className={`h-4 w-4 shrink-0 transition-transform duration-200 ${isOtherWalletsOpen ? 'rotate-180' : ''}`}
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </button>
+                                    {isOtherWalletsOpen && (
+                                        <div className="grid gap-2 pt-2">
+                                            {otherWallets.map(walletInfo => (
+                                                <BaseUIButton
+                                                    key={walletInfo.wallet.name}
+                                                    variant="outline"
+                                                    className="h-auto justify-between p-4 rounded-[16px] w-full"
+                                                    onClick={() => handleSelectWallet(walletInfo.wallet.name)}
+                                                >
+                                                    <span>{walletInfo.wallet.name}</span>
+                                                    <BaseUIAvatar
+                                                        src={walletInfo.wallet.icon}
+                                                        alt={walletInfo.wallet.name}
+                                                        fallback={<Wallet className="h-4 w-4" />}
+                                                        className="h-8 w-8"
+                                                    />
+                                                </BaseUIButton>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </>
+                        )}
+
+                        {notInstalledWallets.length > 0 && (
+                            <>
+                                <div className="shrink-0 bg-border h-[1px] w-full" />
+                                <div className="space-y-2">
+                                    <h3 className="text-sm font-medium text-muted-foreground">Popular Wallets</h3>
+                                    <div className="grid gap-2">
+                                        {notInstalledWallets.slice(0, 3).map(walletInfo => (
+                                            <BaseUIButton
+                                                key={walletInfo.wallet.name}
+                                                variant="outline"
+                                                className="h-auto justify-between p-4 rounded-[16px] w-full"
+                                                onClick={() =>
+                                                    window.open(getInstallUrl(walletInfo.wallet.name), '_blank')
+                                                }
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    <BaseUIAvatar
+                                                        src={walletInfo.wallet.icon}
+                                                        alt={walletInfo.wallet.name}
+                                                        fallback={<Wallet className="h-4 w-4" />}
+                                                        className="h-8 w-8"
+                                                    />
+                                                    <div className="text-left">
+                                                        <div className="font-medium text-sm">
+                                                            {walletInfo.wallet.name}
+                                                        </div>
+                                                        <div className="text-xs text-muted-foreground">
+                                                            Not installed
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                                            </BaseUIButton>
+                                        ))}
+                                    </div>
+                                </div>
+                            </>
+                        )}
+
+                        {wallets.length === 0 && (
+                            <div className="rounded-lg border border-dashed p-8 text-center">
+                                <Wallet className="mx-auto h-12 w-12 text-muted-foreground mb-3" />
+                                <h3 className="font-semibold mb-2">No Wallets Detected</h3>
+                                <p className="text-sm text-muted-foreground mb-4">
+                                    Install a Solana wallet to get started
+                                </p>
+                                <button
+                                    onClick={() => window.open('https://phantom.app', '_blank')}
+                                    className="inline-flex items-center justify-center px-4 py-2 rounded-md bg-primary text-primary-foreground shadow hover:bg-primary/90"
+                                >
+                                    Get Phantom
+                                </button>
+                            </div>
+                        )}
+                    </>
+                )}
+            </div>
+        </div>
+    );
+}
+
+// Component section helper with Radix UI and Base UI tabs
 function ComponentSection({
     title,
     description,
     code,
+    codeBaseUI,
     fileName,
+    fileNameBaseUI,
     children,
+    childrenBaseUI,
 }: {
     title: string;
     description: string;
     badge: string;
     badgeColor: string;
     code: string;
+    codeBaseUI: string;
     fileName: string;
+    fileNameBaseUI: string;
     children: React.ReactNode;
+    childrenBaseUI: React.ReactNode;
 }) {
+    const [framework, setFramework] = useState<'radix' | 'baseui'>('radix');
+
     return (
         <section className="py-12 border-b border-sand-200">
             <div className="grid grid-cols-12 gap-6 lg:gap-8">
@@ -485,7 +1025,30 @@ function ComponentSection({
 
                 <div className="col-span-12 lg:col-span-8 px-4 lg:px-6">
                     <Tabs defaultValue="preview" className="w-full">
-                        <div className="flex justify-end mb-4">
+                        <div className="flex items-center justify-between mb-4">
+                            {/* Framework Toggle */}
+                            <div className="inline-flex items-center rounded-lg border bg-muted p-1">
+                                <button
+                                    onClick={() => setFramework('radix')}
+                                    className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                                        framework === 'radix'
+                                            ? 'bg-background text-foreground shadow-sm'
+                                            : 'text-muted-foreground hover:text-foreground'
+                                    }`}
+                                >
+                                    Radix UI
+                                </button>
+                                <button
+                                    onClick={() => setFramework('baseui')}
+                                    className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                                        framework === 'baseui'
+                                            ? 'bg-background text-foreground shadow-sm'
+                                            : 'text-muted-foreground hover:text-foreground'
+                                    }`}
+                                >
+                                    Base UI
+                                </button>
+                            </div>
                             <TabsList>
                                 <TabsTrigger className="text-xs" value="preview">
                                     Preview
@@ -510,7 +1073,7 @@ function ComponentSection({
                                 }}
                             >
                                 <CardContent className="p-6 flex items-center justify-center min-h-[300px]">
-                                    {children}
+                                    {framework === 'radix' ? children : childrenBaseUI}
                                 </CardContent>
                             </Card>
                         </TabsContent>
@@ -519,16 +1082,19 @@ function ComponentSection({
                             <Card className="border-sand-300 bg-[#282c34] rounded-xl overflow-hidden">
                                 <CardContent className="p-0">
                                     <div className="flex items-center justify-between px-4 py-2 border-b border-white/10">
-                                        <span className="text-xs text-sand-500 font-inter">{fileName}</span>
+                                        <span className="text-xs text-sand-500 font-inter">
+                                            {framework === 'radix' ? fileName : fileNameBaseUI}
+                                        </span>
                                         <CopyButton
-                                            textToCopy={code}
+                                            textToCopy={framework === 'radix' ? code : codeBaseUI}
                                             showText={false}
                                             iconClassName="text-sand-500 group-hover:text-sand-300"
                                             iconClassNameCheck="text-green-400"
                                         />
                                     </div>
                                     <div className="max-h-[400px] overflow-y-auto">
-                                        <SyntaxHighlighter
+                                        <CodeBlock
+                                            code={framework === 'radix' ? code : codeBaseUI}
                                             language="tsx"
                                             style={oneDark}
                                             customStyle={{
@@ -545,9 +1111,7 @@ function ComponentSection({
                                                 color: '#636d83',
                                                 userSelect: 'none',
                                             }}
-                                        >
-                                            {code}
-                                        </SyntaxHighlighter>
+                                        />
                                     </div>
                                 </CardContent>
                             </Card>
@@ -586,9 +1150,27 @@ export function FeaturedSection() {
                 </div>
                 <h2 className="text-h3 font-diatype-medium text-sand-1500 mb-2">Complete Block Examples</h2>
                 <p className="text-body-lg font-inter text-sand-700 max-w-lg">
-                    Complete block examples built with ConnectorKit blocks and radix. Copy any example and customize it
-                    for your app.
+                    Complete block examples built with ConnectorKit blocks. Toggle between Radix UI and Base UI
+                    implementations. Copy any example and customize it for your app.
                 </p>
+
+                {/* Supported UI Frameworks */}
+                <div className="mt-6">
+                    <p className="text-xs font-diatype-medium font-medium text-sand-700 mb-3">Supported UI Frameworks</p>
+                    <div className="flex items-center gap-4">
+                        {/* Base UI */}
+                        <div className="flex items-center gap-2">
+                            <BaseUILogo size={12} className="text-sand-800" />
+                            <span className="text-sm font-medium font-diatype-medium text-sand-900">Base UI</span>
+                        </div>
+                        <div className="h-[15px] w-px bg-sand-400" />
+                        {/* Radix UI */}
+                        <div className="flex items-center gap-2">
+                            <RadixUILogo size={11} className="text-sand-900" />
+                            <span className="text-sm font-medium font-diatype-medium text-sand-900">Radix UI</span>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             {/* ConnectButton */}
@@ -598,7 +1180,10 @@ export function FeaturedSection() {
                 badge="Entry Point"
                 badgeColor="bg-green-100 text-green-700"
                 code={connectButtonCode}
+                codeBaseUI={connectButtonCodeBaseUI}
                 fileName="connect-button.tsx"
+                fileNameBaseUI="connect-button-baseui.tsx"
+                childrenBaseUI={<ConnectButtonBaseUI />}
             >
                 <ConnectButton />
             </ComponentSection>
@@ -610,7 +1195,10 @@ export function FeaturedSection() {
                 badge="Connection"
                 badgeColor="bg-blue-100 text-blue-700"
                 code={walletModalCode}
+                codeBaseUI={walletModalCodeBaseUI}
                 fileName="wallet-modal.tsx"
+                fileNameBaseUI="wallet-modal-baseui.tsx"
+                childrenBaseUI={<WalletModalContentBaseUI />}
             >
                 <WalletModalContent />
             </ComponentSection>
@@ -622,7 +1210,25 @@ export function FeaturedSection() {
                 badge="Account"
                 badgeColor="bg-purple-100 text-purple-700"
                 code={walletDropdownCode}
+                codeBaseUI={walletDropdownCodeBaseUI}
                 fileName="wallet-dropdown-content.tsx"
+                fileNameBaseUI="wallet-dropdown-content-baseui.tsx"
+                childrenBaseUI={
+                    connected && selectedAccount && selectedWallet ? (
+                        <div className="rounded-[20px] border shadow-lg bg-card">
+                            <WalletDropdownContentBaseUI
+                                selectedAccount={selectedAccount}
+                                walletIcon={walletIcon}
+                                walletName={selectedWallet.name}
+                            />
+                        </div>
+                    ) : (
+                        <div className="flex items-center justify-center gap-2 text-center text-sand-600 text-body-md font-inter p-2 border-sand-300 border rounded-lg border-dashed bg-bg1">
+                            <Plug className="h-4 w-4 rotate-45" />
+                            Connect wallet to preview
+                        </div>
+                    )
+                }
             >
                 {connected && selectedAccount && selectedWallet ? (
                     <div className="rounded-[20px] border shadow-lg bg-card">

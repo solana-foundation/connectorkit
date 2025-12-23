@@ -12,7 +12,7 @@ import {
 } from '@/components/playground';
 import { Blocks, Code2, Anchor, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { ConnectButton } from '@/components/connector/connect-button';
+import { ConnectButton } from '@/components/connector/radix-ui/connect-button';
 
 export default function Home() {
     const npmCommand = 'npm i @solana/connector';

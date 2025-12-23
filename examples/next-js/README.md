@@ -19,7 +19,7 @@ Open [http://localhost:3000](http://localhost:3000) to see the components in act
 
 ### Components
 
-All components are located in `components/connector/`:
+All components are located in `components/connector/radix-ui/` (Radix UI) and `components/connector/base-ui/` (Base UI):
 
 #### **ConnectButton**
 
@@ -36,7 +36,7 @@ A fully-featured wallet connection button with dropdown menu.
 **Usage:**
 
 ```tsx
-import { ConnectButton } from '@/components/connector';
+import { ConnectButton } from '@/components/connector/radix-ui';
 
 export default function Header() {
     return <ConnectButton />;
@@ -59,7 +59,7 @@ A dialog for selecting and connecting to Solana wallets.
 **Usage:**
 
 ```tsx
-import { WalletModal } from "@/components/connector"
+import { WalletModal } from "@/components/connector/radix-ui"
 
 const [open, setOpen] = useState(false)
 
@@ -81,7 +81,7 @@ A dropdown for switching between multiple wallet accounts.
 **Usage:**
 
 ```tsx
-import { AccountSwitcher } from '@/components/connector';
+import { AccountSwitcher } from '@/components/connector/radix-ui';
 
 export default function Header() {
     return <AccountSwitcher />;
@@ -103,7 +103,7 @@ A dropdown for switching between Solana networks.
 **Usage:**
 
 ```tsx
-import { ClusterSelector } from '@/components/connector';
+import { ClusterSelector } from '@/components/connector/radix-ui';
 
 export default function Header() {
     return <ClusterSelector />;
@@ -114,7 +114,7 @@ export default function Header() {
 
 These components are meant to be **copied and customized**:
 
-1. **Copy** the component files from `components/connector/` to your project
+1. **Copy** the component files from `components/connector/radix-ui/` or `components/connector/base-ui/` to your project
 2. **Customize** the styling by modifying Tailwind classes
 3. **Extend** functionality by adding your own features
 4. **Replace** icons or add animations as needed
@@ -143,15 +143,28 @@ These components use:
 ```
 components/
 ├── connector/
-│   ├── connect-button.tsx      # Main connection button
-│   ├── wallet-modal.tsx         # Wallet selection dialog
-│   ├── account-switcher.tsx     # Account switching dropdown
-│   ├── cluster-selector.tsx     # Network selection dropdown
-│   └── index.ts                 # Barrel exports
-└── ui/                          # shadcn/ui base components
+│   ├── radix-ui/                  # Radix UI implementation
+│   │   ├── connect-button.tsx     # Main connection button
+│   │   ├── wallet-modal.tsx       # Wallet selection dialog
+│   │   ├── wallet-dropdown-content.tsx
+│   │   ├── account-switcher.tsx   # Account switching dropdown
+│   │   ├── cluster-selector.tsx   # Network selection dropdown
+│   │   └── index.ts               # Barrel exports
+│   ├── base-ui/                   # Base UI implementation
+│   │   ├── connect-button.tsx
+│   │   ├── wallet-modal.tsx
+│   │   ├── wallet-dropdown-content.tsx
+│   │   └── index.ts
+│   └── index.ts                   # Re-exports from both
+├── ui/                            # shadcn/ui base components
+│   ├── button.tsx
+│   ├── dialog.tsx
+│   ├── dropdown-menu.tsx
+│   └── ...
+└── ui-base/                       # Base UI primitive components
     ├── button.tsx
     ├── dialog.tsx
-    ├── dropdown-menu.tsx
+    ├── menu.tsx
     └── ...
 ```
 
@@ -170,12 +183,20 @@ components/
 2. Copy components:
 
     ```bash
-    cp -r components/connector your-project/components/
+    # Copy Radix UI components
+    cp -r components/connector/radix-ui your-project/components/connector/
+
+    # Or copy Base UI components
+    cp -r components/connector/base-ui your-project/components/connector/
     ```
 
 3. Use in your app:
     ```tsx
-    import { ConnectButton } from '@/components/connector';
+    // Radix UI
+    import { ConnectButton } from '@/components/connector/radix-ui';
+
+    // Or Base UI
+    import { ConnectButton } from '@/components/connector/base-ui';
     ```
 
 ### Option 2: Build Your Own

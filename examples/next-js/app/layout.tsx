@@ -61,8 +61,8 @@ const inter = localFont({
 });
 
 export const metadata: Metadata = {
-    title: 'ConnectorKit Example',
-    description: 'Example implementation of ConnectorKit React components',
+    title: 'Connector Kit',
+    description: 'Production-ready wallet connection package for Solana. Pre-built, composable blocks built with modern standards.',
 };
 
 export default function RootLayout({

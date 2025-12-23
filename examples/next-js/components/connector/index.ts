@@ -1,10 +1,6 @@
-// Primary connect button - copy and customize this!
-export { ConnectButton } from './connect-button';
+// Re-export from radix-ui (default)
+export * from './radix-ui';
 
-// Modular components
-export { WalletModal } from './wallet-modal';
-export { WalletDropdownContent } from './wallet-dropdown-content';
-
-// Other example components
-export { AccountSwitcher } from './account-switcher';
-export { ClusterSelector } from './cluster-selector';
+// Named exports for explicit framework choice
+export * as RadixUI from './radix-ui';
+export * as BaseUI from './base-ui';

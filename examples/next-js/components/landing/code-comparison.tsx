@@ -1,9 +1,9 @@
 'use client';
 
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { Card, CardContent } from '@/components/ui/card';
 import { CopyButton } from '@/components/ui/copy-button';
+import { CodeBlock } from '@/components/ui/code-block';
 
 interface CodeComparisonProps {
     beforeTitle: string;
@@ -53,7 +53,8 @@ export function CodeComparison({
                                     />
                                 </div>
                                 <div className="max-h-[1200px] overflow-y-auto">
-                                    <SyntaxHighlighter
+                                    <CodeBlock
+                                        code={beforeCode}
                                         language="typescript"
                                         style={oneDark}
                                         customStyle={{
@@ -70,9 +71,7 @@ export function CodeComparison({
                                             color: '#636d83',
                                             userSelect: 'none',
                                         }}
-                                    >
-                                        {beforeCode}
-                                    </SyntaxHighlighter>
+                                    />
                                 </div>
                             </CardContent>
                         </Card>
@@ -99,7 +98,8 @@ export function CodeComparison({
                                     />
                                 </div>
                                 <div className="max-h-[1200px] overflow-y-auto">
-                                    <SyntaxHighlighter
+                                    <CodeBlock
+                                        code={afterCode}
                                         language="tsx"
                                         style={oneDark}
                                         customStyle={{
@@ -116,9 +116,7 @@ export function CodeComparison({
                                             color: '#636d83',
                                             userSelect: 'none',
                                         }}
-                                    >
-                                        {afterCode}
-                                    </SyntaxHighlighter>
+                                    />
                                 </div>
                             </CardContent>
                         </Card>

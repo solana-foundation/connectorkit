@@ -1,10 +1,10 @@
 'use client';
 
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { CopyButton } from '@/components/ui/copy-button';
+import { CodeBlock } from '@/components/ui/code-block';
 import { useConnector } from '@solana/connector';
 import { Code, Plug } from 'lucide-react';
 
@@ -93,7 +93,8 @@ export function ExampleCard({ example, requiresConnection = true }: ExampleCardP
                                         />
                                     </div>
                                     <div className="max-h-[400px] overflow-y-auto">
-                                        <SyntaxHighlighter
+                                        <CodeBlock
+                                            code={example.code}
                                             language="tsx"
                                             style={oneDark}
                                             customStyle={{
@@ -110,9 +111,7 @@ export function ExampleCard({ example, requiresConnection = true }: ExampleCardP
                                                 color: '#636d83',
                                                 userSelect: 'none',
                                             }}
-                                        >
-                                            {example.code}
-                                        </SyntaxHighlighter>
+                                        />
                                     </div>
                                 </CardContent>
                             </Card>
