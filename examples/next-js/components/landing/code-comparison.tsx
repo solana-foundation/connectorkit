@@ -1,6 +1,6 @@
 'use client';
 
-import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { Card, CardContent } from '@/components/ui/card';
 import { CopyButton } from '@/components/ui/copy-button';
 import { CodeBlock } from '@/components/ui/code-block';
@@ -41,22 +41,22 @@ export function CodeComparison({
                             <h3 className="text-title-5 text-sand-1500 font-diatype-medium">{beforeTitle}</h3>
                             <p className="text-body-md text-sand-700 font-inter mt-1">{beforeDescription}</p>
                         </div>
-                        <Card className="border-sand-300 bg-[#282c34] rounded-xl shadow-sm overflow-hidden">
+                        <Card className="border-sand-300 bg-[#fafafa] rounded-xl shadow-sm overflow-hidden">
                             <CardContent className="p-0">
-                                <div className="flex items-center justify-between px-4 py-2 border-b border-white/10">
-                                    <span className="text-xs text-sand-500 font-inter">TypeScript</span>
+                                <div className="flex items-center justify-between px-4 py-2 border-b border-sand-200">
+                                    <span className="text-xs text-sand-600 font-inter">TypeScript</span>
                                     <CopyButton
                                         textToCopy={beforeCode}
                                         showText={false}
-                                        iconClassName="text-sand-500 group-hover:text-sand-300"
-                                        iconClassNameCheck="text-green-400"
+                                        iconClassName="text-sand-500 group-hover:text-sand-700"
+                                        iconClassNameCheck="text-green-600"
                                     />
                                 </div>
                                 <div className="max-h-[1200px] overflow-y-auto">
                                     <CodeBlock
                                         code={beforeCode}
                                         language="typescript"
-                                        style={oneDark}
+                                        style={oneLight}
                                         customStyle={{
                                             margin: 0,
                                             padding: '1rem',
@@ -68,7 +68,7 @@ export function CodeComparison({
                                         lineNumberStyle={{
                                             minWidth: '2.5em',
                                             paddingRight: '1em',
-                                            color: '#636d83',
+                                            color: '#9ca3af',
                                             userSelect: 'none',
                                         }}
                                     />
@@ -83,25 +83,25 @@ export function CodeComparison({
                             <h3 className="text-title-5 text-sand-1500 font-diatype-medium">{afterTitle}</h3>
                             <p className="text-body-md text-sand-700 font-inter mt-1">{afterDescription}</p>
                         </div>
-                        <Card className="border-green-500/30 bg-[#282c34] rounded-xl shadow-sm overflow-hidden ring-1 ring-green-500/20">
+                        <Card className="border-green-500/30 bg-[#fafafa] rounded-xl shadow-sm overflow-hidden ring-1 ring-green-500/20">
                             <CardContent className="p-0">
-                                <div className="flex items-center justify-between px-4 py-2 border-b border-white/10">
+                                <div className="flex items-center justify-between px-4 py-2 border-b border-sand-200">
                                     <div className="flex items-center gap-2">
-                                        <span className="text-xs text-sand-500 font-inter">TypeScript</span>
-                                        <span className="text-xs text-green-400 font-inter-medium">✓ Recommended</span>
+                                        <span className="text-xs text-sand-600 font-inter">TypeScript</span>
+                                        <span className="text-xs text-green-600 font-inter-medium">✓ Recommended</span>
                                     </div>
                                     <CopyButton
                                         textToCopy={afterCode}
                                         showText={false}
-                                        iconClassName="text-sand-500 group-hover:text-sand-300"
-                                        iconClassNameCheck="text-green-400"
+                                        iconClassName="text-sand-500 group-hover:text-sand-700"
+                                        iconClassNameCheck="text-green-600"
                                     />
                                 </div>
                                 <div className="max-h-[1200px] overflow-y-auto">
                                     <CodeBlock
                                         code={afterCode}
                                         language="tsx"
-                                        style={oneDark}
+                                        style={oneLight}
                                         customStyle={{
                                             margin: 0,
                                             padding: '1rem',
@@ -113,7 +113,7 @@ export function CodeComparison({
                                         lineNumberStyle={{
                                             minWidth: '2.5em',
                                             paddingRight: '1em',
-                                            color: '#636d83',
+                                            color: '#9ca3af',
                                             userSelect: 'none',
                                         }}
                                     />

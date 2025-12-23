@@ -1,12 +1,13 @@
 'use client';
 
-import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { CopyButton } from '@/components/ui/copy-button';
 import { CodeBlock } from '@/components/ui/code-block';
 import { useConnector } from '@solana/connector';
 import { Code, Plug } from 'lucide-react';
+import { IconTypescriptLogo } from 'symbols-react';
 
 export interface ExampleConfig {
     id: string;
@@ -76,27 +77,28 @@ export function ExampleCard({ example, requiresConnection = true }: ExampleCardP
                         </TabsContent>
 
                         <TabsContent value="code">
-                            <Card className="border-sand-300 bg-[#282c34] rounded-xl min-h-[180px] overflow-hidden">
+                            <Card className="border-sand-300 bg-[#fafafa] rounded-xl min-h-[180px] overflow-hidden pt-2">
                                 <CardContent className="p-0">
-                                    <div className="flex items-center justify-between px-4 pb-2 pt-0 border-b border-white/10">
+                                    <div className="flex items-center justify-between px-4 pb-2 pt-0 border-b border-sand-200">
                                         <div className="flex items-center gap-2">
-                                            <Code className="h-3.5 w-3.5 text-sand-500" />
-                                            <span className="text-xs text-sand-500 font-inter">
+                                            <IconTypescriptLogo className="h-4 w-4 fill-sand-400" />
+                                            <span className="text-xs text-sand-1200 font-inter">
                                                 {example.fileName || 'TypeScript'}
                                             </span>
                                         </div>
                                         <CopyButton
                                             textToCopy={example.code}
                                             showText={false}
-                                            iconClassName="text-sand-500 group-hover:text-sand-300"
-                                            iconClassNameCheck="text-green-400"
+                                            className="w-8 h-8 flex items-center"
+                                            iconClassName="text-sand-500 group-hover:text-sand-700 h-4 w-4 translate-y-[-1px] translate-x-[-8px]"
+                                            iconClassNameCheck="text-green-600"
                                         />
                                     </div>
                                     <div className="max-h-[400px] overflow-y-auto">
                                         <CodeBlock
                                             code={example.code}
                                             language="tsx"
-                                            style={oneDark}
+                                            style={oneLight}
                                             customStyle={{
                                                 margin: 0,
                                                 padding: '1rem',
@@ -108,7 +110,7 @@ export function ExampleCard({ example, requiresConnection = true }: ExampleCardP
                                             lineNumberStyle={{
                                                 minWidth: '2.5em',
                                                 paddingRight: '1em',
-                                                color: '#636d83',
+                                                color: '#9ca3af',
                                                 userSelect: 'none',
                                             }}
                                         />

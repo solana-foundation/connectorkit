@@ -41,6 +41,7 @@ export function CopyButton({
         <Button
             onClick={handleCopy}
             disabled={disabled}
+            variant="outline"
             className={cn(
                 'group flex items-center justify-between',
                 className,
