@@ -1,5 +1,5 @@
 ---
-title: @solana/connector
+title: "@solana/connector"
 description: Production-ready wallet connector for Solana applications
 ---
 
