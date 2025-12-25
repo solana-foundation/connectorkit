@@ -19,6 +19,66 @@ function HookReturnValue({ name, value }: { name: string; value: string }) {
     );
 }
 
+// Component for displaying overlapping swap token icons
+function SwapTokenIcon({
+    fromIcon,
+    toIcon,
+    size = 32,
+}: {
+    fromIcon?: string;
+    toIcon?: string;
+    size?: number;
+}) {
+    const offset = size * 0.6; // 60% offset for overlap
+    return (
+        <div className="relative flex-shrink-0" style={{ width: size + offset, height: size }}>
+            {/* From token (back) */}
+            <div
+                className="absolute left-0 top-0 rounded-full bg-muted flex items-center justify-center border-2 border-background"
+                style={{ width: size, height: size }}
+            >
+                {fromIcon ? (
+                    <img src={fromIcon} className="rounded-full" style={{ width: size - 4, height: size - 4 }} alt="" />
+                ) : (
+                    <Coins className="h-4 w-4 text-muted-foreground" />
+                )}
+            </div>
+            {/* To token (front, overlapping) */}
+            <div
+                className="absolute top-0 rounded-full bg-muted flex items-center justify-center border-2 border-background"
+                style={{ left: offset, width: size, height: size }}
+            >
+                {toIcon ? (
+                    <img src={toIcon} className="rounded-full" style={{ width: size - 4, height: size - 4 }} alt="" />
+                ) : (
+                    <Coins className="h-4 w-4 text-muted-foreground" />
+                )}
+            </div>
+        </div>
+    );
+}
+
+function shortId(id: string) {
+    return `${id.slice(0, 4)}...${id.slice(-4)}`;
+}
+
+function getTransactionTitle(tx: { type: string; programName?: string; programId?: string }) {
+    if (tx.type === 'tokenAccountClosed') return 'Token Account Closed';
+    if (tx.type === 'program') {
+        const program = tx.programName ?? (tx.programId ? shortId(tx.programId) : 'Unknown');
+        return `Program: ${program}`;
+    }
+    return tx.type;
+}
+
+function getTransactionSubtitle(tx: { type: string; formattedTime: string; instructionTypes?: string[] }) {
+    if (tx.type === 'program' && tx.instructionTypes?.length) {
+        const summary = tx.instructionTypes.slice(0, 2).join(' · ');
+        return `${tx.formattedTime} · ${summary}`;
+    }
+    return tx.formattedTime;
+}
+
 // Hook example components
 function UseConnectorExample() {
     const { connected, connecting, selectedWallet, selectedAccount, wallets, select, disconnect } = useConnector();
@@ -507,7 +567,13 @@ function UseTransactionsExample() {
                                     rel="noopener noreferrer"
                                     className="flex items-center gap-3 p-3 hover:bg-muted/50 transition-colors"
                                 >
-                                    {tx.tokenIcon ? (
+                                    {tx.type === 'swap' && (tx.swapFromToken || tx.swapToToken) ? (
+                                        <SwapTokenIcon
+                                            fromIcon={tx.swapFromToken?.icon}
+                                            toIcon={tx.swapToToken?.icon}
+                                            size={32}
+                                        />
+                                    ) : tx.tokenIcon ? (
                                         <img src={tx.tokenIcon} className="h-8 w-8 rounded-full" alt="" />
                                     ) : (
                                         <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
@@ -515,8 +581,8 @@ function UseTransactionsExample() {
                                         </div>
                                     )}
                                     <div className="flex-1 min-w-0">
-                                        <p className="font-medium text-sm">{tx.type}</p>
-                                        <p className="text-xs text-muted-foreground">{tx.formattedTime}</p>
+                                        <p className="font-medium text-sm">{getTransactionTitle(tx)}</p>
+                                        <p className="text-xs text-muted-foreground">{getTransactionSubtitle(tx)}</p>
                                     </div>
                                     {tx.formattedAmount && (
                                         <span

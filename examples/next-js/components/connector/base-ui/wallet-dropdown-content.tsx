@@ -69,6 +69,78 @@ function Separator({ className }: { className?: string }) {
     return <div className={`shrink-0 bg-border h-[1px] w-full ${className || ''}`} />;
 }
 
+function SwapTokenIcon({
+    fromIcon,
+    toIcon,
+    size = 32,
+}: {
+    fromIcon?: string;
+    toIcon?: string;
+    size?: number;
+}) {
+    const offset = size * 0.6;
+    return (
+        <div className="relative flex-shrink-0" style={{ width: size + offset, height: size }}>
+            <div
+                className="absolute left-0 top-0 rounded-full bg-muted flex items-center justify-center border-2 border-background"
+                style={{ width: size, height: size }}
+            >
+                {fromIcon ? (
+                    <img
+                        src={fromIcon}
+                        className="rounded-full"
+                        style={{ width: size - 4, height: size - 4 }}
+                        alt=""
+                    />
+                ) : (
+                    <Coins className="h-4 w-4 text-muted-foreground" />
+                )}
+            </div>
+            <div
+                className="absolute top-0 rounded-full bg-muted flex items-center justify-center border-2 border-background"
+                style={{ left: offset, width: size, height: size }}
+            >
+                {toIcon ? (
+                    <img
+                        src={toIcon}
+                        className="rounded-full"
+                        style={{ width: size - 4, height: size - 4 }}
+                        alt=""
+                    />
+                ) : (
+                    <Coins className="h-4 w-4 text-muted-foreground" />
+                )}
+            </div>
+        </div>
+    );
+}
+
+function formatTransactionType(type: string) {
+    if (type === 'tokenAccountClosed') return 'Token Account Closed';
+    return type;
+}
+
+function shortId(id: string) {
+    return `${id.slice(0, 4)}...${id.slice(-4)}`;
+}
+
+function getTransactionTitle(tx: { type: string; programName?: string; programId?: string }) {
+    if (tx.type === 'tokenAccountClosed') return 'Token Account Closed';
+    if (tx.type === 'program') {
+        const program = tx.programName ?? (tx.programId ? shortId(tx.programId) : 'Unknown');
+        return `Program: ${program}`;
+    }
+    return tx.type;
+}
+
+function getTransactionSubtitle(tx: { type: string; formattedTime: string; instructionTypes?: string[] }) {
+    if (tx.type === 'program' && tx.instructionTypes?.length) {
+        const summary = tx.instructionTypes.slice(0, 2).join(' · ');
+        return `${tx.formattedTime} · ${summary}`;
+    }
+    return tx.formattedTime;
+}
+
 export function WalletDropdownContent({ selectedAccount, walletIcon, walletName }: WalletDropdownContentProps) {
     const [view, setView] = useState<DropdownView>('wallet');
     const [copied, setCopied] = useState(false);
@@ -273,7 +345,13 @@ export function WalletDropdownContent({ selectedAccount, walletIcon, walletName 
                                                     className="flex items-center gap-3 py-1 hover:bg-muted/50 rounded-lg px-1 -mx-1 transition-colors"
                                                 >
                                                     <div className="relative">
-                                                        {tx.tokenIcon ? (
+                                                        {tx.type === 'swap' && (tx.swapFromToken || tx.swapToToken) ? (
+                                                            <SwapTokenIcon
+                                                                fromIcon={tx.swapFromToken?.icon}
+                                                                toIcon={tx.swapToToken?.icon}
+                                                                size={32}
+                                                            />
+                                                        ) : tx.tokenIcon ? (
                                                             <img
                                                                 src={tx.tokenIcon}
                                                                 className="h-8 w-8 rounded-full"
@@ -285,23 +363,25 @@ export function WalletDropdownContent({ selectedAccount, walletIcon, walletName 
                                                             </div>
                                                         )}
                                                         {/* Direction indicator */}
-                                                        <div
-                                                            className={`absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full flex items-center justify-center border-2 border-background ${
-                                                                tx.direction === 'in'
-                                                                    ? 'bg-green-500 text-white'
-                                                                    : 'bg-orange-500 text-white'
-                                                            }`}
-                                                        >
-                                                            {tx.direction === 'in' ? (
-                                                                <ArrowDownLeft className="h-2 w-2" />
-                                                            ) : (
-                                                                <ArrowUpRight className="h-2 w-2" />
-                                                            )}
-                                                        </div>
+                                                        {(tx.direction === 'in' || tx.direction === 'out') && (
+                                                            <div
+                                                                className={`absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full flex items-center justify-center border-2 border-background ${
+                                                                    tx.direction === 'in'
+                                                                        ? 'bg-green-500 text-white'
+                                                                        : 'bg-orange-500 text-white'
+                                                                }`}
+                                                            >
+                                                                {tx.direction === 'in' ? (
+                                                                    <ArrowDownLeft className="h-2 w-2" />
+                                                                ) : (
+                                                                    <ArrowUpRight className="h-2 w-2" />
+                                                                )}
+                                                            </div>
+                                                        )}
                                                     </div>
                                                     <div className="flex-1 min-w-0">
-                                                        <p className="font-medium text-sm">{tx.type}</p>
-                                                        <p className="text-xs text-muted-foreground">{tx.formattedTime}</p>
+                                                        <p className="font-medium text-sm">{getTransactionTitle(tx)}</p>
+                                                        <p className="text-xs text-muted-foreground">{getTransactionSubtitle(tx)}</p>
                                                     </div>
                                                     <div className="flex items-center gap-2">
                                                         {tx.formattedAmount && (
@@ -309,7 +389,9 @@ export function WalletDropdownContent({ selectedAccount, walletIcon, walletName 
                                                                 className={`text-sm font-medium ${
                                                                     tx.direction === 'in'
                                                                         ? 'text-green-600'
-                                                                        : 'text-orange-600'
+                                                                        : tx.direction === 'out'
+                                                                          ? 'text-orange-600'
+                                                                          : 'text-muted-foreground'
                                                                 }`}
                                                             >
                                                                 {tx.formattedAmount}

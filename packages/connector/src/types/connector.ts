@@ -105,6 +105,12 @@ export interface ConnectorConfig {
     imageProxy?: string;
 
     /**
+     * Optional mapping from program IDs to human-readable program names.
+     * Used to enrich transaction history (e.g. showing `Jupiter` instead of a raw program address).
+     */
+    programLabels?: Record<string, string>;
+
+    /**
      * CoinGecko API configuration for token price fetching.
      * Configure API key for higher rate limits and retry behavior for 429 responses.
      */
