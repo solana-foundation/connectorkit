@@ -102,7 +102,7 @@ describe('Transaction Format Utilities', () => {
                 serialize: vi.fn().mockReturnValue(mockLegacyTxBytes),
             };
 
-            const result = serializeTransaction(mockTx as any);
+            const result = serializeTransaction(mockTx as unknown as Transaction);
 
             expect(result).toBe(mockLegacyTxBytes);
             expect(mockTx.serialize).toHaveBeenCalledWith({
@@ -118,7 +118,7 @@ describe('Transaction Format Utilities', () => {
 
         it('should convert other TypedArray to Uint8Array', () => {
             const int8Array = new Int8Array([1, 2, 3, 4, 5]);
-            const result = serializeTransaction(int8Array as any);
+            const result = serializeTransaction(int8Array);
 
             expect(result).toBeInstanceOf(Uint8Array);
             expect(result.length).toBe(5);
@@ -127,16 +127,18 @@ describe('Transaction Format Utilities', () => {
 
         it('should convert Uint16Array to Uint8Array', () => {
             const uint16Array = new Uint16Array([256, 512]);
-            const result = serializeTransaction(uint16Array as any);
+            const result = serializeTransaction(uint16Array);
 
             expect(result).toBeInstanceOf(Uint8Array);
         });
 
         it('should throw error for unsupported formats', () => {
-            expect(() => serializeTransaction({} as any)).toThrow('Unsupported transaction format');
-            expect(() => serializeTransaction('string' as any)).toThrow('Unsupported transaction format');
-            expect(() => serializeTransaction(123 as any)).toThrow('Unsupported transaction format');
-            expect(() => serializeTransaction(null as any)).toThrow('Unsupported transaction format');
+            const invalidInputs: unknown[] = [{}, 'string', 123, null];
+            for (const input of invalidInputs) {
+                expect(() =>
+                    serializeTransaction(input as unknown as Parameters<typeof serializeTransaction>[0]),
+                ).toThrow('Unsupported transaction format');
+            }
         });
 
         it('should handle empty Uint8Array', () => {
@@ -150,7 +152,7 @@ describe('Transaction Format Utilities', () => {
             const view = new Uint8Array(buffer, 2, 5); // offset=2, length=5
             view.fill(42);
 
-            const result = serializeTransaction(view as any);
+            const result = serializeTransaction(view);
 
             expect(result).toBeInstanceOf(Uint8Array);
             expect(result.length).toBe(5);
@@ -194,7 +196,7 @@ describe('Transaction Format Utilities', () => {
                 serialize: vi.fn().mockReturnValue(mockLegacyTxBytes),
             };
 
-            const result = prepareTransactionForWallet(mockTx as any);
+            const result = prepareTransactionForWallet(mockTx as unknown as Transaction);
 
             expect(result.serialized).toBe(mockLegacyTxBytes);
             expect(result.wasWeb3js).toBe(true);
@@ -209,7 +211,7 @@ describe('Transaction Format Utilities', () => {
 
         it('should prepare TypedArray transaction', () => {
             const int8Array = new Int8Array([1, 2, 3, 4, 5]);
-            const result = prepareTransactionForWallet(int8Array as any);
+            const result = prepareTransactionForWallet(int8Array);
 
             expect(result.serialized).toBeInstanceOf(Uint8Array);
             expect(result.wasWeb3js).toBe(false);
@@ -219,7 +221,7 @@ describe('Transaction Format Utilities', () => {
             // Web3.js object
             const web3jsResult = prepareTransactionForWallet({
                 serialize: vi.fn().mockReturnValue(mockLegacyTxBytes),
-            } as any);
+            } as unknown as Transaction);
             expect(web3jsResult.wasWeb3js).toBe(true);
 
             // Uint8Array
@@ -292,7 +294,7 @@ describe('Transaction Format Utilities', () => {
             };
 
             // Prepare for wallet
-            const { serialized, wasWeb3js } = prepareTransactionForWallet(mockTx as any);
+            const { serialized, wasWeb3js } = prepareTransactionForWallet(mockTx as unknown as Transaction);
             expect(wasWeb3js).toBe(true);
             expect(serialized).toBe(mockLegacyTxBytes);
 
@@ -315,7 +317,7 @@ describe('Transaction Format Utilities', () => {
             // Web3.js format
             const { wasWeb3js: web3jsFlag } = prepareTransactionForWallet({
                 serialize: vi.fn().mockReturnValue(mockLegacyTxBytes),
-            } as any);
+            } as unknown as Transaction);
             expect(web3jsFlag).toBe(true);
 
             // Byte array format
@@ -327,20 +329,20 @@ describe('Transaction Format Utilities', () => {
     describe('TypedArray variants', () => {
         it('should handle Int8Array', () => {
             const arr = new Int8Array([1, -1, 2, -2]);
-            const result = serializeTransaction(arr as any);
+            const result = serializeTransaction(arr);
             expect(result).toBeInstanceOf(Uint8Array);
             expect(result.length).toBe(4);
         });
 
         it('should handle Uint32Array', () => {
             const arr = new Uint32Array([1, 2, 3]);
-            const result = serializeTransaction(arr as any);
+            const result = serializeTransaction(arr);
             expect(result).toBeInstanceOf(Uint8Array);
         });
 
         it('should handle Float32Array', () => {
             const arr = new Float32Array([1.5, 2.5, 3.5]);
-            const result = serializeTransaction(arr as any);
+            const result = serializeTransaction(arr);
             expect(result).toBeInstanceOf(Uint8Array);
         });
 
@@ -349,7 +351,7 @@ describe('Transaction Format Utilities', () => {
             const view = new DataView(buffer);
             view.setUint8(0, 42);
 
-            const result = serializeTransaction(view as any);
+            const result = serializeTransaction(view);
             expect(result).toBeInstanceOf(Uint8Array);
             expect(result[0]).toBe(42);
         });

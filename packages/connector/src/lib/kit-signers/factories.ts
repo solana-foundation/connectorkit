@@ -14,6 +14,7 @@ import type {
     TransactionSendingSignerConfig,
 } from '@solana/signers';
 import type { SignatureBytes } from '@solana/keys';
+import type { Transaction } from '@solana/transactions';
 import { ValidationError, TransactionError, Errors } from '../errors';
 import { updateSignatureDictionary, freezeSigner, base58ToSignatureBytes } from './utils';
 
@@ -138,13 +139,13 @@ export function createMessageSignerFromWallet(
 export function createTransactionSendingSignerFromWallet(
     walletAddress: Address<string>,
     chain: `solana:${string}`,
-    sendTransactionFn: (transaction: any) => Promise<string>,
+    sendTransactionFn: (transaction: Transaction) => Promise<string>,
 ): TransactionSendingSigner<string> {
     const signer: TransactionSendingSigner<string> = {
         address: walletAddress,
 
         async signAndSendTransactions(
-            transactions: readonly any[],
+            transactions: readonly Transaction[],
             config?: TransactionSendingSignerConfig,
         ): Promise<readonly SignatureBytes[]> {
             // Most wallets only support signing one transaction at a time

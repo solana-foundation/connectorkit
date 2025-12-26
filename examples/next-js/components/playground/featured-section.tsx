@@ -794,12 +794,27 @@ function WalletModalContentBaseUI() {
     };
 
     // Custom Avatar for Base UI
-    const BaseUIAvatar = ({ src, alt, fallback, className }: { src?: string; alt?: string; fallback?: React.ReactNode; className?: string }) => {
+    const BaseUIAvatar = ({
+        src,
+        alt,
+        fallback,
+        className,
+    }: {
+        src?: string;
+        alt?: string;
+        fallback?: React.ReactNode;
+        className?: string;
+    }) => {
         const [hasError, setHasError] = useState(false);
         return (
             <div className={`relative flex shrink-0 overflow-hidden rounded-full ${className}`}>
                 {src && !hasError ? (
-                    <img src={src} alt={alt} className="aspect-square h-full w-full object-cover" onError={() => setHasError(true)} />
+                    <img
+                        src={src}
+                        alt={alt}
+                        className="aspect-square h-full w-full object-cover"
+                        onError={() => setHasError(true)}
+                    />
                 ) : (
                     <div className="flex h-full w-full items-center justify-center bg-muted">{fallback}</div>
                 )}
@@ -899,7 +914,12 @@ function WalletModalContentBaseUI() {
                                             stroke="currentColor"
                                             viewBox="0 0 24 24"
                                         >
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                            <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                strokeWidth={2}
+                                                d="M19 9l-7 7-7-7"
+                                            />
                                         </svg>
                                     </button>
                                     {isOtherWalletsOpen && (
@@ -1155,7 +1175,9 @@ export function FeaturedSection() {
 
                 {/* Supported UI Frameworks */}
                 <div className="mt-6">
-                    <p className="text-xs font-diatype-medium font-medium text-sand-700 mb-3">Supported UI Frameworks</p>
+                    <p className="text-xs font-diatype-medium font-medium text-sand-700 mb-3">
+                        Supported UI Frameworks
+                    </p>
                     <div className="flex items-center gap-4">
                         {/* Base UI */}
                         <div className="flex items-center gap-2">

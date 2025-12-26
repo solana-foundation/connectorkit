@@ -1,4 +1,5 @@
 import type { TransactionActivity } from '../../types/transactions';
+import type { SolanaClusterId } from '@wallet-ui/core';
 import { BaseCollaborator } from '../core/base-collaborator';
 
 /**
@@ -26,11 +27,12 @@ export class TransactionTracker extends BaseCollaborator {
      */
     trackTransaction(activity: Omit<TransactionActivity, 'timestamp' | 'cluster'>): void {
         const state = this.getState();
-        const clusterId = state.cluster?.id || 'solana:devnet';
+        const fallbackClusterId: SolanaClusterId = 'solana:devnet';
+        const clusterId = state.cluster?.id ?? fallbackClusterId;
         const fullActivity: TransactionActivity = {
             ...activity,
             timestamp: new Date().toISOString(),
-            cluster: clusterId as any,
+            cluster: clusterId,
         };
 
         this.transactions.unshift(fullActivity);
@@ -53,14 +55,14 @@ export class TransactionTracker extends BaseCollaborator {
      * Update transaction status (e.g., from pending to confirmed/failed)
      */
     updateStatus(signature: string, status: TransactionActivity['status'], error?: string): void {
-        const tx = this.transactions.find(t => t.signature === signature);
+        const tx = this.transactions.find(t => String(t.signature) === signature);
         if (tx) {
             tx.status = status;
             if (error) tx.error = error;
 
             this.eventEmitter.emit({
                 type: 'transaction:updated',
-                signature: signature as any,
+                signature: tx.signature,
                 status,
                 timestamp: new Date().toISOString(),
             });

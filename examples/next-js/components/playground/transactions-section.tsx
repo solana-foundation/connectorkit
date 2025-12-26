@@ -227,7 +227,6 @@ function ConnectionAbstractionDemo() {
 ];
 
 export function TransactionsSection() {
-
     return (
         <section>
             {/* Section Header */}
@@ -250,8 +249,8 @@ export function TransactionsSection() {
                 </div>
                 <h2 className="text-h3 font-diatype-medium text-sand-1500 mb-2">Real Transaction Examples</h2>
                 <p className="text-body-lg font-inter text-sand-700 max-w-2xl">
-                    Test real-world transactions on devnet or mainnet. Compare legacy web3.js patterns with modern Kit-based
-                    approaches using ConnectorKit&apos;s unified signer interface.
+                    Test real-world transactions on devnet or mainnet. Compare legacy web3.js patterns with modern
+                    Kit-based approaches using ConnectorKit&apos;s unified signer interface.
                 </p>
             </div>
 

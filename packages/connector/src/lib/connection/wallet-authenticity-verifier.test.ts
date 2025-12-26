@@ -40,7 +40,7 @@ describe('WalletAuthenticityVerifier', () => {
         });
 
         it('should handle missing wallet methods', () => {
-            const incompleteWallet = { publicKey: mockWallet.publicKey };
+            const incompleteWallet = { publicKey: mockWallet.publicKey } as unknown as DirectWallet;
             const result = WalletAuthenticityVerifier.verify(incompleteWallet, 'Test');
 
             expect(result.authentic).toBe(false);
@@ -48,7 +48,7 @@ describe('WalletAuthenticityVerifier', () => {
         });
 
         it('should handle empty wallet object', () => {
-            const result = WalletAuthenticityVerifier.verify({} as any, 'Test');
+            const result = WalletAuthenticityVerifier.verify({} as unknown as DirectWallet, 'Test');
             expect(result.authentic).toBe(false);
         });
 

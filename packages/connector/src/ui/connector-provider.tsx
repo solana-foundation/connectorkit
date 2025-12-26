@@ -8,6 +8,12 @@ import type { ExtendedConnectorConfig } from '../config/default-config';
 import { ConnectorErrorBoundary } from './error-boundary';
 import { installPolyfills } from '../lib/utils/polyfills';
 import { createLogger } from '../lib/utils/secure-logger';
+import type {
+    AuthorizationCache,
+    ChainSelector,
+    SolanaMobileWalletAdapterWallet,
+    RegisterMwaConfig,
+} from '@solana-mobile/wallet-standard-mobile';
 
 const logger = createLogger('ConnectorProvider');
 
@@ -35,10 +41,10 @@ export interface MobileWalletAdapterConfig {
         icon?: string;
     };
     remoteHostAuthority?: string;
-    chains?: readonly string[];
-    authorizationCache?: unknown;
-    chainSelector?: unknown;
-    onWalletNotFound?: (wallet: unknown) => Promise<void>;
+    chains?: RegisterMwaConfig['chains'];
+    authorizationCache?: AuthorizationCache;
+    chainSelector?: ChainSelector;
+    onWalletNotFound?: (wallet: SolanaMobileWalletAdapterWallet) => Promise<void>;
 }
 
 function ConnectorProviderInternal({
@@ -119,19 +125,22 @@ function ConnectorProviderInternal({
                     createDefaultChainSelector,
                     createDefaultWalletNotFoundHandler,
                 } = mod;
-                const defaultChains: readonly `${string}:${string}`[] = [
+                const defaultChains: RegisterMwaConfig['chains'] = [
                     'solana:mainnet',
                     'solana:devnet',
                     'solana:testnet',
                 ];
-                registerMwa({
+
+                const mwaConfig: RegisterMwaConfig = {
                     appIdentity: mobile.appIdentity,
-                    authorizationCache: mobile.authorizationCache ?? (createDefaultAuthorizationCache() as any),
-                    chains: (mobile.chains ?? defaultChains) as `${string}:${string}`[],
-                    chainSelector: mobile.chainSelector ?? (createDefaultChainSelector() as any),
+                    authorizationCache: mobile.authorizationCache ?? createDefaultAuthorizationCache(),
+                    chains: mobile.chains ?? defaultChains,
+                    chainSelector: mobile.chainSelector ?? createDefaultChainSelector(),
                     remoteHostAuthority: mobile.remoteHostAuthority,
                     onWalletNotFound: mobile.onWalletNotFound ?? createDefaultWalletNotFoundHandler(),
-                });
+                };
+
+                registerMwa(mwaConfig);
             } catch (e) {
                 // Failed to register Mobile Wallet Adapter
             }

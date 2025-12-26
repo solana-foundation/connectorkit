@@ -177,10 +177,11 @@ describe('ClusterManager', () => {
             try {
                 await manager.setCluster('solana:unknown' as SolanaClusterId);
                 expect.fail('Should have thrown error');
-            } catch (error: any) {
-                expect(error.message).toContain('solana:mainnet');
-                expect(error.message).toContain('solana:devnet');
-                expect(error.message).toContain('solana:testnet');
+            } catch (error: unknown) {
+                const err = error instanceof Error ? error : new Error(String(error));
+                expect(err.message).toContain('solana:mainnet');
+                expect(err.message).toContain('solana:devnet');
+                expect(err.message).toContain('solana:testnet');
             }
         });
 

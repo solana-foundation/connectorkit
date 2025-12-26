@@ -83,25 +83,70 @@ export interface UseWalletAssetsReturn<TSelected = WalletAssetsData> {
 /**
  * Parse a token account from RPC response
  */
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null;
+}
+
+function parseBigInt(value: unknown): bigint {
+    if (typeof value === 'bigint') return value;
+    if (typeof value === 'number' && Number.isSafeInteger(value)) return BigInt(value);
+    if (typeof value === 'string') {
+        try {
+            return BigInt(value);
+        } catch {
+            return 0n;
+        }
+    }
+    return 0n;
+}
+
+interface ParsedTokenAmount {
+    amount?: unknown;
+    decimals?: unknown;
+}
+
+interface ParsedTokenAccountInfo {
+    mint?: unknown;
+    owner?: unknown;
+    tokenAmount?: unknown;
+    state?: unknown;
+}
+
+function getParsedTokenAccountInfo(data: unknown): ParsedTokenAccountInfo | null {
+    if (!isRecord(data)) return null;
+
+    const parsed = data.parsed;
+    if (!isRecord(parsed)) return null;
+
+    const info = parsed.info;
+    if (!isRecord(info)) return null;
+
+    return info as ParsedTokenAccountInfo;
+}
+
 function parseTokenAccount(
     account: { pubkey: unknown; account: { data: unknown } },
     programId: 'token' | 'token-2022',
 ): TokenAccountInfo | null {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const data = account.account.data as any;
-    if (!data?.parsed?.info) return null;
+    const info = getParsedTokenAccountInfo(account.account.data);
+    if (!info) return null;
 
-    const info = data.parsed.info;
-    const amount = BigInt(info.tokenAmount?.amount || '0');
-    const decimals = info.tokenAmount?.decimals ?? 0;
+    const mint = typeof info.mint === 'string' ? info.mint : null;
+    const owner = typeof info.owner === 'string' ? info.owner : null;
+    if (!mint || !owner) return null;
+
+    const tokenAmount = isRecord(info.tokenAmount) ? (info.tokenAmount as ParsedTokenAmount) : null;
+    const amount = parseBigInt(tokenAmount?.amount);
+    const decimals = typeof tokenAmount?.decimals === 'number' ? tokenAmount.decimals : 0;
+    const state = typeof info.state === 'string' ? info.state : undefined;
 
     return {
         pubkey: String(account.pubkey),
-        mint: info.mint,
-        owner: info.owner,
+        mint,
+        owner,
         amount,
         decimals,
-        isFrozen: info.state === 'frozen',
+        isFrozen: state === 'frozen',
         programId,
     };
 }
@@ -153,9 +198,7 @@ export function useWalletAssets<TSelected = WalletAssetsData>(
     const key = useMemo(() => {
         if (!enabled || !connected || !address || !rpcClient) return null;
         const rpcUrl =
-            rpcClient.urlOrMoniker instanceof URL
-                ? rpcClient.urlOrMoniker.toString()
-                : String(rpcClient.urlOrMoniker);
+            rpcClient.urlOrMoniker instanceof URL ? rpcClient.urlOrMoniker.toString() : String(rpcClient.urlOrMoniker);
         return JSON.stringify(['wallet-assets', rpcUrl, address]);
     }, [enabled, connected, address, rpcClient]);
 
@@ -223,17 +266,18 @@ export function useWalletAssets<TSelected = WalletAssetsData>(
     );
 
     // Use shared query with optional select
-    const { data, error, status, updatedAt, isFetching, refetch, abort } = useSharedQuery<
-        WalletAssetsData,
-        TSelected
-    >(key, queryFn, {
-        enabled,
-        staleTimeMs,
-        cacheTimeMs,
-        refetchOnMount,
-        refetchIntervalMs,
-        select: select as ((data: WalletAssetsData | undefined) => TSelected) | undefined,
-    });
+    const { data, error, status, updatedAt, isFetching, refetch, abort } = useSharedQuery<WalletAssetsData, TSelected>(
+        key,
+        queryFn,
+        {
+            enabled,
+            staleTimeMs,
+            cacheTimeMs,
+            refetchOnMount,
+            refetchIntervalMs,
+            select: select as ((data: WalletAssetsData | undefined) => TSelected) | undefined,
+        },
+    );
 
     const isLoading = status === 'loading' || status === 'idle';
 

@@ -11,7 +11,7 @@ import {
     createConnectedEvent,
     createDisconnectedEvent,
     createErrorEvent,
-    createWalletRegisteredEvent,
+    createWalletsDetectedEvent,
 } from '../../__tests__/fixtures/events';
 
 describe('EventEmitter', () => {
@@ -174,7 +174,7 @@ describe('EventEmitter', () => {
             eventEmitter.on(listener);
 
             const events = [
-                createWalletRegisteredEvent(),
+                createWalletsDetectedEvent(),
                 createConnectedEvent(),
                 createDisconnectedEvent(),
                 createErrorEvent(),

@@ -1,5 +1,6 @@
 import type { AccountInfo } from '../../types/accounts';
 import type { WalletAccount } from '@wallet-standard/base';
+import { address as toAddress } from '@solana/addresses';
 
 export const TEST_ADDRESSES = {
     ACCOUNT_1: 'HMJfh9P8FEF5eVHp3XypYWThUYCQ9sWNZZQQxVP2jjr1',
@@ -32,7 +33,7 @@ export function createMockAccountInfo(
     } = {},
 ): AccountInfo {
     return {
-        address: address as any,
+        address: toAddress(address),
         raw: createMockWalletAccount(address, options),
     };
 }

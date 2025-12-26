@@ -43,7 +43,17 @@ const clusterColors: Record<string, string> = {
 };
 
 // Custom Avatar component
-function Avatar({ src, alt, fallback, className }: { src?: string; alt?: string; fallback?: React.ReactNode; className?: string }) {
+function Avatar({
+    src,
+    alt,
+    fallback,
+    className,
+}: {
+    src?: string;
+    alt?: string;
+    fallback?: React.ReactNode;
+    className?: string;
+}) {
     const [hasError, setHasError] = useState(false);
 
     return (
@@ -56,9 +66,7 @@ function Avatar({ src, alt, fallback, className }: { src?: string; alt?: string;
                     onError={() => setHasError(true)}
                 />
             ) : (
-                <div className="flex h-full w-full items-center justify-center bg-muted">
-                    {fallback}
-                </div>
+                <div className="flex h-full w-full items-center justify-center bg-muted">{fallback}</div>
             )}
         </div>
     );
@@ -69,15 +77,7 @@ function Separator({ className }: { className?: string }) {
     return <div className={`shrink-0 bg-border h-[1px] w-full ${className || ''}`} />;
 }
 
-function SwapTokenIcon({
-    fromIcon,
-    toIcon,
-    size = 32,
-}: {
-    fromIcon?: string;
-    toIcon?: string;
-    size?: number;
-}) {
+function SwapTokenIcon({ fromIcon, toIcon, size = 32 }: { fromIcon?: string; toIcon?: string; size?: number }) {
     const offset = size * 0.6;
     return (
         <div className="relative flex-shrink-0" style={{ width: size + offset, height: size }}>
@@ -86,12 +86,7 @@ function SwapTokenIcon({
                 style={{ width: size, height: size }}
             >
                 {fromIcon ? (
-                    <img
-                        src={fromIcon}
-                        className="rounded-full"
-                        style={{ width: size - 4, height: size - 4 }}
-                        alt=""
-                    />
+                    <img src={fromIcon} className="rounded-full" style={{ width: size - 4, height: size - 4 }} alt="" />
                 ) : (
                     <Coins className="h-4 w-4 text-muted-foreground" />
                 )}
@@ -101,12 +96,7 @@ function SwapTokenIcon({
                 style={{ left: offset, width: size, height: size }}
             >
                 {toIcon ? (
-                    <img
-                        src={toIcon}
-                        className="rounded-full"
-                        style={{ width: size - 4, height: size - 4 }}
-                        alt=""
-                    />
+                    <img src={toIcon} className="rounded-full" style={{ width: size - 4, height: size - 4 }} alt="" />
                 ) : (
                     <Coins className="h-4 w-4 text-muted-foreground" />
                 )}
@@ -250,13 +240,19 @@ export function WalletDropdownContent({ selectedAccount, walletIcon, walletName 
                 {/* Tokens & Transactions using Base UI Collapsible */}
                 <div className="space-y-2">
                     {/* Tokens */}
-                    <Collapsible open={isTokensOpen} onOpenChange={setIsTokensOpen} className="border rounded-[12px] px-3">
+                    <Collapsible
+                        open={isTokensOpen}
+                        onOpenChange={setIsTokensOpen}
+                        className="border rounded-[12px] px-3"
+                    >
                         <CollapsibleTrigger className="w-full flex items-center justify-between py-3 hover:no-underline hover:cursor-pointer">
                             <div className="flex items-center gap-2">
                                 <Coins className="h-4 w-4" />
                                 <span className="font-medium text-sm">Tokens</span>
                             </div>
-                            <ChevronDown className={`h-4 w-4 shrink-0 transition-transform duration-200 ${isTokensOpen ? 'rotate-180' : ''}`} />
+                            <ChevronDown
+                                className={`h-4 w-4 shrink-0 transition-transform duration-200 ${isTokensOpen ? 'rotate-180' : ''}`}
+                            />
                         </CollapsibleTrigger>
                         <CollapsibleContent>
                             <TokenListElement
@@ -310,13 +306,19 @@ export function WalletDropdownContent({ selectedAccount, walletIcon, walletName 
                     </Collapsible>
 
                     {/* Transactions */}
-                    <Collapsible open={isTransactionsOpen} onOpenChange={setIsTransactionsOpen} className="border rounded-[12px] px-3">
+                    <Collapsible
+                        open={isTransactionsOpen}
+                        onOpenChange={setIsTransactionsOpen}
+                        className="border rounded-[12px] px-3"
+                    >
                         <CollapsibleTrigger className="w-full flex items-center justify-between py-3 hover:no-underline hover:cursor-pointer">
                             <div className="flex items-center gap-2">
                                 <History className="h-4 w-4" />
                                 <span className="font-medium text-sm">Recent Activity</span>
                             </div>
-                            <ChevronDown className={`h-4 w-4 shrink-0 transition-transform duration-200 ${isTransactionsOpen ? 'rotate-180' : ''}`} />
+                            <ChevronDown
+                                className={`h-4 w-4 shrink-0 transition-transform duration-200 ${isTransactionsOpen ? 'rotate-180' : ''}`}
+                            />
                         </CollapsibleTrigger>
                         <CollapsibleContent>
                             <TransactionHistoryElement
@@ -381,7 +383,9 @@ export function WalletDropdownContent({ selectedAccount, walletIcon, walletName 
                                                     </div>
                                                     <div className="flex-1 min-w-0">
                                                         <p className="font-medium text-sm">{getTransactionTitle(tx)}</p>
-                                                        <p className="text-xs text-muted-foreground">{getTransactionSubtitle(tx)}</p>
+                                                        <p className="text-xs text-muted-foreground">
+                                                            {getTransactionSubtitle(tx)}
+                                                        </p>
                                                     </div>
                                                     <div className="flex items-center gap-2">
                                                         {tx.formattedAmount && (

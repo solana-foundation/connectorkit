@@ -30,7 +30,7 @@ npm install @solana/connector
 pnpm add @solana/connector
 # or
 yarn add @solana/connector
-# or 
+# or
 bun add @solana/connector
 ```
 
@@ -671,6 +671,7 @@ const config = getDefaultConfig({
 ```
 
 Your `.env` file (no `NEXT_PUBLIC_` prefix):
+
 ```
 SOLANA_RPC_URL=https://mainnet.helius-rpc.com/?api-key=your-key
 ```
@@ -708,12 +709,12 @@ https://raw.githubusercontent.com/.../token-logo.png
 
 ### Common Proxy Options
 
-| Service | Configuration |
-|---------|---------------|
-| **Next.js Image** | `imageProxy: '/_next/image?w=64&q=75&url='` |
-| **Cloudflare** | `imageProxy: '/cdn-cgi/image/width=64,quality=75/'` |
-| **imgproxy** | `imageProxy: 'https://imgproxy.example.com/insecure/fill/64/64/'` |
-| **Custom API** | `imageProxy: '/api/image-proxy?url='` |
+| Service           | Configuration                                                     |
+| ----------------- | ----------------------------------------------------------------- |
+| **Next.js Image** | `imageProxy: '/_next/image?w=64&q=75&url='`                       |
+| **Cloudflare**    | `imageProxy: '/cdn-cgi/image/width=64,quality=75/'`               |
+| **imgproxy**      | `imageProxy: 'https://imgproxy.example.com/insecure/fill/64/64/'` |
+| **Custom API**    | `imageProxy: '/api/image-proxy?url='`                             |
 
 ### Custom Proxy API Route (Next.js Example)
 
@@ -790,14 +791,12 @@ function validateUrl(urlString: string): URL | null {
 
 // Check if hostname is in the allowlist
 function isAllowedDomain(hostname: string): boolean {
-    return ALLOWED_DOMAINS.some(
-        (domain) => hostname === domain || hostname.endsWith(`.${domain}`)
-    );
+    return ALLOWED_DOMAINS.some(domain => hostname === domain || hostname.endsWith(`.${domain}`));
 }
 
 export async function GET(request: NextRequest) {
     const urlParam = request.nextUrl.searchParams.get('url');
-    
+
     // (1) Ensure URL exists and parses correctly with http/https
     if (!urlParam) {
         return new NextResponse('Missing URL parameter', { status: 400 });
@@ -829,7 +828,7 @@ export async function GET(request: NextRequest) {
     try {
         const response = await fetch(parsedUrl.toString());
         const buffer = await response.arrayBuffer();
-        
+
         return new NextResponse(buffer, {
             headers: {
                 'Content-Type': response.headers.get('Content-Type') || 'image/png',
@@ -850,16 +849,17 @@ The `useTokens()` hook fetches token prices from CoinGecko. CoinGecko has rate l
 
 ### Rate Limits (as of 2024)
 
-| Tier | Rate Limit | API Key Required |
-|------|------------|------------------|
-| **Free (Public)** | 10-30 requests/minute | No |
-| **Demo** | 30 requests/minute | Yes (free) |
-| **Analyst** | 500 requests/minute | Yes (paid) |
-| **Pro** | 1000+ requests/minute | Yes (paid) |
+| Tier              | Rate Limit            | API Key Required |
+| ----------------- | --------------------- | ---------------- |
+| **Free (Public)** | 10-30 requests/minute | No               |
+| **Demo**          | 30 requests/minute    | Yes (free)       |
+| **Analyst**       | 500 requests/minute   | Yes (paid)       |
+| **Pro**           | 1000+ requests/minute | Yes (paid)       |
 
 ### Handling Rate Limits
 
 ConnectorKit automatically handles rate limits with:
+
 - **Exponential backoff**: Retries with increasing delays
 - **Jitter**: Random delay added to prevent thundering herd
 - **Retry-After header**: Honors server-specified wait times
@@ -887,16 +887,16 @@ const config = getDefaultConfig({
     coingecko: {
         // API key for higher rate limits (optional)
         apiKey: process.env.COINGECKO_API_KEY,
-        
+
         // Set to true if using a Pro API key (default: false for Demo keys)
         isPro: false,
-        
+
         // Maximum retry attempts on 429 (default: 3)
         maxRetries: 3,
-        
+
         // Base delay for exponential backoff in ms (default: 1000)
         baseDelay: 1000,
-        
+
         // Maximum total timeout in ms (default: 30000)
         maxTimeout: 30000,
     },
@@ -1007,35 +1007,35 @@ import { useConnector, useAccount } from '@solana/connector/react';
 
 ### Hooks
 
-| Hook | Description | Returns |
-|------|-------------|---------|
-| `useConnector()` | Main wallet connection hook | `{ wallets, selectedWallet, accounts, connected, connecting, select, disconnect }` |
-| `useAccount()` | Account management hook | `{ address, formatted, copy, copied, accounts, selectAccount }` |
-| `useCluster()` | Network/cluster management hook | `{ cluster, clusters, setCluster, isMainnet, isDevnet, rpcUrl }` |
-| `useWalletInfo()` | Wallet metadata hook | `{ name, icon, wallet, connecting }` |
-| `useTransactionSigner()` | Legacy transaction signer (web3.js) | `{ signer, ready, address, capabilities }` |
-| `useKitTransactionSigner()` | Modern transaction signer (@solana/kit) | `{ signer, ready, address }` |
-| `useBalance()` | SOL balance hook | `{ solBalance, isLoading, refetch }` |
-| `useTokens()` | SPL tokens hook | `{ tokens, isLoading, refetch }` |
-| `useTransactions()` | Transaction history hook | `{ transactions, isLoading, refetch }` |
+| Hook                        | Description                             | Returns                                                                            |
+| --------------------------- | --------------------------------------- | ---------------------------------------------------------------------------------- |
+| `useConnector()`            | Main wallet connection hook             | `{ wallets, selectedWallet, accounts, connected, connecting, select, disconnect }` |
+| `useAccount()`              | Account management hook                 | `{ address, formatted, copy, copied, accounts, selectAccount }`                    |
+| `useCluster()`              | Network/cluster management hook         | `{ cluster, clusters, setCluster, isMainnet, isDevnet, rpcUrl }`                   |
+| `useWalletInfo()`           | Wallet metadata hook                    | `{ name, icon, wallet, connecting }`                                               |
+| `useTransactionSigner()`    | Legacy transaction signer (web3.js)     | `{ signer, ready, address, capabilities }`                                         |
+| `useKitTransactionSigner()` | Modern transaction signer (@solana/kit) | `{ signer, ready, address }`                                                       |
+| `useBalance()`              | SOL balance hook                        | `{ solBalance, isLoading, refetch }`                                               |
+| `useTokens()`               | SPL tokens hook                         | `{ tokens, isLoading, refetch }`                                                   |
+| `useTransactions()`         | Transaction history hook                | `{ transactions, isLoading, refetch }`                                             |
 
 ### Configuration Functions
 
-| Function | Description |
-|----------|-------------|
-| `getDefaultConfig(options)` | Create default connector configuration |
-| `getDefaultMobileConfig(options)` | Create mobile wallet adapter configuration |
-| `createConfig(options)` | Create unified config for ConnectorKit + Armadura |
+| Function                          | Description                                       |
+| --------------------------------- | ------------------------------------------------- |
+| `getDefaultConfig(options)`       | Create default connector configuration            |
+| `getDefaultMobileConfig(options)` | Create mobile wallet adapter configuration        |
+| `createConfig(options)`           | Create unified config for ConnectorKit + Armadura |
 
 ### Utility Functions
 
-| Function | Description |
-|----------|-------------|
-| `formatAddress(address, options?)` | Format Solana address |
-| `formatSOL(lamports, options?)` | Format SOL amount |
-| `copyAddressToClipboard(address)` | Copy address to clipboard |
+| Function                                | Description                         |
+| --------------------------------------- | ----------------------------------- |
+| `formatAddress(address, options?)`      | Format Solana address               |
+| `formatSOL(lamports, options?)`         | Format SOL amount                   |
+| `copyAddressToClipboard(address)`       | Copy address to clipboard           |
 | `getTransactionUrl(cluster, signature)` | Get Solana Explorer transaction URL |
-| `getAddressUrl(cluster, address)` | Get Solana Explorer address URL |
+| `getAddressUrl(cluster, address)`       | Get Solana Explorer address URL     |
 
 ---
 

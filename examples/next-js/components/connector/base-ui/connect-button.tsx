@@ -13,7 +13,17 @@ interface ConnectButtonProps {
 }
 
 // Custom Avatar component for Base UI
-function Avatar({ src, alt, fallback, className }: { src?: string; alt?: string; fallback?: React.ReactNode; className?: string }) {
+function Avatar({
+    src,
+    alt,
+    fallback,
+    className,
+}: {
+    src?: string;
+    alt?: string;
+    fallback?: React.ReactNode;
+    className?: string;
+}) {
     const [hasError, setHasError] = useState(false);
 
     return (
@@ -26,9 +36,7 @@ function Avatar({ src, alt, fallback, className }: { src?: string; alt?: string;
                     onError={() => setHasError(true)}
                 />
             ) : (
-                <div className="flex h-full w-full items-center justify-center bg-muted">
-                    {fallback}
-                </div>
+                <div className="flex h-full w-full items-center justify-center bg-muted">{fallback}</div>
             )}
         </div>
     );
@@ -37,7 +45,9 @@ function Avatar({ src, alt, fallback, className }: { src?: string; alt?: string;
 // Spinner component
 function Spinner({ className }: { className?: string }) {
     return (
-        <div className={`animate-spin rounded-full border-2 border-current border-t-transparent ${className || 'h-4 w-4'}`} />
+        <div
+            className={`animate-spin rounded-full border-2 border-current border-t-transparent ${className || 'h-4 w-4'}`}
+        />
     );
 }
 

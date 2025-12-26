@@ -13,4 +13,3 @@ export function transformImageUrl(url: string | undefined, imageProxy: string | 
     if (!imageProxy) return url;
     return `${imageProxy}${encodeURIComponent(url)}`;
 }
-

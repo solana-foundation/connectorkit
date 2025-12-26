@@ -6,9 +6,9 @@ vi.mock('@wallet-ui/core', () => ({
     Storage: class {
         constructor(
             public key: string,
-            public initial: any,
+            public initial: unknown,
         ) {}
-        set(value: any) {}
+        set(_value: unknown) {}
         get() {
             return this.initial;
         }

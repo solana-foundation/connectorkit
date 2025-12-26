@@ -191,6 +191,7 @@ components/
     ```
 
 3. Use in your app:
+
     ```tsx
     // Radix UI
     import { ConnectButton } from '@/components/connector/radix-ui';

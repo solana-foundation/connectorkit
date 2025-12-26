@@ -10,7 +10,7 @@ import { useSolanaClient } from './use-kit-solana-client';
 import { useConnectorClient } from '../ui/connector-provider';
 import { useSharedQuery } from './_internal/use-shared-query';
 import { fetchSolanaTokenListMetadata } from './_internal/solana-token-list';
-import { getTransactionUrl } from '../utils/cluster';
+import { getTransactionUrl, getClusterType, type ClusterType } from '../utils/cluster';
 import { LAMPORTS_PER_SOL } from '../lib/kit-utils';
 import type { SolanaClient } from '../lib/kit-utils';
 import { transformImageUrl } from '../utils/image';
@@ -747,7 +747,7 @@ async function mapWithConcurrency<TIn, TOut>(
  */
 async function fetchTransactionTokenMetadata(
     mints: string[],
-    options: { signal?: AbortSignal } = {},
+    options: { signal?: AbortSignal; cluster?: ClusterType } = {},
 ): Promise<Map<string, { symbol: string; icon: string }>> {
     const results = new Map<string, { symbol: string; icon: string }>();
     if (!mints.length) return results;
@@ -755,6 +755,7 @@ async function fetchTransactionTokenMetadata(
     const tokenList = await fetchSolanaTokenListMetadata(mints, {
         timeoutMs: 5000,
         signal: options.signal,
+        cluster: options.cluster,
     });
 
     for (const [mint, meta] of tokenList) {
@@ -838,9 +839,7 @@ export function useTransactions(options: UseTransactionsOptions = {}): UseTransa
                 slot,
                 status: err ? 'failed' : 'success',
                 error: err
-                    ? JSON.stringify(err, (_key, value) =>
-                          typeof value === 'bigint' ? value.toString() : value,
-                      )
+                    ? JSON.stringify(err, (_key, value) => (typeof value === 'bigint' ? value.toString() : value))
                     : undefined,
                 type: 'unknown',
                 formattedDate: date,
@@ -997,9 +996,7 @@ export function useTransactions(options: UseTransactionsOptions = {}): UseTransa
     const key = useMemo(() => {
         if (!enabled || !connected || !address || !rpcClient || !cluster) return null;
         const rpcUrl =
-            rpcClient.urlOrMoniker instanceof URL
-                ? rpcClient.urlOrMoniker.toString()
-                : String(rpcClient.urlOrMoniker);
+            rpcClient.urlOrMoniker instanceof URL ? rpcClient.urlOrMoniker.toString() : String(rpcClient.urlOrMoniker);
         return JSON.stringify(['wallet-transactions', rpcUrl, address, cluster.id, limit, fetchDetails]);
     }, [enabled, connected, address, rpcClient, cluster, limit, fetchDetails]);
 
@@ -1102,7 +1099,10 @@ export function useTransactions(options: UseTransactionsOptions = {}): UseTransa
             if (mintsToFetch.length > 0) {
                 throwIfAborted(signal);
 
-                const tokenMetadata = await fetchTransactionTokenMetadata(mintsToFetch, { signal });
+                const tokenMetadata = await fetchTransactionTokenMetadata(mintsToFetch, {
+                    signal,
+                    cluster: getClusterType(currentCluster),
+                });
 
                 if (tokenMetadata.size > 0) {
                     newTransactions = newTransactions.map(tx => {

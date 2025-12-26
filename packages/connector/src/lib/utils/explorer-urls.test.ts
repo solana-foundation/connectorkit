@@ -68,7 +68,8 @@ describe('Explorer URL Utilities', () => {
         });
 
         it('should handle unknown clusters as devnet', () => {
-            const url = getSolanaExplorerUrl(mockSignature, { cluster: 'unknown-cluster' as any });
+            // @ts-expect-error - Testing unknown cluster fallback
+            const url = getSolanaExplorerUrl(mockSignature, { cluster: 'unknown-cluster' });
             expect(url).toContain(mockSignature);
             expect(url).toContain('explorer.solana.com');
         });
@@ -317,12 +318,13 @@ describe('Explorer URL Utilities', () => {
         });
 
         it('should handle undefined options', () => {
-            const url = getSolanaExplorerUrl(mockSignature, undefined as any);
+            const url = getSolanaExplorerUrl(mockSignature);
             expect(url).toContain(mockSignature);
         });
 
         it('should handle null cluster', () => {
-            const url = getSolscanUrl(mockSignature, { cluster: null as any });
+            // @ts-expect-error - Testing null cluster handling
+            const url = getSolscanUrl(mockSignature, { cluster: null });
             expect(url).toContain(mockSignature);
         });
     });

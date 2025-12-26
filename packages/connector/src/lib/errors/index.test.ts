@@ -397,7 +397,7 @@ describe('Error System', () => {
         });
 
         it('should fallback to error message for unknown codes', () => {
-            const error = new ConnectionError('CONNECTION_FAILED' as any, 'Specific error message');
+            const error = new ConnectionError('CONNECTION_FAILED', 'Specific error message');
             const message = getUserFriendlyMessage(error);
             expect(message).toBe('Failed to connect to wallet. Please try again.');
         });

@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { createKitTransactionSigner, createGillTransactionSigner } from './kit-transaction-signer';
 import type { TransactionSigner } from './transaction-signer';
+import type { SolanaTransaction, TransactionSignerCapabilities } from '../../types/transactions';
 
 // Mock dependencies
 vi.mock('@solana/transactions', () => ({
@@ -35,16 +36,23 @@ describe('KitTransactionSigner', () => {
 
         mockAddress = 'HMJfh9P8FEF5eVHp3XypYWThUYCQ9sWNZZQQxVP2jjr1';
 
-        mockConnectorSigner = {
+        const capabilities: TransactionSignerCapabilities = {
+            canSign: true,
+            canSend: true,
+            canSignMessage: false,
+            supportsBatchSigning: true,
+        };
+
+        const signer = {
             address: mockAddress,
-            modifyAndSignTransactions: vi.fn(async (transactions: any[]) => {
-                return transactions.map(tx => ({
-                    messageBytes: tx.messageBytes || new Uint8Array([1, 2, 3]),
-                    signatures: { [mockAddress]: new Uint8Array(64).fill(1) },
-                }));
-            }),
-            signAllTransactions: vi.fn(async (transactions: any[]) => transactions),
-        } as any;
+            signTransaction: vi.fn(async (transaction: SolanaTransaction) => transaction),
+            signAllTransactions: vi.fn(async (transactions: SolanaTransaction[]) => transactions),
+            signAndSendTransaction: vi.fn(async () => 'mock-signature'),
+            signAndSendTransactions: vi.fn(async () => ['mock-signature']),
+            getCapabilities: vi.fn(() => capabilities),
+        } satisfies TransactionSigner;
+
+        mockConnectorSigner = signer;
     });
 
     describe('createKitTransactionSigner', () => {

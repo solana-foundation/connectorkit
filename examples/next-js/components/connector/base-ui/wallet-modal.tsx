@@ -1,12 +1,7 @@
 'use client';
 
 import { useConnector } from '@solana/connector';
-import {
-    Dialog,
-    DialogContent,
-    DialogTitle,
-    DialogClose,
-} from '@/components/ui-base/dialog';
+import { Dialog, DialogContent, DialogTitle, DialogClose } from '@/components/ui-base/dialog';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui-base/collapsible';
 import { Button } from '@/components/ui-base/button';
 import { Wallet, ExternalLink, ChevronDown, X } from 'lucide-react';
@@ -18,7 +13,17 @@ interface WalletModalProps {
 }
 
 // Custom Avatar component
-function Avatar({ src, alt, fallback, className }: { src?: string; alt?: string; fallback?: React.ReactNode; className?: string }) {
+function Avatar({
+    src,
+    alt,
+    fallback,
+    className,
+}: {
+    src?: string;
+    alt?: string;
+    fallback?: React.ReactNode;
+    className?: string;
+}) {
     const [hasError, setHasError] = useState(false);
 
     return (
@@ -31,9 +36,7 @@ function Avatar({ src, alt, fallback, className }: { src?: string; alt?: string;
                     onError={() => setHasError(true)}
                 />
             ) : (
-                <div className="flex h-full w-full items-center justify-center bg-muted">
-                    {fallback}
-                </div>
+                <div className="flex h-full w-full items-center justify-center bg-muted">{fallback}</div>
             )}
         </div>
     );
@@ -42,7 +45,9 @@ function Avatar({ src, alt, fallback, className }: { src?: string; alt?: string;
 // Badge component
 function Badge({ children, className }: { children: React.ReactNode; className?: string }) {
     return (
-        <span className={`inline-flex items-center rounded-md border border-primary/10 px-2.5 py-0.5 text-xs font-semibold transition-colors bg-secondary text-secondary-foreground hover:bg-secondary/80 ${className || ''}`}>
+        <span
+            className={`inline-flex items-center rounded-md border border-primary/10 px-2.5 py-0.5 text-xs font-semibold transition-colors bg-secondary text-secondary-foreground hover:bg-secondary/80 ${className || ''}`}
+        >
             {children}
         </span>
     );
@@ -51,7 +56,9 @@ function Badge({ children, className }: { children: React.ReactNode; className?:
 // Spinner component
 function Spinner({ className }: { className?: string }) {
     return (
-        <div className={`animate-spin rounded-full border-2 border-current border-t-transparent ${className || 'h-4 w-4'}`} />
+        <div
+            className={`animate-spin rounded-full border-2 border-current border-t-transparent ${className || 'h-4 w-4'}`}
+        />
     );
 }
 
@@ -68,7 +75,7 @@ function ErrorAlert({ message, onDismiss }: { message: string; onDismiss: () => 
                 <p className="font-medium">Connection failed</p>
                 <p className="text-xs opacity-90 mt-0.5">{message}</p>
             </div>
-            <button 
+            <button
                 onClick={onDismiss}
                 className="shrink-0 rounded-md p-1 hover:bg-destructive/20 transition-colors"
                 aria-label="Dismiss error"
@@ -115,14 +122,12 @@ export function WalletModal({ open, onOpenChange }: WalletModalProps) {
             onOpenChange(false);
         } catch (error) {
             // Extract user-friendly error message
-            const message = error instanceof Error 
-                ? error.message 
-                : 'An unexpected error occurred';
-            
+            const message = error instanceof Error ? error.message : 'An unexpected error occurred';
+
             // Set error state for UI feedback
             setErrorWallet(walletName);
             setErrorMessage(message);
-            
+
             // Log for telemetry/debugging (includes full error details)
             console.error('Failed to connect wallet:', {
                 wallet: walletName,
@@ -152,7 +157,7 @@ export function WalletModal({ open, onOpenChange }: WalletModalProps) {
     const getInstallUrl = (walletName: string, walletUrl?: string): string | undefined => {
         // Prefer wallet metadata URL if available
         if (walletUrl) return walletUrl;
-        
+
         // Known wallet install URLs
         const name = walletName.toLowerCase();
         if (name.includes('phantom')) return 'https://phantom.app';
@@ -163,7 +168,7 @@ export function WalletModal({ open, onOpenChange }: WalletModalProps) {
         if (name.includes('ledger')) return 'https://www.ledger.com';
         if (name.includes('trust')) return 'https://trustwallet.com';
         if (name.includes('exodus')) return 'https://www.exodus.com';
-        
+
         // Return undefined for unknown wallets to avoid misleading users
         return undefined;
     };
@@ -177,15 +182,10 @@ export function WalletModal({ open, onOpenChange }: WalletModalProps) {
 
     return (
         <Dialog open={open} onOpenChange={handleOpenChange}>
-            <DialogContent
-                showCloseButton={false}
-                className="max-w-md rounded-[24px] p-6"
-            >
+            <DialogContent showCloseButton={false} className="max-w-md rounded-[24px] p-6">
                 {/* Header */}
                 <div className="flex items-center justify-between mb-4">
-                    <DialogTitle className="text-lg font-semibold">
-                        Connect your wallet
-                    </DialogTitle>
+                    <DialogTitle className="text-lg font-semibold">Connect your wallet</DialogTitle>
                     <DialogClose className="rounded-[16px] h-8 w-8 p-2 border border-input bg-background shadow-xs hover:bg-accent hover:text-accent-foreground inline-flex items-center justify-center cursor-pointer">
                         <X className="h-3 w-3" />
                     </DialogClose>
@@ -193,9 +193,7 @@ export function WalletModal({ open, onOpenChange }: WalletModalProps) {
 
                 <div className="space-y-4">
                     {/* Error Alert */}
-                    {errorMessage && (
-                        <ErrorAlert message={errorMessage} onDismiss={clearError} />
-                    )}
+                    {errorMessage && <ErrorAlert message={errorMessage} onDismiss={clearError} />}
 
                     {!isClient ? (
                         <div className="text-center py-8">
@@ -216,8 +214,8 @@ export function WalletModal({ open, onOpenChange }: WalletModalProps) {
                                                     key={walletInfo.wallet.name}
                                                     variant="outline"
                                                     className={`h-auto justify-between p-4 rounded-[16px] w-full ${
-                                                        hasError 
-                                                            ? 'border-destructive/50 bg-destructive/5 hover:bg-destructive/10' 
+                                                        hasError
+                                                            ? 'border-destructive/50 bg-destructive/5 hover:bg-destructive/10'
                                                             : ''
                                                     }`}
                                                     onClick={() => handleSelectWallet(walletInfo.wallet.name)}
@@ -229,11 +227,7 @@ export function WalletModal({ open, onOpenChange }: WalletModalProps) {
                                                                 <span className="font-semibold text-md">
                                                                     {walletInfo.wallet.name}
                                                                 </span>
-                                                                {isRecent && (
-                                                                    <Badge className="text-xs">
-                                                                        Recent
-                                                                    </Badge>
-                                                                )}
+                                                                {isRecent && <Badge className="text-xs">Recent</Badge>}
                                                             </div>
                                                             {isConnecting && (
                                                                 <div className="text-xs text-muted-foreground">
@@ -269,7 +263,9 @@ export function WalletModal({ open, onOpenChange }: WalletModalProps) {
                                     <Collapsible open={isOtherWalletsOpen} onOpenChange={setIsOtherWalletsOpen}>
                                         <CollapsibleTrigger className="w-full flex items-center justify-between border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground hover:no-underline dark:bg-input/30 dark:border-input dark:hover:bg-input/50 rounded-[16px] px-4 py-2 cursor-pointer">
                                             <span>Other Wallets</span>
-                                            <ChevronDown className={`h-4 w-4 shrink-0 transition-transform duration-200 ${isOtherWalletsOpen ? 'rotate-180' : ''}`} />
+                                            <ChevronDown
+                                                className={`h-4 w-4 shrink-0 transition-transform duration-200 ${isOtherWalletsOpen ? 'rotate-180' : ''}`}
+                                            />
                                         </CollapsibleTrigger>
                                         <CollapsibleContent>
                                             <div className="grid gap-2 pt-2">
@@ -282,8 +278,8 @@ export function WalletModal({ open, onOpenChange }: WalletModalProps) {
                                                             key={walletInfo.wallet.name}
                                                             variant="outline"
                                                             className={`h-auto justify-between p-4 rounded-[16px] w-full ${
-                                                                hasError 
-                                                                    ? 'border-destructive/50 bg-destructive/5 hover:bg-destructive/10' 
+                                                                hasError
+                                                                    ? 'border-destructive/50 bg-destructive/5 hover:bg-destructive/10'
                                                                     : ''
                                                             }`}
                                                             onClick={() => handleSelectWallet(walletInfo.wallet.name)}
@@ -296,9 +292,7 @@ export function WalletModal({ open, onOpenChange }: WalletModalProps) {
                                                                             {walletInfo.wallet.name}
                                                                         </span>
                                                                         {isRecent && (
-                                                                            <Badge className="text-xs">
-                                                                                Recent
-                                                                            </Badge>
+                                                                            <Badge className="text-xs">Recent</Badge>
                                                                         )}
                                                                     </div>
                                                                     {isConnecting && (
@@ -342,9 +336,9 @@ export function WalletModal({ open, onOpenChange }: WalletModalProps) {
                                             {notInstalledWallets.slice(0, 3).map(walletInfo => {
                                                 const installUrl = getInstallUrl(
                                                     walletInfo.wallet.name,
-                                                    (walletInfo.wallet as { url?: string }).url
+                                                    (walletInfo.wallet as { url?: string }).url,
                                                 );
-                                                
+
                                                 return (
                                                     <div
                                                         key={walletInfo.wallet.name}

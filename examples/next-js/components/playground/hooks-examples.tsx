@@ -20,15 +20,7 @@ function HookReturnValue({ name, value }: { name: string; value: string }) {
 }
 
 // Component for displaying overlapping swap token icons
-function SwapTokenIcon({
-    fromIcon,
-    toIcon,
-    size = 32,
-}: {
-    fromIcon?: string;
-    toIcon?: string;
-    size?: number;
-}) {
+function SwapTokenIcon({ fromIcon, toIcon, size = 32 }: { fromIcon?: string; toIcon?: string; size?: number }) {
     const offset = size * 0.6; // 60% offset for overlap
     return (
         <div className="relative flex-shrink-0" style={{ width: size + offset, height: size }}>
@@ -319,9 +311,7 @@ function UseClusterExample() {
                                         : 'hover:bg-sand-200 text-sand-700'
                                 }`}
                             >
-                                <span
-                                    className={`h-2 w-2 rounded-full ${clusterColors[c.id] || 'bg-purple-500'}`}
-                                />
+                                <span className={`h-2 w-2 rounded-full ${clusterColors[c.id] || 'bg-purple-500'}`} />
                                 {c.label}
                             </button>
                         ))}
@@ -362,9 +352,7 @@ function UseTokensExample() {
                     {/* Sample token item breakdown */}
                     {sampleToken && (
                         <div className="border border-sand-300 rounded-xl p-2 bg-sand-50">
-                            <span className="text-[10px] font-mono text-sand-700 mb-2 block">
-                                tokens properties:
-                            </span>
+                            <span className="text-[10px] font-mono text-sand-700 mb-2 block">tokens properties:</span>
                             <div className="grid grid-cols-2 gap-1.5">
                                 <div className="flex flex-col gap-1 p-2 rounded-lg border bg-card">
                                     <span className="text-[9px] font-mono text-muted-foreground uppercase">logo</span>

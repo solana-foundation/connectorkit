@@ -11,6 +11,9 @@ import { MockStorageAdapter } from '../mocks/storage-mock';
 import { createEventCollector, waitForCondition } from '../utils/test-helpers';
 import { waitForConnection, waitForDisconnection } from '../utils/wait-for-state';
 import { createMockWalletAccount, TEST_ADDRESSES } from '../fixtures/accounts';
+import type { Wallet } from '@wallet-standard/base';
+import type { WalletInfo } from '../../types/wallets';
+import { StateManager } from '../../lib/core/state-manager';
 
 describe('Connector Flow Integration', () => {
     let client: ConnectorClient;
@@ -18,24 +21,19 @@ describe('Connector Flow Integration', () => {
     let eventCollector: ReturnType<typeof createEventCollector>;
 
     // Helper to add a wallet to the connector's state
-    const addWalletToClient = (wallet: any) => {
+    function getStateManager(client: ConnectorClient): StateManager {
+        return (client as unknown as { stateManager: StateManager }).stateManager;
+    }
+
+    const addWalletToClient = (wallet: Wallet) => {
         const state = client.getSnapshot();
-        (client as any).stateManager.updateState({
-            wallets: [
-                ...state.wallets,
-                {
-                    wallet,
-                    name: wallet.name,
-                    icon: wallet.icon,
-                    isRegistered: true,
-                },
-            ],
-        });
+        const entry: WalletInfo = { wallet, installed: true, connectable: true };
+        getStateManager(client).updateState({ wallets: [...state.wallets, entry] });
     };
 
     beforeEach(() => {
         // Setup mock window environment
-        global.window = {} as Window & typeof globalThis;
+        (globalThis as unknown as { window?: unknown }).window = {} as Window & typeof globalThis;
 
         storage = new MockStorageAdapter('test-wallet');
         eventCollector = createEventCollector();
@@ -52,8 +50,7 @@ describe('Connector Flow Integration', () => {
 
     afterEach(() => {
         client.destroy();
-        // @ts-expect-error - Clean up
-        delete global.window;
+        delete (globalThis as unknown as { window?: unknown }).window;
         vi.clearAllMocks();
     });
 

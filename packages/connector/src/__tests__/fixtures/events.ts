@@ -1,5 +1,7 @@
 import type { ConnectorEvent } from '../../types/events';
 import type { WalletName } from '../../types/wallets';
+import { address as toAddress } from '@solana/addresses';
+import { signature as toSignature } from '@solana/keys';
 import { TEST_ADDRESSES } from './accounts';
 import { TEST_SIGNATURES } from './transactions';
 
@@ -26,7 +28,7 @@ export function createConnectedEvent(
     return {
         type: 'wallet:connected',
         wallet: walletName as WalletName,
-        account: account as any,
+        account: toAddress(account),
         timestamp: new Date().toISOString(),
     };
 }
@@ -41,7 +43,7 @@ export function createDisconnectedEvent(): ConnectorEvent {
 export function createAccountChangedEvent(account: string = TEST_ADDRESSES.ACCOUNT_1): ConnectorEvent {
     return {
         type: 'account:changed',
-        account: account as any,
+        account: toAddress(account),
         timestamp: new Date().toISOString(),
     };
 }
@@ -57,7 +59,7 @@ export function createWalletChangedEvent(walletName: string = 'Phantom'): Connec
 export function createTransactionTrackedEvent(signature: string = TEST_SIGNATURES.TX_1): ConnectorEvent {
     return {
         type: 'transaction:tracked',
-        signature: signature as any,
+        signature: toSignature(signature),
         status: 'pending',
         timestamp: new Date().toISOString(),
     };
@@ -68,14 +70,6 @@ export function createErrorEvent(error: Error = new Error('Test error'), context
         type: 'error',
         error,
         context,
-        timestamp: new Date().toISOString(),
-    };
-}
-
-export function createWalletRegisteredEvent(walletName: string = 'Phantom'): ConnectorEvent {
-    return {
-        type: 'wallet:registered',
-        wallet: walletName as WalletName,
         timestamp: new Date().toISOString(),
     };
 }

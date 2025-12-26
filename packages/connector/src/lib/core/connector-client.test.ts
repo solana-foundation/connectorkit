@@ -1,6 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ConnectorClient } from './connector-client';
 import type { ConnectorConfig } from '../../types/connector';
+import type { ConnectorState } from '../../types/connector';
+import type { Listener } from '../../types/connector';
+import type { SolanaCluster } from '@wallet-ui/core';
 
 // Mock all dependencies
 vi.mock('./state-manager');
@@ -35,7 +38,7 @@ describe('ConnectorClient', () => {
         const { DebugMetrics } = await import('../core/debug-metrics');
 
         // Setup StateManager mock with proper state management
-        const mockState = {
+        const mockState: ConnectorState = {
             wallets: [],
             connected: false,
             selectedWallet: null,
@@ -45,7 +48,7 @@ describe('ConnectorClient', () => {
             cluster: null,
             clusters: [],
         };
-        let stateListeners: Function[] = [];
+        let stateListeners: Listener[] = [];
 
         vi.mocked(StateManager).mockImplementation(
             () =>
@@ -53,7 +56,7 @@ describe('ConnectorClient', () => {
                     getSnapshot: vi.fn(() => mockState),
                     updateState: vi.fn(updates => {
                         Object.assign(mockState, updates);
-                        stateListeners.forEach(l => l());
+                        stateListeners.forEach(l => l(mockState));
                     }),
                     subscribe: vi.fn(listener => {
                         stateListeners.push(listener);
@@ -61,7 +64,8 @@ describe('ConnectorClient', () => {
                             stateListeners = stateListeners.filter(l => l !== listener);
                         };
                     }),
-                }) as any,
+                    clear: vi.fn(),
+                }) as unknown as InstanceType<typeof StateManager>,
         );
 
         vi.mocked(EventEmitter).mockImplementation(
@@ -69,7 +73,10 @@ describe('ConnectorClient', () => {
                 ({
                     emit: vi.fn(),
                     on: vi.fn(() => vi.fn()),
-                }) as any,
+                    off: vi.fn(),
+                    offAll: vi.fn(),
+                    getListenerCount: vi.fn(() => 0),
+                }) as unknown as InstanceType<typeof EventEmitter>,
         );
 
         vi.mocked(WalletDetector).mockImplementation(
@@ -78,7 +85,7 @@ describe('ConnectorClient', () => {
                     initialize: vi.fn(),
                     destroy: vi.fn(),
                     getDetectedWallets: vi.fn(() => []),
-                }) as any,
+                }) as unknown as InstanceType<typeof WalletDetector>,
         );
 
         vi.mocked(ConnectionManager).mockImplementation(
@@ -93,7 +100,7 @@ describe('ConnectorClient', () => {
                         mockState.selectedWallet = null;
                     }),
                     selectAccount: vi.fn(),
-                }) as any,
+                }) as unknown as InstanceType<typeof ConnectionManager>,
         );
 
         vi.mocked(AutoConnector).mockImplementation(
@@ -101,7 +108,7 @@ describe('ConnectorClient', () => {
                 ({
                     initialize: vi.fn(),
                     destroy: vi.fn(),
-                }) as any,
+                }) as unknown as InstanceType<typeof AutoConnector>,
         );
 
         vi.mocked(ClusterManager).mockImplementation(
@@ -109,14 +116,14 @@ describe('ConnectorClient', () => {
                 ({
                     setCluster: vi.fn(),
                     getCurrentCluster: vi.fn(() => null),
-                }) as any,
+                }) as unknown as InstanceType<typeof ClusterManager>,
         );
 
         vi.mocked(HealthMonitor).mockImplementation(
             () =>
                 ({
                     getHealth: vi.fn(() => ({ initialized: true })),
-                }) as any,
+                }) as unknown as InstanceType<typeof HealthMonitor>,
         );
 
         vi.mocked(TransactionTracker).mockImplementation(
@@ -125,7 +132,8 @@ describe('ConnectorClient', () => {
                     trackTransaction: vi.fn(),
                     getTransactions: vi.fn(() => []),
                     clearHistory: vi.fn(),
-                }) as any,
+                    getTotalCount: vi.fn(() => 0),
+                }) as unknown as InstanceType<typeof TransactionTracker>,
         );
 
         vi.mocked(DebugMetrics).mockImplementation(
@@ -133,14 +141,25 @@ describe('ConnectorClient', () => {
                 ({
                     getMetrics: vi.fn(() => ({})),
                     reset: vi.fn(),
-                }) as any,
+                    updateListenerCounts: vi.fn(),
+                }) as unknown as InstanceType<typeof DebugMetrics>,
         );
 
         config = {
-            clusters: [
-                { id: 'solana:mainnet', name: 'Mainnet', rpcUrl: 'https://api.mainnet.solana.com' },
-                { id: 'solana:devnet', name: 'Devnet', rpcUrl: 'https://api.devnet.solana.com' },
-            ],
+            cluster: {
+                clusters: [
+                    {
+                        id: 'solana:mainnet',
+                        label: 'Mainnet',
+                        url: 'https://api.mainnet.solana.com',
+                    } satisfies SolanaCluster,
+                    {
+                        id: 'solana:devnet',
+                        label: 'Devnet',
+                        url: 'https://api.devnet.solana.com',
+                    } satisfies SolanaCluster,
+                ],
+            },
         };
 
         client = new ConnectorClient(config);
@@ -179,7 +198,7 @@ describe('ConnectorClient', () => {
     describe('event system', () => {
         it('should register event listeners', () => {
             const listener = vi.fn();
-            const unsubscribe = client.on('wallet:connected', listener);
+            const unsubscribe = client.on(listener);
 
             expect(typeof unsubscribe).toBe('function');
         });

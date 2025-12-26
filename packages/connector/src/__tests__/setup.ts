@@ -1,12 +1,12 @@
 if (typeof globalThis === 'undefined') {
-    (global as any).globalThis = global;
+    (global as unknown as { globalThis?: unknown }).globalThis = global;
 }
 
 // Ensure window is available for React DOM before any imports
 // happy-dom should provide this, but ensure it exists early
 if (typeof window === 'undefined') {
     // Create a minimal window-like object if happy-dom hasn't initialized yet
-    (global as any).window = {
+    (globalThis as unknown as { window?: unknown }).window = {
         addEventListener: () => {},
         removeEventListener: () => {},
         document: {
@@ -37,9 +37,10 @@ if (typeof window === 'undefined') {
         },
     };
 } else {
+    const win = window as unknown as Record<string, unknown>;
     // Ensure performance API exists
-    if (typeof (window as any).performance === 'undefined') {
-        (window as any).performance = {
+    if (typeof win.performance === 'undefined') {
+        win.performance = {
             now: () => Date.now(),
             mark: () => {},
             measure: () => {},
@@ -48,8 +49,8 @@ if (typeof window === 'undefined') {
         };
     }
     // Ensure location exists
-    if (typeof (window as any).location === 'undefined') {
-        (window as any).location = {
+    if (typeof win.location === 'undefined') {
+        win.location = {
             origin: 'http://localhost:3000',
             href: 'http://localhost:3000',
             protocol: 'http:',
@@ -62,8 +63,8 @@ if (typeof window === 'undefined') {
         };
     }
     // Ensure navigator exists
-    if (typeof (window as any).navigator === 'undefined') {
-        (window as any).navigator = {
+    if (typeof win.navigator === 'undefined') {
+        win.navigator = {
             userAgent: 'test',
             wallets: undefined,
         };

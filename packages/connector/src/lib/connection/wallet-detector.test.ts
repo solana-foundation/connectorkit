@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { WalletDetector } from './wallet-detector';
-import type { StateManager } from '../core/state-manager';
-import type { EventEmitter } from '../core/event-emitter';
+import { StateManager } from '../core/state-manager';
+import { EventEmitter } from '../core/event-emitter';
+import type { ConnectorState } from '../../types/connector';
 
 // Mock dependencies
 vi.mock('../adapters/wallet-standard-shim', () => ({
@@ -27,14 +28,19 @@ describe('WalletDetector', () => {
     let mockEventEmitter: EventEmitter;
 
     beforeEach(() => {
-        mockStateManager = {
-            updateState: vi.fn(),
-            getSnapshot: vi.fn(() => ({ wallets: [] })),
-        } as any;
+        const initialState: ConnectorState = {
+            wallets: [],
+            selectedWallet: null,
+            connected: false,
+            connecting: false,
+            accounts: [],
+            selectedAccount: null,
+            cluster: null,
+            clusters: [],
+        };
 
-        mockEventEmitter = {
-            emit: vi.fn(),
-        } as any;
+        mockStateManager = new StateManager(initialState);
+        mockEventEmitter = new EventEmitter(false);
 
         detector = new WalletDetector(mockStateManager, mockEventEmitter);
     });

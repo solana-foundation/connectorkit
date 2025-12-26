@@ -107,7 +107,8 @@ describe('React Entry Point (react.ts)', () => {
 
             // These are headless-specific, shouldn't be in React entry
             // (though types might be re-exported)
-            const reactExports = exports.filter(name => typeof (ConnectorKitReact as any)[name] === 'function');
+            const reactModule = ConnectorKitReact as unknown as Record<string, unknown>;
+            const reactExports = exports.filter(name => typeof reactModule[name] === 'function');
 
             expect(reactExports.length).toBeGreaterThan(0);
         });

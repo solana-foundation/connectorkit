@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { BaseCollaborator } from './base-collaborator';
-import type { StateManager } from './state-manager';
-import type { EventEmitter } from './event-emitter';
+import { StateManager } from './state-manager';
+import { EventEmitter } from './event-emitter';
+import type { ConnectorState } from '../../types/connector';
 
 // Mock dependencies
 vi.mock('../utils/secure-logger', () => ({
@@ -13,6 +14,10 @@ class TestCollaborator extends BaseCollaborator {
     constructor(stateManager: StateManager, eventEmitter: EventEmitter, debug = false) {
         super({ stateManager, eventEmitter, debug }, 'TestCollaborator');
     }
+
+    getStateForTest() {
+        return this.getState();
+    }
 }
 
 describe('BaseCollaborator', () => {
@@ -20,14 +25,19 @@ describe('BaseCollaborator', () => {
     let mockEventEmitter: EventEmitter;
 
     beforeEach(() => {
-        mockStateManager = {
-            getSnapshot: vi.fn(() => ({ test: 'state' })),
-            updateState: vi.fn(),
-        } as any;
+        const initialState: ConnectorState = {
+            wallets: [],
+            selectedWallet: null,
+            connected: false,
+            connecting: false,
+            accounts: [],
+            selectedAccount: null,
+            cluster: null,
+            clusters: [],
+        };
 
-        mockEventEmitter = {
-            emit: vi.fn(),
-        } as any;
+        mockStateManager = new StateManager(initialState);
+        mockEventEmitter = new EventEmitter(false);
     });
 
     it('should initialize with required dependencies', () => {
@@ -37,7 +47,7 @@ describe('BaseCollaborator', () => {
 
     it('should access state via getState', () => {
         const collaborator = new TestCollaborator(mockStateManager, mockEventEmitter);
-        const state = (collaborator as any).getState();
-        expect(state).toEqual({ test: 'state' });
+        const state = collaborator.getStateForTest();
+        expect(state).toEqual(mockStateManager.getSnapshot());
     });
 });

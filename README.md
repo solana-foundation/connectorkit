@@ -7,9 +7,9 @@ Production-ready Solana wallet infrastructure. A headless, framework-agnostic wa
 
 ## Packages
 
-| Package | Description |
-|---------|-------------|
-| [@solana/connector](./packages/connector) | Core wallet connector with React hooks and headless client |
+| Package                                           | Description                                                          |
+| ------------------------------------------------- | -------------------------------------------------------------------- |
+| [@solana/connector](./packages/connector)         | Core wallet connector with React hooks and headless client           |
 | [@solana/connector-debugger](./packages/debugger) | Development debug panel with transaction analysis (experimental wip) |
 
 ## Why ConnectorKit?
@@ -32,7 +32,7 @@ import { getDefaultConfig } from '@solana/connector/headless';
 
 function App() {
   const config = getDefaultConfig({ appName: 'My App' });
-  
+
   return (
     <AppProvider connectorConfig={config}>
       <YourApp />
@@ -81,11 +81,12 @@ import { ConnectorDebugPanel } from '@solana/connector-debugger/react';
 ```
 
 Features:
--  Live wallet state monitoring
--  Pre-flight transaction simulation  
--  Transaction size analysis with optimization suggestions
--  Address Lookup Table recommendations
--  Real-time event stream
+
+- Live wallet state monitoring
+- Pre-flight transaction simulation
+- Transaction size analysis with optimization suggestions
+- Address Lookup Table recommendations
+- Real-time event stream
 
 See the [debugger package docs](./packages/debugger/README.md) for full documentation.
 
@@ -98,7 +99,7 @@ Check out the [Next.js example](./examples/next-js) for a complete implementatio
 Compatible with all [Wallet Standard](https://github.com/wallet-standard/wallet-standard) compliant wallets:
 
 - Phantom
-- Solflare  
+- Solflare
 - Backpack
 - Glow
 - Brave Wallet

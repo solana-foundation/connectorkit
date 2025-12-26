@@ -8,6 +8,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createTransactionSigner, isTransactionSignerError, TransactionSignerError } from './transaction-signer';
 import type { TransactionSignerConfig } from '../../types/transactions';
 import type { WalletStandardAccount, WalletStandardWallet } from '../adapters/wallet-standard-shim';
+import type { SolanaCluster } from '@wallet-ui/core';
 
 describe('Transaction Signer', () => {
     let mockWallet: WalletStandardWallet;
@@ -75,7 +76,7 @@ describe('Transaction Signer', () => {
 
         it('should return null if wallet is missing', () => {
             const config: TransactionSignerConfig = {
-                wallet: null as any,
+                wallet: null as unknown as TransactionSignerConfig['wallet'],
                 account: mockAccount,
             };
 
@@ -87,7 +88,7 @@ describe('Transaction Signer', () => {
         it('should return null if account is missing', () => {
             const config: TransactionSignerConfig = {
                 wallet: mockWallet,
-                account: null as any,
+                account: null as unknown as TransactionSignerConfig['account'],
             };
 
             const signer = createTransactionSigner(config);
@@ -101,9 +102,9 @@ describe('Transaction Signer', () => {
                 account: mockAccount,
                 cluster: {
                     id: 'solana:devnet',
-                    name: 'Devnet',
-                    endpoint: 'https://api.devnet.solana.com',
-                } as any,
+                    label: 'Devnet',
+                    url: 'https://api.devnet.solana.com',
+                } satisfies SolanaCluster,
             };
 
             const signer = createTransactionSigner(config);
@@ -112,16 +113,12 @@ describe('Transaction Signer', () => {
         });
 
         it('should include eventEmitter if provided', () => {
-            const mockEmitter = {
-                emit: vi.fn(),
-                on: vi.fn(),
-                off: vi.fn(),
-            };
+            const mockEmitter = { emit: vi.fn() } satisfies NonNullable<TransactionSignerConfig['eventEmitter']>;
 
             const config: TransactionSignerConfig = {
                 wallet: mockWallet,
                 account: mockAccount,
-                eventEmitter: mockEmitter as any,
+                eventEmitter: mockEmitter,
             };
 
             const signer = createTransactionSigner(config);

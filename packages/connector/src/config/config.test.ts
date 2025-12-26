@@ -9,6 +9,7 @@ import { getDefaultConfig, getDefaultMobileConfig } from './default-config';
 import { createConfig, isUnifiedConfig } from './unified-config';
 import type { DefaultConfigOptions } from './default-config';
 import type { UnifiedConfig } from './unified-config';
+import type { SolanaCluster } from '@wallet-ui/core';
 
 describe('Configuration System', () => {
     describe('getDefaultConfig', () => {
@@ -127,17 +128,17 @@ describe('Configuration System', () => {
 
         it('should accept custom clusters', () => {
             const customCluster = {
-                id: 'custom' as any,
-                name: 'Custom',
-                endpoint: 'https://custom.com',
-            };
+                id: 'solana:custom',
+                label: 'Custom',
+                url: 'https://custom.com',
+            } satisfies SolanaCluster;
 
             const config = getDefaultConfig({
                 ...baseOptions,
                 customClusters: [customCluster],
             });
 
-            expect(config.cluster!.clusters.some(c => c.id === 'custom')).toBe(true);
+            expect(config.cluster!.clusters.some(c => c.id === 'solana:custom')).toBe(true);
         });
 
         it('should persist cluster selection by default', () => {
@@ -407,10 +408,10 @@ describe('Configuration System', () => {
     describe('configuration merging', () => {
         it('should merge custom clusters with defaults', () => {
             const customCluster = {
-                id: 'custom' as any,
-                name: 'Custom',
-                endpoint: 'https://custom.com',
-            };
+                id: 'solana:custom',
+                label: 'Custom',
+                url: 'https://custom.com',
+            } satisfies SolanaCluster;
 
             const config = getDefaultConfig({
                 appName: 'Test',
@@ -418,7 +419,7 @@ describe('Configuration System', () => {
             });
 
             expect(config.cluster!.clusters.length).toBeGreaterThan(1);
-            expect(config.cluster!.clusters.some(c => c.id === 'custom')).toBe(true);
+            expect(config.cluster!.clusters.some(c => c.id === 'solana:custom')).toBe(true);
         });
 
         it('should override defaults with explicit values', () => {

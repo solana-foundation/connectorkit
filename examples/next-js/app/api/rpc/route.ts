@@ -20,9 +20,6 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(data);
     } catch (error) {
         console.error('RPC proxy error:', error);
-        return NextResponse.json(
-            { error: 'RPC request failed' },
-            { status: 500 }
-        );
+        return NextResponse.json({ error: 'RPC request failed' }, { status: 500 });
     }
 }

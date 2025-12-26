@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
-import { useSharedQuery, clearSharedQueryCache
-} from './use-shared-query';
+import { useSharedQuery, clearSharedQueryCache } from './use-shared-query';
 
 describe('useSharedQuery', () => {
     beforeEach(() => {
@@ -36,15 +35,18 @@ describe('useSharedQuery', () => {
         it('should handle fetch errors', async () => {
             const error = new Error('Test error');
             const queryFn = vi.fn().mockRejectedValue(error);
-            
+
             // Note: The useSharedQuery hook fires and forgets the initial fetch
             // so we need to wait for the error to be stored in the snapshot
             const { result } = renderHook(() => useSharedQuery('error-key', queryFn));
 
             // Wait for the error to propagate to the snapshot
-            await waitFor(() => {
-                expect(result.current.status).toBe('error');
-            }, { timeout: 2000 });
+            await waitFor(
+                () => {
+                    expect(result.current.status).toBe('error');
+                },
+                { timeout: 2000 },
+            );
 
             expect(result.current.error?.message).toBe('Test error');
             expect(result.current.data).toBeUndefined();

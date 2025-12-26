@@ -43,15 +43,7 @@ const clusterColors: Record<string, string> = {
     'solana:localnet': 'bg-red-500',
 };
 
-function SwapTokenIcon({
-    fromIcon,
-    toIcon,
-    size = 32,
-}: {
-    fromIcon?: string;
-    toIcon?: string;
-    size?: number;
-}) {
+function SwapTokenIcon({ fromIcon, toIcon, size = 32 }: { fromIcon?: string; toIcon?: string; size?: number }) {
     const offset = size * 0.6;
     return (
         <div className="relative flex-shrink-0" style={{ width: size + offset, height: size }}>
@@ -60,12 +52,7 @@ function SwapTokenIcon({
                 style={{ width: size, height: size }}
             >
                 {fromIcon ? (
-                    <img
-                        src={fromIcon}
-                        className="rounded-full"
-                        style={{ width: size - 4, height: size - 4 }}
-                        alt=""
-                    />
+                    <img src={fromIcon} className="rounded-full" style={{ width: size - 4, height: size - 4 }} alt="" />
                 ) : (
                     <Coins className="h-4 w-4 text-muted-foreground" />
                 )}
@@ -75,12 +62,7 @@ function SwapTokenIcon({
                 style={{ left: offset, width: size, height: size }}
             >
                 {toIcon ? (
-                    <img
-                        src={toIcon}
-                        className="rounded-full"
-                        style={{ width: size - 4, height: size - 4 }}
-                        alt=""
-                    />
+                    <img src={toIcon} className="rounded-full" style={{ width: size - 4, height: size - 4 }} alt="" />
                 ) : (
                     <Coins className="h-4 w-4 text-muted-foreground" />
                 )}
@@ -194,198 +176,200 @@ export function WalletDropdownContent({ selectedAccount, walletIcon, walletName 
                     </div>
                 </div>
 
-            {/* Full Width Balance */}
-            <BalanceElement
-                render={({ solBalance, isLoading, refetch }) => (
-                    <div className="rounded-[12px] border bg-muted/50 p-4">
-                        <div className="flex items-center justify-between mb-1">
-                            <span className="text-sm text-muted-foreground">Balance</span>
-                            <button
-                                onClick={() => refetch()}
-                                disabled={isLoading}
-                                className="p-1 hover:bg-accent rounded transition-colors disabled:opacity-50"
-                            >
-                                <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-                            </button>
+                {/* Full Width Balance */}
+                <BalanceElement
+                    render={({ solBalance, isLoading, refetch }) => (
+                        <div className="rounded-[12px] border bg-muted/50 p-4">
+                            <div className="flex items-center justify-between mb-1">
+                                <span className="text-sm text-muted-foreground">Balance</span>
+                                <button
+                                    onClick={() => refetch()}
+                                    disabled={isLoading}
+                                    className="p-1 hover:bg-accent rounded transition-colors disabled:opacity-50"
+                                >
+                                    <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+                                </button>
+                            </div>
+                            <div className="text-2xl font-bold">
+                                {isLoading ? (
+                                    <div className="h-8 w-32 bg-muted animate-pulse rounded" />
+                                ) : solBalance !== null ? (
+                                    `${solBalance.toFixed(4)} SOL`
+                                ) : (
+                                    '-- SOL'
+                                )}
+                            </div>
                         </div>
-                        <div className="text-2xl font-bold">
-                            {isLoading ? (
-                                <div className="h-8 w-32 bg-muted animate-pulse rounded" />
-                            ) : solBalance !== null ? (
-                                `${solBalance.toFixed(4)} SOL`
-                            ) : (
-                                '-- SOL'
-                            )}
-                        </div>
-                    </div>
-                )}
-            />
+                    )}
+                />
 
-            <Separator className="scale-x-110" />
+                <Separator className="scale-x-110" />
 
-            {/* Tokens & Transactions Accordion */}
-            <Accordion type="multiple" className="w-full space-y-2">
-                {/* Tokens */}
-                <AccordionItem value="tokens" className="border rounded-[12px] px-3">
-                    <AccordionTrigger className="py-3 hover:no-underline hover:cursor-pointer">
-                        <div className="flex items-center gap-2">
-                            <Coins className="h-4 w-4" />
-                            <span className="font-medium">Tokens</span>
-                        </div>
-                    </AccordionTrigger>
-                    <AccordionContent>
-                        <TokenListElement
-                            limit={5}
-                            render={({ tokens, isLoading }) => (
-                                <div className="space-y-2 pb-2">
-                                    {isLoading ? (
-                                        <div className="space-y-2">
-                                            {[1, 2, 3].map(i => (
-                                                <div key={i} className="flex items-center gap-3">
-                                                    <div className="h-8 w-8 rounded-full bg-muted animate-pulse" />
-                                                    <div className="flex-1">
-                                                        <div className="h-4 w-16 bg-muted animate-pulse rounded mb-1" />
-                                                        <div className="h-3 w-24 bg-muted animate-pulse rounded" />
+                {/* Tokens & Transactions Accordion */}
+                <Accordion type="multiple" className="w-full space-y-2">
+                    {/* Tokens */}
+                    <AccordionItem value="tokens" className="border rounded-[12px] px-3">
+                        <AccordionTrigger className="py-3 hover:no-underline hover:cursor-pointer">
+                            <div className="flex items-center gap-2">
+                                <Coins className="h-4 w-4" />
+                                <span className="font-medium">Tokens</span>
+                            </div>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                            <TokenListElement
+                                limit={5}
+                                render={({ tokens, isLoading }) => (
+                                    <div className="space-y-2 pb-2">
+                                        {isLoading ? (
+                                            <div className="space-y-2">
+                                                {[1, 2, 3].map(i => (
+                                                    <div key={i} className="flex items-center gap-3">
+                                                        <div className="h-8 w-8 rounded-full bg-muted animate-pulse" />
+                                                        <div className="flex-1">
+                                                            <div className="h-4 w-16 bg-muted animate-pulse rounded mb-1" />
+                                                            <div className="h-3 w-24 bg-muted animate-pulse rounded" />
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    ) : tokens.length > 0 ? (
-                                        tokens.map(token => (
-                                            <div key={token.mint} className="flex items-center gap-3 py-1">
-                                                {token.logo ? (
-                                                    <img
-                                                        src={token.logo}
-                                                        className="h-8 w-8 rounded-full"
-                                                        alt={token.symbol}
-                                                    />
-                                                ) : (
-                                                    <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
-                                                        <Coins className="h-4 w-4" />
-                                                    </div>
-                                                )}
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="font-medium text-sm truncate">{token.symbol}</p>
-                                                    <p className="text-xs text-muted-foreground truncate">
-                                                        {token.name}
-                                                    </p>
-                                                </div>
-                                                <p className="font-mono text-sm">{token.formatted}</p>
+                                                ))}
                                             </div>
-                                        ))
-                                    ) : (
-                                        <p className="text-sm text-muted-foreground text-center py-2">
-                                            No tokens found
-                                        </p>
-                                    )}
-                                </div>
-                            )}
-                        />
-                    </AccordionContent>
-                </AccordionItem>
-
-                {/* Transactions */}
-                <AccordionItem value="transactions" className="border rounded-[12px] px-3">
-                    <AccordionTrigger className="py-3 hover:no-underline hover:cursor-pointer">
-                        <div className="flex items-center gap-2">
-                            <History className="h-4 w-4" />
-                            <span className="font-medium">Recent Activity</span>
-                        </div>
-                    </AccordionTrigger>
-                    <AccordionContent>
-                        <TransactionHistoryElement
-                            limit={5}
-                            render={({ transactions, isLoading }) => (
-                                <div className="space-y-2 pb-2">
-                                    {isLoading ? (
-                                        <div className="space-y-2">
-                                            {[1, 2, 3].map(i => (
-                                                <div key={i} className="flex items-center gap-3">
-                                                    <div className="h-8 w-8 rounded-full bg-muted animate-pulse" />
-                                                    <div className="flex-1">
-                                                        <div className="h-4 w-20 bg-muted animate-pulse rounded mb-1" />
-                                                        <div className="h-3 w-16 bg-muted animate-pulse rounded" />
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    ) : transactions.length > 0 ? (
-                                        transactions.map(tx => (
-                                            <a
-                                                key={tx.signature}
-                                                href={tx.explorerUrl}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="flex items-center gap-3 py-1 hover:bg-muted/50 rounded-lg px-1 -mx-1 transition-colors"
-                                            >
-                                                <div className="relative">
-                                                    {tx.type === 'swap' && (tx.swapFromToken || tx.swapToToken) ? (
-                                                        <SwapTokenIcon
-                                                            fromIcon={tx.swapFromToken?.icon}
-                                                            toIcon={tx.swapToToken?.icon}
-                                                            size={32}
-                                                        />
-                                                    ) : tx.tokenIcon ? (
+                                        ) : tokens.length > 0 ? (
+                                            tokens.map(token => (
+                                                <div key={token.mint} className="flex items-center gap-3 py-1">
+                                                    {token.logo ? (
                                                         <img
-                                                            src={tx.tokenIcon}
+                                                            src={token.logo}
                                                             className="h-8 w-8 rounded-full"
-                                                            alt=""
+                                                            alt={token.symbol}
                                                         />
                                                     ) : (
                                                         <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
-                                                            <History className="h-4 w-4" />
+                                                            <Coins className="h-4 w-4" />
                                                         </div>
                                                     )}
-                                                    {/* Direction indicator */}
-                                                    {(tx.direction === 'in' || tx.direction === 'out') && (
-                                                        <div
-                                                            className={`absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full flex items-center justify-center border-2 border-background ${
-                                                                tx.direction === 'in'
-                                                                    ? 'bg-green-500 text-white'
-                                                                    : 'bg-orange-500 text-white'
-                                                            }`}
-                                                        >
-                                                            {tx.direction === 'in' ? (
-                                                                <ArrowDownLeft className="h-2 w-2" />
-                                                            ) : (
-                                                                <ArrowUpRight className="h-2 w-2" />
-                                                            )}
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="font-medium text-sm truncate">{token.symbol}</p>
+                                                        <p className="text-xs text-muted-foreground truncate">
+                                                            {token.name}
+                                                        </p>
+                                                    </div>
+                                                    <p className="font-mono text-sm">{token.formatted}</p>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <p className="text-sm text-muted-foreground text-center py-2">
+                                                No tokens found
+                                            </p>
+                                        )}
+                                    </div>
+                                )}
+                            />
+                        </AccordionContent>
+                    </AccordionItem>
+
+                    {/* Transactions */}
+                    <AccordionItem value="transactions" className="border rounded-[12px] px-3">
+                        <AccordionTrigger className="py-3 hover:no-underline hover:cursor-pointer">
+                            <div className="flex items-center gap-2">
+                                <History className="h-4 w-4" />
+                                <span className="font-medium">Recent Activity</span>
+                            </div>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                            <TransactionHistoryElement
+                                limit={5}
+                                render={({ transactions, isLoading }) => (
+                                    <div className="space-y-2 pb-2">
+                                        {isLoading ? (
+                                            <div className="space-y-2">
+                                                {[1, 2, 3].map(i => (
+                                                    <div key={i} className="flex items-center gap-3">
+                                                        <div className="h-8 w-8 rounded-full bg-muted animate-pulse" />
+                                                        <div className="flex-1">
+                                                            <div className="h-4 w-20 bg-muted animate-pulse rounded mb-1" />
+                                                            <div className="h-3 w-16 bg-muted animate-pulse rounded" />
                                                         </div>
-                                                    )}
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="font-medium text-sm">{getTransactionTitle(tx)}</p>
-                                                    <p className="text-xs text-muted-foreground">{getTransactionSubtitle(tx)}</p>
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    {tx.formattedAmount && (
-                                                        <span
-                                                            className={`text-sm font-medium ${
-                                                                tx.direction === 'in'
-                                                                    ? 'text-green-600'
-                                                                    : tx.direction === 'out'
-                                                                      ? 'text-orange-600'
-                                                                      : 'text-muted-foreground'
-                                                            }`}
-                                                        >
-                                                            {tx.formattedAmount}
-                                                        </span>
-                                                    )}
-                                                    <ExternalLink className="h-3 w-3 text-muted-foreground" />
-                                                </div>
-                                            </a>
-                                        ))
-                                    ) : (
-                                        <p className="text-sm text-muted-foreground text-center py-2">
-                                            No transactions yet
-                                        </p>
-                                    )}
-                                </div>
-                            )}
-                        />
-                    </AccordionContent>
-                </AccordionItem>
-            </Accordion>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : transactions.length > 0 ? (
+                                            transactions.map(tx => (
+                                                <a
+                                                    key={tx.signature}
+                                                    href={tx.explorerUrl}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="flex items-center gap-3 py-1 hover:bg-muted/50 rounded-lg px-1 -mx-1 transition-colors"
+                                                >
+                                                    <div className="relative">
+                                                        {tx.type === 'swap' && (tx.swapFromToken || tx.swapToToken) ? (
+                                                            <SwapTokenIcon
+                                                                fromIcon={tx.swapFromToken?.icon}
+                                                                toIcon={tx.swapToToken?.icon}
+                                                                size={32}
+                                                            />
+                                                        ) : tx.tokenIcon ? (
+                                                            <img
+                                                                src={tx.tokenIcon}
+                                                                className="h-8 w-8 rounded-full"
+                                                                alt=""
+                                                            />
+                                                        ) : (
+                                                            <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
+                                                                <History className="h-4 w-4" />
+                                                            </div>
+                                                        )}
+                                                        {/* Direction indicator */}
+                                                        {(tx.direction === 'in' || tx.direction === 'out') && (
+                                                            <div
+                                                                className={`absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full flex items-center justify-center border-2 border-background ${
+                                                                    tx.direction === 'in'
+                                                                        ? 'bg-green-500 text-white'
+                                                                        : 'bg-orange-500 text-white'
+                                                                }`}
+                                                            >
+                                                                {tx.direction === 'in' ? (
+                                                                    <ArrowDownLeft className="h-2 w-2" />
+                                                                ) : (
+                                                                    <ArrowUpRight className="h-2 w-2" />
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="font-medium text-sm">{getTransactionTitle(tx)}</p>
+                                                        <p className="text-xs text-muted-foreground">
+                                                            {getTransactionSubtitle(tx)}
+                                                        </p>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        {tx.formattedAmount && (
+                                                            <span
+                                                                className={`text-sm font-medium ${
+                                                                    tx.direction === 'in'
+                                                                        ? 'text-green-600'
+                                                                        : tx.direction === 'out'
+                                                                          ? 'text-orange-600'
+                                                                          : 'text-muted-foreground'
+                                                                }`}
+                                                            >
+                                                                {tx.formattedAmount}
+                                                            </span>
+                                                        )}
+                                                        <ExternalLink className="h-3 w-3 text-muted-foreground" />
+                                                    </div>
+                                                </a>
+                                            ))
+                                        ) : (
+                                            <p className="text-sm text-muted-foreground text-center py-2">
+                                                No transactions yet
+                                            </p>
+                                        )}
+                                    </div>
+                                )}
+                            />
+                        </AccordionContent>
+                    </AccordionItem>
+                </Accordion>
 
                 {/* Disconnect Button */}
                 <DisconnectElement

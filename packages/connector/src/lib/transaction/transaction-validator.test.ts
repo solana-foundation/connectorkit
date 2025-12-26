@@ -19,14 +19,18 @@ describe('TransactionValidator', () => {
         });
 
         it('should reject null transaction', () => {
-            const result = TransactionValidator.validate(null as any);
+            const result = TransactionValidator.validate(
+                null as unknown as Parameters<typeof TransactionValidator.validate>[0],
+            );
 
             expect(result.valid).toBe(false);
             expect(result.errors).toContain('Transaction is null or undefined');
         });
 
         it('should reject undefined transaction', () => {
-            const result = TransactionValidator.validate(undefined as any);
+            const result = TransactionValidator.validate(
+                undefined as unknown as Parameters<typeof TransactionValidator.validate>[0],
+            );
 
             expect(result.valid).toBe(false);
             expect(result.errors).toContain('Transaction is null or undefined');
@@ -84,7 +88,9 @@ describe('TransactionValidator', () => {
             const mockWeb3jsTx = {
                 serialize: () => new Uint8Array(100),
             };
-            const result = TransactionValidator.validate(mockWeb3jsTx as any);
+            const result = TransactionValidator.validate(
+                mockWeb3jsTx as unknown as Parameters<typeof TransactionValidator.validate>[0],
+            );
 
             expect(result.valid).toBe(true);
             expect(result.size).toBe(100);
@@ -131,7 +137,9 @@ describe('TransactionValidator', () => {
             const mockTx = {
                 serialize: () => new Uint8Array(456),
             };
-            const result = TransactionValidator.validate(mockTx as any);
+            const result = TransactionValidator.validate(
+                mockTx as unknown as Parameters<typeof TransactionValidator.validate>[0],
+            );
 
             expect(result.size).toBe(456);
         });
@@ -139,7 +147,9 @@ describe('TransactionValidator', () => {
 
     describe('error accumulation', () => {
         it('should collect multiple errors', () => {
-            const result = TransactionValidator.validate(null as any);
+            const result = TransactionValidator.validate(
+                null as unknown as Parameters<typeof TransactionValidator.validate>[0],
+            );
 
             expect(result.errors.length).toBeGreaterThan(0);
         });
@@ -190,7 +200,9 @@ describe('TransactionValidator', () => {
     describe('different transaction formats', () => {
         it('should handle TypedArray variants', () => {
             const int8Tx = new Int8Array(100);
-            const result = TransactionValidator.validate(int8Tx as any);
+            const result = TransactionValidator.validate(
+                int8Tx as unknown as Parameters<typeof TransactionValidator.validate>[0],
+            );
 
             // TypedArray is handled (may or may not be valid depending on size)
             expect(result).toBeDefined();

@@ -96,9 +96,7 @@ function selectBalance(assets: WalletAssetsData | undefined): BalanceSelection {
     }
 
     // Filter to only non-zero balances and format
-    const tokens = assets.tokenAccounts
-        .filter(account => account.amount > 0n)
-        .map(formatTokenAccount);
+    const tokens = assets.tokenAccounts.filter(account => account.amount > 0n).map(formatTokenAccount);
 
     return {
         lamports: assets.lamports,

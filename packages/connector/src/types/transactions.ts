@@ -13,7 +13,7 @@ import type { Transaction, VersionedTransaction } from '@solana/web3.js';
  * Union type for all supported Solana transaction formats
  * Supports both legacy (@solana/web3.js) and modern (gill) transaction types
  */
-export type SolanaTransaction = Transaction | VersionedTransaction | TransactionMessage | Uint8Array;
+export type SolanaTransaction = Transaction | VersionedTransaction | TransactionMessage | Uint8Array | ArrayBufferView;
 
 /**
  * Transaction status during its lifecycle

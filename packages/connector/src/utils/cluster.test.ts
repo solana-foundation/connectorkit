@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
     getClusterRpcUrl,
     getClusterExplorerUrl,
@@ -49,7 +49,7 @@ describe('Cluster Utilities', () => {
         });
 
         it('should handle string cluster names', () => {
-            const url = getClusterRpcUrl('mainnet-beta' as any);
+            const url = getClusterRpcUrl('mainnet-beta');
             expect(url).toContain('mainnet');
         });
 
@@ -59,11 +59,11 @@ describe('Cluster Utilities', () => {
         });
 
         it('should throw on null cluster', () => {
-            expect(() => getClusterRpcUrl(null as any)).toThrow();
+            expect(() => getClusterRpcUrl(null as unknown as SolanaCluster)).toThrow();
         });
 
         it('should throw on undefined cluster', () => {
-            expect(() => getClusterRpcUrl(undefined as any)).toThrow();
+            expect(() => getClusterRpcUrl(undefined as unknown as SolanaCluster)).toThrow();
         });
     });
 

@@ -8,6 +8,7 @@
 'use client';
 
 import { createTimeoutSignal } from '../../utils/abort';
+import type { ClusterType } from '../../utils/cluster';
 
 export interface SolanaTokenListMetadata {
     address: string;
@@ -24,7 +25,30 @@ interface SolanaTokenListApiResponse {
     content: SolanaTokenListMetadata[];
 }
 
-const TOKEN_LIST_API_URL = 'https://token-list-api.solana.cloud/v1/mints?chainId=101';
+/**
+ * Solana Token List API chain IDs for different networks
+ * - 101: mainnet-beta
+ * - 102: testnet
+ * - 103: devnet
+ */
+const CLUSTER_CHAIN_IDS: Record<ClusterType, number> = {
+    mainnet: 101,
+    testnet: 102,
+    devnet: 103,
+    localnet: 103, // Use devnet tokens for localnet
+    custom: 101, // Default to mainnet for custom clusters
+};
+
+const TOKEN_LIST_API_BASE_URL = 'https://token-list-api.solana.cloud/v1/mints';
+
+/**
+ * Build the token list API URL for a specific cluster
+ */
+function getTokenListApiUrl(cluster: ClusterType = 'mainnet'): string {
+    const chainId = CLUSTER_CHAIN_IDS[cluster];
+    return `${TOKEN_LIST_API_BASE_URL}?chainId=${chainId}`;
+}
+
 const DEFAULT_TIMEOUT_MS = 10000;
 const TOKEN_LIST_CACHE_MAX_SIZE = 1500;
 const MAX_ADDRESSES_PER_REQUEST = 100;
@@ -83,8 +107,12 @@ function createLinkedSignal(
 }
 
 export interface FetchSolanaTokenListMetadataOptions {
+    /** Timeout in milliseconds for each batch request */
     timeoutMs?: number;
+    /** External abort signal */
     signal?: AbortSignal;
+    /** Cluster type to fetch tokens for (determines chainId in API URL) */
+    cluster?: ClusterType;
 }
 
 export async function fetchSolanaTokenListMetadata(
@@ -112,6 +140,7 @@ export async function fetchSolanaTokenListMetadata(
     if (!uncached.length) return results;
 
     const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+    const apiUrl = getTokenListApiUrl(options.cluster);
 
     // Batch requests to avoid very large POST bodies/timeouts on wallets with many mints.
     for (let i = 0; i < uncached.length; i += MAX_ADDRESSES_PER_REQUEST) {
@@ -121,7 +150,7 @@ export async function fetchSolanaTokenListMetadata(
         const { signal, cleanup } = createLinkedSignal(options.signal, timeoutMs);
 
         try {
-            const response = await fetch(TOKEN_LIST_API_URL, {
+            const response = await fetch(apiUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ addresses: batch }),
@@ -154,4 +183,3 @@ export async function fetchSolanaTokenListMetadata(
 export function clearSolanaTokenListCache(): void {
     tokenListCache.clear();
 }
-

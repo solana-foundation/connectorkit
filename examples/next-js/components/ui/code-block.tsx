@@ -31,10 +31,7 @@ function CodeBlockFallback({
 
     return (
         <pre
-            className={cn(
-                'overflow-auto rounded-lg bg-gray-50 p-4 text-xs leading-5 text-gray-800',
-                className,
-            )}
+            className={cn('overflow-auto rounded-lg bg-gray-50 p-4 text-xs leading-5 text-gray-800', className)}
             style={{
                 margin: 0,
                 ...customStyle,

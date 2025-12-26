@@ -2,13 +2,19 @@ import type { Connection } from '@solana/web3.js';
 
 export type Commitment = 'processed' | 'confirmed' | 'finalized';
 
+export interface KitSendTransactionOptions {
+    commitment?: Commitment;
+    skipPreflight?: boolean;
+    maxRetries?: number;
+}
+
 export type KitRpc = {
     getLatestBlockhash(options?: { commitment?: Commitment }): {
         send(): Promise<{ value: { blockhash: string; lastValidBlockHeight: number } }>;
     };
     sendTransaction(
         bytes: Uint8Array | string,
-        options?: any,
+        options?: KitSendTransactionOptions,
     ): {
         send(): Promise<string>;
     };

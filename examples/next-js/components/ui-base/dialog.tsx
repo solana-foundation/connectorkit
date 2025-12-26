@@ -13,19 +13,18 @@ const DialogPortal = BaseDialog.Portal;
 
 const DialogClose = BaseDialog.Close;
 
-const DialogBackdrop = React.forwardRef<
-    HTMLDivElement,
-    React.ComponentPropsWithoutRef<typeof BaseDialog.Backdrop>
->(({ className, ...props }, ref) => (
-    <BaseDialog.Backdrop
-        ref={ref}
-        className={cn(
-            'fixed inset-0 min-h-dvh z-50 bg-black/50 transition-opacity duration-150 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0 dark:bg-black/80 supports-[-webkit-touch-callout:none]:absolute',
-            className,
-        )}
-        {...props}
-    />
-));
+const DialogBackdrop = React.forwardRef<HTMLDivElement, React.ComponentPropsWithoutRef<typeof BaseDialog.Backdrop>>(
+    ({ className, ...props }, ref) => (
+        <BaseDialog.Backdrop
+            ref={ref}
+            className={cn(
+                'fixed inset-0 min-h-dvh z-50 bg-black/50 transition-opacity duration-150 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0 dark:bg-black/80 supports-[-webkit-touch-callout:none]:absolute',
+                className,
+            )}
+            {...props}
+        />
+    ),
+);
 DialogBackdrop.displayName = 'DialogBackdrop';
 
 const DialogContent = React.forwardRef<
@@ -62,34 +61,26 @@ const DialogHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivEleme
 DialogHeader.displayName = 'DialogHeader';
 
 const DialogFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-    <div
-        className={cn('flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2', className)}
-        {...props}
-    />
+    <div className={cn('flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2', className)} {...props} />
 );
 DialogFooter.displayName = 'DialogFooter';
 
-const DialogTitle = React.forwardRef<
-    HTMLHeadingElement,
-    React.ComponentPropsWithoutRef<typeof BaseDialog.Title>
->(({ className, ...props }, ref) => (
-    <BaseDialog.Title
-        ref={ref}
-        className={cn('text-lg font-semibold leading-none tracking-tight', className)}
-        {...props}
-    />
-));
+const DialogTitle = React.forwardRef<HTMLHeadingElement, React.ComponentPropsWithoutRef<typeof BaseDialog.Title>>(
+    ({ className, ...props }, ref) => (
+        <BaseDialog.Title
+            ref={ref}
+            className={cn('text-lg font-semibold leading-none tracking-tight', className)}
+            {...props}
+        />
+    ),
+);
 DialogTitle.displayName = 'DialogTitle';
 
 const DialogDescription = React.forwardRef<
     HTMLParagraphElement,
     React.ComponentPropsWithoutRef<typeof BaseDialog.Description>
 >(({ className, ...props }, ref) => (
-    <BaseDialog.Description
-        ref={ref}
-        className={cn('text-sm text-muted-foreground', className)}
-        {...props}
-    />
+    <BaseDialog.Description ref={ref} className={cn('text-sm text-muted-foreground', className)} {...props} />
 ));
 DialogDescription.displayName = 'DialogDescription';
 

@@ -58,12 +58,7 @@ export default function Home() {
                                 iconClassNameCheck="text-green-600"
                             />
 
-                            <Button
-                                onClick={scrollToPlayground}
-                                variant="default"
-                                size="sm"
-                                className="gap-2"
-                            >
+                            <Button onClick={scrollToPlayground} variant="default" size="sm" className="gap-2">
                                 View Playground
                             </Button>
                         </div>

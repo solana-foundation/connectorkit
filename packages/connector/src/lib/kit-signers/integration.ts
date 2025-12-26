@@ -10,6 +10,7 @@ import type { Address } from '@solana/addresses';
 import type { MessageModifyingSigner, TransactionSendingSigner } from '@solana/signers';
 import { address } from '@solana/addresses';
 import type { Connection } from '@solana/web3.js';
+import type { Transaction } from '@solana/transactions';
 import { createMessageSignerFromWallet, createTransactionSendingSignerFromWallet } from './factories';
 import { Errors } from '../errors';
 
@@ -163,7 +164,7 @@ export function createKitSignersFromWallet(
     // Prefer signAndSendTransaction over sendTransaction as it's more efficient
     const transactionSigner: TransactionSendingSigner<string> | null =
         hasSignAndSendTransaction || hasSendTransaction
-            ? createTransactionSendingSignerFromWallet(walletAddress, chain, async (transaction: any) => {
+            ? createTransactionSendingSignerFromWallet(walletAddress, chain, async (transaction: Transaction) => {
                   // Prefer signAndSendTransaction (sign + send in one call)
                   if (hasSignAndSendTransaction) {
                       try {

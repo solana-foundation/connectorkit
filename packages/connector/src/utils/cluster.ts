@@ -13,6 +13,13 @@ import { PUBLIC_RPC_ENDPOINTS } from './network';
  */
 export type ClusterType = 'mainnet' | 'devnet' | 'testnet' | 'localnet' | 'custom';
 
+function getMaybeStringProp(value: unknown, prop: string): string | undefined {
+    if (typeof value !== 'object' || value === null) return undefined;
+    const record = value as Record<string, unknown>;
+    const v = record[prop];
+    return typeof v === 'string' ? v : undefined;
+}
+
 export function getClusterRpcUrl(cluster: SolanaCluster | string): string {
     // Handle string input (cluster name/ID)
     if (typeof cluster === 'string') {
@@ -26,7 +33,7 @@ export function getClusterRpcUrl(cluster: SolanaCluster | string): string {
         throw new Error(`Unknown cluster: ${cluster}`);
     }
 
-    const url = cluster.url || (cluster as any).rpcUrl;
+    const url = cluster.url ?? getMaybeStringProp(cluster, 'rpcUrl');
 
     if (!url) {
         throw new Error('Cluster URL is required');
@@ -104,14 +111,15 @@ export function isTestnetCluster(cluster: SolanaCluster): boolean {
 }
 
 export function isLocalCluster(cluster: SolanaCluster): boolean {
-    const url = cluster.url || (cluster as any).rpcUrl;
+    const url = cluster.url ?? getMaybeStringProp(cluster, 'rpcUrl');
     if (!url) return cluster.id === 'solana:localnet';
     return cluster.id === 'solana:localnet' || url.includes('localhost') || url.includes('127.0.0.1');
 }
 
 export function getClusterName(cluster: SolanaCluster): string {
     if (cluster.label) return cluster.label;
-    if ((cluster as any).name) return (cluster as any).name;
+    const name = getMaybeStringProp(cluster, 'name');
+    if (name) return name;
 
     const parts = cluster.id.split(':');
     if (parts.length >= 2 && parts[1]) {

@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useEffect, useRef, useState } from 'react';
 import { useAccount } from './use-account';
+import { useCluster } from './use-cluster';
 import { useConnectorClient } from '../ui/connector-provider';
 import { createTimeoutSignal } from '../utils/abort';
 import { transformImageUrl } from '../utils/image';
@@ -15,6 +16,7 @@ import {
 import { fetchSolanaTokenListMetadata } from './_internal/solana-token-list';
 import type { CoinGeckoConfig } from '../types/connector';
 import type { SolanaClient } from '../lib/kit-utils';
+import type { ClusterType } from '../utils/cluster';
 
 export interface Token {
     /** Token mint address */
@@ -387,7 +389,7 @@ async function fetchCoinGeckoPrices(coingeckoIds: string[], config?: CoinGeckoCo
 async function fetchTokenMetadataHybrid(
     mints: string[],
     coingeckoConfig?: CoinGeckoConfig,
-    options?: { onUpdate?: () => void },
+    options?: { onUpdate?: () => void; cluster?: ClusterType },
 ): Promise<boolean> {
     if (mints.length === 0) return false;
 
@@ -415,7 +417,10 @@ async function fetchTokenMetadataHybrid(
     let didUpdate = false;
 
     // 1. Fetch token list metadata ONLY for mints missing metadata
-    const tokenListMetadata = await fetchSolanaTokenListMetadata(mintsNeedingTokenList, { timeoutMs: 10000 });
+    const tokenListMetadata = await fetchSolanaTokenListMetadata(mintsNeedingTokenList, {
+        timeoutMs: 10000,
+        cluster: options?.cluster,
+    });
 
     // 2. Store token-list metadata into cache immediately (so logos show ASAP).
     for (const [mint, meta] of tokenListMetadata) {
@@ -607,6 +612,7 @@ export function useTokens(options: UseTokensOptions = {}): UseTokensReturn {
     } = options;
 
     const { address, connected } = useAccount();
+    const { type: clusterType } = useCluster();
     const connectorClient = useConnectorClient();
 
     // Get imageProxy and coingecko config from connector config
@@ -713,6 +719,7 @@ export function useTokens(options: UseTokensOptions = {}): UseTokensReturn {
                     onUpdate: () => {
                         if (isMounted) setMetadataVersion(v => v + 1);
                     },
+                    cluster: clusterType ?? undefined,
                 });
 
                 // Final bump in case onUpdate wasn't called (e.g., only prices updated)
@@ -725,7 +732,7 @@ export function useTokens(options: UseTokensOptions = {}): UseTokensReturn {
         return () => {
             isMounted = false;
         };
-    }, [mintsKey, fetchMetadata, coingeckoConfig]);
+    }, [mintsKey, fetchMetadata, coingeckoConfig, clusterType]);
 
     // Derive final tokens from baseTokens + metadata cache
     // This ensures balances always stay current (derived from latest baseTokens)

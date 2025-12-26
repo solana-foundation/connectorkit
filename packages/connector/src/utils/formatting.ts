@@ -227,12 +227,7 @@ export function formatBigIntBalance(
         useGrouping?: boolean;
     } = {},
 ): string {
-    const {
-        maxDecimals = Math.min(decimals, 6),
-        minDecimals = 0,
-        locale,
-        useGrouping = true,
-    } = options;
+    const { maxDecimals = Math.min(decimals, 6), minDecimals = 0, locale, useGrouping = true } = options;
 
     // Fast path: if the amount is safe to convert to Number, use native formatting
     if (isSafeInteger(amount)) {

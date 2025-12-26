@@ -111,7 +111,7 @@ describe('Constants', () => {
 
             it('should be readonly', () => {
                 expect(() => {
-                    (POLL_INTERVALS_MS as any)[0] = 999;
+                    (POLL_INTERVALS_MS as unknown as number[])[0] = 999;
                 }).not.toThrow(); // as const makes it readonly at type level but not runtime
             });
         });

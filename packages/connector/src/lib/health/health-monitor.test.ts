@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { HealthMonitor } from './health-monitor';
-import type { StateManager } from '../core/state-manager';
+import { StateManager } from '../core/state-manager';
+import type { ConnectorState } from '../../types/connector';
 
 // Mock dependencies
 vi.mock('../adapters/wallet-standard-shim', () => ({
@@ -12,9 +13,18 @@ describe('HealthMonitor', () => {
     let mockStateManager: StateManager;
 
     beforeEach(() => {
-        mockStateManager = {
-            getSnapshot: vi.fn(() => ({ wallets: [], connected: false })),
-        } as any;
+        const initialState: ConnectorState = {
+            wallets: [],
+            selectedWallet: null,
+            connected: false,
+            connecting: false,
+            accounts: [],
+            selectedAccount: null,
+            cluster: null,
+            clusters: [],
+        };
+
+        mockStateManager = new StateManager(initialState);
 
         healthMonitor = new HealthMonitor(mockStateManager, undefined, undefined, () => true);
     });

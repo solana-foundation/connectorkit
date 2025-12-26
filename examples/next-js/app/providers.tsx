@@ -17,7 +17,7 @@ const getOrigin = () => {
 export function Providers({ children }: { children: ReactNode }) {
     const connectorConfig = useMemo(() => {
         const origin = getOrigin();
-        
+
         // Use RPC proxy to keep API keys server-side
         const rpcProxyUrl = `${origin}/api/rpc`;
 

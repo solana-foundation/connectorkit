@@ -9,8 +9,9 @@ import { TransactionTracker } from './transaction-tracker';
 import { StateManager } from '../core/state-manager';
 import { EventEmitter } from '../core/event-emitter';
 import type { ConnectorState } from '../../types/connector';
+import type { SolanaCluster } from '@wallet-ui/core';
 import { createEventCollector } from '../../__tests__/utils/test-helpers';
-import { createMockTransaction, TEST_SIGNATURES } from '../../__tests__/fixtures/transactions';
+import { createMockTransaction, TEST_SIGNATURES, TEST_SIGNATURES_TYPED } from '../../__tests__/fixtures/transactions';
 
 describe('TransactionTracker', () => {
     let stateManager: StateManager;
@@ -30,7 +31,7 @@ describe('TransactionTracker', () => {
                 id: 'solana:mainnet-beta',
                 label: 'Mainnet Beta',
                 url: 'https://api.mainnet-beta.solana.com',
-            } as any,
+            } satisfies SolanaCluster,
             clusters: [],
         };
 
@@ -46,7 +47,7 @@ describe('TransactionTracker', () => {
     describe('trackTransaction', () => {
         it('should track a transaction', () => {
             const transaction = {
-                signature: TEST_SIGNATURES.TX_1,
+                signature: TEST_SIGNATURES_TYPED.TX_1,
                 status: 'pending' as const,
             };
 
@@ -55,7 +56,7 @@ describe('TransactionTracker', () => {
             const transactions = transactionTracker.getTransactions();
             expect(transactions).toHaveLength(1);
             expect(transactions[0]).toMatchObject({
-                signature: TEST_SIGNATURES.TX_1,
+                signature: TEST_SIGNATURES_TYPED.TX_1,
                 status: 'pending',
                 cluster: 'solana:mainnet-beta',
             });
@@ -64,7 +65,7 @@ describe('TransactionTracker', () => {
 
         it('should emit transaction:tracked event', () => {
             const transaction = {
-                signature: TEST_SIGNATURES.TX_1,
+                signature: TEST_SIGNATURES_TYPED.TX_1,
                 status: 'pending' as const,
             };
 
@@ -75,50 +76,46 @@ describe('TransactionTracker', () => {
 
         it('should add transactions to the beginning of the list', () => {
             transactionTracker.trackTransaction({
-                signature: TEST_SIGNATURES.TX_1,
+                signature: TEST_SIGNATURES_TYPED.TX_1,
                 status: 'pending' as const,
             });
 
             transactionTracker.trackTransaction({
-                signature: TEST_SIGNATURES.TX_2,
+                signature: TEST_SIGNATURES_TYPED.TX_2,
                 status: 'pending' as const,
             });
 
             const transactions = transactionTracker.getTransactions();
-            expect(transactions[0].signature).toBe(TEST_SIGNATURES.TX_2);
-            expect(transactions[1].signature).toBe(TEST_SIGNATURES.TX_1);
+            expect(transactions[0].signature).toBe(TEST_SIGNATURES_TYPED.TX_2);
+            expect(transactions[1].signature).toBe(TEST_SIGNATURES_TYPED.TX_1);
         });
 
         it('should respect max transaction limit', () => {
-            const smallTracker = new TransactionTracker(stateManager, eventEmitter, 3, false);
+            const smallTracker = new TransactionTracker(stateManager, eventEmitter, 2, false);
 
-            for (let i = 0; i < 5; i++) {
-                smallTracker.trackTransaction({
-                    signature: `signature-${i}`,
-                    status: 'pending' as const,
-                });
-            }
+            smallTracker.trackTransaction({ signature: TEST_SIGNATURES_TYPED.TX_1, status: 'pending' as const });
+            smallTracker.trackTransaction({ signature: TEST_SIGNATURES_TYPED.TX_2, status: 'pending' as const });
+            smallTracker.trackTransaction({ signature: TEST_SIGNATURES_TYPED.TX_3, status: 'pending' as const });
 
             const transactions = smallTracker.getTransactions();
-            expect(transactions).toHaveLength(3);
+            expect(transactions).toHaveLength(2);
             // Should keep most recent
-            expect(transactions[0].signature).toBe('signature-4');
-            expect(transactions[1].signature).toBe('signature-3');
-            expect(transactions[2].signature).toBe('signature-2');
+            expect(transactions[0].signature).toBe(TEST_SIGNATURES_TYPED.TX_3);
+            expect(transactions[1].signature).toBe(TEST_SIGNATURES_TYPED.TX_2);
         });
 
         it('should increment total transaction count', () => {
             expect(transactionTracker.getTotalCount()).toBe(0);
 
             transactionTracker.trackTransaction({
-                signature: TEST_SIGNATURES.TX_1,
+                signature: TEST_SIGNATURES_TYPED.TX_1,
                 status: 'pending' as const,
             });
 
             expect(transactionTracker.getTotalCount()).toBe(1);
 
             transactionTracker.trackTransaction({
-                signature: TEST_SIGNATURES.TX_2,
+                signature: TEST_SIGNATURES_TYPED.TX_2,
                 status: 'confirmed' as const,
             });
 
@@ -127,7 +124,7 @@ describe('TransactionTracker', () => {
 
         it('should include cluster information', () => {
             transactionTracker.trackTransaction({
-                signature: TEST_SIGNATURES.TX_1,
+                signature: TEST_SIGNATURES_TYPED.TX_1,
                 status: 'pending' as const,
             });
 
@@ -140,7 +137,7 @@ describe('TransactionTracker', () => {
             stateManager.updateState({ cluster: null });
 
             transactionTracker.trackTransaction({
-                signature: TEST_SIGNATURES.TX_1,
+                signature: TEST_SIGNATURES_TYPED.TX_1,
                 status: 'pending' as const,
             });
 
@@ -152,7 +149,7 @@ describe('TransactionTracker', () => {
     describe('updateStatus', () => {
         beforeEach(() => {
             transactionTracker.trackTransaction({
-                signature: TEST_SIGNATURES.TX_1,
+                signature: TEST_SIGNATURES_TYPED.TX_1,
                 status: 'pending' as const,
             });
         });
@@ -188,21 +185,21 @@ describe('TransactionTracker', () => {
 
         it('should update correct transaction when multiple exist', () => {
             transactionTracker.trackTransaction({
-                signature: TEST_SIGNATURES.TX_2,
+                signature: TEST_SIGNATURES_TYPED.TX_2,
                 status: 'pending' as const,
             });
 
             transactionTracker.trackTransaction({
-                signature: TEST_SIGNATURES.TX_3,
+                signature: TEST_SIGNATURES_TYPED.TX_3,
                 status: 'pending' as const,
             });
 
             transactionTracker.updateStatus(TEST_SIGNATURES.TX_2, 'confirmed');
 
             const transactions = transactionTracker.getTransactions();
-            const tx2 = transactions.find(t => t.signature === TEST_SIGNATURES.TX_2);
-            const tx1 = transactions.find(t => t.signature === TEST_SIGNATURES.TX_1);
-            const tx3 = transactions.find(t => t.signature === TEST_SIGNATURES.TX_3);
+            const tx2 = transactions.find(t => t.signature === TEST_SIGNATURES_TYPED.TX_2);
+            const tx1 = transactions.find(t => t.signature === TEST_SIGNATURES_TYPED.TX_1);
+            const tx3 = transactions.find(t => t.signature === TEST_SIGNATURES_TYPED.TX_3);
 
             expect(tx2?.status).toBe('confirmed');
             expect(tx1?.status).toBe('pending');
@@ -218,7 +215,7 @@ describe('TransactionTracker', () => {
 
         it('should return copy of transactions array', () => {
             transactionTracker.trackTransaction({
-                signature: TEST_SIGNATURES.TX_1,
+                signature: TEST_SIGNATURES_TYPED.TX_1,
                 status: 'pending' as const,
             });
 
@@ -231,17 +228,17 @@ describe('TransactionTracker', () => {
 
         it('should return all tracked transactions', () => {
             transactionTracker.trackTransaction({
-                signature: TEST_SIGNATURES.TX_1,
+                signature: TEST_SIGNATURES_TYPED.TX_1,
                 status: 'pending' as const,
             });
 
             transactionTracker.trackTransaction({
-                signature: TEST_SIGNATURES.TX_2,
+                signature: TEST_SIGNATURES_TYPED.TX_2,
                 status: 'confirmed' as const,
             });
 
             transactionTracker.trackTransaction({
-                signature: TEST_SIGNATURES.TX_3,
+                signature: TEST_SIGNATURES_TYPED.TX_3,
                 status: 'failed' as const,
                 error: 'Error message',
             });
@@ -258,10 +255,11 @@ describe('TransactionTracker', () => {
 
         it('should track total across history limit', () => {
             const smallTracker = new TransactionTracker(stateManager, eventEmitter, 2, false);
+            const signatures = [TEST_SIGNATURES_TYPED.TX_1, TEST_SIGNATURES_TYPED.TX_2, TEST_SIGNATURES_TYPED.TX_3];
 
             for (let i = 0; i < 5; i++) {
                 smallTracker.trackTransaction({
-                    signature: `signature-${i}`,
+                    signature: signatures[i % signatures.length],
                     status: 'pending' as const,
                 });
             }
@@ -276,12 +274,12 @@ describe('TransactionTracker', () => {
     describe('clearHistory', () => {
         it('should clear transaction history', () => {
             transactionTracker.trackTransaction({
-                signature: TEST_SIGNATURES.TX_1,
+                signature: TEST_SIGNATURES_TYPED.TX_1,
                 status: 'pending' as const,
             });
 
             transactionTracker.trackTransaction({
-                signature: TEST_SIGNATURES.TX_2,
+                signature: TEST_SIGNATURES_TYPED.TX_2,
                 status: 'confirmed' as const,
             });
 
@@ -294,7 +292,7 @@ describe('TransactionTracker', () => {
 
         it('should not affect total count', () => {
             transactionTracker.trackTransaction({
-                signature: TEST_SIGNATURES.TX_1,
+                signature: TEST_SIGNATURES_TYPED.TX_1,
                 status: 'pending' as const,
             });
 
