@@ -16,3 +16,6 @@ export * from './use-transaction-preparer';
 export * from './use-balance';
 export * from './use-transactions';
 export * from './use-tokens';
+
+// Cache utilities
+export { clearSharedQueryCache, invalidateSharedQuery } from './_internal/use-shared-query';

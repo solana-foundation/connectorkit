@@ -201,7 +201,7 @@ export function WalletDropdownContent({ selectedAccount, walletIcon, walletName 
                         <div className="flex items-center justify-between mb-1">
                             <span className="text-sm text-muted-foreground">Balance</span>
                             <button
-                                onClick={refetch}
+                                onClick={() => refetch()}
                                 disabled={isLoading}
                                 className="p-1 hover:bg-accent rounded transition-colors disabled:opacity-50"
                             >

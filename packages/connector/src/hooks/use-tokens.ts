@@ -1,11 +1,13 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useCallback, useMemo, useEffect, useRef, useState } from 'react';
 import { address as toAddress } from '@solana/addresses';
 import { useAccount } from './use-account';
 import { useSolanaClient } from './use-kit-solana-client';
 import { useConnectorClient } from '../ui/connector-provider';
+import { useSharedQuery } from './_internal/use-shared-query';
 import type { CoinGeckoConfig } from '../types/connector';
+import type { SolanaClient } from '../lib/kit-utils';
 
 /**
  * Creates a timeout signal with browser compatibility fallback.
@@ -61,6 +63,8 @@ export interface Token {
 }
 
 export interface UseTokensOptions {
+    /** Whether the hook is enabled (default: true) */
+    enabled?: boolean;
     /** Whether to include zero balance tokens */
     includeZeroBalance?: boolean;
     /** Whether to auto-refresh */
@@ -71,6 +75,14 @@ export interface UseTokensOptions {
     fetchMetadata?: boolean;
     /** Include native SOL balance */
     includeNativeSol?: boolean;
+    /** Time in ms to consider data fresh (default: 0) */
+    staleTimeMs?: number;
+    /** Time in ms to keep cache after unmount (default: 300000) */
+    cacheTimeMs?: number;
+    /** Whether to refetch on mount (default: 'stale') */
+    refetchOnMount?: boolean | 'stale';
+    /** Override the Solana client from provider */
+    client?: SolanaClient | null;
 }
 
 export interface UseTokensReturn {
@@ -80,8 +92,10 @@ export interface UseTokensReturn {
     isLoading: boolean;
     /** Error if fetch failed */
     error: Error | null;
-    /** Refetch tokens */
-    refetch: () => Promise<void>;
+    /** Refetch tokens, optionally with an abort signal */
+    refetch: (options?: { signal?: AbortSignal }) => Promise<void>;
+    /** Abort any in-flight token fetch */
+    abort: () => void;
     /** Last updated timestamp */
     lastUpdated: Date | null;
     /** Total number of token accounts */
@@ -244,7 +258,7 @@ const metadataCache = new LRUCache<string, TokenMetadata>(CACHE_MAX_SIZE);
 // Price cache with TTL (LRU + TTL - prices change frequently)
 const priceCache = new LRUCache<string, { price: number; timestamp: number }>(CACHE_MAX_SIZE, {
     getTtl: () => PRICE_CACHE_TTL,
-    getTimestamp: (entry) => entry.timestamp,
+    getTimestamp: entry => entry.timestamp,
 });
 
 // Periodic stale entry cleanup for price cache
@@ -378,10 +392,7 @@ function parseRetryAfter(retryAfterHeader: string | null): number | undefined {
  *
  * @see https://docs.coingecko.com/reference/introduction
  */
-async function fetchCoinGeckoPrices(
-    coingeckoIds: string[],
-    config?: CoinGeckoConfig,
-): Promise<Map<string, number>> {
+async function fetchCoinGeckoPrices(coingeckoIds: string[], config?: CoinGeckoConfig): Promise<Map<string, number>> {
     const results = new Map<string, number>();
 
     if (coingeckoIds.length === 0) return results;
@@ -500,9 +511,7 @@ async function fetchCoinGeckoPrices(
 
             // Don't retry on abort/timeout - we're already tracking total timeout
             if (error instanceof DOMException && error.name === 'AbortError') {
-                console.warn(
-                    `[useTokens] CoinGecko API request timed out. Attempt ${attempt + 1}/${maxRetries + 1}.`,
-                );
+                console.warn(`[useTokens] CoinGecko API request timed out. Attempt ${attempt + 1}/${maxRetries + 1}.`);
             } else {
                 console.warn(
                     `[useTokens] CoinGecko API request failed. Attempt ${attempt + 1}/${maxRetries + 1}:`,
@@ -558,7 +567,9 @@ async function fetchTokenMetadataHybrid(
         if (cached) {
             // Check if we need to refresh prices
             const priceStale =
-                cached.coingeckoId && (!priceCache.get(cached.coingeckoId) || now - (priceCache.get(cached.coingeckoId)?.timestamp ?? 0) >= PRICE_CACHE_TTL);
+                cached.coingeckoId &&
+                (!priceCache.get(cached.coingeckoId) ||
+                    now - (priceCache.get(cached.coingeckoId)?.timestamp ?? 0) >= PRICE_CACHE_TTL);
 
             if (priceStale && cached.coingeckoId) {
                 // Metadata is cached but price is stale - we'll refresh price later
@@ -664,9 +675,23 @@ function transformImageUrl(url: string | undefined, imageProxy: string | undefin
     return imageProxy.endsWith('/') ? imageProxy + encodedUrl : imageProxy + '/' + encodedUrl;
 }
 
+/** Internal data structure for tokens RPC query */
+interface TokensRpcData {
+    tokens: Token[];
+    mints: string[];
+    totalAccounts: number;
+}
+
 /**
  * Hook for fetching wallet token holdings.
  * Fetches metadata (name, symbol, icon) from Solana Token List API and USD prices from CoinGecko.
+ *
+ * Features:
+ * - Automatic request deduplication across components
+ * - Shared polling interval (ref-counted)
+ * - Configurable auto-refresh behavior
+ * - Abort support for in-flight requests
+ * - Optional client override
  *
  * @example Basic usage
  * ```tsx
@@ -688,44 +713,75 @@ function transformImageUrl(url: string | undefined, imageProxy: string | undefin
  *   );
  * }
  * ```
+ *
+ * @example With options
+ * ```tsx
+ * function TokenList() {
+ *   const { tokens, refetch, abort } = useTokens({
+ *     autoRefresh: true,
+ *     refreshInterval: 30000,
+ *     includeNativeSol: true,
+ *   });
+ *
+ *   return (
+ *     <div>
+ *       {tokens.map(token => (
+ *         <div key={token.mint}>{token.symbol}: {token.formatted}</div>
+ *       ))}
+ *       <button onClick={() => refetch()}>Refresh</button>
+ *     </div>
+ *   );
+ * }
+ * ```
  */
 export function useTokens(options: UseTokensOptions = {}): UseTokensReturn {
     const {
+        enabled = true,
         includeZeroBalance = false,
         autoRefresh = false,
         refreshInterval = 60000,
         fetchMetadata = true,
         includeNativeSol = true,
+        staleTimeMs = 0,
+        cacheTimeMs = 5 * 60 * 1000, // 5 minutes
+        refetchOnMount = 'stale',
+        client: clientOverride,
     } = options;
 
     const { address, connected } = useAccount();
-    const client = useSolanaClient();
+    const { client: providerClient } = useSolanaClient();
     const connectorClient = useConnectorClient();
 
-    const [tokens, setTokens] = useState<Token[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<Error | null>(null);
-    const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-    const [totalAccounts, setTotalAccounts] = useState(0);
+    // Use override client if provided, otherwise use provider client
+    const rpcClient = clientOverride ?? providerClient;
 
-    // Extract the actual client to use as a stable dependency
-    const rpcClient = client?.client ?? null;
     // Get imageProxy and coingecko config from connector config
     const connectorConfig = connectorClient?.getConfig();
     const imageProxy = connectorConfig?.imageProxy;
     const coingeckoConfig = connectorConfig?.coingecko;
 
-    const fetchTokens = useCallback(async () => {
-        if (!connected || !address || !rpcClient) {
-            setTokens([]);
-            setTotalAccounts(0);
-            return;
-        }
+    // Generate cache key based on RPC URL, address, and options that affect the query
+    const key = useMemo(() => {
+        if (!enabled || !connected || !address || !rpcClient) return null;
+        const rpcUrl =
+            rpcClient.urlOrMoniker instanceof URL
+                ? rpcClient.urlOrMoniker.toString()
+                : String(rpcClient.urlOrMoniker);
+        return JSON.stringify(['wallet-tokens', rpcUrl, address, includeZeroBalance, includeNativeSol]);
+    }, [enabled, connected, address, rpcClient, includeZeroBalance, includeNativeSol]);
 
-        setIsLoading(true);
-        setError(null);
+    // Query function that fetches token accounts from RPC
+    const queryFn = useCallback(
+        async (signal: AbortSignal): Promise<TokensRpcData> => {
+            if (!connected || !address || !rpcClient) {
+                return { tokens: [], mints: [], totalAccounts: 0 };
+            }
 
-        try {
+            // Throw on abort - fetchSharedQuery will preserve previous data
+            if (signal.aborted) {
+                throw new DOMException('Query aborted', 'AbortError');
+            }
+
             const rpc = rpcClient.rpc;
             const walletAddress = toAddress(address);
             const tokenProgramId = toAddress('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
@@ -737,6 +793,11 @@ export function useTokens(options: UseTokensOptions = {}): UseTokensReturn {
                     .getTokenAccountsByOwner(walletAddress, { programId: tokenProgramId }, { encoding: 'jsonParsed' })
                     .send(),
             ]);
+
+            // Throw on abort - fetchSharedQuery will preserve previous data
+            if (signal.aborted) {
+                throw new DOMException('Query aborted', 'AbortError');
+            }
 
             const tokenList: Token[] = [];
             const mints: string[] = [];
@@ -760,9 +821,10 @@ export function useTokens(options: UseTokensOptions = {}): UseTokensReturn {
 
             // Add SPL tokens
             for (const account of tokenAccountsResult.value) {
-                const parsed = account.account.data as any;
-                if (parsed?.parsed?.info) {
-                    const info = parsed.parsed.info;
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const data = account.account.data as any;
+                if (data?.parsed?.info) {
+                    const info = data.parsed.info;
                     const amount = BigInt(info.tokenAmount?.amount || '0');
                     const decimals = info.tokenAmount?.decimals || 0;
 
@@ -785,34 +847,94 @@ export function useTokens(options: UseTokensOptions = {}): UseTokensReturn {
                 }
             }
 
-            // Set initial tokens immediately so UI is responsive
-            setTokens([...tokenList]);
-            setTotalAccounts(tokenAccountsResult.value.length + (includeNativeSol ? 1 : 0));
-            setLastUpdated(new Date());
+            return {
+                tokens: tokenList,
+                mints,
+                totalAccounts: tokenAccountsResult.value.length + (includeNativeSol ? 1 : 0),
+            };
+        },
+        [connected, address, rpcClient, includeZeroBalance, includeNativeSol],
+    );
 
-            // Fetch metadata from Solana Token List API + CoinGecko prices
-            if (fetchMetadata && mints.length > 0) {
-                const metadata = await fetchTokenMetadataHybrid(mints, coingeckoConfig);
+    // Use shared query for deduplication and caching of RPC data
+    const {
+        data: rpcData,
+        error,
+        isFetching,
+        updatedAt,
+        refetch: sharedRefetch,
+        abort,
+    } = useSharedQuery<TokensRpcData>(key, queryFn, {
+        enabled,
+        staleTimeMs,
+        cacheTimeMs,
+        refetchOnMount,
+        refetchIntervalMs: autoRefresh ? refreshInterval : false,
+    });
+
+    // Memoize base tokens from RPC data
+    const baseTokens = rpcData?.tokens ?? [];
+    const mints = rpcData?.mints ?? [];
+    const totalAccounts = rpcData?.totalAccounts ?? 0;
+
+    // Track enriched tokens with metadata (using state to trigger re-renders)
+    const [enrichedTokens, setEnrichedTokens] = useState<{ key: string; tokens: Token[] } | null>(null);
+    // Track which key we're currently fetching to avoid duplicate fetches
+    const fetchingKeyRef = useRef<string | null>(null);
+
+    // Compute mints key for comparison (stable reference)
+    const mintsKey = useMemo(() => mints.join(','), [mints]);
+
+    // Fetch metadata when mints change
+    useEffect(() => {
+        // Skip if metadata fetch disabled or no mints
+        if (!fetchMetadata || mintsKey === '') {
+            return;
+        }
+
+        // Skip if we already have enriched data for these exact mints
+        if (enrichedTokens?.key === mintsKey) {
+            return;
+        }
+
+        // Skip if we're already fetching for these mints
+        if (fetchingKeyRef.current === mintsKey) {
+            return;
+        }
+
+        // Mark as fetching
+        fetchingKeyRef.current = mintsKey;
+
+        // Capture current values for async operation
+        const currentMints = mints;
+        const currentBaseTokens = baseTokens;
+        const currentMintsKey = mintsKey;
+
+        // Fetch metadata asynchronously
+        let cancelled = false;
+        (async () => {
+            try {
+                const metadata = await fetchTokenMetadataHybrid(currentMints, coingeckoConfig);
+
+                if (cancelled) return;
 
                 // Apply metadata to tokens
-                for (let i = 0; i < tokenList.length; i++) {
-                    const meta = metadata.get(tokenList[i].mint);
-                    if (meta) {
-                        tokenList[i] = {
-                            ...tokenList[i],
-                            name: meta.name,
-                            symbol: meta.symbol,
-                            logo: transformImageUrl(meta.logoURI, imageProxy),
-                            usdPrice: meta.usdPrice,
-                            formattedUsd: meta.usdPrice
-                                ? formatUsd(tokenList[i].amount, tokenList[i].decimals, meta.usdPrice)
-                                : undefined,
-                        };
-                    }
-                }
+                const enriched = currentBaseTokens.map(token => {
+                    const meta = metadata.get(token.mint);
+                    if (!meta) return token;
+
+                    return {
+                        ...token,
+                        name: meta.name,
+                        symbol: meta.symbol,
+                        logo: transformImageUrl(meta.logoURI, imageProxy),
+                        usdPrice: meta.usdPrice,
+                        formattedUsd: meta.usdPrice ? formatUsd(token.amount, token.decimals, meta.usdPrice) : undefined,
+                    };
+                });
 
                 // Sort by USD value (highest first), tokens with metadata first
-                tokenList.sort((a, b) => {
+                enriched.sort((a, b) => {
                     // Tokens with metadata come first
                     const metadataSort = (b.logo ? 1 : 0) - (a.logo ? 1 : 0);
                     if (metadataSort !== 0) return metadataSort;
@@ -823,28 +945,29 @@ export function useTokens(options: UseTokensOptions = {}): UseTokensReturn {
                     return bValue - aValue;
                 });
 
-                setTokens([...tokenList]);
+                setEnrichedTokens({ key: currentMintsKey, tokens: enriched });
+            } catch (err) {
+                console.error('[useTokens] Failed to fetch metadata:', err);
+                // On error, store base tokens with the key so we don't retry infinitely
+                setEnrichedTokens({ key: currentMintsKey, tokens: currentBaseTokens });
+            } finally {
+                // Clear fetching ref if it's still for this key
+                if (fetchingKeyRef.current === currentMintsKey) {
+                    fetchingKeyRef.current = null;
+                }
             }
-        } catch (err) {
-            setError(err as Error);
-            console.error('[useTokens] Failed to fetch tokens:', err);
-        } finally {
-            setIsLoading(false);
-        }
-    }, [connected, address, rpcClient, includeZeroBalance, fetchMetadata, includeNativeSol, imageProxy, coingeckoConfig]);
+        })();
 
-    // Fetch on mount and when dependencies change
-    useEffect(() => {
-        fetchTokens();
-    }, [fetchTokens]);
-
-    // Auto-refresh
-    useEffect(() => {
-        if (!connected || !autoRefresh) return;
-
-        const interval = setInterval(fetchTokens, refreshInterval);
-        return () => clearInterval(interval);
-    }, [connected, autoRefresh, refreshInterval, fetchTokens]);
+        return () => {
+            cancelled = true;
+            // Clear fetching ref on cleanup
+            if (fetchingKeyRef.current === currentMintsKey) {
+                fetchingKeyRef.current = null;
+            }
+        };
+        // Only depend on mintsKey and fetchMetadata - the other values are captured in the closure
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [mintsKey, fetchMetadata]);
 
     // Start/stop cache cleanup interval based on hook lifecycle
     useEffect(() => {
@@ -864,15 +987,30 @@ export function useTokens(options: UseTokensOptions = {}): UseTokensReturn {
         wasConnectedRef.current = connected;
     }, [connected]);
 
+    // Preserve old behavior: don't surface "refresh failed" errors if we already have data
+    const visibleError = updatedAt ? null : error;
+
+    // Wrap refetch to match expected signature
+    const refetch = useCallback(
+        async (opts?: { signal?: AbortSignal }) => {
+            await sharedRefetch(opts);
+        },
+        [sharedRefetch],
+    );
+
+    // Use enriched tokens if available and matching current mints, otherwise base tokens
+    const tokens = enrichedTokens?.key === mintsKey ? enrichedTokens.tokens : baseTokens;
+
     return useMemo(
         () => ({
             tokens,
-            isLoading,
-            error,
-            refetch: fetchTokens,
-            lastUpdated,
+            isLoading: isFetching,
+            error: visibleError,
+            refetch,
+            abort,
+            lastUpdated: updatedAt ? new Date(updatedAt) : null,
             totalAccounts,
         }),
-        [tokens, isLoading, error, fetchTokens, lastUpdated, totalAccounts],
+        [tokens, isFetching, visibleError, refetch, abort, updatedAt, totalAccounts],
     );
 }

@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useCallback, useMemo } from 'react';
 import { address as toAddress } from '@solana/addresses';
 import { useAccount } from './use-account';
-import { useCluster } from './use-cluster';
 import { useSolanaClient } from './use-kit-solana-client';
+import { useSharedQuery } from './_internal/use-shared-query';
+import type { SolanaClient } from '../lib/kit-utils';
 
 export interface TokenBalance {
     /** Token mint address */
@@ -23,6 +24,26 @@ export interface TokenBalance {
     logo?: string;
 }
 
+/**
+ * Options for useBalance hook
+ */
+export interface UseBalanceOptions {
+    /** Whether the hook is enabled (default: true) */
+    enabled?: boolean;
+    /** Whether to auto-refresh balance (default: true) */
+    autoRefresh?: boolean;
+    /** Refresh interval in milliseconds (default: 30000) */
+    refreshInterval?: number;
+    /** Time in ms to consider data fresh (default: 0) */
+    staleTimeMs?: number;
+    /** Time in ms to keep cache after unmount (default: 300000) */
+    cacheTimeMs?: number;
+    /** Whether to refetch on mount (default: 'stale') */
+    refetchOnMount?: boolean | 'stale';
+    /** Override the Solana client from provider */
+    client?: SolanaClient | null;
+}
+
 export interface UseBalanceReturn {
     /** SOL balance in SOL (not lamports) */
     solBalance: number;
@@ -36,8 +57,10 @@ export interface UseBalanceReturn {
     isLoading: boolean;
     /** Error if balance fetch failed */
     error: Error | null;
-    /** Refetch balance */
-    refetch: () => Promise<void>;
+    /** Refetch balance, optionally with an abort signal */
+    refetch: (options?: { signal?: AbortSignal }) => Promise<void>;
+    /** Abort any in-flight balance fetch */
+    abort: () => void;
     /** Last updated timestamp */
     lastUpdated: Date | null;
 }
@@ -54,8 +77,21 @@ function formatSol(lamports: bigint, decimals: number = 4): string {
     );
 }
 
+/** Internal data structure for balance query */
+interface BalanceData {
+    lamports: bigint;
+    tokens: TokenBalance[];
+}
+
 /**
  * Hook for fetching wallet balance (SOL and tokens).
+ *
+ * Features:
+ * - Automatic request deduplication across components
+ * - Shared polling interval (ref-counted)
+ * - Configurable auto-refresh behavior
+ * - Abort support for in-flight requests
+ * - Optional client override
  *
  * @example Basic usage
  * ```tsx
@@ -64,6 +100,23 @@ function formatSol(lamports: bigint, decimals: number = 4): string {
  *
  *   if (isLoading) return <div>Loading...</div>;
  *   return <div>{formattedSol}</div>;
+ * }
+ * ```
+ *
+ * @example With options
+ * ```tsx
+ * function Balance() {
+ *   const { formattedSol, refetch, abort } = useBalance({
+ *     autoRefresh: false,  // Disable polling
+ *     staleTimeMs: 10000,  // Consider data fresh for 10s
+ *   });
+ *
+ *   return (
+ *     <div>
+ *       {formattedSol}
+ *       <button onClick={() => refetch()}>Refresh</button>
+ *     </div>
+ *   );
  * }
  * ```
  *
@@ -84,56 +137,76 @@ function formatSol(lamports: bigint, decimals: number = 4): string {
  * }
  * ```
  */
-export function useBalance(): UseBalanceReturn {
+export function useBalance(options: UseBalanceOptions = {}): UseBalanceReturn {
     const { address, connected } = useAccount();
-    const { cluster } = useCluster();
-    const client = useSolanaClient();
+    const { client: providerClient } = useSolanaClient();
 
-    const [lamports, setLamports] = useState<bigint>(0n);
-    const [tokens, setTokens] = useState<TokenBalance[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<Error | null>(null);
-    const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+    const {
+        enabled = true,
+        autoRefresh = true,
+        refreshInterval = 30000,
+        staleTimeMs = 0,
+        cacheTimeMs = 5 * 60 * 1000, // 5 minutes
+        refetchOnMount = 'stale',
+        client: clientOverride,
+    } = options;
 
-    // Track if we have successfully fetched data (for error handling)
-    const hasDataRef = useRef(false);
+    // Use override client if provided, otherwise use provider client
+    const rpcClient = clientOverride ?? providerClient;
 
-    // Extract the actual client to use as a stable dependency
-    const rpcClient = client?.client ?? null;
+    // Generate cache key based on RPC URL and address
+    const key = useMemo(() => {
+        if (!enabled || !connected || !address || !rpcClient) return null;
+        const rpcUrl =
+            rpcClient.urlOrMoniker instanceof URL
+                ? rpcClient.urlOrMoniker.toString()
+                : String(rpcClient.urlOrMoniker);
+        return JSON.stringify(['wallet-balance', rpcUrl, address]);
+    }, [enabled, connected, address, rpcClient]);
 
-    const fetchBalance = useCallback(async () => {
-        if (!connected || !address || !rpcClient) {
-            setLamports(0n);
-            setTokens([]);
-            hasDataRef.current = false;
-            return;
-        }
+    // Query function that fetches SOL balance and token accounts
+    const queryFn = useCallback(
+        async (signal: AbortSignal): Promise<BalanceData> => {
+            if (!connected || !address || !rpcClient) {
+                return { lamports: 0n, tokens: [] };
+            }
 
-        setIsLoading(true);
-        setError(null);
+            // Throw on abort - fetchSharedQuery will preserve previous data
+            if (signal.aborted) {
+                throw new DOMException('Query aborted', 'AbortError');
+            }
 
-        try {
-            // Fetch SOL balance using the Kit client
             const rpc = rpcClient.rpc;
             const walletAddress = toAddress(address);
 
-            // Get SOL balance
+            // Fetch SOL balance
             const balanceResult = await rpc.getBalance(walletAddress).send();
-            setLamports(balanceResult.value);
+
+            // Throw on abort - fetchSharedQuery will preserve previous data
+            if (signal.aborted) {
+                throw new DOMException('Query aborted', 'AbortError');
+            }
 
             // Fetch token accounts
+            let tokens: TokenBalance[] = [];
             try {
                 const tokenProgramId = toAddress('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
                 const tokenAccountsResult = await rpc
                     .getTokenAccountsByOwner(walletAddress, { programId: tokenProgramId }, { encoding: 'jsonParsed' })
                     .send();
 
+                // Throw on abort - fetchSharedQuery will preserve previous data
+                if (signal.aborted) {
+                    throw new DOMException('Query aborted', 'AbortError');
+                }
+
                 const tokenBalances: TokenBalance[] = [];
 
                 for (const account of tokenAccountsResult.value) {
-                    const parsed = account.account.data as any;
-                    if (parsed?.parsed?.info) {
-                        const info = parsed.parsed.info;
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    const data = account.account.data as any;
+                    if (data?.parsed?.info) {
+                        const info = data.parsed.info;
                         const amount = BigInt(info.tokenAmount?.amount || '0');
                         const decimals = info.tokenAmount?.decimals || 0;
                         const formatted = (Number(amount) / Math.pow(10, decimals)).toLocaleString(undefined, {
@@ -152,44 +225,51 @@ export function useBalance(): UseBalanceReturn {
                     }
                 }
 
-                setTokens(tokenBalances);
+                tokens = tokenBalances;
             } catch (tokenError) {
                 // Token fetch failed but SOL balance succeeded
                 console.warn('Failed to fetch token balances:', tokenError);
-                setTokens([]);
+                tokens = [];
             }
 
-            hasDataRef.current = true;
-            setLastUpdated(new Date());
-        } catch (err) {
-            // Only set error state if we don't already have balance data
-            // This prevents noisy errors on auto-refresh failures
-            if (!hasDataRef.current) {
-                setError(err as Error);
-                console.error('Failed to fetch balance:', err);
-            }
-            // Silently ignore refresh failures when we already have data
-        } finally {
-            setIsLoading(false);
-        }
-    }, [connected, address, rpcClient]);
+            return { lamports: balanceResult.value, tokens };
+        },
+        [connected, address, rpcClient],
+    );
 
-    // Fetch on mount and when dependencies change
-    useEffect(() => {
-        fetchBalance();
-    }, [fetchBalance]);
+    // Use shared query for deduplication and caching
+    const {
+        data,
+        error,
+        isFetching,
+        updatedAt,
+        refetch: sharedRefetch,
+        abort,
+    } = useSharedQuery<BalanceData>(key, queryFn, {
+        enabled,
+        staleTimeMs,
+        cacheTimeMs,
+        refetchOnMount,
+        refetchIntervalMs: autoRefresh ? refreshInterval : false,
+    });
 
-    // Auto-refresh every 30 seconds when connected
-    useEffect(() => {
-        if (!connected) return;
-
-        const interval = setInterval(fetchBalance, 30000);
-        return () => clearInterval(interval);
-    }, [connected, fetchBalance]);
+    const lamports = data?.lamports ?? 0n;
+    const tokens = data?.tokens ?? [];
 
     const solBalance = useMemo(() => Number(lamports) / Number(LAMPORTS_PER_SOL), [lamports]);
 
     const formattedSol = useMemo(() => formatSol(lamports), [lamports]);
+
+    // Preserve old behavior: don't surface "refresh failed" errors if we already have data
+    const visibleError = updatedAt ? null : error;
+
+    // Wrap refetch to match expected signature
+    const refetch = useCallback(
+        async (opts?: { signal?: AbortSignal }) => {
+            await sharedRefetch(opts);
+        },
+        [sharedRefetch],
+    );
 
     return useMemo(
         () => ({
@@ -197,11 +277,12 @@ export function useBalance(): UseBalanceReturn {
             lamports,
             formattedSol,
             tokens,
-            isLoading,
-            error,
-            refetch: fetchBalance,
-            lastUpdated,
+            isLoading: isFetching,
+            error: visibleError,
+            refetch,
+            abort,
+            lastUpdated: updatedAt ? new Date(updatedAt) : null,
         }),
-        [solBalance, lamports, formattedSol, tokens, isLoading, error, fetchBalance, lastUpdated],
+        [solBalance, lamports, formattedSol, tokens, isFetching, visibleError, refetch, abort, updatedAt],
     );
 }

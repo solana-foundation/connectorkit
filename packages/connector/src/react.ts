@@ -35,7 +35,7 @@ export {
 export { useTransactionPreparer } from './hooks/use-transaction-preparer';
 
 // Data fetching hooks for elements
-export { useBalance, type UseBalanceReturn, type TokenBalance } from './hooks/use-balance';
+export { useBalance, type UseBalanceReturn, type UseBalanceOptions, type TokenBalance } from './hooks/use-balance';
 export {
     useTransactions,
     type UseTransactionsReturn,
@@ -43,6 +43,9 @@ export {
     type TransactionInfo,
 } from './hooks/use-transactions';
 export { useTokens, type UseTokensReturn, type UseTokensOptions, type Token } from './hooks/use-tokens';
+
+// Cache utilities for advanced use cases
+export { clearSharedQueryCache, invalidateSharedQuery } from './hooks/_internal/use-shared-query';
 
 // Element system components
 export * from './components';

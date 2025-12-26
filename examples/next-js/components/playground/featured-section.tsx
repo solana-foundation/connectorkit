@@ -233,7 +233,7 @@ export function WalletDropdownContent({ selectedAccount, walletIcon, walletName 
                     <div className="rounded-[12px] border p-4">
                         <div className="flex justify-between">
                             <span>Balance</span>
-                            <button onClick={refetch}><RefreshCw className={isLoading ? 'animate-spin' : ''} /></button>
+                            <button onClick={() => refetch()}><RefreshCw className={isLoading ? 'animate-spin' : ''} /></button>
                         </div>
                         <div className="text-2xl font-bold">{solBalance?.toFixed(4)} SOL</div>
                     </div>
@@ -478,7 +478,7 @@ export function WalletDropdownContentBaseUI({ selectedAccount, walletIcon, walle
                     <div className="rounded-[12px] border bg-muted/50 p-4">
                         <div className="flex items-center justify-between mb-1">
                             <span className="text-sm text-muted-foreground">Balance</span>
-                            <button onClick={refetch} className="p-1 hover:bg-accent rounded">
+                            <button onClick={() => refetch()} className="p-1 hover:bg-accent rounded">
                                 <RefreshCw className={\`h-3.5 w-3.5 \${isLoading ? 'animate-spin' : ''}\`} />
                             </button>
                         </div>

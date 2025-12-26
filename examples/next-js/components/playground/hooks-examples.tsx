@@ -234,7 +234,7 @@ function UseBalanceExample() {
                 <div className="p-4 rounded-lg border bg-card">
                     <div className="flex items-center justify-between mb-1">
                         <span className="text-xs text-muted-foreground">SOL Balance</span>
-                        <button onClick={refetch} disabled={isLoading} className="p-1 hover:bg-muted rounded">
+                        <button onClick={() => refetch()} disabled={isLoading} className="p-1 hover:bg-muted rounded">
                             <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} />
                         </button>
                     </div>
@@ -410,7 +410,7 @@ function UseTokensExample() {
                 <div className="rounded-lg border bg-card">
                     <div className="flex items-center justify-between p-3 border-b">
                         <span className="text-sm font-medium">Tokens</span>
-                        <button onClick={refetch} disabled={isLoading} className="p-1 hover:bg-muted rounded">
+                        <button onClick={() => refetch()} disabled={isLoading} className="p-1 hover:bg-muted rounded">
                             <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} />
                         </button>
                     </div>
@@ -660,7 +660,7 @@ function BalanceDisplay() {
     return (
         <div>
             <span>Balance: {solBalance?.toFixed(4) ?? '--'} SOL</span>
-            <button onClick={refetch} disabled={isLoading}>
+            <button onClick={() => refetch()} disabled={isLoading}>
                 {isLoading ? 'Loading...' : 'Refresh'}
             </button>
         </div>
