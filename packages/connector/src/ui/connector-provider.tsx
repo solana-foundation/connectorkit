@@ -12,8 +12,22 @@ import type {
     AuthorizationCache,
     ChainSelector,
     SolanaMobileWalletAdapterWallet,
-    RegisterMwaConfig,
 } from '@solana-mobile/wallet-standard-mobile';
+import type { IdentifierArray } from '@wallet-standard/base';
+
+/** Configuration for registerMwa - defined locally as the package doesn't export this type */
+interface RegisterMwaConfig {
+    appIdentity: {
+        name: string;
+        uri?: string;
+        icon?: string;
+    };
+    authorizationCache: AuthorizationCache;
+    chains: IdentifierArray;
+    chainSelector: ChainSelector;
+    remoteHostAuthority?: string;
+    onWalletNotFound: (mobileWalletAdapter: SolanaMobileWalletAdapterWallet) => Promise<void>;
+}
 
 const logger = createLogger('ConnectorProvider');
 

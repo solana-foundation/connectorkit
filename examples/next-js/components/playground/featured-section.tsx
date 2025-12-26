@@ -1170,7 +1170,7 @@ export function FeaturedSection() {
                 </div>
                 <h2 className="text-h3 font-diatype-medium text-sand-1500 mb-2">Complete Component Examples</h2>
                 <p className="text-body-lg font-inter text-sand-900 max-w-md">
-                    Complete components built with ConnectorKit's Elements based on Radix UI and Base UI.
+                    Complete components built with ConnectorKit&apos;s Elements based on Radix UI and Base UI.
                 </p>
 
                 {/* Supported UI Frameworks */}
