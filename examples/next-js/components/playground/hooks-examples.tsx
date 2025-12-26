@@ -333,7 +333,7 @@ function UseClusterExample() {
 }
 
 function UseTokensExample() {
-    const { tokens, isLoading, refetch } = useTokens();
+    const { tokens, isLoading, error, refetch, abort, lastUpdated, totalAccounts } = useTokens();
     const displayTokens = tokens.slice(0, 3);
     const sampleToken = tokens[0];
 
@@ -349,9 +349,14 @@ function UseTokensExample() {
                     <div className="space-y-0.5">
                         <HookReturnValue name="tokens" value={`[${tokens.length} items]`} />
                         <HookReturnValue name="isLoading" value={String(isLoading)} />
+                        <HookReturnValue name="error" value={error?.message ?? 'null'} />
                         <HookReturnValue name="refetch" value="fn()" />
-                        <HookReturnValue name="hasMore" value="boolean" />
-                        <HookReturnValue name="loadMore" value="fn()" />
+                        <HookReturnValue name="abort" value="fn()" />
+                        <HookReturnValue
+                            name="lastUpdated"
+                            value={lastUpdated ? lastUpdated.toLocaleTimeString() : 'null'}
+                        />
+                        <HookReturnValue name="totalAccounts" value={String(totalAccounts)} />
                     </div>
 
                     {/* Sample token item breakdown */}
@@ -453,7 +458,11 @@ function UseTokensExample() {
 }
 
 function UseTransactionsExample() {
-    const { transactions, isLoading, hasMore, loadMore } = useTransactions({ limit: 3 });
+    const { transactions, isLoading, error, hasMore, loadMore, refetch, abort, lastUpdated } = useTransactions({
+        limit: 10,
+        // Public RPCs can throttle aggressively; lower this if you see rate limiting.
+        detailsConcurrency: 4,
+    });
     const sampleTx = transactions[0];
 
     return (
@@ -468,8 +477,15 @@ function UseTransactionsExample() {
                     <div className="space-y-0.5">
                         <HookReturnValue name="transactions" value={`[${transactions.length} items]`} />
                         <HookReturnValue name="isLoading" value={String(isLoading)} />
+                        <HookReturnValue name="error" value={error?.message ?? 'null'} />
                         <HookReturnValue name="hasMore" value={String(hasMore)} />
                         <HookReturnValue name="loadMore" value="fn()" />
+                        <HookReturnValue name="refetch" value="fn()" />
+                        <HookReturnValue name="abort" value="fn()" />
+                        <HookReturnValue
+                            name="lastUpdated"
+                            value={lastUpdated ? lastUpdated.toLocaleTimeString() : 'null'}
+                        />
                     </div>
 
                     {/* Sample transaction item breakdown */}
@@ -706,25 +722,29 @@ function NetworkSelector() {
     {
         id: 'use-tokens',
         name: 'useTokens',
-        description: 'Fetch token holdings with metadata from Jupiter API. Supports pagination and refresh.',
+        description:
+            'Fetch token holdings with Solana Token List metadata and optional CoinGecko pricing. Includes caching + refresh.',
         code: `import { useTokens } from '@solana/connector';
 
 function TokenList() {
-    const { tokens, isLoading, refetch, hasMore, loadMore } = useTokens({ 
-        limit: 10 
+    const { tokens, isLoading, error, refetch, totalAccounts } = useTokens({
+        includeNativeSol: true,
+        fetchMetadata: true,
     });
 
     if (isLoading) return <div>Loading tokens...</div>;
+    if (error) return <div>Failed to load tokens</div>;
 
     return (
         <div>
             {tokens.map(token => (
                 <div key={token.mint}>
-                    <img src={token.logo} alt={token.symbol} />
-                    <span>{token.symbol}: {token.formatted}</span>
+                    {token.logo && <img src={token.logo} alt={token.symbol ?? 'Token'} />}
+                    <span>{token.symbol ?? token.mint}: {token.formatted}</span>
                 </div>
             ))}
-            {hasMore && <button onClick={loadMore}>Load More</button>}
+            <button onClick={() => refetch()}>Refresh</button>
+            <div>Total token accounts: {totalAccounts}</div>
         </div>
     );
 }`,
@@ -742,8 +762,14 @@ function TransactionHistory() {
         transactions, 
         isLoading, 
         hasMore, 
-        loadMore 
-    } = useTransactions({ limit: 10 });
+        loadMore,
+        refetch
+    } = useTransactions({ 
+        limit: 10,
+        // Public RPCs can throttle aggressively; lower this if you see rate limiting.
+        detailsConcurrency: 4,
+        fetchDetails: true,
+    });
 
     if (isLoading) return <div>Loading...</div>;
 
@@ -757,6 +783,7 @@ function TransactionHistory() {
                 </a>
             ))}
             {hasMore && <button onClick={loadMore}>Load More</button>}
+            <button onClick={() => refetch()}>Refresh</button>
         </div>
     );
 }`,

@@ -487,7 +487,8 @@ import { LogOut } from 'lucide-react';
     {
         id: 'token-list-element',
         name: 'TokenListElement',
-        description: 'Display token holdings with metadata from Jupiter. Includes loading states and refetch.',
+        description:
+            'Display token holdings with Solana Token List metadata and optional CoinGecko pricing. Includes loading states and refetch.',
         code: `import { TokenListElement } from '@solana/connector/react';
 import { Coins, RefreshCw } from 'lucide-react';
 
@@ -684,6 +685,9 @@ import { ExternalLink, Coins } from 'lucide-react';
 
 <TransactionHistoryElement
     limit={5}
+    // Public RPCs can throttle aggressively; lower this if you see rate limiting.
+    detailsConcurrency={4}
+    fetchDetails
     render={({ transactions, isLoading, hasMore, loadMore }) => (
         <div className="rounded-lg border bg-card w-[400px]">
             <div className="p-3 border-b">
@@ -728,6 +732,8 @@ import { ExternalLink, Coins } from 'lucide-react';
         render: () => (
             <TransactionHistoryElement
                 limit={5}
+                detailsConcurrency={4}
+                fetchDetails
                 render={({ transactions, isLoading, hasMore, loadMore }) => {
                     const sampleTx = transactions[0];
                     return (

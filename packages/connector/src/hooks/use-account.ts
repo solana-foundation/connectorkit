@@ -32,7 +32,7 @@ export interface UseAccountReturn {
 export function useAccount(): UseAccountReturn {
     const { selectedAccount, accounts, connected, selectAccount } = useConnector();
     const [copied, setCopied] = useState(false);
-    const copyTimeoutRef = React.useRef<NodeJS.Timeout | undefined>(undefined);
+    const copyTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
     const account = useMemo(
         () => accounts.find((a: AccountInfo) => a.address === selectedAccount) ?? null,

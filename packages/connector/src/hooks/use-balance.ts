@@ -1,10 +1,8 @@
 'use client';
 
 import { useCallback, useMemo } from 'react';
-import { address as toAddress } from '@solana/addresses';
-import { useAccount } from './use-account';
-import { useSolanaClient } from './use-kit-solana-client';
-import { useSharedQuery } from './_internal/use-shared-query';
+import { useWalletAssets, type WalletAssetsData, type TokenAccountInfo } from './_internal/use-wallet-assets';
+import { formatLamportsToSolSafe, formatBigIntBalance } from '../utils/formatting';
 import type { SolanaClient } from '../lib/kit-utils';
 
 export interface TokenBalance {
@@ -67,20 +65,45 @@ export interface UseBalanceReturn {
 
 const LAMPORTS_PER_SOL = 1_000_000_000n;
 
-function formatSol(lamports: bigint, decimals: number = 4): string {
-    const sol = Number(lamports) / Number(LAMPORTS_PER_SOL);
-    return (
-        sol.toLocaleString(undefined, {
-            minimumFractionDigits: 0,
-            maximumFractionDigits: decimals,
-        }) + ' SOL'
-    );
+/**
+ * Format a token account into a TokenBalance (BigInt-safe)
+ */
+function formatTokenAccount(account: TokenAccountInfo): TokenBalance {
+    const formatted = formatBigIntBalance(account.amount, account.decimals, {
+        maxDecimals: Math.min(account.decimals, 6),
+    });
+
+    return {
+        mint: account.mint,
+        amount: account.amount,
+        decimals: account.decimals,
+        formatted,
+    };
 }
 
-/** Internal data structure for balance query */
-interface BalanceData {
+/** Selected data type for balance hook */
+interface BalanceSelection {
     lamports: bigint;
     tokens: TokenBalance[];
+}
+
+/**
+ * Select function to transform wallet assets into balance data
+ */
+function selectBalance(assets: WalletAssetsData | undefined): BalanceSelection {
+    if (!assets) {
+        return { lamports: 0n, tokens: [] };
+    }
+
+    // Filter to only non-zero balances and format
+    const tokens = assets.tokenAccounts
+        .filter(account => account.amount > 0n)
+        .map(formatTokenAccount);
+
+    return {
+        lamports: assets.lamports,
+        tokens,
+    };
 }
 
 /**
@@ -88,6 +111,8 @@ interface BalanceData {
  *
  * Features:
  * - Automatic request deduplication across components
+ * - Shared data with useTokens (single RPC query)
+ * - Token-2022 support
  * - Shared polling interval (ref-counted)
  * - Configurable auto-refresh behavior
  * - Abort support for in-flight requests
@@ -138,9 +163,6 @@ interface BalanceData {
  * ```
  */
 export function useBalance(options: UseBalanceOptions = {}): UseBalanceReturn {
-    const { address, connected } = useAccount();
-    const { client: providerClient } = useSolanaClient();
-
     const {
         enabled = true,
         autoRefresh = true,
@@ -151,93 +173,7 @@ export function useBalance(options: UseBalanceOptions = {}): UseBalanceReturn {
         client: clientOverride,
     } = options;
 
-    // Use override client if provided, otherwise use provider client
-    const rpcClient = clientOverride ?? providerClient;
-
-    // Generate cache key based on RPC URL and address
-    const key = useMemo(() => {
-        if (!enabled || !connected || !address || !rpcClient) return null;
-        const rpcUrl =
-            rpcClient.urlOrMoniker instanceof URL
-                ? rpcClient.urlOrMoniker.toString()
-                : String(rpcClient.urlOrMoniker);
-        return JSON.stringify(['wallet-balance', rpcUrl, address]);
-    }, [enabled, connected, address, rpcClient]);
-
-    // Query function that fetches SOL balance and token accounts
-    const queryFn = useCallback(
-        async (signal: AbortSignal): Promise<BalanceData> => {
-            if (!connected || !address || !rpcClient) {
-                return { lamports: 0n, tokens: [] };
-            }
-
-            // Throw on abort - fetchSharedQuery will preserve previous data
-            if (signal.aborted) {
-                throw new DOMException('Query aborted', 'AbortError');
-            }
-
-            const rpc = rpcClient.rpc;
-            const walletAddress = toAddress(address);
-
-            // Fetch SOL balance
-            const balanceResult = await rpc.getBalance(walletAddress).send();
-
-            // Throw on abort - fetchSharedQuery will preserve previous data
-            if (signal.aborted) {
-                throw new DOMException('Query aborted', 'AbortError');
-            }
-
-            // Fetch token accounts
-            let tokens: TokenBalance[] = [];
-            try {
-                const tokenProgramId = toAddress('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
-                const tokenAccountsResult = await rpc
-                    .getTokenAccountsByOwner(walletAddress, { programId: tokenProgramId }, { encoding: 'jsonParsed' })
-                    .send();
-
-                // Throw on abort - fetchSharedQuery will preserve previous data
-                if (signal.aborted) {
-                    throw new DOMException('Query aborted', 'AbortError');
-                }
-
-                const tokenBalances: TokenBalance[] = [];
-
-                for (const account of tokenAccountsResult.value) {
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    const data = account.account.data as any;
-                    if (data?.parsed?.info) {
-                        const info = data.parsed.info;
-                        const amount = BigInt(info.tokenAmount?.amount || '0');
-                        const decimals = info.tokenAmount?.decimals || 0;
-                        const formatted = (Number(amount) / Math.pow(10, decimals)).toLocaleString(undefined, {
-                            minimumFractionDigits: 0,
-                            maximumFractionDigits: Math.min(decimals, 6),
-                        });
-
-                        if (amount > 0n) {
-                            tokenBalances.push({
-                                mint: info.mint,
-                                amount,
-                                decimals,
-                                formatted,
-                            });
-                        }
-                    }
-                }
-
-                tokens = tokenBalances;
-            } catch (tokenError) {
-                // Token fetch failed but SOL balance succeeded
-                console.warn('Failed to fetch token balances:', tokenError);
-                tokens = [];
-            }
-
-            return { lamports: balanceResult.value, tokens };
-        },
-        [connected, address, rpcClient],
-    );
-
-    // Use shared query for deduplication and caching
+    // Use shared wallet assets with select for reduced rerenders
     const {
         data,
         error,
@@ -245,12 +181,14 @@ export function useBalance(options: UseBalanceOptions = {}): UseBalanceReturn {
         updatedAt,
         refetch: sharedRefetch,
         abort,
-    } = useSharedQuery<BalanceData>(key, queryFn, {
+    } = useWalletAssets<BalanceSelection>({
         enabled,
         staleTimeMs,
         cacheTimeMs,
         refetchOnMount,
         refetchIntervalMs: autoRefresh ? refreshInterval : false,
+        client: clientOverride,
+        select: selectBalance,
     });
 
     const lamports = data?.lamports ?? 0n;
@@ -258,7 +196,7 @@ export function useBalance(options: UseBalanceOptions = {}): UseBalanceReturn {
 
     const solBalance = useMemo(() => Number(lamports) / Number(LAMPORTS_PER_SOL), [lamports]);
 
-    const formattedSol = useMemo(() => formatSol(lamports), [lamports]);
+    const formattedSol = useMemo(() => formatLamportsToSolSafe(lamports, { maxDecimals: 4, suffix: true }), [lamports]);
 
     // Preserve old behavior: don't surface "refresh failed" errors if we already have data
     const visibleError = updatedAt ? null : error;

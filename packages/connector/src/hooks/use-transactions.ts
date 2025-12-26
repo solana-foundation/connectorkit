@@ -9,9 +9,11 @@ import { useCluster } from './use-cluster';
 import { useSolanaClient } from './use-kit-solana-client';
 import { useConnectorClient } from '../ui/connector-provider';
 import { useSharedQuery } from './_internal/use-shared-query';
+import { fetchSolanaTokenListMetadata } from './_internal/solana-token-list';
 import { getTransactionUrl } from '../utils/cluster';
 import { LAMPORTS_PER_SOL } from '../lib/kit-utils';
 import type { SolanaClient } from '../lib/kit-utils';
+import { transformImageUrl } from '../utils/image';
 
 export interface TransactionInfo {
     /** Transaction signature */
@@ -81,6 +83,13 @@ export interface UseTransactionsOptions {
     refreshInterval?: number;
     /** Fetch full transaction details (slower but more info) */
     fetchDetails?: boolean;
+    /**
+     * Max concurrent `getTransaction` RPC calls when `fetchDetails` is true.
+     * Lower this if you see throttling on public RPCs.
+     *
+     * @default 6
+     */
+    detailsConcurrency?: number;
     /** Time in ms to consider data fresh (default: 0) */
     staleTimeMs?: number;
     /** Time in ms to keep cache after unmount (default: 300000) */
@@ -692,57 +701,64 @@ function formatAmount(
     return undefined;
 }
 
-// Cache for token metadata
-const tokenMetadataCache = new Map<string, { symbol: string; icon: string }>();
-
-/**
- * Transform an image URL through a proxy if configured
- */
-function transformImageUrl(url: string | undefined, imageProxy: string | undefined): string | undefined {
-    if (!url) return undefined;
-    if (!imageProxy) return url;
-    return `${imageProxy}${encodeURIComponent(url)}`;
+function throwIfAborted(signal: AbortSignal | undefined): void {
+    if (!signal?.aborted) return;
+    throw new DOMException('Query aborted', 'AbortError');
 }
 
 /**
- * Fetch token metadata from Solana Token List API for transaction display
+ * Clamp an integer to a safe range.
  */
-async function fetchTokenMetadata(mints: string[]): Promise<Map<string, { symbol: string; icon: string }>> {
-    const results = new Map<string, { symbol: string; icon: string }>();
-    if (mints.length === 0) return results;
+function clampInt(value: number, min: number, max: number): number {
+    if (!Number.isFinite(value)) return min;
+    return Math.min(max, Math.max(min, Math.floor(value)));
+}
 
-    // Check cache
-    const uncachedMints: string[] = [];
-    for (const mint of mints) {
-        const cached = tokenMetadataCache.get(mint);
-        if (cached) {
-            results.set(mint, cached);
-        } else {
-            uncachedMints.push(mint);
+/**
+ * Run async work over a list with bounded concurrency.
+ * Preserves input order.
+ */
+async function mapWithConcurrency<TIn, TOut>(
+    inputs: readonly TIn[],
+    worker: (input: TIn, index: number) => Promise<TOut>,
+    options: { concurrency: number; signal?: AbortSignal },
+): Promise<TOut[]> {
+    const concurrency = clampInt(options.concurrency, 1, 32);
+    const results = new Array<TOut>(inputs.length);
+    let nextIndex = 0;
+
+    async function run(): Promise<void> {
+        while (true) {
+            throwIfAborted(options.signal);
+            const index = nextIndex;
+            nextIndex += 1;
+            if (index >= inputs.length) return;
+            results[index] = await worker(inputs[index], index);
         }
     }
 
-    if (uncachedMints.length === 0) return results;
+    const runners = Array.from({ length: Math.min(concurrency, inputs.length) }, () => run());
+    await Promise.all(runners);
+    return results;
+}
 
-    try {
-        const response = await fetch('https://token-list-api.solana.cloud/v1/mints?chainId=101', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ addresses: uncachedMints }),
-            signal: AbortSignal.timeout(5000),
-        });
+/**
+ * Fetch token metadata for transaction display (shared token-list cache).
+ */
+async function fetchTransactionTokenMetadata(
+    mints: string[],
+    options: { signal?: AbortSignal } = {},
+): Promise<Map<string, { symbol: string; icon: string }>> {
+    const results = new Map<string, { symbol: string; icon: string }>();
+    if (!mints.length) return results;
 
-        if (!response.ok) return results;
+    const tokenList = await fetchSolanaTokenListMetadata(mints, {
+        timeoutMs: 5000,
+        signal: options.signal,
+    });
 
-        const data: { content: Array<{ address: string; symbol: string; logoURI: string }> } = await response.json();
-
-        for (const item of data.content) {
-            const metadata = { symbol: item.symbol, icon: item.logoURI };
-            results.set(item.address, metadata);
-            tokenMetadataCache.set(item.address, metadata);
-        }
-    } catch (error) {
-        console.warn('[useTransactions] Failed to fetch token metadata:', error);
+    for (const [mint, meta] of tokenList) {
+        results.set(mint, { symbol: meta.symbol, icon: meta.logoURI });
     }
 
     return results;
@@ -778,6 +794,7 @@ export function useTransactions(options: UseTransactionsOptions = {}): UseTransa
         autoRefresh = false,
         refreshInterval = 60000,
         fetchDetails = true,
+        detailsConcurrency = 6,
         staleTimeMs = 0,
         cacheTimeMs = 5 * 60 * 1000, // 5 minutes
         refetchOnMount = 'stale',
@@ -986,15 +1003,27 @@ export function useTransactions(options: UseTransactionsOptions = {}): UseTransa
         return JSON.stringify(['wallet-transactions', rpcUrl, address, cluster.id, limit, fetchDetails]);
     }, [enabled, connected, address, rpcClient, cluster, limit, fetchDetails]);
 
+    // Reset pagination immediately when the query key changes.
+    // This prevents "old paginated transactions" flashing while the new key loads.
+    useEffect(() => {
+        beforeSignatureRef.current = undefined;
+        setPaginatedTransactions([]);
+        setIsPaginationLoading(false);
+        setHasMore(true);
+    }, [key]);
+
     // Helper to fetch and enrich transactions
     const fetchAndEnrichTransactions = useCallback(
         async (
             beforeSignature: string | undefined,
             currentCluster: SolanaCluster,
+            signal?: AbortSignal,
         ): Promise<{ transactions: TransactionInfo[]; hasMore: boolean }> => {
             if (!rpcClient || !address) {
                 return { transactions: [], hasMore: false };
             }
+
+            throwIfAborted(signal);
 
             const rpc = rpcClient.rpc;
             const walletAddress = toAddress(address);
@@ -1006,21 +1035,26 @@ export function useTransactions(options: UseTransactionsOptions = {}): UseTransa
                 })
                 .send();
 
+            throwIfAborted(signal);
+
             let newTransactions: TransactionInfo[];
 
             if (fetchDetails && signaturesResult.length > 0) {
-                // Fetch full transaction details in parallel
-                const txPromises = signaturesResult.map(s =>
-                    rpc
-                        .getTransaction(toSignature(String(s.signature)), {
-                            encoding: 'jsonParsed',
-                            maxSupportedTransactionVersion: 0,
-                        })
-                        .send()
-                        .catch(() => null),
+                // Fetch full transaction details with bounded concurrency (prevents RPC throttling).
+                const txDetails = await mapWithConcurrency(
+                    signaturesResult,
+                    async sig =>
+                        rpc
+                            .getTransaction(toSignature(String(sig.signature)), {
+                                encoding: 'jsonParsed',
+                                maxSupportedTransactionVersion: 0,
+                            })
+                            .send()
+                            .catch(() => null),
+                    { concurrency: detailsConcurrency, signal },
                 );
 
-                const txDetails = await Promise.all(txPromises);
+                throwIfAborted(signal);
 
                 newTransactions = signaturesResult.map((sig, idx) => {
                     const blockTimeNum = sig.blockTime ? Number(sig.blockTime) : null;
@@ -1066,7 +1100,9 @@ export function useTransactions(options: UseTransactionsOptions = {}): UseTransa
             ];
 
             if (mintsToFetch.length > 0) {
-                const tokenMetadata = await fetchTokenMetadata(mintsToFetch);
+                throwIfAborted(signal);
+
+                const tokenMetadata = await fetchTransactionTokenMetadata(mintsToFetch, { signal });
 
                 if (tokenMetadata.size > 0) {
                     newTransactions = newTransactions.map(tx => {
@@ -1118,7 +1154,7 @@ export function useTransactions(options: UseTransactionsOptions = {}): UseTransa
                 hasMore: newTransactions.length === limit,
             };
         },
-        [rpcClient, address, limit, fetchDetails, parseTransaction, imageProxy],
+        [rpcClient, address, limit, fetchDetails, detailsConcurrency, parseTransaction, imageProxy],
     );
 
     // Query function for initial page (deduped via useSharedQuery)
@@ -1129,18 +1165,12 @@ export function useTransactions(options: UseTransactionsOptions = {}): UseTransa
             }
 
             // Throw on abort - fetchSharedQuery will preserve previous data
-            if (signal.aborted) {
-                throw new DOMException('Query aborted', 'AbortError');
-            }
+            throwIfAborted(signal);
 
-            const result = await fetchAndEnrichTransactions(undefined, cluster);
+            const result = await fetchAndEnrichTransactions(undefined, cluster, signal);
 
-            // Update pagination state
-            if (result.transactions.length > 0) {
-                beforeSignatureRef.current = result.transactions[result.transactions.length - 1].signature;
-            }
-            setHasMore(result.hasMore);
-            setPaginatedTransactions([]); // Reset pagination when initial fetch completes
+            // Re-check abort after awaited work (prevents publishing results after abort)
+            throwIfAborted(signal);
 
             return result.transactions;
         },
@@ -1162,6 +1192,19 @@ export function useTransactions(options: UseTransactionsOptions = {}): UseTransa
         refetchOnMount,
         refetchIntervalMs: autoRefresh ? refreshInterval : false,
     });
+
+    // When the initial page changes (refetch/key change), update cursor + hasMore,
+    // and drop any prior pagination results (keeps list consistent).
+    useEffect(() => {
+        if (!initialTransactions) return;
+
+        beforeSignatureRef.current = initialTransactions.length
+            ? initialTransactions[initialTransactions.length - 1].signature
+            : undefined;
+
+        setHasMore(initialTransactions.length === limit);
+        setPaginatedTransactions(prev => (prev.length ? [] : prev));
+    }, [initialTransactions, limit]);
 
     // Load more transactions (pagination - local only)
     const loadMoreFn = useCallback(async () => {

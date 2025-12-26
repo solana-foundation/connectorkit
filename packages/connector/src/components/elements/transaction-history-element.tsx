@@ -16,6 +16,20 @@ export interface TransactionHistoryElementRenderProps {
 export interface TransactionHistoryElementProps {
     /** Number of transactions to display */
     limit?: number;
+    /**
+     * Fetch full transaction details (slower, but enables richer parsing like token icons + swap detection).
+     *
+     * Passed through to `useTransactions({ fetchDetails })`.
+     * @default true
+     */
+    fetchDetails?: boolean;
+    /**
+     * Max concurrent `getTransaction` RPC calls when `fetchDetails` is true.
+     *
+     * Passed through to `useTransactions({ detailsConcurrency })`.
+     * @default 6
+     */
+    detailsConcurrency?: number;
     /** Show transaction status */
     showStatus?: boolean;
     /** Show transaction time */
@@ -47,6 +61,11 @@ export interface TransactionHistoryElementProps {
  * <TransactionHistoryElement limit={10} showLoadMore />
  * ```
  *
+ * @example Throttle-safe details fetching (recommended for public RPCs)
+ * ```tsx
+ * <TransactionHistoryElement limit={10} fetchDetails detailsConcurrency={4} />
+ * ```
+ *
  * @example Custom item render
  * ```tsx
  * <TransactionHistoryElement
@@ -60,6 +79,8 @@ export interface TransactionHistoryElementProps {
  */
 export function TransactionHistoryElement({
     limit = 5,
+    fetchDetails = true,
+    detailsConcurrency,
     showStatus = true,
     showTime = true,
     className,
@@ -69,7 +90,11 @@ export function TransactionHistoryElement({
     render,
     renderItem,
 }: TransactionHistoryElementProps) {
-    const { transactions, isLoading, error, hasMore, loadMore, refetch } = useTransactions({ limit });
+    const { transactions, isLoading, error, hasMore, loadMore, refetch } = useTransactions({
+        limit,
+        fetchDetails,
+        detailsConcurrency,
+    });
 
     // Custom render
     if (render) {

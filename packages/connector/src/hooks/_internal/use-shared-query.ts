@@ -21,7 +21,7 @@ export interface SharedQuerySnapshot<TData> {
 /**
  * Options for useSharedQuery hook
  */
-export interface SharedQueryOptions {
+export interface SharedQueryOptions<TData = unknown, TSelected = TData> {
     /** Whether the query is enabled (default: true) */
     enabled?: boolean;
     /** Time in ms to consider data fresh (default: 0) */
@@ -32,6 +32,8 @@ export interface SharedQueryOptions {
     refetchOnMount?: boolean | 'stale';
     /** Polling interval in ms, or false to disable (default: false) */
     refetchIntervalMs?: number | false;
+    /** Transform/select a subset of data (reduces rerenders) */
+    select?: (data: TData | undefined) => TSelected;
 }
 
 /**
@@ -61,20 +63,61 @@ interface SharedQueryEntry<TData> {
     intervalCounts: Map<number, number>;
     activeIntervalMs: number | null;
     intervalId: ReturnType<typeof setInterval> | null;
+
+    // LRU tracking
+    lastAccessedAt: number;
 }
 
 /** Default cache time: 5 minutes */
 const DEFAULT_CACHE_TIME_MS = 5 * 60 * 1000;
 
+/** Maximum store size before LRU eviction triggers */
+const MAX_STORE_SIZE = 100;
+
 /** Global cache store */
 const store = new Map<string, SharedQueryEntry<unknown>>();
+
+/**
+ * Evict least-recently-accessed entries without active subscribers.
+ * Called when store size exceeds MAX_STORE_SIZE.
+ */
+function evictStaleEntries(): void {
+    if (store.size <= MAX_STORE_SIZE) return;
+
+    // Collect entries without subscribers, sorted by lastAccessedAt (oldest first)
+    const evictable: Array<[string, SharedQueryEntry<unknown>]> = [];
+    for (const [key, entry] of store) {
+        if (entry.subscribers.size === 0) {
+            evictable.push([key, entry]);
+        }
+    }
+
+    // Sort by lastAccessedAt ascending (oldest first)
+    evictable.sort((a, b) => a[1].lastAccessedAt - b[1].lastAccessedAt);
+
+    // Evict oldest entries until we're under the limit
+    for (const [key, entry] of evictable) {
+        if (store.size <= MAX_STORE_SIZE) break;
+
+        // Clean up timers before deleting
+        if (entry.gcTimeoutId) clearTimeout(entry.gcTimeoutId);
+        if (entry.intervalId) clearInterval(entry.intervalId);
+        if (entry.abortController) entry.abortController.abort();
+
+        store.delete(key);
+    }
+}
 
 /**
  * Get or create a cache entry for a key
  */
 function getOrCreateEntry<TData>(key: string): SharedQueryEntry<TData> {
     const existing = store.get(key) as SharedQueryEntry<TData> | undefined;
-    if (existing) return existing;
+    if (existing) {
+        // Update LRU timestamp on access
+        existing.lastAccessedAt = Date.now();
+        return existing;
+    }
 
     const entry: SharedQueryEntry<TData> = {
         snapshot: {
@@ -96,9 +139,15 @@ function getOrCreateEntry<TData>(key: string): SharedQueryEntry<TData> {
         intervalCounts: new Map(),
         activeIntervalMs: null,
         intervalId: null,
+
+        lastAccessedAt: Date.now(),
     };
 
     store.set(key, entry as SharedQueryEntry<unknown>);
+
+    // Trigger LRU eviction if needed
+    evictStaleEntries();
+
     return entry;
 }
 
@@ -316,6 +365,26 @@ export interface UseSharedQueryReturn<TData> extends SharedQuerySnapshot<TData> 
 }
 
 /**
+ * Return type for useSharedQuery hook with select
+ */
+export interface UseSharedQueryReturnSelected<TSelected> {
+    /** The selected/transformed data */
+    data: TSelected;
+    /** Error from the last fetch attempt */
+    error: Error | null;
+    /** Current status of the query */
+    status: 'idle' | 'loading' | 'success' | 'error';
+    /** Timestamp of last successful update */
+    updatedAt: number | null;
+    /** Whether a fetch is currently in progress */
+    isFetching: boolean;
+    /** Refetch the query, optionally with an abort signal */
+    refetch: (options?: { signal?: AbortSignal }) => Promise<unknown>;
+    /** Abort any in-flight request */
+    abort: () => void;
+}
+
+/**
  * Hook for shared, deduplicated data fetching with caching and polling support.
  *
  * @param key - Unique cache key, or null to disable
@@ -323,7 +392,7 @@ export interface UseSharedQueryReturn<TData> extends SharedQuerySnapshot<TData> 
  * @param options - Query options
  * @returns Query snapshot with refetch and abort methods
  *
- * @example
+ * @example Basic usage
  * ```tsx
  * const { data, isLoading, refetch, abort } = useSharedQuery(
  *   ['balance', address],
@@ -334,18 +403,30 @@ export interface UseSharedQueryReturn<TData> extends SharedQuerySnapshot<TData> 
  *   { refetchIntervalMs: 30000 }
  * );
  * ```
+ *
+ * @example With select (reduces rerenders)
+ * ```tsx
+ * const { data: solBalance } = useSharedQuery(
+ *   ['wallet-assets', address],
+ *   fetchWalletAssets,
+ *   {
+ *     select: (assets) => assets?.lamports ?? 0n,
+ *   }
+ * );
+ * ```
  */
-export function useSharedQuery<TData>(
+export function useSharedQuery<TData, TSelected = TData>(
     key: string | null,
     queryFn: (signal: AbortSignal) => Promise<TData>,
-    options: SharedQueryOptions = {},
-): UseSharedQueryReturn<TData> {
+    options: SharedQueryOptions<TData, TSelected> = {},
+): TSelected extends TData ? UseSharedQueryReturn<TData> : UseSharedQueryReturnSelected<TSelected> {
     const {
         enabled = true,
         staleTimeMs = 0,
         cacheTimeMs,
         refetchOnMount = 'stale',
         refetchIntervalMs = false,
+        select,
     } = options;
 
     // Stable reference to queryFn - update on every render but don't trigger effects
@@ -383,6 +464,23 @@ export function useSharedQuery<TData>(
 
     const snapshot = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 
+    // Apply select transform if provided
+    const selectedData = useMemo(() => {
+        if (!select) return snapshot.data as unknown as TSelected;
+        return select(snapshot.data);
+    }, [snapshot.data, select]);
+
+    // Track previous selected value for referential stability
+    const prevSelectedRef = useRef<TSelected>(selectedData);
+    const stableSelectedData = useMemo(() => {
+        // Use Object.is for comparison (handles primitives and objects)
+        if (Object.is(prevSelectedRef.current, selectedData)) {
+            return prevSelectedRef.current;
+        }
+        prevSelectedRef.current = selectedData;
+        return selectedData;
+    }, [selectedData]);
+
     // Track if we've successfully fetched for this key (used to prevent duplicate fetches)
     const fetchedKeyRef = useRef<string | null>(null);
 
@@ -412,9 +510,12 @@ export function useSharedQuery<TData>(
         if (shouldFetch) {
             // Mark as fetched for this key (will be validated by status check on re-runs)
             fetchedKeyRef.current = key;
-            void fetchSharedQuery(key, stableQueryFn, {
+            // Fire-and-forget - errors are stored in snapshot, not re-thrown
+            fetchSharedQuery(key, stableQueryFn, {
                 staleTimeMs,
                 force: refetchOnMount === true,
+            }).catch(() => {
+                // Error is already stored in snapshot, no need to handle here
             });
         } else {
             // Data is fresh, mark as fetched
@@ -463,13 +564,19 @@ export function useSharedQuery<TData>(
         }
     }, [key]);
 
+    // Return type depends on whether select is provided
     return useMemo(
-        () => ({
-            ...snapshot,
-            refetch,
-            abort,
-        }),
-        [snapshot, refetch, abort],
+        () =>
+            ({
+                data: stableSelectedData,
+                error: snapshot.error,
+                status: snapshot.status,
+                updatedAt: snapshot.updatedAt,
+                isFetching: snapshot.isFetching,
+                refetch,
+                abort,
+            }) as TSelected extends TData ? UseSharedQueryReturn<TData> : UseSharedQueryReturnSelected<TSelected>,
+        [stableSelectedData, snapshot.error, snapshot.status, snapshot.updatedAt, snapshot.isFetching, refetch, abort],
     );
 }
 
@@ -496,4 +603,11 @@ export function clearSharedQueryCache(): void {
         if (entry.abortController) entry.abortController.abort();
     }
     store.clear();
+}
+
+/**
+ * Get the current store size (for testing/debugging)
+ */
+export function getSharedQueryStoreSize(): number {
+    return store.size;
 }

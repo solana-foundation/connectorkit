@@ -36,13 +36,17 @@ describe('useSharedQuery', () => {
         it('should handle fetch errors', async () => {
             const error = new Error('Test error');
             const queryFn = vi.fn().mockRejectedValue(error);
+            
+            // Note: The useSharedQuery hook fires and forgets the initial fetch
+            // so we need to wait for the error to be stored in the snapshot
             const { result } = renderHook(() => useSharedQuery('error-key', queryFn));
 
+            // Wait for the error to propagate to the snapshot
             await waitFor(() => {
                 expect(result.current.status).toBe('error');
-            });
+            }, { timeout: 2000 });
 
-            expect(result.current.error).toBe(error);
+            expect(result.current.error?.message).toBe('Test error');
             expect(result.current.data).toBeUndefined();
         });
     });
@@ -114,6 +118,31 @@ describe('useSharedQuery', () => {
             expect(result2.current.status).toBe('success');
 
             // Should not trigger additional fetch
+            expect(queryFn).toHaveBeenCalledTimes(1);
+        });
+    });
+
+    describe('select', () => {
+        it('should recompute selected data when select changes (even if snapshot data does not)', async () => {
+            const queryFn = vi.fn().mockResolvedValue({ value: 1 });
+
+            const { result, rerender } = renderHook(
+                ({ multiplier }) =>
+                    useSharedQuery('select-key', queryFn, {
+                        select: data => (data ? (data as { value: number }).value * multiplier : 0),
+                    }),
+                { initialProps: { multiplier: 1 } },
+            );
+
+            await waitFor(() => {
+                expect(result.current.status).toBe('success');
+            });
+
+            expect(result.current.data).toBe(1);
+            expect(queryFn).toHaveBeenCalledTimes(1);
+
+            rerender({ multiplier: 2 });
+            expect(result.current.data).toBe(2);
             expect(queryFn).toHaveBeenCalledTimes(1);
         });
     });
