@@ -101,8 +101,7 @@ Compatible with all [Wallet Standard](https://github.com/wallet-standard/wallet-
 - Phantom
 - Solflare
 - Backpack
-- Glow
-- Brave Wallet
+- Jupiter
 - Any Wallet Standard compatible wallet
 
 ## Development
