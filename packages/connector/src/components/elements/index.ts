@@ -24,3 +24,6 @@ export {
     type TransactionHistoryElementRenderProps,
 } from './transaction-history-element';
 export { TokenListElement, type TokenListElementProps, type TokenListElementRenderProps } from './token-list-element';
+
+// Shared components
+export { SkeletonShine } from './skeleton-shine';

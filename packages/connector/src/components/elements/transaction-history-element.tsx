@@ -3,6 +3,7 @@
 import React from 'react';
 import type { ReactNode } from 'react';
 import { useTransactions, type TransactionInfo } from '../../hooks/use-transactions';
+import { SkeletonShine } from './skeleton-shine';
 
 export interface TransactionHistoryElementRenderProps {
     transactions: TransactionInfo[];
@@ -156,7 +157,9 @@ export function TransactionHistoryElement({
             >
                 <div className="ck-tx-history-skeleton" data-slot="tx-history-skeleton">
                     {Array.from({ length: Math.min(limit, 3) }).map((_, i) => (
-                        <div key={i} className="ck-skeleton ck-skeleton--tx" />
+                        <div key={i} className="ck-skeleton ck-skeleton--tx">
+                            <SkeletonShine />
+                        </div>
                     ))}
                 </div>
             </div>

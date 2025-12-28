@@ -3,6 +3,7 @@
 import React from 'react';
 import type { ReactNode } from 'react';
 import { useTokens, type Token } from '../../hooks/use-tokens';
+import { SkeletonShine } from './skeleton-shine';
 
 export interface TokenListElementRenderProps {
     tokens: Token[];
@@ -125,7 +126,9 @@ export function TokenListElement({
             >
                 <div className="ck-token-list-skeleton" data-slot="token-list-skeleton">
                     {Array.from({ length: Math.min(limit, 3) }).map((_, i) => (
-                        <div key={i} className="ck-skeleton ck-skeleton--token" />
+                        <div key={i} className="ck-skeleton ck-skeleton--token">
+                            <SkeletonShine />
+                        </div>
                     ))}
                 </div>
             </div>

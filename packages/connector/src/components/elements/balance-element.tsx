@@ -3,6 +3,7 @@
 import React from 'react';
 import type { ReactNode } from 'react';
 import { useBalance, type TokenBalance } from '../../hooks/use-balance';
+import { SkeletonShine } from './skeleton-shine';
 
 export interface BalanceElementRenderProps {
     solBalance: number;
@@ -105,11 +106,17 @@ export function BalanceElement({
                 data-loading="true"
             >
                 <div className="ck-balance-block-skeleton" data-slot="balance-element-skeleton">
-                    <div className="ck-skeleton ck-skeleton--text" />
+                    <div className="ck-skeleton ck-skeleton--text">
+                        <SkeletonShine />
+                    </div>
                     {showTokens && (
                         <>
-                            <div className="ck-skeleton ck-skeleton--text ck-skeleton--short" />
-                            <div className="ck-skeleton ck-skeleton--text ck-skeleton--short" />
+                            <div className="ck-skeleton ck-skeleton--text ck-skeleton--short">
+                                <SkeletonShine />
+                            </div>
+                            <div className="ck-skeleton ck-skeleton--text ck-skeleton--short">
+                                <SkeletonShine />
+                            </div>
                         </>
                     )}
                 </div>
