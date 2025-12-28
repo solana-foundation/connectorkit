@@ -66,7 +66,9 @@ export function getBase58SignatureFromSignedTransaction(transaction: unknown): s
 
     const numSigners = getNumRequiredSigners(messageBytes);
     if (numSigners !== 1) {
-        throw new Error(`This demo currently supports single-signer transactions (found ${numSigners} required signers)`);
+        throw new Error(
+            `This demo currently supports single-signer transactions (found ${numSigners} required signers)`,
+        );
     }
 
     const firstSig = Object.values(signatures)[0];
@@ -93,7 +95,9 @@ export function getBase64EncodedWireTransaction(transaction: unknown): Base64Enc
 
     const numSigners = getNumRequiredSigners(messageBytes);
     if (numSigners !== 1) {
-        throw new Error(`This demo currently supports single-signer transactions (found ${numSigners} required signers)`);
+        throw new Error(
+            `This demo currently supports single-signer transactions (found ${numSigners} required signers)`,
+        );
     }
 
     const signatureCountPrefix = encodeShortVecLength(numSigners);
@@ -124,10 +128,7 @@ export function getWebSocketUrlForRpcUrl(rpcUrl: string): string {
     url.protocol = url.protocol.replace('http', 'ws');
 
     // solana-test-validator defaults to HTTP 8899 and WS 8900
-    if (
-        (url.hostname === 'localhost' || url.hostname.startsWith('127')) &&
-        (url.port === '8899' || url.port === '')
-    ) {
+    if ((url.hostname === 'localhost' || url.hostname.startsWith('127')) && (url.port === '8899' || url.port === '')) {
         url.port = '8900';
     }
 
@@ -172,4 +173,3 @@ export async function waitForSignatureConfirmation({
 
     throw new Error('Timed out waiting for transaction confirmation');
 }
-

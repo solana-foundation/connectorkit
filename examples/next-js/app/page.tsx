@@ -12,6 +12,7 @@ import {
 import { Blocks, Code2, Anchor, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ConnectButton } from '@/components/connector/radix-ui/connect-button';
+import { IconPuzzlepieceFill, IconSparkle, IconSquareStack3dUpFill } from 'symbols-react';
 
 export default function Home() {
     const npmCommand = 'npm i @solana/connector';
@@ -100,28 +101,28 @@ export default function Home() {
                                 value="components"
                                 className="h-14 px-4 rounded-none border-b-2 border-transparent data-[state=active]:border-sand-1500 data-[state=active]:bg-transparent data-[state=active]:shadow-none gap-2"
                             >
-                                <Blocks className="h-4 w-4" />
+                                <IconSquareStack3dUpFill className="h-4 w-4 fill-foreground/30" />
                                 <span className="hidden sm:inline">Components</span>
                             </TabsTrigger>
                             <TabsTrigger
                                 value="elements"
                                 className="h-14 px-4 rounded-none border-b-2 border-transparent data-[state=active]:border-sand-1500 data-[state=active]:bg-transparent data-[state=active]:shadow-none gap-2"
                             >
-                                <Code2 className="h-4 w-4" />
+                                <IconPuzzlepieceFill className="h-4 w-4 fill-foreground/30" />
                                 <span className="hidden sm:inline">Elements</span>
                             </TabsTrigger>
                             <TabsTrigger
                                 value="hooks"
                                 className="h-14 px-4 rounded-none border-b-2 border-transparent data-[state=active]:border-sand-1500 data-[state=active]:bg-transparent data-[state=active]:shadow-none gap-2"
                             >
-                                <Anchor className="h-4 w-4" />
+                                <Anchor className="h-3.5 w-3.5 text-foreground/30 " />
                                 <span className="hidden sm:inline">Hooks</span>
                             </TabsTrigger>
                             <TabsTrigger
                                 value="transactions"
                                 className="h-14 px-4 rounded-none border-b-2 border-transparent data-[state=active]:border-sand-1500 data-[state=active]:bg-transparent data-[state=active]:shadow-none gap-2"
                             >
-                                <Zap className="h-4 w-4" />
+                                <IconSparkle className="h-3.5 w-3.5 fill-foreground/30" />
                                 <span className="hidden sm:inline">Transactions</span>
                             </TabsTrigger>
                         </TabsList>
