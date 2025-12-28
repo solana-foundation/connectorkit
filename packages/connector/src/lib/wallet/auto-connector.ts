@@ -3,7 +3,7 @@ import type { StorageAdapter } from '../../types/storage';
 import type { WalletDetector, LegacyPublicKey } from './detector';
 import type { ConnectionManager } from './connection-manager';
 import type { StateManager } from '../core/state-manager';
-import { getWalletsRegistry } from './standard-shim';
+import { getWalletsRegistry, ready } from './standard-shim';
 import { createLogger } from '../utils/secure-logger';
 
 const logger = createLogger('AutoConnector');
@@ -209,6 +209,10 @@ export class AutoConnector {
                 },
                 true,
             );
+
+            // Await registry initialization for deterministic wallet detection
+            // This ensures we check the registry after it's fully populated
+            await ready;
 
             // Check if wallet is already in registry - use that instead for better compatibility
             const walletsApi = getWalletsRegistry();

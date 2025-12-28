@@ -75,7 +75,7 @@
         "@wallet-standard/base": "^1.1.0",
         "@wallet-standard/features": "^1.1.0",
         "@wallet-ui/core": "^2.1.0",
-        "zod": "^3.23.0"
+        "zod": "^4.0.0"
     },
     "devDependencies": {
         "@testing-library/jest-dom": "^6.9.1",

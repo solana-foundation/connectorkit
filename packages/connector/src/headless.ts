@@ -32,6 +32,7 @@ export type { MobileWalletAdapterConfig } from './ui/connector-provider';
 export {
     // Standard shim
     getWalletsRegistry,
+    ready,
     type WalletStandardWallet,
     type WalletStandardAccount,
     // Enhanced storage

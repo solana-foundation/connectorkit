@@ -5,7 +5,7 @@
  * These schemas provide type-safe validation with helpful error messages.
  */
 
-import { z } from 'zod';
+import { z } from 'zod/v4';
 
 // ============================================================================
 // Primitive Schemas
@@ -38,14 +38,13 @@ export const optionalUrlSchema = urlSchema.optional();
 // ============================================================================
 
 export const coinGeckoConfigSchema = z
-    .object({
+    .strictObject({
         apiKey: z.string().optional(),
         isPro: z.boolean().optional(),
         maxRetries: z.number().int().positive().max(10).optional(),
         baseDelay: z.number().int().positive().max(30000).optional(),
         maxTimeout: z.number().int().positive().max(120000).optional(),
     })
-    .strict()
     .optional();
 
 // ============================================================================
@@ -55,10 +54,10 @@ export const coinGeckoConfigSchema = z
 /**
  * Storage adapter interface schema (validates shape, not implementation)
  */
-export const storageAdapterSchema = z.object({
-    get: z.function(),
-    set: z.function(),
-}).passthrough();
+export const storageAdapterSchema = z.looseObject({
+    get: z.custom<(...args: unknown[]) => unknown>((val) => typeof val === 'function'),
+    set: z.custom<(...args: unknown[]) => unknown>((val) => typeof val === 'function'),
+});
 
 export const storageConfigSchema = z
     .object({
@@ -120,11 +119,11 @@ export const defaultConfigOptionsSchema = z.object({
     storage: storageConfigSchema,
     clusters: z.array(solanaClusterSchema).optional(),
     customClusters: z.array(solanaClusterSchema).optional(),
-    programLabels: z.record(z.string()).optional(),
+    programLabels: z.record(z.string(), z.string()).optional(),
     coingecko: coinGeckoConfigSchema,
 
     // Functions (can't validate implementation, just existence)
-    onError: z.function().optional(),
+    onError: z.custom<(...args: unknown[]) => unknown>((val) => typeof val === 'function').optional(),
 });
 
 // ============================================================================
@@ -132,13 +131,13 @@ export const defaultConfigOptionsSchema = z.object({
 // ============================================================================
 
 export const connectorConfigSchema = z
-    .object({
+    .strictObject({
         autoConnect: z.boolean().optional(),
         debug: z.boolean().optional(),
         storage: storageConfigSchema,
         cluster: clusterConfigSchema,
         imageProxy: z.string().optional(),
-        programLabels: z.record(z.string()).optional(),
+        programLabels: z.record(z.string(), z.string()).optional(),
         coingecko: coinGeckoConfigSchema,
     })
     .optional();
@@ -171,7 +170,7 @@ export type DefaultConfigOptionsInput = z.input<typeof defaultConfigOptionsSchem
  * }
  * ```
  */
-export function validateConfigOptions(options: unknown): z.SafeParseReturnType<unknown, DefaultConfigOptionsInput> {
+export function validateConfigOptions(options: unknown): z.ZodSafeParseResult<DefaultConfigOptionsInput> {
     return defaultConfigOptionsSchema.safeParse(options);
 }
 

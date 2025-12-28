@@ -1,6 +1,7 @@
 // Wallet Standard Shim
 export {
     getWalletsRegistry,
+    ready,
     __resetWalletRegistryForTesting,
     type Wallet,
     type WalletAccount,

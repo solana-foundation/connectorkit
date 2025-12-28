@@ -205,8 +205,8 @@ importers:
         specifier: ^2.1.0
         version: 2.1.0(@solana/kit@5.0.0(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@5.0.10)))
       zod:
-        specifier: ^3.23.0
-        version: 3.25.76
+        specifier: ^4.0.0
+        version: 4.2.1
     devDependencies:
       '@testing-library/jest-dom':
         specifier: ^6.9.1
@@ -5607,8 +5607,8 @@ packages:
     peerDependencies:
       zod: ^3.25.0 || ^4.0.0
 
-  zod@3.25.76:
-    resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
+  zod@4.2.1:
+    resolution: {integrity: sha512-0wZ1IRqGGhMP76gLqz8EyfBXKk0J2qo2+H3fi4mcUP/KtTocoX08nmIAHl1Z2kJIZbZee8KOpBCSNPRgauucjw==}
 
 snapshots:
 
@@ -9224,8 +9224,8 @@ snapshots:
       '@babel/parser': 7.28.4
       eslint: 9.38.0(jiti@2.6.1)
       hermes-parser: 0.25.1
-      zod: 3.25.76
-      zod-validation-error: 4.0.2(zod@3.25.76)
+      zod: 4.2.1
+      zod-validation-error: 4.0.2(zod@4.2.1)
     transitivePeerDependencies:
       - supports-color
 
@@ -11789,8 +11789,8 @@ snapshots:
 
   yocto-queue@0.1.0: {}
 
-  zod-validation-error@4.0.2(zod@3.25.76):
+  zod-validation-error@4.0.2(zod@4.2.1):
     dependencies:
-      zod: 3.25.76
+      zod: 4.2.1
 
-  zod@3.25.76: {}
+  zod@4.2.1: {}
