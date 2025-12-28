@@ -1,7 +1,12 @@
 'use client';
 
 import { useCallback, useMemo } from 'react';
-import { useWalletAssets, getWalletAssetsQueryKey, type WalletAssetsData, type TokenAccountInfo } from './_internal/use-wallet-assets';
+import {
+    useWalletAssets,
+    getWalletAssetsQueryKey,
+    type WalletAssetsData,
+    type TokenAccountInfo,
+} from './_internal/use-wallet-assets';
 import { formatLamportsToSolSafe, formatBigIntBalance } from '../utils/formatting';
 import type { SolanaClient } from '../lib/kit';
 

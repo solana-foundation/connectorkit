@@ -28,7 +28,7 @@ let stylesInjected = false;
 
 function injectStyles() {
     if (stylesInjected) return;
-    
+
     if (typeof document !== 'undefined') {
         const styleId = 'ck-skeleton-shine-styles';
         if (!document.getElementById(styleId)) {

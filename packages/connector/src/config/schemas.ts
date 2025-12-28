@@ -55,8 +55,8 @@ export const coinGeckoConfigSchema = z
  * Storage adapter interface schema (validates shape, not implementation)
  */
 export const storageAdapterSchema = z.looseObject({
-    get: z.custom<(...args: unknown[]) => unknown>((val) => typeof val === 'function'),
-    set: z.custom<(...args: unknown[]) => unknown>((val) => typeof val === 'function'),
+    get: z.custom<(...args: unknown[]) => unknown>(val => typeof val === 'function'),
+    set: z.custom<(...args: unknown[]) => unknown>(val => typeof val === 'function'),
 });
 
 export const storageConfigSchema = z
@@ -123,7 +123,7 @@ export const defaultConfigOptionsSchema = z.object({
     coingecko: coinGeckoConfigSchema,
 
     // Functions (can't validate implementation, just existence)
-    onError: z.custom<(...args: unknown[]) => unknown>((val) => typeof val === 'function').optional(),
+    onError: z.custom<(...args: unknown[]) => unknown>(val => typeof val === 'function').optional(),
 });
 
 // ============================================================================

@@ -91,9 +91,7 @@ export function createWalletAdapterCompat(
             }
 
             const txs = transformTransaction ? transactions.map(tx => transformTransaction(tx)) : transactions;
-            const { data: signedTxs, error } = await tryCatch(
-                Promise.all(txs.map(tx => signer.signTransaction(tx))),
-            );
+            const { data: signedTxs, error } = await tryCatch(Promise.all(txs.map(tx => signer.signTransaction(tx))));
 
             if (error) {
                 handleError(error, 'signAllTransactions');

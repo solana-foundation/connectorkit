@@ -920,9 +920,7 @@ import { tryCatch } from '@solana/connector/headless';
 
 // Instead of try/catch blocks
 async function sendTransaction() {
-    const { data: signature, error } = await tryCatch(
-        signer.signAndSendTransaction(transaction)
-    );
+    const { data: signature, error } = await tryCatch(signer.signAndSendTransaction(transaction));
 
     if (error) {
         console.error('Transaction failed:', error.message);
