@@ -1,5 +1,6 @@
 import type { ConnectorConfig, CoinGeckoConfig } from '../types/connector';
 import type { SolanaCluster, SolanaClusterId } from '@wallet-ui/core';
+import type { Wallet } from '../types/wallets';
 import { createSolanaMainnet, createSolanaDevnet, createSolanaTestnet, createSolanaLocalnet } from '@wallet-ui/core';
 import {
     createEnhancedStorageAccount,
@@ -64,6 +65,26 @@ export interface DefaultConfigOptions {
      * @see https://docs.coingecko.com/reference/introduction for rate limit details
      */
     coingecko?: CoinGeckoConfig;
+    /**
+     * Additional wallets to include alongside Wallet Standard wallets.
+     * Use this to add remote/server-backed signers created via `createRemoteSignerWallet()`.
+     *
+     * @example
+     * ```typescript
+     * import { createRemoteSignerWallet } from '@solana/connector/remote';
+     *
+     * const remoteWallet = createRemoteSignerWallet({
+     *   endpoint: '/api/connector-signer',
+     *   name: 'Treasury Signer',
+     * });
+     *
+     * const config = getDefaultConfig({
+     *   appName: 'My App',
+     *   additionalWallets: [remoteWallet],
+     * });
+     * ```
+     */
+    additionalWallets?: Wallet[];
 }
 
 /** Extended ConnectorConfig with app metadata */
@@ -126,6 +147,7 @@ export function getDefaultConfig(options: DefaultConfigOptions): ExtendedConnect
         imageProxy,
         programLabels,
         coingecko,
+        additionalWallets,
     } = options;
 
     const defaultClusters: SolanaCluster[] = clusters ?? [
@@ -225,6 +247,7 @@ export function getDefaultConfig(options: DefaultConfigOptions): ExtendedConnect
         imageProxy,
         programLabels,
         coingecko,
+        additionalWallets,
     };
 
     return config;

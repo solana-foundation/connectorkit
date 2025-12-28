@@ -26,6 +26,16 @@
             "types": "./dist/compat.d.ts",
             "import": "./dist/compat.mjs",
             "require": "./dist/compat.js"
+        },
+        "./remote": {
+            "types": "./dist/remote.d.ts",
+            "import": "./dist/remote.mjs",
+            "require": "./dist/remote.js"
+        },
+        "./server": {
+            "types": "./dist/server.d.ts",
+            "import": "./dist/server.mjs",
+            "require": "./dist/server.js"
         }
     },
     "files": [
@@ -48,7 +58,10 @@
     },
     "peerDependencies": {
         "@solana/web3.js": "^1.0.0",
-        "react": ">=18.0.0"
+        "react": ">=18.0.0",
+        "@solana/keychain": "^0.1.0",
+        "@solana/keychain-fireblocks": "^0.1.0",
+        "@solana/keychain-privy": "^0.1.0"
     },
     "peerDependenciesMeta": {
         "react": {
@@ -58,6 +71,15 @@
             "optional": true
         },
         "@solana/web3.js": {
+            "optional": true
+        },
+        "@solana/keychain": {
+            "optional": true
+        },
+        "@solana/keychain-fireblocks": {
+            "optional": true
+        },
+        "@solana/keychain-privy": {
             "optional": true
         }
     },

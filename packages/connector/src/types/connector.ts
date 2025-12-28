@@ -115,6 +115,26 @@ export interface ConnectorConfig {
      * Configure API key for higher rate limits and retry behavior for 429 responses.
      */
     coingecko?: CoinGeckoConfig;
+
+    /**
+     * Additional wallets to include alongside Wallet Standard wallets.
+     * Use this to add remote/server-backed signers created via `createRemoteSignerWallet()`.
+     *
+     * @example
+     * ```typescript
+     * import { createRemoteSignerWallet } from '@solana/connector/remote';
+     *
+     * const remoteWallet = createRemoteSignerWallet({
+     *   endpoint: '/api/connector-signer',
+     *   name: 'Treasury Signer',
+     * });
+     *
+     * const config = {
+     *   additionalWallets: [remoteWallet],
+     * };
+     * ```
+     */
+    additionalWallets?: Wallet[];
 }
 
 /**

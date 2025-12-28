@@ -107,6 +107,11 @@ export class ConnectorClient {
         if (this.initialized) return;
 
         const { error } = tryCatchSync(() => {
+            // Set additional wallets before detection if configured
+            if (this.config.additionalWallets && this.config.additionalWallets.length > 0) {
+                this.walletDetector.setAdditionalWallets(this.config.additionalWallets);
+            }
+
             this.walletDetector.initialize();
 
             if (this.config.autoConnect) {

@@ -75,9 +75,11 @@ function verifyWalletName(wallet: DirectWallet | Record<string, unknown>, reques
  * WalletDetector - Handles wallet discovery and registry management
  *
  * Integrates with Wallet Standard registry and provides direct wallet detection.
+ * Supports additional wallets (e.g., remote signers) via `setAdditionalWallets()`.
  */
 export class WalletDetector extends BaseCollaborator {
     private unsubscribers: Array<() => void> = [];
+    private additionalWallets: Wallet[] = [];
 
     constructor(
         stateManager: import('../core/state-manager').StateManager,
@@ -85,6 +87,53 @@ export class WalletDetector extends BaseCollaborator {
         debug = false,
     ) {
         super({ stateManager, eventEmitter, debug }, 'WalletDetector');
+    }
+
+    /**
+     * Set additional wallets to include alongside Wallet Standard wallets.
+     * These wallets (e.g., remote signers) will be merged with detected wallets.
+     *
+     * @param wallets - Array of Wallet Standard compatible wallets
+     */
+    setAdditionalWallets(wallets: Wallet[]): void {
+        this.additionalWallets = wallets;
+        // Re-run detection to merge new wallets
+        this.refreshWallets();
+    }
+
+    /**
+     * Get additional wallets that have been configured
+     */
+    getAdditionalWallets(): Wallet[] {
+        return this.additionalWallets;
+    }
+
+    /**
+     * Refresh wallet list (re-detect and merge)
+     */
+    private refreshWallets(): void {
+        if (typeof window === 'undefined') return;
+
+        try {
+            const walletsApi = getWalletsRegistry();
+            const registryWallets = walletsApi.get();
+
+            // Merge registry wallets with additional wallets
+            const allWallets = [...registryWallets, ...this.additionalWallets];
+            const unique = this.deduplicateWallets(allWallets);
+
+            this.stateManager.updateState({
+                wallets: unique.map(w => this.mapToWalletInfo(w)),
+            });
+
+            this.log('🔍 WalletDetector: refreshed wallets', {
+                registry: registryWallets.length,
+                additional: this.additionalWallets.length,
+                total: unique.length,
+            });
+        } catch {
+            // Ignore errors during refresh
+        }
     }
 
     /**
@@ -103,15 +152,21 @@ export class WalletDetector extends BaseCollaborator {
         try {
             const walletsApi = getWalletsRegistry();
             const update = () => {
-                const ws = walletsApi.get();
+                const registryWallets = walletsApi.get();
                 const previousCount = this.getState().wallets.length;
-                const newCount = ws.length;
+
+                // Merge registry wallets with additional wallets
+                const allWallets = [...registryWallets, ...this.additionalWallets];
+                const unique = this.deduplicateWallets(allWallets);
+                const newCount = unique.length;
 
                 if (newCount !== previousCount) {
-                    this.log('🔍 WalletDetector: found wallets:', newCount);
+                    this.log('🔍 WalletDetector: found wallets:', {
+                        registry: registryWallets.length,
+                        additional: this.additionalWallets.length,
+                        total: newCount,
+                    });
                 }
-
-                const unique = this.deduplicateWallets(ws);
 
                 this.stateManager.updateState({
                     wallets: unique.map(w => this.mapToWalletInfo(w)),

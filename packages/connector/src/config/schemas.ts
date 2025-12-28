@@ -55,8 +55,8 @@ export const coinGeckoConfigSchema = z
  * Storage adapter interface schema (validates shape, not implementation)
  */
 export const storageAdapterSchema = z.looseObject({
-    get: z.custom<(...args: unknown[]) => unknown>(val => typeof val === 'function'),
-    set: z.custom<(...args: unknown[]) => unknown>(val => typeof val === 'function'),
+    get: z.custom<(...args: unknown[]) => unknown>((val: unknown) => typeof val === 'function'),
+    set: z.custom<(...args: unknown[]) => unknown>((val: unknown) => typeof val === 'function'),
 });
 
 export const storageConfigSchema = z
@@ -93,6 +93,20 @@ export const clusterConfigSchema = z
 // Default Config Options
 // ============================================================================
 
+/**
+ * Wallet Standard wallet schema (shallow validation - just check it's an object with required fields)
+ */
+export const walletSchema = z.custom<import('@wallet-standard/base').Wallet>(
+    (val: unknown) =>
+        typeof val === 'object' &&
+        val !== null &&
+        'name' in val &&
+        'version' in val &&
+        'features' in val &&
+        'chains' in val,
+    { message: 'Invalid Wallet Standard wallet object' },
+);
+
 export const defaultConfigOptionsSchema = z.object({
     // Required
     appName: z.string().min(1, 'Application name is required'),
@@ -122,8 +136,11 @@ export const defaultConfigOptionsSchema = z.object({
     programLabels: z.record(z.string(), z.string()).optional(),
     coingecko: coinGeckoConfigSchema,
 
+    // Additional wallets (remote signers, etc.)
+    additionalWallets: z.array(walletSchema).optional(),
+
     // Functions (can't validate implementation, just existence)
-    onError: z.custom<(...args: unknown[]) => unknown>(val => typeof val === 'function').optional(),
+    onError: z.custom<(...args: unknown[]) => unknown>((val: unknown) => typeof val === 'function').optional(),
 });
 
 // ============================================================================
@@ -139,6 +156,7 @@ export const connectorConfigSchema = z
         imageProxy: z.string().optional(),
         programLabels: z.record(z.string(), z.string()).optional(),
         coingecko: coinGeckoConfigSchema,
+        additionalWallets: z.array(walletSchema).optional(),
     })
     .optional();
 

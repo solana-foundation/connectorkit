@@ -218,6 +218,109 @@ See `app/page.tsx` for a complete example showing:
 - Network and account details
 - Component documentation
 
+## 🔐 Remote Signer (Server-Backed Signing)
+
+This example includes support for server-backed signing using Fireblocks, Privy, or custom signers. This allows you to sign transactions from the frontend while keeping sensitive API keys secure on the server.
+
+### Setup
+
+1. **Configure Environment Variables**
+
+   Create a `.env.local` file with your provider credentials:
+
+   ```bash
+   # Enable remote signer in the UI
+   NEXT_PUBLIC_ENABLE_REMOTE_SIGNER=true
+
+   # Auth token for the signing API (generate a secure random string)
+   CONNECTOR_SIGNER_TOKEN=your-secure-token-here
+
+   # Solana RPC URL (for signAndSend operations)
+   SOLANA_RPC_URL=https://api.mainnet-beta.solana.com
+
+   # --- Fireblocks Configuration ---
+   FIREBLOCKS_API_KEY=your-api-key
+   FIREBLOCKS_PRIVATE_KEY="-----BEGIN RSA PRIVATE KEY-----\n...\n-----END RSA PRIVATE KEY-----"
+   FIREBLOCKS_VAULT_ID=0
+
+   # --- OR Privy Configuration ---
+   # PRIVY_APP_ID=your-app-id
+   # PRIVY_APP_SECRET=your-app-secret
+   # PRIVY_WALLET_ID=wallet-id
+   ```
+
+2. **Install Provider Dependencies** (when available on npm)
+
+   The `@solana-keychain/*` packages provide Fireblocks and Privy integrations.
+   Once published, install only the one you need:
+
+   ```bash
+   # For Fireblocks (when published)
+   pnpm add @solana-keychain/fireblocks
+
+   # For Privy (when published)
+   pnpm add @solana-keychain/privy
+   ```
+
+   **Note:** If these packages aren't published yet, you can use the `custom` provider
+   type to implement your own signer (see route.ts for the interface).
+
+3. **Run the Example**
+
+   ```bash
+   pnpm dev
+   ```
+
+   The "Treasury Signer" will now appear in the wallet selection modal alongside browser wallets.
+
+### How It Works
+
+```
+Browser                    Server (Next.js Route Handler)
+   │                                    │
+   │  1. User selects "Treasury Signer" │
+   ├───────────────────────────────────▶│
+   │                                    │ 2. GET /api/connector-signer
+   │◀───────────────────────────────────┤    Returns address + capabilities
+   │                                    │
+   │  3. User initiates transaction     │
+   ├───────────────────────────────────▶│
+   │                                    │ 4. POST /api/connector-signer
+   │                                    │    { operation: "signTransaction" }
+   │                                    │
+   │                                    │ 5. Server signs with Fireblocks/Privy
+   │◀───────────────────────────────────┤
+   │  6. Signed transaction returned    │
+```
+
+### Security Considerations
+
+- **API Keys Stay Server-Side**: Fireblocks/Privy credentials never leave the server
+- **Auth Token Required**: All requests must include `Authorization: Bearer <token>`
+- **Policy Hooks**: Optionally validate transactions before signing (see `route.ts`)
+- **No Client SDK Bloat**: The browser only ships a tiny fetch-based adapter
+
+### Custom Authorization
+
+Edit `app/api/connector-signer/route.ts` to add custom authorization:
+
+```typescript
+const { GET, POST } = createRemoteSignerRouteHandlers({
+    provider: getProviderConfig(),
+    authorize: async (request) => {
+        // Example: verify user session
+        const session = await getServerSession(request);
+        return session?.user?.role === 'admin';
+    },
+    policy: {
+        validateTransaction: async (txBytes, request) => {
+            // Example: only allow transfers under 1 SOL
+            return true;
+        },
+    },
+});
+```
+
 ## 🚢 Production Tips
 
 - **Error Handling**: Add toast notifications for connection errors
@@ -225,6 +328,7 @@ See `app/page.tsx` for a complete example showing:
 - **Accessibility**: Components use semantic HTML and ARIA labels
 - **Performance**: Components use React best practices (memoization, etc.)
 - **Mobile**: Test on mobile devices and adjust as needed
+- **Remote Signing**: Use strong auth tokens and consider rate limiting
 
 ## 📚 Learn More
 

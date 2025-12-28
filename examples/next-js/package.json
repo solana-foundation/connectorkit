@@ -21,6 +21,7 @@
         "@solana-program/system": "^0.7.0",
         "@solana/connector": "workspace:*",
         "@solana/connector-debugger": "workspace:*",
+        "@solana/keychain": "^0.1.0",
         "@solana/kit": "^5.0.0",
         "@solana/web3.js": "^1.98.4",
         "@tanstack/react-query": "^5.90.5",
