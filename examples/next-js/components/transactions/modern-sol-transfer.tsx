@@ -10,17 +10,24 @@ import {
     setTransactionMessageLifetimeUsingBlockhash,
     appendTransactionMessageInstructions,
     sendAndConfirmTransactionFactory,
-    getSignatureFromTransaction,
     signTransactionMessageWithSigners,
     createSolanaRpcSubscriptions,
     lamports,
     assertIsTransactionWithBlockhashLifetime,
+    signature as createSignature,
     type TransactionSigner,
 } from '@solana/kit';
 import { getTransferSolInstruction } from '@solana-program/system';
 import { useKitTransactionSigner, useCluster, useConnectorClient, LAMPORTS_PER_SOL } from '@solana/connector';
 import { TransactionForm } from './transaction-form';
 import { TransactionResult } from './transaction-result';
+import {
+    getBase58SignatureFromSignedTransaction,
+    getBase64EncodedWireTransaction,
+    getWebSocketUrlForRpcUrl,
+    isRpcProxyUrl,
+    waitForSignatureConfirmation,
+} from './rpc-utils';
 
 /**
  * Modern SOL Transfer Component
@@ -48,7 +55,6 @@ export function ModernSolTransfer() {
 
         // Create RPC client using web3.js 2.0
         const rpc = createSolanaRpc(rpcUrl);
-        const rpcSubscriptions = createSolanaRpcSubscriptions(rpcUrl.replace('http', 'ws'));
 
         // Create addresses using gill's address() API
         const senderAddress = signer.address;
@@ -88,32 +94,52 @@ export function ModernSolTransfer() {
             throw new Error(`Failed to sign transaction: ${error instanceof Error ? error.message : String(error)}`);
         }
 
+        const signatureBase58 = getBase58SignatureFromSignedTransaction(signedTransaction);
+        setSignature(signatureBase58);
+
+        // Track transaction in debugger early so it shows up even if confirmation fails later
+        client.trackTransaction({
+            signature: createSignature(signatureBase58),
+            status: 'pending',
+            method: 'sendTransaction',
+            feePayer: senderAddress,
+        });
+
         console.log('📡 Modern SOL Transfer: Sending and confirming transaction');
         try {
             // Assert transaction has blockhash lifetime (we set it above with setTransactionMessageLifetimeUsingBlockhash)
             assertIsTransactionWithBlockhashLifetime(signedTransaction);
-            await sendAndConfirmTransactionFactory({ rpc, rpcSubscriptions })(signedTransaction, {
-                commitment: 'confirmed',
-            });
+
+            if (isRpcProxyUrl(rpcUrl)) {
+                // Next.js `/api/rpc` proxy is HTTP-only; confirm via polling (no WebSocket).
+                const encodedTransaction = getBase64EncodedWireTransaction(signedTransaction);
+                await rpc.sendTransaction(encodedTransaction, { encoding: 'base64' }).send();
+                await waitForSignatureConfirmation({
+                    signature: signatureBase58,
+                    commitment: 'confirmed',
+                    getSignatureStatuses: async sig => await rpc.getSignatureStatuses([createSignature(sig)]).send(),
+                });
+            } else {
+                const rpcSubscriptions = createSolanaRpcSubscriptions(getWebSocketUrlForRpcUrl(rpcUrl));
+                await sendAndConfirmTransactionFactory({ rpc, rpcSubscriptions })(signedTransaction, {
+                    commitment: 'confirmed',
+                });
+            }
+
             console.log('✅ Modern SOL Transfer: Transaction confirmed');
         } catch (error) {
             console.error('❌ Modern SOL Transfer: Send/confirm failed', error);
+            client.updateTransactionStatus(
+                createSignature(signatureBase58),
+                'failed',
+                error instanceof Error ? error.message : String(error),
+            );
             throw new Error(`Failed to send transaction: ${error instanceof Error ? error.message : String(error)}`);
         }
 
-        const transactionSignature = getSignatureFromTransaction(signedTransaction);
-        setSignature(transactionSignature);
-        console.log('🎉 Modern SOL Transfer: Transaction complete!', { signature: transactionSignature });
+        console.log('🎉 Modern SOL Transfer: Transaction complete!', { signature: signatureBase58 });
 
-        // Track transaction in debugger
-        if (client) {
-            client.trackTransaction({
-                signature: transactionSignature,
-                status: 'confirmed',
-                method: 'signAndSendTransaction',
-                feePayer: senderAddress,
-            });
-        }
+        client.updateTransactionStatus(createSignature(signatureBase58), 'confirmed');
     }
 
     return (

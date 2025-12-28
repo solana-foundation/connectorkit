@@ -7,6 +7,7 @@ import { useWalletAdapterCompat } from '@solana/connector/compat';
 import { useTransactionSigner, useConnector, useCluster, useConnectorClient } from '@solana/connector';
 import { TransactionForm } from './transaction-form';
 import { TransactionResult } from './transaction-result';
+import { waitForSignatureConfirmation } from './rpc-utils';
 
 /**
  * Legacy SOL Transfer Component
@@ -66,36 +67,38 @@ export function LegacySolTransfer() {
 
         // Sign and send using wallet adapter compat layer
         const sig = await walletAdapter.sendTransaction(transaction, connection);
+        const typedSignature = createSignature(sig);
 
         setSignature(sig);
 
         // Track transaction in debugger
         if (client) {
             client.trackTransaction({
-                signature: createSignature(sig),
+                signature: typedSignature,
                 status: 'pending' as const,
                 method: 'sendTransaction',
                 feePayer: address(walletAdapter.publicKey),
             });
         }
 
-        // Wait for confirmation
+        // Wait for confirmation via HTTP polling (works with the Next.js `/api/rpc` proxy which has no WebSocket server)
         try {
-            await connection.confirmTransaction({
+            await waitForSignatureConfirmation({
                 signature: sig,
-                blockhash,
-                lastValidBlockHeight,
+                commitment: 'confirmed',
+                getSignatureStatuses: async signature =>
+                    await connection.getSignatureStatuses([signature], { searchTransactionHistory: true }),
             });
 
             // Update status to confirmed
             if (client) {
-                client.updateTransactionStatus(createSignature(sig), 'confirmed');
+                client.updateTransactionStatus(typedSignature, 'confirmed');
             }
         } catch (confirmError) {
             // Update status to failed if confirmation fails
             if (client) {
                 client.updateTransactionStatus(
-                    createSignature(sig),
+                    typedSignature,
                     'failed',
                     confirmError instanceof Error ? confirmError.message : 'Confirmation failed',
                 );

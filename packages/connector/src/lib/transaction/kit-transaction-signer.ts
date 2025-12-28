@@ -338,7 +338,9 @@ export function createKitTransactionSigner<TAddress extends string = string>(
             // Prepare transaction data for wallet signing
             const transactionData = transactions.map(tx => {
                 const messageBytes = new Uint8Array(tx.messageBytes);
-                const numSigners = Object.keys(tx.signatures).length;
+                // Derive the required signature count from the message header, not from the
+                // current signature dictionary (which is often empty pre-signing).
+                const { numSigners } = parseMessageSigners(messageBytes);
 
                 // Create full transaction wire format for wallet
                 const wireFormat = createTransactionBytesForSigning(messageBytes, numSigners);
