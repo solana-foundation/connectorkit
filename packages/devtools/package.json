@@ -1,7 +1,7 @@
 {
-    "name": "@solana/connector-debugger",
-    "version": "0.1.1",
-    "description": "Development debug panel for @solana/connector",
+    "name": "@solana/devtools",
+    "version": "0.1.0",
+    "description": "Framework-agnostic devtools for @solana/connector",
     "main": "./dist/index.js",
     "module": "./dist/index.mjs",
     "types": "./dist/index.d.ts",
@@ -11,11 +11,6 @@
             "types": "./dist/index.d.ts",
             "import": "./dist/index.mjs",
             "require": "./dist/index.js"
-        },
-        "./react": {
-            "types": "./dist/react.d.ts",
-            "import": "./dist/react.mjs",
-            "require": "./dist/react.js"
         }
     },
     "files": [
@@ -28,22 +23,29 @@
         "lint": "prettier --check src/",
         "clean": "rm -rf dist"
     },
-    "dependencies": {
-        "@solana/kit": "^4.0.0"
-    },
     "peerDependencies": {
-        "@solana/connector": "workspace:*",
-        "react": ">=18.0.0"
+        "@solana/connector": ">=0.1.0"
+    },
+    "peerDependenciesMeta": {
+        "@solana/connector": {
+            "optional": true
+        }
     },
     "devDependencies": {
-        "@solana/connector": "workspace:*",
-        "@types/react": "^19.2.2",
         "tsup": "^8.5.0",
         "typescript": "^5.9.3"
     },
     "license": "MIT",
     "repository": {
         "type": "git",
-        "url": "https://github.com/solana-foundation/connectorkit"
-    }
+        "url": "https://github.com/solana-foundation/connectorkit",
+        "directory": "packages/devtools"
+    },
+    "keywords": [
+        "solana",
+        "wallet",
+        "devtools",
+        "debugging",
+        "connector"
+    ]
 }

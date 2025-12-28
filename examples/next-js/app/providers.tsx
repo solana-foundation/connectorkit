@@ -1,8 +1,7 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 import { AppProvider } from '@solana/connector/react';
-// import { ConnectorDebugPanel } from '@solana/connector-debugger/react';
 import { getDefaultConfig, getDefaultMobileConfig } from '@solana/connector/headless';
 import type { ReactNode } from 'react';
 
@@ -60,11 +59,42 @@ export function Providers({ children }: { children: ReactNode }) {
         [],
     );
 
+    // Mount devtools in development mode
+    useEffect(() => {
+        if (process.env.NODE_ENV !== 'development') return;
+
+        let devtools: { mount: (el: HTMLElement) => void; unmount: () => void } | undefined;
+        let container: HTMLDivElement | undefined;
+
+        // Dynamic import to avoid bundling in production
+        import('@solana/devtools').then(({ ConnectorDevtools }) => {
+            // Create container for devtools
+            container = document.createElement('div');
+            container.id = 'connector-devtools-container';
+            document.body.appendChild(container);
+
+            // Create and mount devtools (auto-detects window.__connectorClient)
+            devtools = new ConnectorDevtools({
+                config: {
+                    position: 'bottom-right',
+                    theme: 'dark',
+                    defaultOpen: false,
+                    rpcUrl: process.env.NEXT_PUBLIC_RPC_URL,
+                },
+            });
+            devtools.mount(container);
+        });
+
+        // Cleanup on unmount
+        return () => {
+            devtools?.unmount();
+            container?.remove();
+        };
+    }, []);
+
     return (
         <AppProvider connectorConfig={connectorConfig} mobile={mobile}>
             {children}
-            {/* Debug panel - only visible in development */}
-            {/* {process.env.NODE_ENV === 'development' && <ConnectorDebugPanel />} */}
         </AppProvider>
     );
 }
