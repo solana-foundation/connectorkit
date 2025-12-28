@@ -1,13 +1,13 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { AutoConnector } from './auto-connector';
-import type { WalletDetector } from './wallet-detector';
+import type { WalletDetector } from './detector';
 import type { ConnectionManager } from './connection-manager';
 import type { StateManager } from '../core/state-manager';
 import type { StorageAdapter } from '../../types/storage';
 import type { ConnectorState } from '../../types/connector';
 
 // Mock dependencies
-vi.mock('../adapters/wallet-standard-shim', () => ({
+vi.mock('./standard-shim', () => ({
     getWalletsRegistry: vi.fn(() => ({ get: vi.fn(() => []), on: vi.fn(() => vi.fn()) })),
 }));
 

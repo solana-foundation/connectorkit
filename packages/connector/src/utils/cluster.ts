@@ -5,7 +5,7 @@
  */
 
 import type { SolanaCluster } from '@wallet-ui/core';
-import { getExplorerLink } from '../lib/kit-utils';
+import { getExplorerLink } from '../lib/kit';
 import { PUBLIC_RPC_ENDPOINTS } from './network';
 
 /**

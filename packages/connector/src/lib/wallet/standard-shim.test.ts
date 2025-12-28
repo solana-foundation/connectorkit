@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { getWalletsRegistry } from './wallet-standard-shim';
+import { getWalletsRegistry } from './standard-shim';
 
 // Mock @wallet-standard/app
 vi.mock('@wallet-standard/app', () => ({

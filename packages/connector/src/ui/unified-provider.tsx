@@ -4,33 +4,27 @@ import type { ReactNode, ComponentType, PropsWithChildren } from 'react';
 import { ConnectorProvider } from './connector-provider';
 import type { MobileWalletAdapterConfig } from './connector-provider';
 import type { ConnectorConfig } from '../types/connector';
-import type { UnifiedConfig } from '../config/unified-config';
 
-export interface UnifiedProviderProps {
+export interface AppProviderProps {
     children: ReactNode;
 
-    // NEW: Option 1 - Pass UnifiedConfig directly (recommended)
-    config?: UnifiedConfig;
-
-    // OLD: Option 2 - Pass configs separately (backward compatible)
+    /** ConnectorKit configuration */
     connectorConfig?: ConnectorConfig;
+
+    /** Mobile Wallet Adapter configuration */
     mobile?: MobileWalletAdapterConfig;
 
-    // Optional additional providers to wrap around children
+    /** Optional additional providers to wrap around children */
     providers?: Array<{
         component: ComponentType<PropsWithChildren>;
         props?: Record<string, unknown>;
     }>;
 }
 
-export function UnifiedProvider({ children, config, connectorConfig, mobile, providers = [] }: UnifiedProviderProps) {
-    // Handle both new and old patterns
-    const actualConnectorConfig = config?.connectorConfig ?? connectorConfig;
-    const actualMobile = config?.mobile ?? mobile;
-
+export function AppProvider({ children, connectorConfig, mobile, providers = [] }: AppProviderProps) {
     // Start with connector provider as the base
     let content = (
-        <ConnectorProvider config={actualConnectorConfig} mobile={actualMobile}>
+        <ConnectorProvider config={connectorConfig} mobile={mobile}>
             {children}
         </ConnectorProvider>
     );
@@ -45,5 +39,8 @@ export function UnifiedProvider({ children, config, connectorConfig, mobile, pro
     return content;
 }
 
-// Export with practical alias
-export { UnifiedProvider as AppProvider };
+/** @deprecated Use `AppProvider` instead */
+export const UnifiedProvider = AppProvider;
+
+/** @deprecated Use `AppProviderProps` instead */
+export type UnifiedProviderProps = AppProviderProps;

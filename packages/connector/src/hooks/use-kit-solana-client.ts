@@ -8,7 +8,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { createSolanaClient, type SolanaClient, type ModifiedClusterUrl } from '../lib/kit-utils';
+import { createSolanaClient, type SolanaClient, type ModifiedClusterUrl } from '../lib/kit';
 import { useCluster } from './use-cluster';
 import { useConnectorClient } from '../ui/connector-provider';
 import type { ClusterType } from '../utils/cluster';

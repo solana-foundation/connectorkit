@@ -9,14 +9,36 @@ import { transformImageUrl } from '../utils/image';
 import { formatBigIntBalance, formatBigIntUsd } from '../utils/formatting';
 import {
     useWalletAssets,
+    getWalletAssetsQueryKey,
     NATIVE_SOL_MINT,
     type WalletAssetsData,
     type TokenAccountInfo,
 } from './_internal/use-wallet-assets';
 import { fetchSolanaTokenListMetadata } from './_internal/solana-token-list';
 import type { CoinGeckoConfig } from '../types/connector';
-import type { SolanaClient } from '../lib/kit-utils';
+import type { SolanaClient } from '../lib/kit';
 import type { ClusterType } from '../utils/cluster';
+
+/**
+ * Generate the query key for tokens data.
+ * Use this to invalidate the tokens cache externally.
+ *
+ * Note: Balance and tokens share the same underlying cache (wallet-assets).
+ *
+ * @param rpcUrl - The RPC URL being used
+ * @param address - The wallet address
+ * @returns The query key string, or null if params are invalid
+ *
+ * @example
+ * ```tsx
+ * // Invalidate tokens after receiving new tokens
+ * const key = getTokensQueryKey(rpcUrl, address);
+ * if (key) invalidateSharedQuery(key);
+ * ```
+ */
+export function getTokensQueryKey(rpcUrl: string | null, address: string | null): string | null {
+    return getWalletAssetsQueryKey(rpcUrl, address);
+}
 
 export interface Token {
     /** Token mint address */

@@ -1,9 +1,9 @@
 import type { Wallet, WalletInfo } from '../../types/wallets';
 import type { StorageAdapter } from '../../types/storage';
-import type { WalletDetector, LegacyPublicKey } from './wallet-detector';
+import type { WalletDetector, LegacyPublicKey } from './detector';
 import type { ConnectionManager } from './connection-manager';
 import type { StateManager } from '../core/state-manager';
-import { getWalletsRegistry } from '../adapters/wallet-standard-shim';
+import { getWalletsRegistry } from './standard-shim';
 import { createLogger } from '../utils/secure-logger';
 
 const logger = createLogger('AutoConnector');

@@ -1,9 +1,30 @@
 'use client';
 
 import { useCallback, useMemo } from 'react';
-import { useWalletAssets, type WalletAssetsData, type TokenAccountInfo } from './_internal/use-wallet-assets';
+import { useWalletAssets, getWalletAssetsQueryKey, type WalletAssetsData, type TokenAccountInfo } from './_internal/use-wallet-assets';
 import { formatLamportsToSolSafe, formatBigIntBalance } from '../utils/formatting';
-import type { SolanaClient } from '../lib/kit-utils';
+import type { SolanaClient } from '../lib/kit';
+
+/**
+ * Generate the query key for balance data.
+ * Use this to invalidate the balance cache externally.
+ *
+ * Note: Balance and tokens share the same underlying cache (wallet-assets).
+ *
+ * @param rpcUrl - The RPC URL being used
+ * @param address - The wallet address
+ * @returns The query key string, or null if params are invalid
+ *
+ * @example
+ * ```tsx
+ * // Invalidate balance after sending a transaction
+ * const key = getBalanceQueryKey(rpcUrl, address);
+ * if (key) invalidateSharedQuery(key);
+ * ```
+ */
+export function getBalanceQueryKey(rpcUrl: string | null, address: string | null): string | null {
+    return getWalletAssetsQueryKey(rpcUrl, address);
+}
 
 export interface TokenBalance {
     /** Token mint address */

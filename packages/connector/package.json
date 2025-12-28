@@ -62,7 +62,6 @@
         }
     },
     "dependencies": {
-        "@nanostores/persistent": "^1.1.0",
         "@solana-mobile/wallet-standard-mobile": "^0.4.3",
         "@solana/webcrypto-ed25519-polyfill": "^4.0.0",
         "@solana/addresses": "^5.0.0",
@@ -75,7 +74,8 @@
         "@wallet-standard/app": "^1.1.0",
         "@wallet-standard/base": "^1.1.0",
         "@wallet-standard/features": "^1.1.0",
-        "@wallet-ui/core": "^2.1.0"
+        "@wallet-ui/core": "^2.1.0",
+        "zod": "^3.23.0"
     },
     "devDependencies": {
         "@testing-library/jest-dom": "^6.9.1",

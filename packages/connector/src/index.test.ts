@@ -42,10 +42,8 @@ describe('Main Entry Point (index.ts)', () => {
         it('should export configuration functions', () => {
             expect(ConnectorKit.getDefaultConfig).toBeDefined();
             expect(ConnectorKit.getDefaultMobileConfig).toBeDefined();
-            expect(ConnectorKit.createConfig).toBeDefined();
-            expect(ConnectorKit.isUnifiedConfig).toBeDefined();
             expect(typeof ConnectorKit.getDefaultConfig).toBe('function');
-            expect(typeof ConnectorKit.isUnifiedConfig).toBe('function');
+            expect(typeof ConnectorKit.getDefaultMobileConfig).toBe('function');
         });
 
         it('should export transaction signing functions', () => {

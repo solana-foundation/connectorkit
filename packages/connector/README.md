@@ -911,6 +911,87 @@ Token prices are cached for 60 seconds to minimize API calls. The retry logic on
 
 ## Advanced Usage
 
+### Error Handling with `tryCatch`
+
+ConnectorKit exports a `tryCatch` utility for consistent async error handling:
+
+```typescript
+import { tryCatch } from '@solana/connector/headless';
+
+// Instead of try/catch blocks
+async function sendTransaction() {
+    const { data: signature, error } = await tryCatch(
+        signer.signAndSendTransaction(transaction)
+    );
+
+    if (error) {
+        console.error('Transaction failed:', error.message);
+        return;
+    }
+
+    console.log('Transaction sent:', signature);
+}
+```
+
+The `tryCatch` utility returns a `Result<T, E>` type that's either a success with `data` or a failure with `error`:
+
+```typescript
+interface Success<T> {
+    data: T;
+    error: null;
+}
+
+interface Failure<E> {
+    data: null;
+    error: E;
+}
+```
+
+Also available: `tryCatchSync` for synchronous operations, and `isSuccess`/`isFailure` type guards.
+
+### Cache Invalidation with Query Keys
+
+For advanced cache management, ConnectorKit exports query key generators:
+
+```typescript
+import {
+    getBalanceQueryKey,
+    getTokensQueryKey,
+    getTransactionsQueryKey,
+    invalidateSharedQuery,
+} from '@solana/connector/react';
+
+// After sending a transaction, invalidate relevant caches
+async function sendAndRefresh() {
+    await sendTransaction();
+
+    // Invalidate balance and tokens (they share the same cache)
+    const balanceKey = getBalanceQueryKey(rpcUrl, address);
+    if (balanceKey) invalidateSharedQuery(balanceKey);
+
+    // Invalidate transactions
+    const txKey = getTransactionsQueryKey({ rpcUrl, address, clusterId });
+    if (txKey) invalidateSharedQuery(txKey);
+}
+```
+
+### Configuration Validation
+
+Configuration is validated at runtime using Zod schemas. For manual validation:
+
+```typescript
+import { validateConfigOptions } from '@solana/connector/headless';
+
+const result = validateConfigOptions({
+    appName: 'My App',
+    network: 'mainnet',
+});
+
+if (!result.success) {
+    console.error('Validation errors:', result.error.issues);
+}
+```
+
 ### Headless Client (Vue, Svelte, Vanilla JS)
 
 Use `ConnectorClient` for non-React frameworks:
@@ -1021,11 +1102,10 @@ import { useConnector, useAccount } from '@solana/connector/react';
 
 ### Configuration Functions
 
-| Function                          | Description                                       |
-| --------------------------------- | ------------------------------------------------- |
-| `getDefaultConfig(options)`       | Create default connector configuration            |
-| `getDefaultMobileConfig(options)` | Create mobile wallet adapter configuration        |
-| `createConfig(options)`           | Create unified config for ConnectorKit + Armadura |
+| Function                          | Description                                |
+| --------------------------------- | ------------------------------------------ |
+| `getDefaultConfig(options)`       | Create default connector configuration     |
+| `getDefaultMobileConfig(options)` | Create mobile wallet adapter configuration |
 
 ### Utility Functions
 

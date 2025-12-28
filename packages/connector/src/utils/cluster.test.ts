@@ -16,8 +16,8 @@ import {
 } from './cluster';
 import type { SolanaCluster } from '@wallet-ui/core';
 
-// Mock kit-utils
-vi.mock('../lib/kit-utils', () => ({
+// Mock kit
+vi.mock('../lib/kit', () => ({
     getExplorerLink: vi.fn(({ transaction, address, cluster }) => {
         const clusterParam = cluster === 'mainnet' ? '' : `?cluster=${cluster}`;
         if (transaction) return `https://explorer.solana.com/tx/${transaction}${clusterParam}`;

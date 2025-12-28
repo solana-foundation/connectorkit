@@ -9,55 +9,38 @@
 // Core Client & Registry
 // ============================================================================
 export { ConnectorClient } from './lib/core/connector-client';
-export { getWalletsRegistry } from './lib/adapters/wallet-standard-shim';
 
 // ============================================================================
 // Configuration
 // ============================================================================
-export { getDefaultConfig, getDefaultMobileConfig, createConfig, isUnifiedConfig } from './config';
-export type { DefaultConfigOptions, ExtendedConnectorConfig, UnifiedConfigOptions, UnifiedConfig } from './config';
+export { getDefaultConfig, getDefaultMobileConfig } from './config';
+export type { DefaultConfigOptions, ExtendedConnectorConfig } from './config';
+
+// Configuration validation
+export { validateConfigOptions, parseConfigOptions } from './config';
 
 // ============================================================================
-// Essential Types
+// Essential Types (via barrel)
 // ============================================================================
-export type { Wallet, WalletAccount, WalletInfo, WalletName, AccountAddress } from './types/wallets';
-export { isWalletName, isAccountAddress } from './types/wallets';
-
-export type { AccountInfo } from './types/accounts';
-
-export type {
-    ConnectorConfig,
-    ConnectorState,
-    ConnectorHealth,
-    ConnectorDebugMetrics,
-    ConnectorDebugState,
-    Listener,
-} from './types/connector';
-
-export type {
-    SolanaTransaction,
-    TransactionSignerConfig,
-    SignedTransaction,
-    TransactionSignerCapabilities,
-    TransactionActivity,
-    TransactionActivityStatus,
-    TransactionMethod,
-    TransactionMetadata,
-} from './types/transactions';
-
-export type { ConnectorEvent, ConnectorEventListener } from './types/events';
-
-export type {
-    StorageAdapter,
-    StorageOptions,
-    EnhancedStorageAccountOptions,
-    EnhancedStorageClusterOptions,
-    EnhancedStorageWalletOptions,
-} from './types/storage';
-
-export type { WalletStandardWallet, WalletStandardAccount } from './lib/adapters/wallet-standard-shim';
+export * from './types';
 
 export type { MobileWalletAdapterConfig } from './ui/connector-provider';
+
+// ============================================================================
+// Wallet System (via barrel)
+// ============================================================================
+export {
+    // Standard shim
+    getWalletsRegistry,
+    type WalletStandardWallet,
+    type WalletStandardAccount,
+    // Enhanced storage
+    EnhancedStorage,
+    EnhancedStorageAdapter,
+    createEnhancedStorageAccount,
+    createEnhancedStorageCluster,
+    createEnhancedStorageWallet,
+} from './lib/wallet';
 
 // ============================================================================
 // Transaction Signing
@@ -76,21 +59,14 @@ export {
 export type { TransactionSigner } from './lib/transaction/transaction-signer';
 
 // ============================================================================
-// Storage System
-// ============================================================================
-export {
-    EnhancedStorage,
-    EnhancedStorageAdapter,
-    createEnhancedStorageAccount,
-    createEnhancedStorageCluster,
-    createEnhancedStorageWallet,
-} from './lib/adapters/enhanced-storage';
-
-// ============================================================================
 // Error Handling
 // ============================================================================
 export { WalletErrorType } from './ui/error-boundary';
 export type { WalletError } from './ui/error-boundary';
+
+// Result-based error handling
+export { tryCatch, tryCatchSync, isSuccess, isFailure } from './lib/core/try-catch';
+export type { Result, Success, Failure } from './lib/core/try-catch';
 
 // Unified Error System
 export {
@@ -133,10 +109,10 @@ export { installPolyfills, isPolyfillInstalled, isCryptoAvailable, getPolyfillSt
 // ============================================================================
 // Kit Signer Integration
 // ============================================================================
-export * from './lib/kit-signers/types';
-export * from './lib/kit-signers/factories';
-export * from './lib/kit-signers/integration';
-export * from './lib/kit-signers/utils';
+export * from './lib/kit/signer-types';
+export * from './lib/kit/signer-factories';
+export * from './lib/kit/signer-integration';
+export * from './lib/kit/signer-utils';
 export { createSignableMessage } from '@solana/signers';
 export { address } from '@solana/addresses';
 
@@ -182,7 +158,7 @@ export {
     getPublicSolanaRpcUrl,
     createSolanaClient,
     prepareTransaction,
-} from './lib/kit-utils';
+} from './lib/kit';
 
 export type {
     SolanaClusterMoniker,
@@ -191,4 +167,4 @@ export type {
     CreateSolanaClientArgs,
     GetExplorerLinkArgs,
     PrepareTransactionConfig,
-} from './lib/kit-utils';
+} from './lib/kit';

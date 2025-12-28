@@ -13,15 +13,16 @@ import type { WalletInfo } from '../../types/wallets';
 import { StateManager } from './state-manager';
 import { EventEmitter } from './event-emitter';
 import { DebugMetrics } from './debug-metrics';
-import { WalletDetector } from '../connection/wallet-detector';
-import { ConnectionManager } from '../connection/connection-manager';
-import { AutoConnector } from '../connection/auto-connector';
+import { WalletDetector } from '../wallet/detector';
+import { ConnectionManager } from '../wallet/connection-manager';
+import { AutoConnector } from '../wallet/auto-connector';
 import { ClusterManager } from '../cluster/cluster-manager';
 import { TransactionTracker } from '../transaction/transaction-tracker';
 import { HealthMonitor } from '../health/health-monitor';
 import { getClusterRpcUrl } from '../../utils/cluster';
 import { AUTO_CONNECT_DELAY_MS, DEFAULT_MAX_TRACKED_TRANSACTIONS } from '../constants';
 import { createLogger } from '../utils/secure-logger';
+import { tryCatchSync } from './try-catch';
 
 const logger = createLogger('ConnectorClient');
 
@@ -105,7 +106,7 @@ export class ConnectorClient {
         if (typeof window === 'undefined') return;
         if (this.initialized) return;
 
-        try {
+        const { error } = tryCatchSync(() => {
             this.walletDetector.initialize();
 
             if (this.config.autoConnect) {
@@ -119,10 +120,10 @@ export class ConnectorClient {
             }
 
             this.initialized = true;
-        } catch (e) {
-            if (this.config.debug) {
-                logger.error('Connector initialization failed', { error: e });
-            }
+        });
+
+        if (error && this.config.debug) {
+            logger.error('Connector initialization failed', { error });
         }
     }
 
@@ -157,14 +158,15 @@ export class ConnectorClient {
     getRpcUrl(): string | null {
         const cluster = this.clusterManager.getCluster();
         if (!cluster) return null;
-        try {
-            return getClusterRpcUrl(cluster);
-        } catch (error) {
+
+        const { data, error } = tryCatchSync(() => getClusterRpcUrl(cluster));
+        if (error) {
             if (this.config.debug) {
                 logger.error('Failed to get RPC URL', { error });
             }
             return null;
         }
+        return data;
     }
 
     subscribe(listener: Listener): () => void {
@@ -186,15 +188,14 @@ export class ConnectorClient {
             const storage = this.config.storage?.[key];
 
             if (storage && 'reset' in storage && typeof storage.reset === 'function') {
-                try {
-                    storage.reset();
-                    if (this.config.debug) {
-                        logger.debug('Reset storage', { key });
-                    }
-                } catch (error) {
+                const resetFn = storage.reset as () => void;
+                const { error } = tryCatchSync(() => resetFn());
+                if (error) {
                     if (this.config.debug) {
                         logger.error('Failed to reset storage', { key, error });
                     }
+                } else if (this.config.debug) {
+                    logger.debug('Reset storage', { key });
                 }
             }
         }

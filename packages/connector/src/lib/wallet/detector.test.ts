@@ -1,18 +1,18 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { WalletDetector } from './wallet-detector';
+import { WalletDetector } from './detector';
 import { StateManager } from '../core/state-manager';
 import { EventEmitter } from '../core/event-emitter';
 import type { ConnectorState } from '../../types/connector';
 
 // Mock dependencies
-vi.mock('../adapters/wallet-standard-shim', () => ({
+vi.mock('./standard-shim', () => ({
     getWalletsRegistry: vi.fn(() => ({
         get: vi.fn(() => []),
         on: vi.fn(() => vi.fn()),
     })),
 }));
 
-vi.mock('./wallet-authenticity-verifier', () => ({
+vi.mock('./authenticity-verifier', () => ({
     WalletAuthenticityVerifier: {
         verify: vi.fn(() => ({ authentic: true, confidence: 0.95 })),
     },

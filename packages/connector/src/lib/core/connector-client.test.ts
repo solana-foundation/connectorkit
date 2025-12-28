@@ -8,9 +8,9 @@ import type { SolanaCluster } from '@wallet-ui/core';
 // Mock all dependencies
 vi.mock('./state-manager');
 vi.mock('./event-emitter');
-vi.mock('../connection/wallet-detector');
-vi.mock('../connection/connection-manager');
-vi.mock('../connection/auto-connector');
+vi.mock('../wallet/detector');
+vi.mock('../wallet/connection-manager');
+vi.mock('../wallet/auto-connector');
 vi.mock('../cluster/cluster-manager');
 vi.mock('../health/health-monitor');
 vi.mock('../transaction/transaction-tracker');
@@ -29,9 +29,9 @@ describe('ConnectorClient', () => {
         // Import mocks
         const { StateManager } = await import('./state-manager');
         const { EventEmitter } = await import('./event-emitter');
-        const { WalletDetector } = await import('../connection/wallet-detector');
-        const { ConnectionManager } = await import('../connection/connection-manager');
-        const { AutoConnector } = await import('../connection/auto-connector');
+        const { WalletDetector } = await import('../wallet/detector');
+        const { ConnectionManager } = await import('../wallet/connection-manager');
+        const { AutoConnector } = await import('../wallet/auto-connector');
         const { ClusterManager } = await import('../cluster/cluster-manager');
         const { HealthMonitor } = await import('../health/health-monitor');
         const { TransactionTracker } = await import('../transaction/transaction-tracker');

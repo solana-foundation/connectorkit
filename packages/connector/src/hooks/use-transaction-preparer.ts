@@ -19,7 +19,7 @@ import type {
  * Replaces the deprecated CompilableTransactionMessage type.
  */
 type CompilableTransactionMessage = TransactionMessage & TransactionMessageWithFeePayer;
-import { prepareTransaction } from '../lib/kit-utils';
+import { prepareTransaction } from '../lib/kit';
 import { useSolanaClient } from './use-kit-solana-client';
 import { NetworkError } from '../lib/errors';
 

@@ -8,6 +8,7 @@ import type { SolanaTransaction } from './types/transactions';
 import type { Connection, SendOptions } from '@solana/web3.js';
 import { isWeb3jsTransaction } from './utils/transaction-format';
 import { createLogger } from './lib/utils/secure-logger';
+import { tryCatch } from './lib/core/try-catch';
 
 const logger = createLogger('WalletAdapterCompat');
 
@@ -71,16 +72,15 @@ export function createWalletAdapterCompat(
                 throw error;
             }
 
-            try {
-                const tx = transformTransaction ? transformTransaction(transaction) : transaction;
+            const tx = transformTransaction ? transformTransaction(transaction) : transaction;
+            const { data: signed, error } = await tryCatch(signer.signTransaction(tx));
 
-                // Use the signer's sign method
-                const signed = await signer.signTransaction(tx);
-                return signed;
-            } catch (error) {
-                handleError(error as Error, 'signTransaction');
+            if (error) {
+                handleError(error, 'signTransaction');
                 throw error;
             }
+
+            return signed;
         },
 
         signAllTransactions: async (transactions: SolanaTransaction[]) => {
@@ -90,17 +90,17 @@ export function createWalletAdapterCompat(
                 throw error;
             }
 
-            try {
-                const txs = transformTransaction ? transactions.map(tx => transformTransaction(tx)) : transactions;
+            const txs = transformTransaction ? transactions.map(tx => transformTransaction(tx)) : transactions;
+            const { data: signedTxs, error } = await tryCatch(
+                Promise.all(txs.map(tx => signer.signTransaction(tx))),
+            );
 
-                // Sign each transaction
-                const signedTxs = await Promise.all(txs.map(tx => signer.signTransaction(tx)));
-
-                return signedTxs;
-            } catch (error) {
-                handleError(error as Error, 'signAllTransactions');
+            if (error) {
+                handleError(error, 'signAllTransactions');
                 throw error;
             }
+
+            return signedTxs;
         },
 
         sendTransaction: async (transaction: SolanaTransaction, connection: Connection, sendOptions?: SendOptions) => {
@@ -110,34 +110,43 @@ export function createWalletAdapterCompat(
                 throw error;
             }
 
-            try {
-                const tx = transformTransaction ? transformTransaction(transaction) : transaction;
+            const tx = transformTransaction ? transformTransaction(transaction) : transaction;
 
-                const capabilities = signer.getCapabilities();
-
-                if (!capabilities.canSign) {
-                    throw new Error('Wallet does not support transaction signing');
-                }
-
-                const signedTx = await signer.signTransaction(tx);
-
-                // Serialize the signed transaction
-                let rawTransaction: Uint8Array;
-                if (isWeb3jsTransaction(signedTx)) {
-                    rawTransaction = signedTx.serialize();
-                } else if (signedTx instanceof Uint8Array) {
-                    rawTransaction = signedTx;
-                } else {
-                    throw new Error('Unexpected signed transaction format');
-                }
-
-                const signature = await connection.sendRawTransaction(rawTransaction, sendOptions);
-
-                return signature;
-            } catch (error) {
-                handleError(error as Error, 'sendTransaction');
+            const capabilities = signer.getCapabilities();
+            if (!capabilities.canSign) {
+                const error = new Error('Wallet does not support transaction signing');
+                handleError(error, 'sendTransaction');
                 throw error;
             }
+
+            const { data: signedTx, error: signError } = await tryCatch(signer.signTransaction(tx));
+            if (signError) {
+                handleError(signError, 'sendTransaction');
+                throw signError;
+            }
+
+            // Serialize the signed transaction
+            let rawTransaction: Uint8Array;
+            if (isWeb3jsTransaction(signedTx)) {
+                rawTransaction = signedTx.serialize();
+            } else if (signedTx instanceof Uint8Array) {
+                rawTransaction = signedTx;
+            } else {
+                const error = new Error('Unexpected signed transaction format');
+                handleError(error, 'sendTransaction');
+                throw error;
+            }
+
+            const { data: signature, error: sendError } = await tryCatch(
+                connection.sendRawTransaction(rawTransaction, sendOptions),
+            );
+
+            if (sendError) {
+                handleError(sendError, 'sendTransaction');
+                throw sendError;
+            }
+
+            return signature;
         },
 
         connect: async () => {
@@ -145,10 +154,9 @@ export function createWalletAdapterCompat(
         },
 
         disconnect: async () => {
-            try {
-                await disconnect();
-            } catch (error) {
-                handleError(error as Error, 'disconnect');
+            const { error } = await tryCatch(disconnect());
+            if (error) {
+                handleError(error, 'disconnect');
                 throw error;
             }
         },
@@ -161,12 +169,13 @@ export function createWalletAdapterCompat(
                       throw error;
                   }
 
-                  try {
-                      return await signer.signMessage(message);
-                  } catch (error) {
-                      handleError(error as Error, 'signMessage');
+                  const { data, error } = await tryCatch(signer.signMessage(message));
+                  if (error) {
+                      handleError(error, 'signMessage');
                       throw error;
                   }
+
+                  return data;
               }
             : undefined,
     };

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { WalletAuthenticityVerifier } from './wallet-authenticity-verifier';
-import type { DirectWallet } from './wallet-detector';
+import { WalletAuthenticityVerifier } from './authenticity-verifier';
+import type { DirectWallet } from './detector';
 
 // Mock logger
 vi.mock('../utils/secure-logger', () => ({

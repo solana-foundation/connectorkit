@@ -17,7 +17,7 @@
  * ```
  */
 
-import { isDebugEnabled, debug as connectorDebug } from '../kit-utils';
+import { isDebugEnabled, debug as connectorDebug } from '../kit';
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 

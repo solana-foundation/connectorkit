@@ -6,7 +6,7 @@ import { useAccount } from '../use-account';
 import { useSolanaClient } from '../use-kit-solana-client';
 import { useSharedQuery } from './use-shared-query';
 import type { SharedQueryOptions } from './use-shared-query';
-import type { SolanaClient } from '../../lib/kit-utils';
+import type { SolanaClient } from '../../lib/kit';
 
 /**
  * Token Program IDs
@@ -152,6 +152,26 @@ function parseTokenAccount(
 }
 
 /**
+ * Generate the query key for wallet assets.
+ * Use this to invalidate the cache externally.
+ *
+ * @param rpcUrl - The RPC URL being used
+ * @param address - The wallet address
+ * @returns The stringified query key, or null if params are invalid
+ *
+ * @example
+ * ```tsx
+ * // Invalidate wallet assets after a transaction
+ * const key = getWalletAssetsQueryKey(rpcUrl, address);
+ * if (key) invalidateSharedQuery(key);
+ * ```
+ */
+export function getWalletAssetsQueryKey(rpcUrl: string | null, address: string | null): string | null {
+    if (!rpcUrl || !address) return null;
+    return JSON.stringify(['wallet-assets', rpcUrl, address]);
+}
+
+/**
  * Internal hook that fetches both SOL balance and all token accounts.
  * Queries both Token Program and Token-2022 in parallel.
  *
@@ -199,7 +219,7 @@ export function useWalletAssets<TSelected = WalletAssetsData>(
         if (!enabled || !connected || !address || !rpcClient) return null;
         const rpcUrl =
             rpcClient.urlOrMoniker instanceof URL ? rpcClient.urlOrMoniker.toString() : String(rpcClient.urlOrMoniker);
-        return JSON.stringify(['wallet-assets', rpcUrl, address]);
+        return getWalletAssetsQueryKey(rpcUrl, address);
     }, [enabled, connected, address, rpcClient]);
 
     // Query function that fetches SOL balance and all token accounts

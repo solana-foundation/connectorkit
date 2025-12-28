@@ -6,7 +6,7 @@
  * Helps protect users from phishing attacks and fake wallet injections
  */
 
-import type { DirectWallet } from './wallet-detector';
+import type { DirectWallet } from './detector';
 import { createLogger } from '../utils/secure-logger';
 
 const logger = createLogger('WalletAuthenticity');

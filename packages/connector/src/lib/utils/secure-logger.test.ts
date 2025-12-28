@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { SecureLogger, createLogger, logger } from './secure-logger';
 
-// Mock kit-utils
-vi.mock('../kit-utils', () => ({
+// Mock kit
+vi.mock('../kit', () => ({
     isDebugEnabled: vi.fn(() => false),
     debug: vi.fn(),
 }));

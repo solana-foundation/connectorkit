@@ -17,5 +17,8 @@ export * from './use-balance';
 export * from './use-transactions';
 export * from './use-tokens';
 
+// Query key generators for cache invalidation
+export * from './query-options';
+
 // Cache utilities
 export { clearSharedQueryCache, invalidateSharedQuery } from './_internal/use-shared-query';

@@ -1,7 +1,7 @@
-import { getWalletsRegistry } from '../adapters/wallet-standard-shim';
+import { getWalletsRegistry } from './standard-shim';
 import type { Wallet, WalletInfo } from '../../types/wallets';
 import { BaseCollaborator } from '../core/base-collaborator';
-import { WalletAuthenticityVerifier } from './wallet-authenticity-verifier';
+import { WalletAuthenticityVerifier } from './authenticity-verifier';
 import { createLogger } from '../utils/secure-logger';
 
 const logger = createLogger('WalletDetector');

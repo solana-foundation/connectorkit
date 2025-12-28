@@ -11,7 +11,7 @@ import type { MessageModifyingSigner, TransactionSendingSigner } from '@solana/s
 import { address } from '@solana/addresses';
 import type { Connection } from '@solana/web3.js';
 import type { Transaction } from '@solana/transactions';
-import { createMessageSignerFromWallet, createTransactionSendingSignerFromWallet } from './factories';
+import { createMessageSignerFromWallet, createTransactionSendingSignerFromWallet } from './signer-factories';
 import { Errors } from '../errors';
 
 /**

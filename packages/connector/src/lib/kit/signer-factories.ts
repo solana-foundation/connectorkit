@@ -16,7 +16,7 @@ import type {
 import type { SignatureBytes } from '@solana/keys';
 import type { Transaction } from '@solana/transactions';
 import { ValidationError, TransactionError, Errors } from '../errors';
-import { updateSignatureDictionary, freezeSigner, base58ToSignatureBytes } from './utils';
+import { updateSignatureDictionary, freezeSigner, base58ToSignatureBytes } from './signer-utils';
 
 /**
  * Create a MessageModifyingSigner from a wallet's sign message function

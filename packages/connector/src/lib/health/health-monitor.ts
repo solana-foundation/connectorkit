@@ -2,7 +2,7 @@ import type { ConnectorHealth } from '../../types/connector';
 import type { StorageAdapter } from '../../types/storage';
 import type { SolanaClusterId } from '@wallet-ui/core';
 import type { StateManager } from '../core/state-manager';
-import { getWalletsRegistry } from '../adapters/wallet-standard-shim';
+import { getWalletsRegistry } from '../wallet/standard-shim';
 
 /**
  * HealthMonitor - Provides connector diagnostics and health checks

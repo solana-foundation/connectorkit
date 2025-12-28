@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { address as toAddress } from '@solana/addresses';
 import { signature as toSignature } from '@solana/keys';
-import type { SolanaCluster } from '@wallet-ui/core';
+import type { SolanaCluster, SolanaClusterId } from '@wallet-ui/core';
 import { useAccount } from './use-account';
 import { useCluster } from './use-cluster';
 import { useSolanaClient } from './use-kit-solana-client';
@@ -11,9 +11,44 @@ import { useConnectorClient } from '../ui/connector-provider';
 import { useSharedQuery } from './_internal/use-shared-query';
 import { fetchSolanaTokenListMetadata } from './_internal/solana-token-list';
 import { getTransactionUrl, getClusterType, type ClusterType } from '../utils/cluster';
-import { LAMPORTS_PER_SOL } from '../lib/kit-utils';
-import type { SolanaClient } from '../lib/kit-utils';
+import { LAMPORTS_PER_SOL } from '../lib/kit';
+import type { SolanaClient } from '../lib/kit';
 import { transformImageUrl } from '../utils/image';
+
+/**
+ * Options for generating the transactions query key
+ */
+export interface TransactionsQueryKeyOptions {
+    rpcUrl: string;
+    address: string;
+    clusterId: SolanaClusterId;
+    limit?: number;
+    fetchDetails?: boolean;
+}
+
+/**
+ * Generate the query key for transactions data.
+ * Use this to invalidate the transactions cache externally.
+ *
+ * @param options - Query key options
+ * @returns The query key string, or null if required params are missing
+ *
+ * @example
+ * ```tsx
+ * // Invalidate transactions after sending a new transaction
+ * const key = getTransactionsQueryKey({
+ *   rpcUrl: 'https://api.mainnet-beta.solana.com',
+ *   address: 'ABC123...',
+ *   clusterId: 'solana:mainnet',
+ * });
+ * if (key) invalidateSharedQuery(key);
+ * ```
+ */
+export function getTransactionsQueryKey(options: TransactionsQueryKeyOptions): string | null {
+    const { rpcUrl, address, clusterId, limit = 20, fetchDetails = false } = options;
+    if (!rpcUrl || !address || !clusterId) return null;
+    return JSON.stringify(['wallet-transactions', rpcUrl, address, clusterId, limit, fetchDetails]);
+}
 
 export interface TransactionInfo {
     /** Transaction signature */
@@ -997,7 +1032,7 @@ export function useTransactions(options: UseTransactionsOptions = {}): UseTransa
         if (!enabled || !connected || !address || !rpcClient || !cluster) return null;
         const rpcUrl =
             rpcClient.urlOrMoniker instanceof URL ? rpcClient.urlOrMoniker.toString() : String(rpcClient.urlOrMoniker);
-        return JSON.stringify(['wallet-transactions', rpcUrl, address, cluster.id, limit, fetchDetails]);
+        return getTransactionsQueryKey({ rpcUrl, address, clusterId: cluster.id, limit, fetchDetails });
     }, [enabled, connected, address, rpcClient, cluster, limit, fetchDetails]);
 
     // Reset pagination immediately when the query key changes.

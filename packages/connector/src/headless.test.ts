@@ -30,16 +30,6 @@ describe('Headless Entry Point (headless.ts)', () => {
             expect(ConnectorKitHeadless.getDefaultMobileConfig).toBeDefined();
             expect(typeof ConnectorKitHeadless.getDefaultMobileConfig).toBe('function');
         });
-
-        it('should export createConfig', () => {
-            expect(ConnectorKitHeadless.createConfig).toBeDefined();
-            expect(typeof ConnectorKitHeadless.createConfig).toBe('function');
-        });
-
-        it('should export isUnifiedConfig', () => {
-            expect(ConnectorKitHeadless.isUnifiedConfig).toBeDefined();
-            expect(typeof ConnectorKitHeadless.isUnifiedConfig).toBe('function');
-        });
     });
 
     describe('transaction signing', () => {
