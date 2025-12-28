@@ -11,8 +11,45 @@ import { prepareTransactionForWallet, convertSignedTransaction } from '../../uti
 import { TransactionValidator } from './transaction-validator';
 import { createLogger } from '../utils/secure-logger';
 import { TransactionError, ValidationError, Errors } from '../errors';
+import { getBase58Decoder } from '@solana/codecs';
 
 const logger = createLogger('TransactionSigner');
+
+function signatureBytesToBase58(bytes: Uint8Array): string {
+    if (bytes.length !== 64) {
+        throw new Error(`Invalid signature length: expected 64 bytes, got ${bytes.length}`);
+    }
+    return getBase58Decoder().decode(bytes);
+}
+
+function extractSignatureString(result: unknown): string {
+    if (typeof result === 'string') {
+        return result;
+    }
+
+    if (result instanceof Uint8Array) {
+        return signatureBytesToBase58(result);
+    }
+
+    if (Array.isArray(result) && result.length > 0) {
+        // Wallet Standard typically returns an array of outputs, e.g. [{ signature: Uint8Array }]
+        return extractSignatureString(result[0]);
+    }
+
+    if (result && typeof result === 'object') {
+        const record = result as Record<string, unknown>;
+
+        if ('signature' in record) {
+            return extractSignatureString(record.signature);
+        }
+
+        if (Array.isArray(record.signatures) && record.signatures.length > 0) {
+            return extractSignatureString(record.signatures[0]);
+        }
+    }
+
+    throw new Error('Unexpected wallet response format for signAndSendTransaction');
+}
 
 export interface TransactionSigner {
     /** The wallet address that will sign transactions */
@@ -273,7 +310,7 @@ export function createTransactionSigner(config: TransactionSignerConfig): Transa
                     })) as { signature?: string } | string;
                 }
 
-                const signature = typeof result === 'object' && result.signature ? result.signature : String(result);
+                const signature = extractSignatureString(result);
 
                 if (eventEmitter) {
                     eventEmitter.emit({
