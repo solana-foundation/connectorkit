@@ -263,8 +263,11 @@ export function getDefaultConfig(options: DefaultConfigOptions): ExtendedConnect
         wallet: new EnhancedStorageAdapter(walletStorage),
     };
 
+    // Compute the actual cluster storage key (same logic as createEnhancedStorageCluster)
+    const actualClusterStorageKey = clusterStorageKey ?? 'connector-kit:v1:cluster';
+
     // Build WalletConnect config from simplified options
-    const walletConnectConfig = buildWalletConnectConfig(walletConnect, appName, appUrl);
+    const walletConnectConfig = buildWalletConnectConfig(walletConnect, appName, appUrl, actualClusterStorageKey);
 
     const config: ExtendedConnectorConfig = {
         autoConnect,
@@ -300,6 +303,7 @@ function buildWalletConnectConfig(
     walletConnect: boolean | SimplifiedWalletConnectConfig | undefined,
     appName: string,
     appUrl?: string,
+    clusterStorageKey?: string,
 ): WalletConnectConfig | undefined {
     // Disabled
     if (!walletConnect) return undefined;
@@ -341,8 +345,9 @@ function buildWalletConnectConfig(
         // Auto-sync with cluster storage
         getCurrentChain: () => {
             if (typeof window === 'undefined') return 'solana:mainnet';
+            const storageKey = clusterStorageKey || 'connector-kit:v1:cluster';
             try {
-                const stored = localStorage.getItem('connector-kit:v1:cluster');
+                const stored = localStorage.getItem(storageKey);
                 if (stored) {
                     const id = JSON.parse(stored) as string;
                     if (id === 'solana:mainnet' || id === 'solana:devnet' || id === 'solana:testnet') {

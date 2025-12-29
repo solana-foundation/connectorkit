@@ -62,19 +62,27 @@ export const walletConnectMetadataSchema = z.object({
 });
 
 /**
+ * WalletConnect detailed object configuration schema
+ */
+export const walletConnectObjectConfigSchema = z.object({
+    enabled: z.boolean().optional(),
+    projectId: z.string().min(1, 'WalletConnect projectId is required'),
+    metadata: walletConnectMetadataSchema,
+    defaultChain: z.enum(['solana:mainnet', 'solana:devnet', 'solana:testnet']).optional(),
+    onDisplayUri: z.custom<(uri: string) => void>(val => typeof val === 'function').optional(),
+    onSessionEstablished: z.custom<() => void>(val => typeof val === 'function').optional(),
+    onSessionDisconnected: z.custom<() => void>(val => typeof val === 'function').optional(),
+    relayUrl: urlSchema.optional(),
+});
+
+/**
  * WalletConnect configuration schema
+ * Accepts either:
+ * - `true` (boolean shorthand to enable with defaults)
+ * - Detailed object configuration with projectId and metadata
  */
 export const walletConnectConfigSchema = z
-    .object({
-        enabled: z.boolean().optional(),
-        projectId: z.string().min(1, 'WalletConnect projectId is required'),
-        metadata: walletConnectMetadataSchema,
-        defaultChain: z.enum(['solana:mainnet', 'solana:devnet', 'solana:testnet']).optional(),
-        onDisplayUri: z.custom<(uri: string) => void>(val => typeof val === 'function').optional(),
-        onSessionEstablished: z.custom<() => void>(val => typeof val === 'function').optional(),
-        onSessionDisconnected: z.custom<() => void>(val => typeof val === 'function').optional(),
-        relayUrl: urlSchema.optional(),
-    })
+    .union([z.literal(true), walletConnectObjectConfigSchema])
     .optional();
 
 // ============================================================================

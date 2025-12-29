@@ -294,11 +294,13 @@ export async function createWalletConnectTransport(
 
 
             try {
-                return await provider.request<T>({
-                    method: args.method,
-                    params: args.params,
-                    chainId: args.chainId,
-                });
+                return await provider.request<T>(
+                    {
+                        method: args.method,
+                        params: args.params as object | Record<string, unknown> | unknown[] | undefined,
+                    },
+                    args.chainId,
+                );
             } catch (error) {
                 throw error;
             }

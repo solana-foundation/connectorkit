@@ -203,7 +203,9 @@ export function createWalletConnectWallet(
         name: 'WalletConnect',
         icon: WALLETCONNECT_ICON,
         chains,
-        accounts,
+        get accounts() {
+            return accounts;
+        },
         features: {
             // Standard connect feature
             'standard:connect': {
