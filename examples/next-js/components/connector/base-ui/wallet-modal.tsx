@@ -4,12 +4,17 @@ import { useConnector } from '@solana/connector';
 import { Dialog, DialogContent, DialogTitle, DialogClose } from '@/components/ui-base/dialog';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui-base/collapsible';
 import { Button } from '@/components/ui-base/button';
-import { Wallet, ExternalLink, ChevronDown, X } from 'lucide-react';
+import { Wallet, ExternalLink, ChevronDown, X, Copy, Check, ChevronLeft } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { QRCodeSVG } from 'qrcode.react';
 
 interface WalletModalProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
+    /** WalletConnect URI for QR code display */
+    walletConnectUri?: string | null;
+    /** Callback to clear the WalletConnect URI */
+    onClearWalletConnectUri?: () => void;
 }
 
 // Custom Avatar component
@@ -86,7 +91,7 @@ function ErrorAlert({ message, onDismiss }: { message: string; onDismiss: () => 
     );
 }
 
-export function WalletModal({ open, onOpenChange }: WalletModalProps) {
+export function WalletModal({ open, onOpenChange, walletConnectUri, onClearWalletConnectUri }: WalletModalProps) {
     const { wallets, select, connecting } = useConnector();
     const [connectingWallet, setConnectingWallet] = useState<string | null>(null);
     const [isClient, setIsClient] = useState(false);
@@ -94,6 +99,7 @@ export function WalletModal({ open, onOpenChange }: WalletModalProps) {
     const [isOtherWalletsOpen, setIsOtherWalletsOpen] = useState(false);
     const [errorWallet, setErrorWallet] = useState<string | null>(null);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
+    const [copied, setCopied] = useState(false);
 
     useEffect(() => {
         setIsClient(true);
@@ -105,6 +111,8 @@ export function WalletModal({ open, onOpenChange }: WalletModalProps) {
             setRecentlyConnected(recent);
         }
     }, []);
+
+    // Note: WalletConnect URI is cleared by the parent component when modal closes
 
     // Clear error state when modal closes or user tries another wallet
     const clearError = () => {
@@ -119,7 +127,10 @@ export function WalletModal({ open, onOpenChange }: WalletModalProps) {
             await select(walletName);
             localStorage.setItem('recentlyConnectedWallet', walletName);
             setRecentlyConnected(walletName);
-            onOpenChange(false);
+            // Don't close modal for WalletConnect - wait for connection
+            if (walletName !== 'WalletConnect') {
+                onOpenChange(false);
+            }
         } catch (error) {
             // Extract user-friendly error message
             const message = error instanceof Error ? error.message : 'An unexpected error occurred';
@@ -138,6 +149,22 @@ export function WalletModal({ open, onOpenChange }: WalletModalProps) {
         } finally {
             setConnectingWallet(null);
         }
+    };
+
+    const handleCopyUri = async () => {
+        if (!walletConnectUri) return;
+        try {
+            await navigator.clipboard.writeText(walletConnectUri);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        } catch (err) {
+            console.error('Failed to copy URI:', err);
+        }
+    };
+
+    const handleBackFromWalletConnect = () => {
+        onClearWalletConnectUri?.();
+        setConnectingWallet(null);
     };
 
     const installedWallets = wallets.filter(w => w.installed);
@@ -185,12 +212,65 @@ export function WalletModal({ open, onOpenChange }: WalletModalProps) {
             <DialogContent showCloseButton={false} className="max-w-md rounded-[24px] p-6">
                 {/* Header */}
                 <div className="flex items-center justify-between mb-4">
-                    <DialogTitle className="text-lg font-semibold">Connect your wallet</DialogTitle>
+                    {walletConnectUri ? (
+                        <button
+                            onClick={handleBackFromWalletConnect}
+                            className="rounded-[16px] h-8 w-8 p-2 border border-input bg-background shadow-xs hover:bg-accent hover:text-accent-foreground inline-flex items-center justify-center cursor-pointer"
+                        >
+                            <ChevronLeft className="h-4 w-4" />
+                        </button>
+                    ) : null}
+                    <DialogTitle className="text-lg font-semibold">
+                        {walletConnectUri ? 'WalletConnect' : 'Connect your wallet'}
+                    </DialogTitle>
                     <DialogClose className="rounded-[16px] h-8 w-8 p-2 border border-input bg-background shadow-xs hover:bg-accent hover:text-accent-foreground inline-flex items-center justify-center cursor-pointer">
                         <X className="h-3 w-3" />
                     </DialogClose>
                 </div>
 
+                {/* WalletConnect QR Code Display */}
+                {walletConnectUri ? (
+                    <div className="space-y-4 py-2">
+                        <p className="text-center text-sm text-muted-foreground">
+                            Scan with your mobile wallet
+                        </p>
+
+                        {/* QR Code */}
+                        <div className="flex justify-center">
+                            <div className="p-4 bg-white rounded-2xl shadow-sm">
+                                <QRCodeSVG
+                                    value={walletConnectUri}
+                                    size={200}
+                                    level="M"
+                                    includeMargin={false}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Copy URI button */}
+                        <Button 
+                            variant="outline" 
+                            onClick={handleCopyUri} 
+                            className="w-full rounded-[16px]"
+                        >
+                            {copied ? (
+                                <>
+                                    <Check className="w-4 h-4 mr-2" />
+                                    Copied!
+                                </>
+                            ) : (
+                                <>
+                                    <Copy className="w-4 h-4 mr-2" />
+                                    Copy link instead
+                                </>
+                            )}
+                        </Button>
+
+                        <p className="text-xs text-center text-muted-foreground">
+                            Works with Phantom, Trust Wallet, Exodus, and other WalletConnect-compatible wallets
+                        </p>
+                    </div>
+                ) : (
                 <div className="space-y-4">
                     {/* Error Alert */}
                     {errorMessage && <ErrorAlert message={errorMessage} onDismiss={clearError} />}
@@ -404,6 +484,7 @@ export function WalletModal({ open, onOpenChange }: WalletModalProps) {
                         </>
                     )}
                 </div>
+                )}
             </DialogContent>
         </Dialog>
     );

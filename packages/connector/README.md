@@ -606,6 +606,102 @@ const mobile = getDefaultMobileConfig({
 </AppProvider>
 ```
 
+### WalletConnect Integration
+
+Connect mobile wallets via QR code or deep link using WalletConnect. This enables users to connect wallets like Trust Wallet, Exodus, and other WalletConnect-compatible Solana wallets.
+
+**1. Install WalletConnect dependency:**
+
+```bash
+npm install @walletconnect/universal-provider
+```
+
+**2. Get a WalletConnect Cloud Project ID:**
+
+Visit [cloud.walletconnect.com](https://cloud.walletconnect.com/) and create a project to get your `projectId`.
+
+**3. Configure WalletConnect in your app:**
+
+```typescript
+import { getDefaultConfig } from '@solana/connector/headless';
+import { useState } from 'react';
+
+export function Providers({ children }: { children: React.ReactNode }) {
+    const [walletConnectUri, setWalletConnectUri] = useState<string | null>(null);
+
+    const connectorConfig = useMemo(() => {
+        return getDefaultConfig({
+            appName: 'My App',
+            appUrl: 'https://myapp.com',
+            walletConnect: {
+                enabled: true,
+                projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID!,
+                metadata: {
+                    name: 'My App',
+                    description: 'My Solana Application',
+                    url: 'https://myapp.com',
+                    icons: ['https://myapp.com/icon.png'],
+                },
+                // Handle the WalletConnect URI for QR code display
+                onDisplayUri: (uri) => {
+                    setWalletConnectUri(uri);
+                },
+                onSessionEstablished: () => {
+                    setWalletConnectUri(null);
+                },
+            },
+        });
+    }, []);
+
+    return (
+        <AppProvider connectorConfig={connectorConfig}>
+            {children}
+            {/* Render QR code modal when URI is available */}
+            {walletConnectUri && (
+                <WalletConnectQRModal
+                    uri={walletConnectUri}
+                    onClose={() => setWalletConnectUri(null)}
+                />
+            )}
+        </AppProvider>
+    );
+}
+```
+
+**4. Create a QR code modal:**
+
+```typescript
+import QRCode from 'qrcode.react'; // npm install qrcode.react
+
+function WalletConnectQRModal({ uri, onClose }: { uri: string; onClose: () => void }) {
+    return (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl p-6 max-w-sm">
+                <h2 className="text-lg font-semibold mb-4">Scan with your wallet</h2>
+                <QRCode value={uri} size={256} />
+                <p className="text-sm text-gray-500 mt-4 text-center">
+                    Open your WalletConnect-compatible wallet and scan this QR code
+                </p>
+                <button onClick={onClose} className="mt-4 w-full py-2 bg-gray-100 rounded">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    );
+}
+```
+
+Once enabled, "WalletConnect" appears as a wallet option in your wallet list. When selected, the `onDisplayUri` callback fires with a URI that should be displayed as a QR code for mobile wallet scanning.
+
+**Supported WalletConnect Solana methods:**
+- `solana_getAccounts` / `solana_requestAccounts` - Get connected accounts
+- `solana_signMessage` - Sign arbitrary messages
+- `solana_signTransaction` - Sign transactions
+- `solana_signAllTransactions` - Sign multiple transactions
+- `solana_signAndSendTransaction` - Sign and broadcast transactions
+
+See the [WalletConnect Solana documentation](https://docs.walletconnect.network/wallet-sdk/chain-support/solana) for more details.
+
 ---
 
 ## Security Considerations
@@ -1208,6 +1304,7 @@ Compatible with all [Wallet Standard](https://github.com/wallet-standard/wallet-
 - **Glow** - Browser extension
 - **Brave Wallet** - Built-in browser wallet
 - **Solana Mobile** - All mobile wallet adapter compatible wallets
+- **WalletConnect** - Connect any WalletConnect-compatible mobile wallet via QR code
 - **Any Wallet Standard wallet** - Full compatibility
 
 ---

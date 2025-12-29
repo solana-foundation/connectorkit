@@ -8,6 +8,7 @@ import type { WalletInfo } from './wallets';
 import type { AccountInfo } from './accounts';
 import type { Wallet } from './wallets';
 import type { Address } from '@solana/addresses';
+import type { WalletConnectConfig } from './walletconnect';
 
 /**
  * CoinGecko API configuration for price fetching.
@@ -115,6 +116,13 @@ export interface ConnectorConfig {
      * Configure API key for higher rate limits and retry behavior for 429 responses.
      */
     coingecko?: CoinGeckoConfig;
+
+    /**
+     * WalletConnect configuration for connecting via QR code / deep link.
+     * When enabled, a "WalletConnect" wallet is registered in the Wallet Standard registry.
+     * @see https://docs.walletconnect.network/wallet-sdk/chain-support/solana
+     */
+    walletConnect?: WalletConnectConfig;
 }
 
 /**

@@ -218,14 +218,33 @@ export function createTransactionSigner(config: TransactionSignerConfig): Transa
                     const serializedTxs = prepared.map(p => p.serialized);
                     const wasWeb3js = prepared[0].wasWeb3js;
 
-                    const result = (await signFeature.signAllTransactions({
+                    type SignAllResult = 
+                        | { signedTransaction: Uint8Array }[]  // Wallet Standard format
+                        | { signedTransactions: Uint8Array[] }; // Legacy format
+                    
+                    const result = await signFeature.signAllTransactions({
                         account,
                         transactions: serializedTxs,
                         ...(cluster ? { chain: cluster.id } : {}),
-                    })) as { signedTransactions: Uint8Array[] };
+                    }) as SignAllResult;
+
+                    // Handle both Wallet Standard formats:
+                    // 1. Array of { signedTransaction: Uint8Array } (standard format)
+                    // 2. Legacy { signedTransactions: Uint8Array[] } format
+                    let signedBytesArray: Uint8Array[];
+                    
+                    if (Array.isArray(result)) {
+                        // Standard format: [{ signedTransaction: Uint8Array }, ...]
+                        signedBytesArray = result.map(item => item.signedTransaction);
+                    } else if ('signedTransactions' in result) {
+                        // Legacy format: { signedTransactions: Uint8Array[] }
+                        signedBytesArray = result.signedTransactions;
+                    } else {
+                        throw new Error('Unexpected signAllTransactions response format');
+                    }
 
                     return await Promise.all(
-                        result.signedTransactions.map((signedBytes: Uint8Array) =>
+                        signedBytesArray.map((signedBytes: Uint8Array) =>
                             convertSignedTransaction(signedBytes, wasWeb3js),
                         ),
                     );

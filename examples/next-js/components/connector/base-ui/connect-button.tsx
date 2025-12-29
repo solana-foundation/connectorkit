@@ -7,6 +7,7 @@ import { WalletDropdownContent } from './wallet-dropdown-content';
 import { Button } from '@/components/ui-base/button';
 import { Menu, MenuTrigger, MenuPortal, MenuPositioner, MenuPopup } from '@/components/ui-base/menu';
 import { Wallet, ChevronDown } from 'lucide-react';
+import { useWalletConnectUri } from '@/lib/walletconnect-context';
 
 interface ConnectButtonProps {
     className?: string;
@@ -54,15 +55,7 @@ function Spinner({ className }: { className?: string }) {
 export function ConnectButton({ className }: ConnectButtonProps) {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const { connected, connecting, selectedWallet, selectedAccount, wallets } = useConnector();
-
-    if (connecting) {
-        return (
-            <Button size="sm" variant="outline" disabled className={className}>
-                <Spinner className="h-4 w-4" />
-                <span className="text-xs">Connecting...</span>
-            </Button>
-        );
-    }
+    const { uri: walletConnectUri, clearUri: clearWalletConnectUri } = useWalletConnectUri();
 
     if (connected && selectedAccount && selectedWallet) {
         const shortAddress = `${selectedAccount.slice(0, 4)}...${selectedAccount.slice(-4)}`;
@@ -96,12 +89,39 @@ export function ConnectButton({ className }: ConnectButtonProps) {
         );
     }
 
+    // Show loading button when connecting (but modal stays rendered)
+    const buttonContent = connecting ? (
+        <>
+            <Spinner className="h-4 w-4" />
+            <span className="text-xs">Connecting...</span>
+        </>
+    ) : (
+        <span className="!text-[14px]">Connect Wallet</span>
+    );
+
     return (
         <>
-            <Button size="sm" variant="outline" onClick={() => setIsModalOpen(true)} className={className}>
-                <span className="!text-[14px]">Connect Wallet</span>
+            <Button 
+                size="sm" 
+                variant="outline" 
+                onClick={() => setIsModalOpen(true)} 
+                disabled={connecting}
+                className={className}
+            >
+                {buttonContent}
             </Button>
-            <WalletModal open={isModalOpen} onOpenChange={setIsModalOpen} />
+            <WalletModal
+                open={isModalOpen}
+                onOpenChange={(open) => {
+                    setIsModalOpen(open);
+                    // Clear WalletConnect URI when modal closes
+                    if (!open) {
+                        clearWalletConnectUri();
+                    }
+                }}
+                walletConnectUri={walletConnectUri}
+                onClearWalletConnectUri={clearWalletConnectUri}
+            />
         </>
     );
 }

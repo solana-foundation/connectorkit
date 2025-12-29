@@ -169,3 +169,21 @@ export type {
     GetExplorerLinkArgs,
     PrepareTransactionConfig,
 } from './lib/kit';
+
+// ============================================================================
+// WalletConnect Integration
+// ============================================================================
+export {
+    registerWalletConnectWallet,
+    isWalletConnectAvailable,
+    createWalletConnectWallet,
+    createWalletConnectTransport,
+    createMockWalletConnectTransport,
+    type WalletConnectRegistration,
+} from './lib/wallet/walletconnect';
+
+export type {
+    WalletConnectConfig,
+    WalletConnectMetadata,
+    WalletConnectTransport,
+} from './types/walletconnect';

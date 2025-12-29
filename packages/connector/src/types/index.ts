@@ -45,3 +45,19 @@ export type {
     EnhancedStorageClusterOptions,
     EnhancedStorageWalletOptions,
 } from './storage';
+
+// WalletConnect types
+export type {
+    WalletConnectConfig,
+    WalletConnectMetadata,
+    WalletConnectTransport,
+    WalletConnectSolanaAccount,
+    WalletConnectSignMessageParams,
+    WalletConnectSignMessageResult,
+    WalletConnectSignTransactionParams,
+    WalletConnectSignTransactionResult,
+    WalletConnectSignAllTransactionsParams,
+    WalletConnectSignAllTransactionsResult,
+    WalletConnectSignAndSendTransactionParams,
+    WalletConnectSignAndSendTransactionResult,
+} from './walletconnect';

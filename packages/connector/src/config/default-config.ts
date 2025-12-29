@@ -1,4 +1,5 @@
 import type { ConnectorConfig, CoinGeckoConfig } from '../types/connector';
+import type { WalletConnectConfig } from '../types/walletconnect';
 import type { SolanaCluster, SolanaClusterId } from '@wallet-ui/core';
 import { createSolanaMainnet, createSolanaDevnet, createSolanaTestnet, createSolanaLocalnet } from '@wallet-ui/core';
 import {
@@ -64,6 +65,12 @@ export interface DefaultConfigOptions {
      * @see https://docs.coingecko.com/reference/introduction for rate limit details
      */
     coingecko?: CoinGeckoConfig;
+    /**
+     * WalletConnect configuration for connecting via QR code / deep link.
+     * When enabled, a "WalletConnect" wallet appears in the wallet list.
+     * @see https://docs.walletconnect.network/wallet-sdk/chain-support/solana
+     */
+    walletConnect?: WalletConnectConfig;
 }
 
 /** Extended ConnectorConfig with app metadata */
@@ -126,6 +133,7 @@ export function getDefaultConfig(options: DefaultConfigOptions): ExtendedConnect
         imageProxy,
         programLabels,
         coingecko,
+        walletConnect,
     } = options;
 
     const defaultClusters: SolanaCluster[] = clusters ?? [
@@ -225,6 +233,7 @@ export function getDefaultConfig(options: DefaultConfigOptions): ExtendedConnect
         imageProxy,
         programLabels,
         coingecko,
+        walletConnect,
     };
 
     return config;

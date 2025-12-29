@@ -8,24 +8,30 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Wallet, ExternalLink } from 'lucide-react';
+import { Wallet, ExternalLink, Copy, Check, ChevronLeft } from 'lucide-react';
 import {
     //IconQuestionmark,
     IconXmark,
 } from 'symbols-react';
 import { useState, useEffect } from 'react';
 import { Spinner } from '@/components/ui/spinner';
+import { QRCodeSVG } from 'qrcode.react';
 
 interface WalletModalProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
+    /** WalletConnect URI for QR code display */
+    walletConnectUri?: string | null;
+    /** Callback to clear the WalletConnect URI */
+    onClearWalletConnectUri?: () => void;
 }
 
-export function WalletModal({ open, onOpenChange }: WalletModalProps) {
+export function WalletModal({ open, onOpenChange, walletConnectUri, onClearWalletConnectUri }: WalletModalProps) {
     const { wallets, select, connecting, selectedWallet } = useConnector();
     const [connectingWallet, setConnectingWallet] = useState<string | null>(null);
     const [isClient, setIsClient] = useState(false);
     const [recentlyConnected, setRecentlyConnected] = useState<string | null>(null);
+    const [copied, setCopied] = useState(false);
 
     useEffect(() => {
         setIsClient(true);
@@ -45,18 +51,39 @@ export function WalletModal({ open, onOpenChange }: WalletModalProps) {
         }
     }, [selectedWallet]);
 
+    // Note: WalletConnect URI is cleared by the parent component when modal closes
+
     const handleSelectWallet = async (walletName: string) => {
         setConnectingWallet(walletName);
         try {
             await select(walletName);
             localStorage.setItem('recentlyConnectedWallet', walletName);
             setRecentlyConnected(walletName);
-            onOpenChange(false);
+            // Don't close modal for WalletConnect - wait for connection
+            if (walletName !== 'WalletConnect') {
+                onOpenChange(false);
+            }
         } catch (error) {
             console.error('Failed to connect wallet:', error);
         } finally {
             setConnectingWallet(null);
         }
+    };
+
+    const handleCopyUri = async () => {
+        if (!walletConnectUri) return;
+        try {
+            await navigator.clipboard.writeText(walletConnectUri);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        } catch (err) {
+            console.error('Failed to copy URI:', err);
+        }
+    };
+
+    const handleBackFromWalletConnect = () => {
+        onClearWalletConnectUri?.();
+        setConnectingWallet(null);
     };
 
     const installedWallets = wallets.filter(w => w.installed);
@@ -86,15 +113,17 @@ export function WalletModal({ open, onOpenChange }: WalletModalProps) {
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-md [&>button]:hidden rounded-[24px]">
                 <DialogHeader className="flex flex-row items-center justify-between">
-                    {/* <Button
-                        type="button"
-                        variant="outline"
-                        className="rounded-[16px] size-8 shrink-0 p-2 cursor-pointer"
-                        onClick={() => window.open('https://docs.solana.com/wallet-guide', '_blank')}
-                    >
-                        <IconQuestionmark className="size-3" />
-                    </Button> */}
-                    <DialogTitle>Connect your wallet</DialogTitle>
+                    {walletConnectUri ? (
+                        <Button
+                            type="button"
+                            variant="outline"
+                            className="rounded-[16px] size-8 shrink-0 p-2 cursor-pointer"
+                            onClick={handleBackFromWalletConnect}
+                        >
+                            <ChevronLeft className="size-4" />
+                        </Button>
+                    ) : null}
+                    <DialogTitle>{walletConnectUri ? 'WalletConnect' : 'Connect your wallet'}</DialogTitle>
                     <DialogPrimitive.Close asChild>
                         <Button
                             variant="outline"
@@ -106,6 +135,49 @@ export function WalletModal({ open, onOpenChange }: WalletModalProps) {
                     </DialogPrimitive.Close>
                 </DialogHeader>
 
+                {/* WalletConnect QR Code Display */}
+                {walletConnectUri ? (
+                    <div className="space-y-4 py-2">
+                        <p className="text-center text-sm text-muted-foreground">
+                            Scan with your mobile wallet
+                        </p>
+
+                        {/* QR Code */}
+                        <div className="flex justify-center">
+                            <div className="p-4 bg-white rounded-2xl shadow-sm">
+                                <QRCodeSVG
+                                    value={walletConnectUri}
+                                    size={200}
+                                    level="M"
+                                    includeMargin={false}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Copy URI button */}
+                        <Button 
+                            variant="outline" 
+                            onClick={handleCopyUri} 
+                            className="w-full rounded-[16px]"
+                        >
+                            {copied ? (
+                                <>
+                                    <Check className="w-4 h-4 mr-2" />
+                                    Copied!
+                                </>
+                            ) : (
+                                <>
+                                    <Copy className="w-4 h-4 mr-2" />
+                                    Copy link instead
+                                </>
+                            )}
+                        </Button>
+
+                        <p className="text-xs text-center text-muted-foreground">
+                            Works with Phantom, Trust Wallet, Exodus, and other WalletConnect-compatible wallets
+                        </p>
+                    </div>
+                ) : (
                 <div className="space-y-4">
                     {!isClient ? (
                         <div className="text-center py-8">
@@ -320,6 +392,7 @@ export function WalletModal({ open, onOpenChange }: WalletModalProps) {
                         </>
                     )}
                 </div>
+                )}
             </DialogContent>
         </Dialog>
     );

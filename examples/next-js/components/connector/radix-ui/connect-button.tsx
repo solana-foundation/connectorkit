@@ -11,6 +11,7 @@ import { WalletDropdownContent } from './wallet-dropdown-content';
 import { Wallet, ChevronDown } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
+import { useWalletConnectUri } from '@/lib/walletconnect-context';
 
 interface ConnectButtonProps {
     className?: string;
@@ -20,15 +21,7 @@ export function ConnectButton({ className }: ConnectButtonProps) {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const { connected, connecting, selectedWallet, selectedAccount, wallets } = useConnector();
-
-    if (connecting) {
-        return (
-            <Button size="sm" variant="outline" disabled className={className}>
-                <Spinner className="h-4 w-4" />
-                <span className="text-xs">Connecting...</span>
-            </Button>
-        );
-    }
+    const { uri: walletConnectUri, clearUri: clearWalletConnectUri } = useWalletConnectUri();
 
     if (connected && selectedAccount && selectedWallet) {
         const shortAddress = `${selectedAccount.slice(0, 4)}...${selectedAccount.slice(-4)}`;
@@ -67,12 +60,39 @@ export function ConnectButton({ className }: ConnectButtonProps) {
         );
     }
 
+    // Show loading button when connecting (but modal stays rendered)
+    const buttonContent = connecting ? (
+        <>
+            <Spinner className="h-4 w-4" />
+            <span className="text-xs">Connecting...</span>
+        </>
+    ) : (
+        'Connect Wallet'
+    );
+
     return (
         <>
-            <Button size="sm" variant="outline" onClick={() => setIsModalOpen(true)} className={className}>
-                Connect Wallet
+            <Button 
+                size="sm" 
+                variant="outline" 
+                onClick={() => setIsModalOpen(true)} 
+                disabled={connecting}
+                className={className}
+            >
+                {buttonContent}
             </Button>
-            <WalletModal open={isModalOpen} onOpenChange={setIsModalOpen} />
+            <WalletModal
+                open={isModalOpen}
+                onOpenChange={(open) => {
+                    setIsModalOpen(open);
+                    // Clear WalletConnect URI when modal closes
+                    if (!open) {
+                        clearWalletConnectUri();
+                    }
+                }}
+                walletConnectUri={walletConnectUri}
+                onClearWalletConnectUri={clearWalletConnectUri}
+            />
         </>
     );
 }
