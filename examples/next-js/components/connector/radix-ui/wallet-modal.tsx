@@ -27,7 +27,7 @@ interface WalletModalProps {
 }
 
 export function WalletModal({ open, onOpenChange, walletConnectUri, onClearWalletConnectUri }: WalletModalProps) {
-    const { wallets, select, connecting, selectedWallet } = useConnector();
+    const { wallets, select, connecting, selectedWallet, disconnect } = useConnector();
     const [connectingWallet, setConnectingWallet] = useState<string | null>(null);
     const [isClient, setIsClient] = useState(false);
     const [recentlyConnected, setRecentlyConnected] = useState<string | null>(null);
@@ -51,11 +51,30 @@ export function WalletModal({ open, onOpenChange, walletConnectUri, onClearWalle
         }
     }, [selectedWallet]);
 
-    // Note: WalletConnect URI is cleared by the parent component when modal closes
+    const isWalletConnectFlow = connectingWallet === 'WalletConnect' || !!walletConnectUri;
+
+    function cancelConnection() {
+        onClearWalletConnectUri?.();
+        setConnectingWallet(null);
+        // Important: reset connector state even if connect() is still in-flight
+        // (disconnect() also cancels pending connection attempts in the connector)
+        disconnect().catch(() => {});
+    }
+
+    function handleOpenChange(nextOpen: boolean) {
+        if (!nextOpen && (connecting || connectingWallet || walletConnectUri)) {
+            cancelConnection();
+        }
+        onOpenChange(nextOpen);
+    }
 
     const handleSelectWallet = async (walletName: string) => {
         setConnectingWallet(walletName);
         try {
+            if (walletName === 'WalletConnect') {
+                // Ensure stale URIs don't flash
+                onClearWalletConnectUri?.();
+            }
             await select(walletName);
             localStorage.setItem('recentlyConnectedWallet', walletName);
             setRecentlyConnected(walletName);
@@ -64,6 +83,10 @@ export function WalletModal({ open, onOpenChange, walletConnectUri, onClearWalle
                 onOpenChange(false);
             }
         } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            if (message.includes('Connection cancelled')) {
+                return;
+            }
             console.error('Failed to connect wallet:', error);
         } finally {
             setConnectingWallet(null);
@@ -82,8 +105,7 @@ export function WalletModal({ open, onOpenChange, walletConnectUri, onClearWalle
     };
 
     const handleBackFromWalletConnect = () => {
-        onClearWalletConnectUri?.();
-        setConnectingWallet(null);
+        cancelConnection();
     };
 
     const installedWallets = wallets.filter(w => w.installed);
@@ -110,10 +132,10 @@ export function WalletModal({ open, onOpenChange, walletConnectUri, onClearWalle
     };
 
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
+        <Dialog open={open} onOpenChange={handleOpenChange}>
             <DialogContent className="sm:max-w-md [&>button]:hidden rounded-[24px]">
                 <DialogHeader className="flex flex-row items-center justify-between">
-                    {walletConnectUri ? (
+                    {isWalletConnectFlow ? (
                         <Button
                             type="button"
                             variant="outline"
@@ -123,12 +145,11 @@ export function WalletModal({ open, onOpenChange, walletConnectUri, onClearWalle
                             <ChevronLeft className="size-4" />
                         </Button>
                     ) : null}
-                    <DialogTitle>{walletConnectUri ? 'WalletConnect' : 'Connect your wallet'}</DialogTitle>
+                    <DialogTitle>{isWalletConnectFlow ? 'WalletConnect' : 'Connect your wallet'}</DialogTitle>
                     <DialogPrimitive.Close asChild>
                         <Button
                             variant="outline"
                             className="rounded-[16px] size-8 p-2 shrink-0 cursor-pointer"
-                            onClick={() => onOpenChange(false)}
                         >
                             <IconXmark className="size-3" />
                         </Button>
@@ -136,7 +157,7 @@ export function WalletModal({ open, onOpenChange, walletConnectUri, onClearWalle
                 </DialogHeader>
 
                 {/* WalletConnect QR Code Display */}
-                {walletConnectUri ? (
+                {isWalletConnectFlow ? (
                     <div className="space-y-4 py-2">
                         <p className="text-center text-sm text-muted-foreground">
                             Scan with your mobile wallet
@@ -145,19 +166,22 @@ export function WalletModal({ open, onOpenChange, walletConnectUri, onClearWalle
                         {/* QR Code */}
                         <div className="flex justify-center">
                             <div className="p-4 bg-white rounded-2xl shadow-sm">
-                                <QRCodeSVG
-                                    value={walletConnectUri}
-                                    size={200}
-                                    level="M"
-                                    includeMargin={false}
-                                />
+                                {walletConnectUri ? (
+                                    <QRCodeSVG value={walletConnectUri} size={200} level="M" includeMargin={false} />
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center w-[200px] h-[200px]">
+                                        <Spinner className="h-6 w-6 animate-spin" />
+                                        <p className="mt-3 text-xs text-muted-foreground">Generating QR code…</p>
+                                    </div>
+                                )}
                             </div>
                         </div>
 
                         {/* Copy URI button */}
-                        <Button 
-                            variant="outline" 
-                            onClick={handleCopyUri} 
+                        <Button
+                            variant="outline"
+                            onClick={handleCopyUri}
+                            disabled={!walletConnectUri}
                             className="w-full rounded-[16px]"
                         >
                             {copied ? (
@@ -198,7 +222,7 @@ export function WalletModal({ open, onOpenChange, walletConnectUri, onClearWalle
                                                     variant="outline"
                                                     className="h-auto justify-between p-4 rounded-[16px]"
                                                     onClick={() => handleSelectWallet(walletInfo.wallet.name)}
-                                                    disabled={connecting || isConnecting}
+                                                    disabled={isConnecting}
                                                 >
                                                     <div className="flex items-center gap-3 flex-1">
                                                         <div className="flex-1 text-left">
@@ -265,7 +289,7 @@ export function WalletModal({ open, onOpenChange, walletConnectUri, onClearWalle
                                                                 onClick={() =>
                                                                     handleSelectWallet(walletInfo.wallet.name)
                                                                 }
-                                                                disabled={connecting || isConnecting}
+                                                                disabled={isConnecting}
                                                             >
                                                                 <div className="flex items-center gap-3 flex-1">
                                                                     <div className="flex-1 text-left">

@@ -57,6 +57,10 @@ export function ConnectButton({ className }: ConnectButtonProps) {
     const { connected, connecting, selectedWallet, selectedAccount, wallets } = useConnector();
     const { uri: walletConnectUri, clearUri: clearWalletConnectUri } = useWalletConnectUri();
 
+    // Note: We intentionally don't have a useEffect here to clear the URI when modal closes.
+    // The onOpenChange callback handles this, and adding an effect causes timing issues
+    // where it runs with stale isModalOpen values and clears the URI prematurely.
+
     if (connected && selectedAccount && selectedWallet) {
         const shortAddress = `${selectedAccount.slice(0, 4)}...${selectedAccount.slice(-4)}`;
         const walletWithIcon = wallets.find(w => w.wallet.name === selectedWallet.name);
@@ -101,13 +105,7 @@ export function ConnectButton({ className }: ConnectButtonProps) {
 
     return (
         <>
-            <Button 
-                size="sm" 
-                variant="outline" 
-                onClick={() => setIsModalOpen(true)} 
-                disabled={connecting}
-                className={className}
-            >
+            <Button size="sm" variant="outline" onClick={() => setIsModalOpen(true)} className={className}>
                 {buttonContent}
             </Button>
             <WalletModal

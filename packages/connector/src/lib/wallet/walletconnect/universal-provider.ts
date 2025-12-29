@@ -42,6 +42,8 @@ interface ProviderState {
     provider: import('@walletconnect/universal-provider').default | null;
     initialized: boolean;
     connecting: boolean;
+    connectPromise: Promise<void> | null;
+    cancelConnect: (() => void) | null;
 }
 
 /**
@@ -57,7 +59,47 @@ export async function createWalletConnectTransport(
         provider: null,
         initialized: false,
         connecting: false,
+        connectPromise: null,
+        cancelConnect: null,
     };
+
+    function hasSolanaNamespace(session: unknown): boolean {
+        const namespaces = (session as { namespaces?: Record<string, unknown> } | null | undefined)?.namespaces;
+        if (!namespaces) return false;
+        return 'solana' in namespaces;
+    }
+
+    async function safeCleanupPendingPairings(
+        provider: import('@walletconnect/universal-provider').default,
+        deletePairings = false,
+    ): Promise<void> {
+        const cleanup = (provider as unknown as { cleanupPendingPairings?: (opts?: { deletePairings?: boolean }) => Promise<void> })
+            .cleanupPendingPairings;
+        if (!cleanup) return;
+        try {
+            await cleanup.call(provider, { deletePairings });
+        } catch (error) {
+            // ignore errors
+        }
+    }
+
+    function safeAbortPairingAttempt(provider: import('@walletconnect/universal-provider').default): void {
+        const abort = (provider as unknown as { abortPairingAttempt?: () => void }).abortPairingAttempt;
+        if (!abort) return;
+        try {
+            abort.call(provider);
+        } catch (error) {
+            // ignore errors
+        }
+    }
+
+    async function safeDisconnectProvider(provider: import('@walletconnect/universal-provider').default): Promise<void> {
+        try {
+            await provider.disconnect();
+        } catch (error) {
+            // ignore errors
+        }
+    }
 
     /**
      * Initialize the provider lazily
@@ -88,22 +130,15 @@ export async function createWalletConnectTransport(
         });
 
         // Set up event listeners
-        console.log('[WalletConnect Transport] Setting up event listeners');
         provider.on('display_uri', (uri: string) => {
-            console.log('[WalletConnect Transport] display_uri event received!');
-            logger.debug('WalletConnect display_uri event', { uri: uri.substring(0, 50) + '...' });
-
             if (config.onDisplayUri) {
-                console.log('[WalletConnect Transport] Calling onDisplayUri callback');
                 config.onDisplayUri(uri);
             } else if (process.env.NODE_ENV === 'development') {
                 // Log to console in development if no handler provided
-                console.log('[WalletConnect] Connection URI:', uri);
             }
         });
 
         provider.on('session_delete', () => {
-            logger.debug('WalletConnect session deleted');
             if (config.onSessionDisconnected) {
                 config.onSessionDisconnected();
             }
@@ -117,64 +152,128 @@ export async function createWalletConnectTransport(
 
     const transport: WalletConnectTransport = {
         async connect(): Promise<void> {
-            console.log('[WalletConnect Transport] connect() called');
-            if (state.connecting) {
-                logger.warn('WalletConnect connection already in progress');
+            if (state.connectPromise) {
+                await state.connectPromise;
                 return;
             }
 
-            state.connecting = true;
+            state.connectPromise = (async () => {
+                state.connecting = true;
 
-            try {
-                console.log('[WalletConnect Transport] Initializing provider...');
-                const provider = await initProvider();
-                console.log('[WalletConnect Transport] Provider initialized');
+                try {
+                    const CANCELLED = Symbol('WALLETCONNECT_CANCELLED');
+                    type Cancelled = typeof CANCELLED;
 
-                // Check if we already have a session
-                if (provider.session) {
-                    logger.debug('WalletConnect: using existing session');
+                    let cancelResolve: (() => void) | null = null;
+                    const cancelPromise = new Promise<Cancelled>(resolve => {
+                        cancelResolve = () => resolve(CANCELLED);
+                    });
+
+                    let isCancelled = false;
+                    state.cancelConnect = () => {
+                        if (isCancelled) return;
+                        isCancelled = true;
+                        cancelResolve?.();
+                    };
+
+                    async function raceWithCancel<T>(promise: Promise<T>): Promise<T> {
+                        const result = await Promise.race([
+                            promise as Promise<T | Cancelled>,
+                            cancelPromise as Promise<T | Cancelled>,
+                        ]);
+                        if (result === CANCELLED) {
+                            throw new Error('Connection cancelled');
+                        }
+                        return result as T;
+                    }
+
+                    let provider: import('@walletconnect/universal-provider').default | null = null;
+                    let connectAttemptPromise: Promise<unknown> | null = null;
+
+                    provider = await raceWithCancel(initProvider());
+
+                    // If we already have a session, validate that it's actually a Solana session.
+                    // WalletConnect can restore sessions from storage; if it's not a Solana session,
+                    // we must disconnect and start a fresh pairing so we can request Solana accounts.
+                    if (provider.session) {
+                        if (hasSolanaNamespace(provider.session)) {
+                            if (config.onSessionEstablished) {
+                                config.onSessionEstablished();
+                            }
+                            return;
+                        }
+
+                        await raceWithCancel(safeDisconnectProvider(provider));
+                        // Clean up old pairings only after explicitly disconnecting an invalid session
+                        await raceWithCancel(safeCleanupPendingPairings(provider, false));
+                    }
+
+                    // Request ALL Solana chains so the session supports any cluster.
+                    // The actual chain used for requests will be determined by the current cluster.
+                    connectAttemptPromise = provider.connect({
+                        namespaces: {
+                            solana: {
+                                chains: [...ALL_SOLANA_CAIP_CHAINS],
+                                methods: [...SOLANA_METHODS],
+                                events: [],
+                            },
+                        },
+                    });
+
+                    try {
+                        await raceWithCancel(connectAttemptPromise);
+                    } catch (error) {
+                        // Prevent unhandled rejections if the underlying connect eventually errors.
+                        void connectAttemptPromise?.catch(() => {});
+                        throw error;
+                    }
+
+                    if (!provider.session) {
+                        throw new Error('WalletConnect: connect completed but no session was established');
+                    }
+                    if (!hasSolanaNamespace(provider.session)) {
+                        await raceWithCancel(safeDisconnectProvider(provider));
+                        throw new Error('WalletConnect: connected session does not include Solana namespace');
+                    }
+
                     if (config.onSessionEstablished) {
                         config.onSessionEstablished();
                     }
-                    return;
+                } finally {
+                    state.connecting = false;
+                    state.cancelConnect = null;
+                    state.connectPromise = null;
                 }
+            })();
 
-                // Create a new session
-                logger.debug('WalletConnect: creating new session');
-                console.log('[WalletConnect Transport] Creating new session...');
-
-                // Request ALL Solana chains so the session supports any cluster
-                // The actual chain used for requests will be determined by the current cluster
-                console.log('[WalletConnect Transport] Requesting all Solana chains:', ALL_SOLANA_CAIP_CHAINS);
-
-                await provider.connect({
-                    namespaces: {
-                        solana: {
-                            chains: [...ALL_SOLANA_CAIP_CHAINS],
-                            methods: [...SOLANA_METHODS],
-                            events: [],
-                        },
-                    },
-                });
-                console.log('[WalletConnect Transport] Session created successfully');
-
-                if (config.onSessionEstablished) {
-                    config.onSessionEstablished();
-                }
-            } finally {
-                state.connecting = false;
-            }
+            await state.connectPromise;
         },
 
         async disconnect(): Promise<void> {
+            // Always cancel an in-flight connect attempt, even if the provider isn't initialized yet.
+            if (state.cancelConnect) {
+                try {
+                    state.cancelConnect();
+                } catch {
+                    // ignore cancellation errors
+                }
+            }
+
             if (!state.provider) {
+                if (config.onSessionDisconnected) {
+                    config.onSessionDisconnected();
+                }
                 return;
             }
 
-            try {
-                await state.provider.disconnect();
-            } catch (error) {
-                logger.warn('Error disconnecting WalletConnect', { error });
+            // Only abort/cleanup if there's no active session (i.e., still pairing)
+            if (!state.provider.session) {
+                safeAbortPairingAttempt(state.provider);
+                // Don't delete pairings aggressively - just clean up expired ones
+                await safeCleanupPendingPairings(state.provider, false);
+            } else {
+                // There's an active session - disconnect it properly
+                await safeDisconnectProvider(state.provider);
             }
 
             if (config.onSessionDisconnected) {
@@ -193,19 +292,14 @@ export async function createWalletConnectTransport(
                 throw new Error('WalletConnect: no active session. Call connect() first.');
             }
 
-            console.log('[WalletConnect Transport] request()', { method: args.method, chainId: args.chainId });
 
             try {
-                const result = await provider.request<T>({
+                return await provider.request<T>({
                     method: args.method,
                     params: args.params,
                     chainId: args.chainId,
                 });
-
-                console.log('[WalletConnect Transport] request() success:', { method: args.method, result });
-                return result;
             } catch (error) {
-                console.error('[WalletConnect Transport] request() error:', { method: args.method, error });
                 throw error;
             }
         },
@@ -224,11 +318,7 @@ export async function createWalletConnectTransport(
             const accounts: string[] = [];
             const session = state.provider.session;
             const namespaces = session.namespaces as Record<string, { accounts?: string[]; chains?: string[] }> | undefined;
-            
-            // Log session chains for debugging
-            console.log('[WalletConnect Transport] Session chains:', namespaces?.solana?.chains);
-            console.log('[WalletConnect Transport] Session raw accounts:', namespaces?.solana?.accounts);
-            
+
             if (namespaces?.solana?.accounts) {
                 for (const account of namespaces.solana.accounts) {
                     // Account format: "solana:chainId:address"
@@ -243,8 +333,6 @@ export async function createWalletConnectTransport(
                     }
                 }
             }
-
-            console.log('[WalletConnect Transport] Session accounts:', accounts);
             return accounts;
         },
     };

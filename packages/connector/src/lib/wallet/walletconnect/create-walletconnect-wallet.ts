@@ -71,13 +71,11 @@ function isLikelyBase58(str: string): boolean {
  */
 function decodeTransaction(encoded: string): Uint8Array {
     if (isLikelyBase58(encoded)) {
-        console.log('[WalletConnect Wallet] Decoding transaction as base58');
         // Note: getBase58Encoder().encode() takes a base58 string and returns bytes
         // Convert ReadonlyUint8Array to Uint8Array
         const readonlyBytes = getBase58Encoder().encode(encoded);
         return new Uint8Array(readonlyBytes);
     } else {
-        console.log('[WalletConnect Wallet] Decoding transaction as base64');
         return base64ToBytes(encoded);
     }
 }
@@ -217,16 +215,15 @@ export function createWalletConnectWallet(
                     const sessionAccounts = transport.getSessionAccounts();
                     
                     if (sessionAccounts.length > 0) {
-                        console.log('[WalletConnect Wallet] Using accounts from session:', sessionAccounts);
                         accounts = sessionAccounts.map(pubkey => toWalletAccount({ pubkey }, chains));
                         emitChange();
                         return { accounts };
                     }
 
                     // Fallback: Try RPC methods if session doesn't have accounts
-                    console.log('[WalletConnect Wallet] No session accounts, trying RPC methods...');
                     const method = input?.silent ? 'solana_getAccounts' : 'solana_requestAccounts';
                     let result: WalletConnectSolanaAccount[];
+                    let firstError: unknown;
 
                     try {
                         result = await transport.request<WalletConnectSolanaAccount[]>({
@@ -234,7 +231,8 @@ export function createWalletConnectWallet(
                             params: {},
                             chainId: getCurrentCaipChainId(),
                         });
-                    } catch {
+                    } catch (error) {
+                        firstError = error;
                         // Fallback to the other method
                         try {
                             const fallbackMethod = method === 'solana_getAccounts' 
@@ -245,8 +243,16 @@ export function createWalletConnectWallet(
                                 params: {},
                                 chainId: getCurrentCaipChainId(),
                             });
-                        } catch {
-                            throw new Error('Failed to get accounts from WalletConnect. The wallet may not support Solana accounts.');
+                        } catch (fallbackError) {
+                            const firstMessage = firstError instanceof Error ? firstError.message : String(firstError);
+                            const fallbackMessage =
+                                fallbackError instanceof Error ? fallbackError.message : String(fallbackError);
+                            const details = [firstMessage, fallbackMessage].filter(Boolean).join(' | ');
+                            throw new Error(
+                                `Failed to get accounts from WalletConnect. The wallet may not support Solana accounts.${
+                                    details ? ` (Details: ${details})` : ''
+                                }`,
+                            );
                         }
                     }
 
@@ -316,8 +322,7 @@ export function createWalletConnectWallet(
                     const transactionBase64 = bytesToBase64(transaction);
 
                     const requestChainId = getCurrentCaipChainId();
-                    console.log('[WalletConnect Wallet] signTransaction with chainId:', requestChainId);
-                    
+
                     const result = await transport.request<WalletConnectSignTransactionResult>({
                         method: 'solana_signTransaction',
                         params: {
@@ -326,32 +331,22 @@ export function createWalletConnectWallet(
                         chainId: requestChainId,
                     });
 
-                    console.log('[WalletConnect Wallet] signTransaction result:', result);
-                    console.log('[WalletConnect Wallet] result type:', typeof result);
-                    console.log('[WalletConnect Wallet] result keys:', result ? Object.keys(result) : 'null');
-
                     let signedTransaction: Uint8Array;
 
                     if (result.transaction) {
                         // Wallet returned the full signed transaction
-                        console.log('[WalletConnect Wallet] Using result.transaction');
                         signedTransaction = decodeTransaction(result.transaction);
-                        console.log('[WalletConnect Wallet] Decoded transaction length:', signedTransaction.length);
                     } else if (result.signature) {
                         // Wallet returned only the signature, inject it into the original transaction
-                        console.log('[WalletConnect Wallet] Using result.signature:', result.signature);
                         const signerIndex = findSignerIndex(transaction, account.address);
-                        console.log('[WalletConnect Wallet] Signer index:', signerIndex);
                         if (signerIndex < 0) {
                             throw new Error('Signer pubkey not found in transaction');
                         }
                         signedTransaction = injectSignature(transaction, signerIndex, result.signature);
                     } else {
-                        console.error('[WalletConnect Wallet] Unexpected result format:', JSON.stringify(result));
                         throw new Error('Invalid solana_signTransaction response: no signature or transaction');
                     }
 
-                    console.log('[WalletConnect Wallet] signTransaction completed successfully');
                     return [{ signedTransaction }];
                 },
             },
@@ -370,7 +365,6 @@ export function createWalletConnectWallet(
                     const transactionsBase64 = transactions.map(bytesToBase64);
 
                     try {
-                        console.log('[WalletConnect Wallet] signAllTransactions: trying batch method');
                         const result = await transport.request<WalletConnectSignAllTransactionsResult>({
                             method: 'solana_signAllTransactions',
                             params: {
@@ -379,15 +373,12 @@ export function createWalletConnectWallet(
                             chainId: getCurrentCaipChainId(),
                         });
 
-                        console.log('[WalletConnect Wallet] signAllTransactions batch succeeded');
                         // Map back to bytes - could be base58 or base64 depending on wallet
                         return result.transactions.map(txEncoded => ({
                             signedTransaction: decodeTransaction(txEncoded),
                         }));
                     } catch (error) {
                         // Fallback: sign transactions one by one
-                        console.log('[WalletConnect Wallet] signAllTransactions batch failed, falling back to individual signing');
-                        console.log('[WalletConnect Wallet] Signing', transactions.length, 'transactions individually');
                         
                         const signFeature = wallet.features['solana:signTransaction'] as {
                             signTransaction: (args: {
@@ -397,13 +388,9 @@ export function createWalletConnectWallet(
                         };
 
                         const results = await Promise.all(
-                            transactions.map((tx, i) => {
-                                console.log('[WalletConnect Wallet] Signing transaction', i + 1, 'of', transactions.length);
-                                return signFeature.signTransaction({ account, transaction: tx });
-                            }),
+                            transactions.map(tx => signFeature.signTransaction({ account, transaction: tx })),
                         );
 
-                        console.log('[WalletConnect Wallet] All transactions signed successfully');
                         return results.map(r => ({ signedTransaction: r[0].signedTransaction }));
                     }
                 },

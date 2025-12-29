@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect, useRef, type ReactNode } from 'react';
 
 interface WalletConnectContextValue {
     uri: string | null;
@@ -13,18 +13,33 @@ const WalletConnectContext = createContext<WalletConnectContextValue | null>(nul
 export function WalletConnectProvider({ children }: { children: ReactNode }) {
     const [uri, setUriState] = useState<string | null>(null);
 
-    // Debug: log when URI changes
+    const isMountedRef = useRef(false);
+    const pendingUriRef = useRef<string | null>(null);
+
     useEffect(() => {
-        console.log('[WalletConnectContext] URI state changed:', uri ? uri.substring(0, 50) + '...' : 'null');
-    }, [uri]);
+        isMountedRef.current = true;
+
+        if (pendingUriRef.current !== null) {
+            setUriState(pendingUriRef.current);
+            pendingUriRef.current = null;
+        }
+
+        return () => {
+            isMountedRef.current = false;
+        };
+    }, []);
 
     const setUri = useCallback((newUri: string | null) => {
-        console.log('[WalletConnectContext] setUri called with:', newUri ? newUri.substring(0, 50) + '...' : 'null');
+        if (!isMountedRef.current) {
+            pendingUriRef.current = newUri;
+            return;
+        }
         setUriState(newUri);
     }, []);
 
     const clearUri = useCallback(() => {
-        console.log('[WalletConnectContext] clearUri called');
+        pendingUriRef.current = null;
+        if (!isMountedRef.current) return;
         setUriState(null);
     }, []);
 

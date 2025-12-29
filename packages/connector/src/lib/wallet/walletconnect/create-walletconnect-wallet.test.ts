@@ -30,6 +30,9 @@ function createMockWalletConnectTransport(
         isConnected(): boolean {
             return connected;
         },
+        getSessionAccounts(): string[] {
+            return [];
+        },
     };
 
     return {

@@ -21,7 +21,6 @@ function ProvidersInner({ children }: { children: ReactNode }) {
     // Memoized callbacks for WalletConnect events
     const onDisplayUri = useCallback(
         (uri: string) => {
-            console.log('[WalletConnect] display_uri received:', uri.substring(0, 50) + '...');
             setUri(uri);
         },
         [setUri],
@@ -68,7 +67,6 @@ function ProvidersInner({ children }: { children: ReactNode }) {
         // 2. Get a project ID from https://cloud.walletconnect.com/
         // 3. Set NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID in your .env.local
         const walletConnectProjectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID;
-        console.log('[WalletConnect] Project ID configured:', walletConnectProjectId ? 'YES' : 'NO');
         
         // Dynamic cluster callback - reads current cluster from storage
         const getCurrentChain = (): 'solana:mainnet' | 'solana:devnet' | 'solana:testnet' => {
