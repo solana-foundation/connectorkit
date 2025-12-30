@@ -24,7 +24,7 @@ export { validateConfigOptions, parseConfigOptions } from './config';
 // ============================================================================
 export * from './types';
 
-export type { MobileWalletAdapterConfig } from './ui/connector-provider';
+export type { MobileWalletAdapterConfig, RegisterMwaConfig } from './types/mobile';
 
 // ============================================================================
 // Wallet System (via barrel)
@@ -41,7 +41,42 @@ export {
     createEnhancedStorageAccount,
     createEnhancedStorageCluster,
     createEnhancedStorageWallet,
+    // vNext storage
+    createEnhancedStorageWalletState,
+    saveWalletState,
+    clearWalletState,
+    WALLET_STATE_VERSION,
 } from './lib/wallet';
+
+// ============================================================================
+// vNext Session Types
+// ============================================================================
+export {
+    createConnectorId,
+    isWalletConnectorId,
+    getWalletNameFromConnectorId,
+    isDisconnected,
+    isConnecting,
+    isConnected,
+    isStatusError,
+    isWalletStatusError,
+    INITIAL_WALLET_STATUS,
+    toLegacyWalletState,
+} from './types/session';
+
+export type {
+    WalletConnectorId,
+    WalletConnectorMetadata,
+    WalletConnector,
+    ConnectOptions,
+    SessionAccount,
+    WalletSession,
+    WalletStatus,
+    WalletStatusDisconnected,
+    WalletStatusConnecting,
+    WalletStatusConnected,
+    WalletStatusError,
+} from './types/session';
 
 // ============================================================================
 // Transaction Signing
@@ -62,8 +97,8 @@ export type { TransactionSigner } from './lib/transaction/transaction-signer';
 // ============================================================================
 // Error Handling
 // ============================================================================
-export { WalletErrorType } from './ui/error-boundary';
-export type { WalletError } from './ui/error-boundary';
+export { WalletErrorType, isWalletError, createWalletError } from './lib/errors/wallet-errors';
+export type { WalletError } from './lib/errors/wallet-errors';
 
 // Result-based error handling
 export { tryCatch, tryCatchSync, isSuccess, isFailure } from './lib/core/try-catch';

@@ -44,6 +44,7 @@ interface ProviderState {
     connecting: boolean;
     connectPromise: Promise<void> | null;
     cancelConnect: (() => void) | null;
+    sessionChangeListeners: Set<(accounts: string[]) => void>;
 }
 
 /**
@@ -61,7 +62,46 @@ export async function createWalletConnectTransport(
         connecting: false,
         connectPromise: null,
         cancelConnect: null,
+        sessionChangeListeners: new Set(),
     };
+
+    /**
+     * Notify all session change listeners with current accounts
+     */
+    function notifySessionChange(): void {
+        if (!state.provider?.session) return;
+
+        const accounts = getAccountsFromSession(state.provider.session);
+        state.sessionChangeListeners.forEach(listener => {
+            try {
+                listener(accounts);
+            } catch (error) {
+                logger.warn('Error in session change listener', { error });
+            }
+        });
+    }
+
+    /**
+     * Extract accounts from a WalletConnect session
+     */
+    function getAccountsFromSession(session: unknown): string[] {
+        const accounts: string[] = [];
+        const namespaces = (session as { namespaces?: Record<string, { accounts?: string[] }> } | null)?.namespaces;
+
+        if (namespaces?.solana?.accounts) {
+            for (const account of namespaces.solana.accounts) {
+                // Account format: "solana:chainId:address"
+                const parts = account.split(':');
+                if (parts.length >= 3) {
+                    const address = parts.slice(2).join(':');
+                    if (address && !accounts.includes(address)) {
+                        accounts.push(address);
+                    }
+                }
+            }
+        }
+        return accounts;
+    }
 
     function hasSolanaNamespace(session: unknown): boolean {
         const namespaces = (session as { namespaces?: Record<string, unknown> } | null | undefined)?.namespaces;
@@ -142,6 +182,19 @@ export async function createWalletConnectTransport(
             if (config.onSessionDisconnected) {
                 config.onSessionDisconnected();
             }
+        });
+
+        // Handle session_update events (accounts may have changed)
+        provider.on('session_update', () => {
+            logger.debug('WalletConnect session_update received');
+            notifySessionChange();
+        });
+
+        // Handle session_event (general session events that may include account changes)
+        provider.on('session_event', (event: unknown) => {
+            logger.debug('WalletConnect session_event received', { event });
+            // Some wallets emit account changes through session_event
+            notifySessionChange();
         });
 
         state.provider = provider;
@@ -314,28 +367,14 @@ export async function createWalletConnectTransport(
             if (!state.provider?.session) {
                 return [];
             }
+            return getAccountsFromSession(state.provider.session);
+        },
 
-            // Extract accounts from session namespaces
-            // WalletConnect session format: namespace:chainId:address
-            const accounts: string[] = [];
-            const session = state.provider.session;
-            const namespaces = session.namespaces as Record<string, { accounts?: string[]; chains?: string[] }> | undefined;
-
-            if (namespaces?.solana?.accounts) {
-                for (const account of namespaces.solana.accounts) {
-                    // Account format: "solana:chainId:address"
-                    // Extract just the address (last part after the last colon)
-                    const parts = account.split(':');
-                    if (parts.length >= 3) {
-                        // The address is everything after "solana:chainId:"
-                        const address = parts.slice(2).join(':');
-                        if (address && !accounts.includes(address)) {
-                            accounts.push(address);
-                        }
-                    }
-                }
-            }
-            return accounts;
+        onSessionChanged(listener: (accounts: string[]) => void): () => void {
+            state.sessionChangeListeners.add(listener);
+            return () => {
+                state.sessionChangeListeners.delete(listener);
+            };
         },
     };
 
@@ -352,6 +391,7 @@ export function createMockWalletConnectTransport(
     mockImplementation: Partial<WalletConnectTransport> = {},
 ): WalletConnectTransport {
     let connected = false;
+    const listeners = new Set<(accounts: string[]) => void>();
 
     const defaultTransport: WalletConnectTransport = {
         async connect(): Promise<void> {
@@ -368,6 +408,10 @@ export function createMockWalletConnectTransport(
         },
         getSessionAccounts(): string[] {
             return [];
+        },
+        onSessionChanged(listener: (accounts: string[]) => void): () => void {
+            listeners.add(listener);
+            return () => listeners.delete(listener);
         },
     };
 

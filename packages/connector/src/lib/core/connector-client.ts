@@ -10,6 +10,8 @@ import type { TransactionActivity } from '../../types/transactions';
 import type { ConnectorEvent, ConnectorEventListener } from '../../types/events';
 import type { SolanaClusterId, SolanaCluster } from '@wallet-ui/core';
 import type { WalletInfo } from '../../types/wallets';
+import type { WalletConnectorId, ConnectOptions } from '../../types/session';
+import { INITIAL_WALLET_STATUS } from '../../types/session';
 import { StateManager } from './state-manager';
 import { EventEmitter } from './event-emitter';
 import { DebugMetrics } from './debug-metrics';
@@ -48,6 +50,11 @@ export class ConnectorClient {
         const clusters = clusterConfig?.clusters ?? [];
 
         const initialState: ConnectorState = {
+            // vNext wallet status
+            wallet: INITIAL_WALLET_STATUS,
+            connectors: [],
+
+            // Legacy fields (for backwards compatibility)
             wallets: [],
             selectedWallet: null,
             connected: false,
@@ -161,6 +168,47 @@ export class ConnectorClient {
         }
     }
 
+    // ========================================================================
+    // vNext Wallet Actions (connector-id based)
+    // ========================================================================
+
+    /**
+     * Connect to a wallet using its stable connector ID.
+     * This is the recommended way to connect in vNext.
+     *
+     * @param connectorId - Stable connector identifier
+     * @param options - Connection options (silent mode, preferred account, etc.)
+     */
+    async connectWallet(connectorId: WalletConnectorId, options?: ConnectOptions): Promise<void> {
+        const connector = this.walletDetector.getConnectorById(connectorId);
+        if (!connector) {
+            throw new Error(`Connector ${connectorId} not found`);
+        }
+        await this.connectionManager.connectWallet(connector, connectorId, options);
+    }
+
+    /**
+     * Disconnect the current wallet session.
+     * This is the vNext equivalent of disconnect().
+     */
+    async disconnectWallet(): Promise<void> {
+        await this.connectionManager.disconnect();
+    }
+
+    /**
+     * Get a connector by its ID (for advanced use cases).
+     */
+    getConnector(connectorId: WalletConnectorId) {
+        return this.walletDetector.getConnectorById(connectorId);
+    }
+
+    // ========================================================================
+    // Legacy Actions (kept for backwards compatibility)
+    // ========================================================================
+
+    /**
+     * @deprecated Use `connectWallet(connectorId)` instead.
+     */
     async select(walletName: string): Promise<void> {
         const wallet = this.stateManager
             .getSnapshot()
@@ -169,6 +217,9 @@ export class ConnectorClient {
         await this.connectionManager.connect(wallet, walletName);
     }
 
+    /**
+     * @deprecated Use `disconnectWallet()` instead.
+     */
     async disconnect(): Promise<void> {
         await this.connectionManager.disconnect();
     }

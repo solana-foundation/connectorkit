@@ -46,6 +46,23 @@ export type { AccountInfo } from './types/accounts';
 export type { ConnectorConfig, ConnectorState } from './types/connector';
 export type { WalletStandardWallet, WalletStandardAccount } from './lib/wallet/standard-shim';
 
+// vNext Session Types
+export type {
+    WalletConnectorId,
+    WalletConnectorMetadata,
+    WalletSession,
+    WalletStatus,
+    SessionAccount,
+    ConnectOptions,
+} from './types/session';
+export {
+    createConnectorId,
+    isWalletConnectorId,
+    isConnected,
+    isConnecting,
+    isDisconnected,
+} from './types/session';
+
 // Essential configuration types
 export type { ExtendedConnectorConfig } from './config';
 

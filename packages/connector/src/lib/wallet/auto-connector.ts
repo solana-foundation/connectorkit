@@ -1,5 +1,7 @@
 import type { Wallet, WalletInfo } from '../../types/wallets';
-import type { StorageAdapter } from '../../types/storage';
+import type { StorageAdapter, PersistedWalletState } from '../../types/storage';
+import type { WalletConnectorId } from '../../types/session';
+import { createConnectorId } from '../../types/session';
 import type { WalletDetector, LegacyPublicKey } from './detector';
 import type { ConnectionManager } from './connection-manager';
 import type { StateManager } from '../core/state-manager';
@@ -20,7 +22,10 @@ export class AutoConnector {
     private walletDetector: WalletDetector;
     private connectionManager: ConnectionManager;
     private stateManager: StateManager;
+    /** Legacy wallet name storage */
     private walletStorage?: StorageAdapter<string | undefined>;
+    /** vNext wallet state storage (connector ID + account) */
+    private walletStateStorage?: StorageAdapter<PersistedWalletState | null>;
     private debug: boolean;
 
     constructor(
@@ -29,20 +34,89 @@ export class AutoConnector {
         stateManager: StateManager,
         walletStorage?: StorageAdapter<string | undefined>,
         debug = false,
+        walletStateStorage?: StorageAdapter<PersistedWalletState | null>,
     ) {
         this.walletDetector = walletDetector;
         this.connectionManager = connectionManager;
         this.stateManager = stateManager;
         this.walletStorage = walletStorage;
+        this.walletStateStorage = walletStateStorage;
         this.debug = debug;
     }
 
     async attemptAutoConnect(): Promise<boolean> {
+        // First try vNext auto-connect with silent-first approach
+        if (this.walletStateStorage) {
+            const vNextSuccess = await this.attemptVNextAutoConnect();
+            if (vNextSuccess) return true;
+        }
+
+        // Fall back to legacy auto-connect
         const instantSuccess = await this.attemptInstantConnect();
         if (instantSuccess) return true;
 
         await this.attemptStandardConnect();
         return this.stateManager.getSnapshot().connected;
+    }
+
+    /**
+     * vNext auto-connect using stored connector ID with silent-first approach.
+     * This won't prompt the user unless they explicitly initiated the connect.
+     */
+    private async attemptVNextAutoConnect(): Promise<boolean> {
+        const walletState = this.walletStateStorage?.get();
+        if (!walletState || !walletState.autoConnect) {
+            if (this.debug) {
+                logger.debug('vNext auto-connect: No stored wallet state or autoConnect disabled');
+            }
+            return false;
+        }
+
+        const { connectorId, lastAccount } = walletState;
+
+        // Wait for registry to be ready
+        await ready;
+
+        // Try to get connector by ID
+        const wallet = this.walletDetector.getConnectorById(connectorId as WalletConnectorId);
+        if (!wallet) {
+            if (this.debug) {
+                logger.debug('vNext auto-connect: Connector not found', { connectorId });
+            }
+            return false;
+        }
+
+        try {
+            if (this.debug) {
+                logger.info('vNext auto-connect: Attempting silent connect', {
+                    connectorId,
+                    lastAccount,
+                });
+            }
+
+            // Use silent-first connect (won't prompt user)
+            await this.connectionManager.connectWallet(wallet, connectorId as WalletConnectorId, {
+                silent: true,
+                allowInteractiveFallback: false, // Don't prompt on auto-connect
+                preferredAccount: lastAccount as import('@solana/addresses').Address | undefined,
+            });
+
+            if (this.debug) {
+                logger.info('vNext auto-connect: Silent connect successful', { connectorId });
+            }
+
+            return true;
+        } catch (error) {
+            if (this.debug) {
+                logger.debug('vNext auto-connect: Silent connect failed (expected for first-time or revoked)', {
+                    connectorId,
+                    error: error instanceof Error ? error.message : error,
+                });
+            }
+            // Silent connect failed - this is normal for first-time connections
+            // or when user revoked permissions. Don't clear state, let user retry.
+            return false;
+        }
     }
 
     private async attemptInstantConnect(): Promise<boolean> {

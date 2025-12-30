@@ -1,5 +1,7 @@
 import { getWalletsRegistry, ready } from './standard-shim';
 import type { Wallet, WalletInfo } from '../../types/wallets';
+import type { WalletConnectorId, WalletConnectorMetadata } from '../../types/session';
+import { createConnectorId } from '../../types/session';
 import { BaseCollaborator } from '../core/base-collaborator';
 import { WalletAuthenticityVerifier } from './authenticity-verifier';
 import { createLogger } from '../utils/secure-logger';
@@ -76,9 +78,12 @@ function verifyWalletName(wallet: DirectWallet | Record<string, unknown>, reques
  * WalletDetector - Handles wallet discovery and registry management
  *
  * Integrates with Wallet Standard registry and provides direct wallet detection.
+ * Maintains a stable connector ID -> Wallet mapping for vNext APIs.
  */
 export class WalletDetector extends BaseCollaborator {
     private unsubscribers: Array<() => void> = [];
+    /** Map from stable connector ID to Wallet reference (not stored in state) */
+    private connectorRegistry = new Map<WalletConnectorId, Wallet>();
 
     constructor(
         stateManager: import('../core/state-manager').StateManager,
@@ -114,8 +119,13 @@ export class WalletDetector extends BaseCollaborator {
 
                 const unique = this.deduplicateWallets(ws);
 
+                // Update connector registry (connectorId -> Wallet map)
+                this.updateConnectorRegistry(unique);
+
+                // Update state with both legacy WalletInfo[] and vNext connectors[]
                 this.stateManager.updateState({
                     wallets: unique.map(w => this.mapToWalletInfo(w)),
+                    connectors: unique.map(w => this.mapToConnectorMetadata(w)),
                 });
 
                 if (newCount !== previousCount && newCount > 0) {
@@ -232,14 +242,71 @@ export class WalletDetector extends BaseCollaborator {
     }
 
     /**
-     * Get currently detected wallets
+     * Get currently detected wallets (legacy)
+     * @deprecated Use getConnectors() for vNext API
      */
     getDetectedWallets(): WalletInfo[] {
         return this.getState().wallets;
     }
 
     /**
-     * Convert a Wallet Standard wallet to WalletInfo with capability checks
+     * Get all available connectors (vNext API)
+     */
+    getConnectors(): WalletConnectorMetadata[] {
+        return this.getState().connectors;
+    }
+
+    /**
+     * Get a wallet by its stable connector ID (vNext API)
+     * Returns the Wallet reference for connection operations
+     */
+    getConnectorById(connectorId: WalletConnectorId): Wallet | undefined {
+        return this.connectorRegistry.get(connectorId);
+    }
+
+    /**
+     * Get connector metadata by ID
+     */
+    getConnectorMetadata(connectorId: WalletConnectorId): WalletConnectorMetadata | undefined {
+        return this.getState().connectors.find(c => c.id === connectorId);
+    }
+
+    /**
+     * Update the connector registry map
+     */
+    private updateConnectorRegistry(wallets: Wallet[]): void {
+        // Clear and rebuild to handle unregistered wallets
+        this.connectorRegistry.clear();
+        for (const wallet of wallets) {
+            const connectorId = createConnectorId(wallet.name);
+            this.connectorRegistry.set(connectorId, wallet);
+        }
+    }
+
+    /**
+     * Convert a Wallet Standard wallet to WalletConnectorMetadata (serializable)
+     */
+    private mapToConnectorMetadata(wallet: Wallet): WalletConnectorMetadata {
+        const walletWithIcon = applyWalletIconOverride(wallet);
+        const hasConnect = hasFeature(walletWithIcon, 'standard:connect');
+        const hasDisconnect = hasFeature(walletWithIcon, 'standard:disconnect');
+        const isSolana =
+            Array.isArray(walletWithIcon.chains) &&
+            walletWithIcon.chains.some(c => typeof c === 'string' && c.includes('solana'));
+        const ready = hasConnect && hasDisconnect && isSolana;
+
+        return {
+            id: createConnectorId(wallet.name),
+            name: wallet.name,
+            icon: typeof walletWithIcon.icon === 'string' ? walletWithIcon.icon : '',
+            ready,
+            chains: walletWithIcon.chains ?? [],
+            features: Object.keys(walletWithIcon.features ?? {}),
+        };
+    }
+
+    /**
+     * Convert a Wallet Standard wallet to WalletInfo with capability checks (legacy)
      */
     private mapToWalletInfo(wallet: Wallet): WalletInfo {
         const walletWithIcon = applyWalletIconOverride(wallet);

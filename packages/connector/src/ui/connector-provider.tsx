@@ -9,26 +9,10 @@ import { ConnectorErrorBoundary } from './error-boundary';
 import { useWalletConnectUri } from './walletconnect-context';
 import { installPolyfills } from '../lib/utils/polyfills';
 import { createLogger } from '../lib/utils/secure-logger';
-import type {
-    AuthorizationCache,
-    ChainSelector,
-    SolanaMobileWalletAdapterWallet,
-} from '@solana-mobile/wallet-standard-mobile';
-import type { IdentifierArray } from '@wallet-standard/base';
+import type { MobileWalletAdapterConfig, RegisterMwaConfig } from '../types/mobile';
 
-/** Configuration for registerMwa - defined locally as the package doesn't export this type */
-interface RegisterMwaConfig {
-    appIdentity: {
-        name: string;
-        uri?: string;
-        icon?: string;
-    };
-    authorizationCache: AuthorizationCache;
-    chains: IdentifierArray;
-    chainSelector: ChainSelector;
-    remoteHostAuthority?: string;
-    onWalletNotFound: (mobileWalletAdapter: SolanaMobileWalletAdapterWallet) => Promise<void>;
-}
+// Re-export for backwards compatibility
+export type { MobileWalletAdapterConfig };
 
 const logger = createLogger('ConnectorProvider');
 
@@ -52,19 +36,6 @@ export type ConnectorSnapshot = ReturnType<ConnectorClient['getSnapshot']> & {
 
 export const ConnectorContext = createContext<ConnectorClient | null>(null);
 ConnectorContext.displayName = 'ConnectorContext';
-
-export interface MobileWalletAdapterConfig {
-    appIdentity: {
-        name: string;
-        uri?: string;
-        icon?: string;
-    };
-    remoteHostAuthority?: string;
-    chains?: RegisterMwaConfig['chains'];
-    authorizationCache?: AuthorizationCache;
-    chainSelector?: ChainSelector;
-    onWalletNotFound?: (wallet: SolanaMobileWalletAdapterWallet) => Promise<void>;
-}
 
 function ConnectorProviderInternal({
     children,

@@ -16,6 +16,7 @@ function createMockWalletConnectTransport(
     mockImplementation: Partial<WalletConnectTransport> = {},
 ): WalletConnectTransport {
     let connected = false;
+    const sessionChangeListeners = new Set<(accounts: string[]) => void>();
 
     const defaultTransport: WalletConnectTransport = {
         async connect(): Promise<void> {
@@ -33,6 +34,17 @@ function createMockWalletConnectTransport(
         getSessionAccounts(): string[] {
             return [];
         },
+        onSessionChanged(listener: (accounts: string[]) => void): () => void {
+            sessionChangeListeners.add(listener);
+            return () => sessionChangeListeners.delete(listener);
+        },
+    };
+
+    // Helper to emit session changes for testing
+    (defaultTransport as unknown as { _emitSessionChange: (accounts: string[]) => void })._emitSessionChange = (
+        accounts: string[],
+    ) => {
+        sessionChangeListeners.forEach(listener => listener(accounts));
     };
 
     return {
@@ -44,6 +56,7 @@ function createMockWalletConnectTransport(
 // Test fixtures
 const TEST_PUBKEY = 'HMJfh9P8FEF5eVHp3XypYWThUYCQ9sWNZZQQxVP2jjr1';
 const TEST_PUBKEY_2 = 'BPFLoaderUpgradeab1e11111111111111111111111';
+const TEST_PUBKEY_3 = 'Vote111111111111111111111111111111111111111';
 const TEST_SIGNATURE = '2Lb1KQHWfbV3pWMqXZveFWqneSyhH95YsgCENRWnArSkLydjN1M42oB82zSd6BBdGkM9pE6sQLQf1gyBh8KWM2c4';
 
 // Create a minimal valid config
@@ -197,6 +210,26 @@ describe('createWalletConnectWallet', () => {
 
             expect(result.accounts).toHaveLength(2);
         });
+
+        it('should prefer session accounts over RPC response', async () => {
+            const sessionAccounts = [TEST_PUBKEY, TEST_PUBKEY_2];
+            const requestMock = vi.fn();
+            mockTransport = createMockWalletConnectTransport({
+                request: requestMock,
+                getSessionAccounts: () => sessionAccounts,
+            });
+            const wallet = createWalletConnectWallet(config, mockTransport);
+
+            const connectFeature = wallet.features['standard:connect'] as {
+                connect: () => Promise<{ accounts: unknown[] }>;
+            };
+
+            const result = await connectFeature.connect();
+
+            // Should use session accounts without making RPC call
+            expect(result.accounts).toHaveLength(2);
+            expect(requestMock).not.toHaveBeenCalled();
+        });
     });
 
     describe('standard:disconnect', () => {
@@ -257,6 +290,127 @@ describe('createWalletConnectWallet', () => {
             const unsubscribe = eventsFeature.on('change', vi.fn());
 
             expect(typeof unsubscribe).toBe('function');
+        });
+
+        it('should handle session update events from transport', async () => {
+            mockTransport = createMockWalletConnectTransport();
+            const wallet = createWalletConnectWallet(config, mockTransport);
+
+            const eventsFeature = wallet.features['standard:events'] as {
+                on: (event: string, listener: (props: { accounts?: unknown[] }) => void) => () => void;
+            };
+
+            const listener = vi.fn();
+            eventsFeature.on('change', listener);
+
+            // Emit session change from transport
+            (mockTransport as unknown as { _emitSessionChange: (accounts: string[]) => void })._emitSessionChange([
+                TEST_PUBKEY,
+                TEST_PUBKEY_2,
+            ]);
+
+            expect(listener).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    accounts: expect.arrayContaining([
+                        expect.objectContaining({ address: TEST_PUBKEY }),
+                        expect.objectContaining({ address: TEST_PUBKEY_2 }),
+                    ]),
+                }),
+            );
+        });
+
+        it('should update wallet.accounts when session changes', async () => {
+            mockTransport = createMockWalletConnectTransport();
+            const wallet = createWalletConnectWallet(config, mockTransport);
+
+            // Initially no accounts
+            expect(wallet.accounts).toHaveLength(0);
+
+            // Emit session change
+            (mockTransport as unknown as { _emitSessionChange: (accounts: string[]) => void })._emitSessionChange([
+                TEST_PUBKEY,
+            ]);
+
+            // Should have accounts now
+            expect(wallet.accounts).toHaveLength(1);
+            expect(wallet.accounts[0].address).toBe(TEST_PUBKEY);
+        });
+
+        it('should handle session cleared (empty accounts)', async () => {
+            const requestMock = vi.fn().mockResolvedValue([{ pubkey: TEST_PUBKEY }]);
+            mockTransport = createMockWalletConnectTransport({ request: requestMock });
+            const wallet = createWalletConnectWallet(config, mockTransport);
+
+            const eventsFeature = wallet.features['standard:events'] as {
+                on: (event: string, listener: (props: { accounts?: unknown[] }) => void) => () => void;
+            };
+
+            const listener = vi.fn();
+            eventsFeature.on('change', listener);
+
+            // Connect first
+            const connectFeature = wallet.features['standard:connect'] as {
+                connect: () => Promise<{ accounts: unknown[] }>;
+            };
+            await connectFeature.connect();
+            expect(wallet.accounts.length).toBeGreaterThan(0);
+
+            listener.mockClear();
+
+            // Emit session clear
+            (mockTransport as unknown as { _emitSessionChange: (accounts: string[]) => void })._emitSessionChange([]);
+
+            expect(listener).toHaveBeenCalledWith({ accounts: [] });
+            expect(wallet.accounts).toHaveLength(0);
+        });
+
+        it('should handle account additions from session update', async () => {
+            mockTransport = createMockWalletConnectTransport();
+            const wallet = createWalletConnectWallet(config, mockTransport);
+
+            const eventsFeature = wallet.features['standard:events'] as {
+                on: (event: string, listener: (props: { accounts?: unknown[] }) => void) => () => void;
+            };
+
+            const listener = vi.fn();
+            eventsFeature.on('change', listener);
+
+            // Initial accounts
+            (mockTransport as unknown as { _emitSessionChange: (accounts: string[]) => void })._emitSessionChange([
+                TEST_PUBKEY,
+            ]);
+            expect(wallet.accounts).toHaveLength(1);
+            listener.mockClear();
+
+            // Add more accounts
+            (mockTransport as unknown as { _emitSessionChange: (accounts: string[]) => void })._emitSessionChange([
+                TEST_PUBKEY,
+                TEST_PUBKEY_2,
+                TEST_PUBKEY_3,
+            ]);
+
+            expect(wallet.accounts).toHaveLength(3);
+            expect(listener).toHaveBeenCalled();
+        });
+
+        it('should handle account removals from session update', async () => {
+            mockTransport = createMockWalletConnectTransport();
+            const wallet = createWalletConnectWallet(config, mockTransport);
+
+            // Start with multiple accounts
+            (mockTransport as unknown as { _emitSessionChange: (accounts: string[]) => void })._emitSessionChange([
+                TEST_PUBKEY,
+                TEST_PUBKEY_2,
+            ]);
+            expect(wallet.accounts).toHaveLength(2);
+
+            // Remove one account
+            (mockTransport as unknown as { _emitSessionChange: (accounts: string[]) => void })._emitSessionChange([
+                TEST_PUBKEY,
+            ]);
+
+            expect(wallet.accounts).toHaveLength(1);
+            expect(wallet.accounts[0].address).toBe(TEST_PUBKEY);
         });
     });
 
@@ -563,6 +717,51 @@ describe('createWalletConnectWallet', () => {
                             maxRetries: 3,
                         }),
                     }),
+                }),
+            );
+        });
+    });
+
+    describe('dynamic chain selection', () => {
+        it('should use getCurrentChain callback for requests', async () => {
+            let currentChain: 'solana:mainnet' | 'solana:devnet' | 'solana:testnet' = 'solana:mainnet';
+            const configWithChainCallback = createTestConfig({
+                getCurrentChain: () => currentChain,
+            });
+
+            const requestMock = vi.fn().mockResolvedValue({ signature: TEST_SIGNATURE });
+            mockTransport = createMockWalletConnectTransport({ request: requestMock });
+            const wallet = createWalletConnectWallet(configWithChainCallback, mockTransport);
+
+            const signMessageFeature = wallet.features['solana:signMessage'] as {
+                signMessage: (args: { account: { address: string }; message: Uint8Array }) => Promise<unknown>;
+            };
+
+            // First request on mainnet
+            await signMessageFeature.signMessage({
+                account: { address: TEST_PUBKEY },
+                message: new Uint8Array([1, 2, 3]),
+            });
+
+            expect(requestMock).toHaveBeenLastCalledWith(
+                expect.objectContaining({
+                    chainId: expect.stringContaining('solana:'),
+                }),
+            );
+
+            // Change chain
+            currentChain = 'solana:devnet';
+            requestMock.mockClear();
+
+            // Second request on devnet
+            await signMessageFeature.signMessage({
+                account: { address: TEST_PUBKEY },
+                message: new Uint8Array([4, 5, 6]),
+            });
+
+            expect(requestMock).toHaveBeenLastCalledWith(
+                expect.objectContaining({
+                    chainId: expect.stringContaining('solana:'),
                 }),
             );
         });

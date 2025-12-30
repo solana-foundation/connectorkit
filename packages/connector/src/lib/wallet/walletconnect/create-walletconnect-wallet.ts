@@ -198,6 +198,28 @@ export function createWalletConnectWallet(
         changeListeners.forEach(fn => fn({ accounts }));
     }
 
+    /**
+     * Refresh accounts from the session.
+     * Called when transport notifies of session changes.
+     */
+    function refreshAccountsFromSession(sessionAccounts: string[]): void {
+        if (sessionAccounts.length === 0) {
+            // Session cleared - emit with empty accounts
+            accounts = [];
+            emitChange();
+            return;
+        }
+
+        // Convert session accounts to Wallet Standard accounts
+        accounts = sessionAccounts.map(pubkey => toWalletAccount({ pubkey }, chains));
+        emitChange();
+    }
+
+    // Subscribe to session changes from the transport
+    if (transport.onSessionChanged) {
+        transport.onSessionChanged(refreshAccountsFromSession);
+    }
+
     const wallet: Wallet = {
         version: '1.0.0',
         name: 'WalletConnect',

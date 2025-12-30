@@ -20,7 +20,11 @@ export {
     createEnhancedStorageAccount,
     createEnhancedStorageCluster,
     createEnhancedStorageWallet,
+    createEnhancedStorageWalletState,
+    saveWalletState,
+    clearWalletState,
     STORAGE_VERSION,
+    WALLET_STATE_VERSION,
 } from './enhanced-storage';
 
 // Wallet Detector

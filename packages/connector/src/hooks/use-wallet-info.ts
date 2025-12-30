@@ -9,6 +9,8 @@
 import { useMemo } from 'react';
 import { useConnector } from '../ui/connector-provider';
 import type { WalletInfo } from '../types/wallets';
+import type { WalletConnectorId, WalletConnectorMetadata } from '../types/session';
+import { createConnectorId } from '../types/session';
 
 /**
  * Simplified wallet information for display purposes
@@ -16,6 +18,8 @@ import type { WalletInfo } from '../types/wallets';
 export interface WalletDisplayInfo {
     /** Wallet name */
     name: string;
+    /** Stable connector ID for vNext API */
+    connectorId: WalletConnectorId;
     /** Wallet icon/logo URL if available */
     icon?: string;
     /** Whether the wallet extension is installed */
@@ -74,6 +78,7 @@ export function useWalletInfo(): UseWalletInfoReturn {
             wallets.map(
                 (walletInfo: WalletInfo): WalletDisplayInfo => ({
                     name: walletInfo.wallet.name,
+                    connectorId: createConnectorId(walletInfo.wallet.name),
                     icon: walletInfo.wallet.icon,
                     installed: walletInfo.installed,
                     connectable: walletInfo.connectable,

@@ -135,6 +135,15 @@ export interface WalletConnectTransport {
 
     /** Get accounts from the current session namespaces (if available) */
     getSessionAccounts(): string[];
+
+    /**
+     * Subscribe to session changes (account changes, session updates).
+     * Returns an unsubscribe function.
+     *
+     * @param listener - Called when session changes (new accounts, etc.)
+     * @returns Unsubscribe function
+     */
+    onSessionChanged?(listener: (accounts: string[]) => void): () => void;
 }
 
 /**

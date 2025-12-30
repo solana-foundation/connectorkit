@@ -44,6 +44,8 @@ export type {
     EnhancedStorageAccountOptions,
     EnhancedStorageClusterOptions,
     EnhancedStorageWalletOptions,
+    EnhancedStorageWalletStateOptions,
+    PersistedWalletState,
 } from './storage';
 
 // WalletConnect types
@@ -61,3 +63,33 @@ export type {
     WalletConnectSignAndSendTransactionParams,
     WalletConnectSignAndSendTransactionResult,
 } from './walletconnect';
+
+// Mobile Wallet Adapter types
+export type { MobileWalletAdapterConfig, RegisterMwaConfig } from './mobile';
+
+// Session types (vNext connector/session abstraction)
+export type {
+    WalletConnectorId,
+    WalletConnectorMetadata,
+    WalletConnector,
+    ConnectOptions,
+    SessionAccount,
+    WalletSession,
+    WalletStatus,
+    WalletStatusDisconnected,
+    WalletStatusConnecting,
+    WalletStatusConnected,
+    WalletStatusError,
+} from './session';
+
+export {
+    createConnectorId,
+    isWalletConnectorId,
+    getWalletNameFromConnectorId,
+    isDisconnected,
+    isConnecting,
+    isConnected,
+    isStatusError,
+    INITIAL_WALLET_STATUS,
+    toLegacyWalletState,
+} from './session';

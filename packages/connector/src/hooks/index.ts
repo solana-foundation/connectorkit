@@ -4,6 +4,17 @@
  * Enhanced React hooks for wallet and cluster management
  */
 
+// ============================================================================
+// vNext Wallet Hooks (connector-id based)
+// ============================================================================
+export * from './use-wallet';
+export * from './use-wallet-connectors';
+export * from './use-connect-wallet';
+export * from './use-disconnect-wallet';
+
+// ============================================================================
+// Legacy/Shared Hooks
+// ============================================================================
 export * from './use-cluster';
 export * from './use-account';
 export * from './use-wallet-info';
