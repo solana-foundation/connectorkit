@@ -15,7 +15,7 @@ import {
 } from 'symbols-react';
 import { useState, useEffect } from 'react';
 import { Spinner } from '@/components/ui/spinner';
-import { QRCodeSVG } from 'qrcode.react';
+import { CustomQRCode } from '@/components/ui/custom-qr-code';
 
 interface WalletModalProps {
     open: boolean;
@@ -167,16 +167,13 @@ export function WalletModal({ open, onOpenChange, walletConnectUri, onClearWalle
 
                         {/* QR Code */}
                         <div className="flex justify-center">
-                            <div className="p-4 bg-white rounded-2xl shadow-sm">
-                                {walletConnectUri ? (
-                                    <QRCodeSVG value={walletConnectUri} size={200} level="M" includeMargin={false} />
-                                ) : (
-                                    <div className="flex flex-col items-center justify-center w-[200px] h-[200px]">
-                                        <Spinner className="h-6 w-6 animate-spin" />
-                                        <p className="mt-3 text-xs text-muted-foreground">Generating QR code…</p>
-                                    </div>
-                                )}
-                            </div>
+                            <CustomQRCode
+                                value={walletConnectUri ?? ''}
+                                size={280}
+                                ecl="M"
+                                loading={!walletConnectUri}
+                                scanning={!!walletConnectUri}
+                            />
                         </div>
 
                         {/* Copy URI button */}

@@ -464,6 +464,36 @@ describe('Transaction Signer', () => {
             expect(updatedWallet.features['solana:signMessage'].signMessage).toHaveBeenCalled();
         });
 
+        it('should sign a message when wallet returns Wallet Standard array output', async () => {
+            const updatedWallet = {
+                ...mockWallet,
+                features: {
+                    ...mockWallet.features,
+                    'solana:signMessage': {
+                        signMessage: vi.fn().mockResolvedValue([
+                            {
+                                signature: new Uint8Array([20, 21, 22]),
+                                signedMessage: new Uint8Array([1, 2, 3]),
+                            },
+                        ]),
+                    },
+                },
+            } as unknown as WalletStandardWallet;
+
+            const config: TransactionSignerConfig = {
+                wallet: updatedWallet,
+                account: mockAccount,
+            };
+
+            const signer = createTransactionSigner(config)!;
+            const message = new Uint8Array([1, 2, 3]);
+
+            const signature = await signer.signMessage!(message);
+
+            expect(signature).toEqual(new Uint8Array([20, 21, 22]));
+            expect(updatedWallet.features['solana:signMessage'].signMessage).toHaveBeenCalled();
+        });
+
         it('should be undefined if message signing not supported', () => {
             const walletWithoutMessage = {
                 ...mockWallet,

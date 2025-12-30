@@ -51,6 +51,34 @@ function extractSignatureString(result: unknown): string {
     throw new Error('Unexpected wallet response format for signAndSendTransaction');
 }
 
+function extractSignatureBytes(result: unknown): Uint8Array {
+    if (result instanceof Uint8Array) {
+        return result;
+    }
+
+    if (Array.isArray(result)) {
+        const [first] = result;
+        if (!first) {
+            throw new Error('Wallet returned empty results array');
+        }
+        return extractSignatureBytes(first);
+    }
+
+    if (result && typeof result === 'object') {
+        const record = result as Record<string, unknown>;
+
+        if ('signature' in record) {
+            return extractSignatureBytes(record.signature);
+        }
+
+        if (Array.isArray(record.signatures) && record.signatures.length > 0) {
+            return extractSignatureBytes(record.signatures[0]);
+        }
+    }
+
+    throw new Error('Unexpected wallet response format for signMessage');
+}
+
 export interface TransactionSigner {
     /** The wallet address that will sign transactions */
     readonly address: string;
@@ -380,12 +408,12 @@ export function createTransactionSigner(config: TransactionSignerConfig): Transa
             async signMessage(message: Uint8Array): Promise<Uint8Array> {
                 try {
                     const signFeature = features['solana:signMessage'];
-                    const result = (await signFeature.signMessage({
+                    const result = await signFeature.signMessage({
                         account,
                         message,
                         ...(cluster ? { chain: cluster.id } : {}),
-                    })) as { signature: Uint8Array };
-                    return result.signature;
+                    });
+                    return extractSignatureBytes(result);
                 } catch (error) {
                     throw new TransactionError('SIGNING_FAILED', 'Failed to sign message', undefined, error as Error);
                 }
