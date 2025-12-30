@@ -34,3 +34,14 @@ export { ConnectionManager } from './connection-manager';
 
 // Auto Connector
 export { AutoConnector } from './auto-connector';
+
+// WalletConnect Integration
+// Note: These are lazily loaded to avoid requiring @walletconnect/universal-provider
+// unless WalletConnect is actually enabled in the config
+export {
+    registerWalletConnectWallet,
+    isWalletConnectAvailable,
+    createWalletConnectWallet,
+    createMockWalletConnectTransport,
+    type WalletConnectRegistration,
+} from './walletconnect';

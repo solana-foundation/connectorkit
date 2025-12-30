@@ -6,6 +6,7 @@ import { ConnectorClient } from '../lib/core/connector-client';
 import type { ConnectorConfig } from '../types/connector';
 import type { ExtendedConnectorConfig } from '../config/default-config';
 import { ConnectorErrorBoundary } from './error-boundary';
+import { useWalletConnectUri } from './walletconnect-context';
 import { installPolyfills } from '../lib/utils/polyfills';
 import { createLogger } from '../lib/utils/secure-logger';
 import type {
@@ -43,6 +44,10 @@ export type ConnectorSnapshot = ReturnType<ConnectorClient['getSnapshot']> & {
     select: (walletName: string) => Promise<void>;
     disconnect: () => Promise<void>;
     selectAccount: (address: string) => Promise<void>;
+    /** WalletConnect URI for QR code display (null when not connecting via WalletConnect) */
+    walletConnectUri: string | null;
+    /** Clear the WalletConnect URI (call when modal closes or connection completes) */
+    clearWalletConnectUri: () => void;
 };
 
 export const ConnectorContext = createContext<ConnectorClient | null>(null);
@@ -209,6 +214,9 @@ export function useConnector(): ConnectorSnapshot {
         );
     }
 
+    // Get WalletConnect URI from context (gracefully returns null if not in WalletConnect flow)
+    const { uri: walletConnectUri, clearUri: clearWalletConnectUri } = useWalletConnectUri();
+
     const state = useSyncExternalStore(
         React.useCallback(cb => client.subscribe(cb), [client]),
         React.useCallback(() => client.getSnapshot(), [client]),
@@ -228,8 +236,10 @@ export function useConnector(): ConnectorSnapshot {
         () => ({
             ...state,
             ...methods,
+            walletConnectUri,
+            clearWalletConnectUri,
         }),
-        [state, methods],
+        [state, methods, walletConnectUri, clearWalletConnectUri],
     );
 }
 

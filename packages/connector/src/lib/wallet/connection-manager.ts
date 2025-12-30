@@ -49,6 +49,9 @@ export class ConnectionManager extends BaseCollaborator {
     private walletChangeUnsub: (() => void) | null = null;
     private pollTimer: ReturnType<typeof setTimeout> | null = null;
     private pollAttempts = 0;
+    private connectAttemptId = 0;
+    private pendingWallet: Wallet | null = null;
+    private pendingWalletName: string | null = null;
 
     constructor(
         stateManager: import('../core/state-manager').StateManager,
@@ -67,6 +70,9 @@ export class ConnectionManager extends BaseCollaborator {
         if (typeof window === 'undefined') return;
 
         const name = walletName || wallet.name;
+        const attemptId = ++this.connectAttemptId;
+        this.pendingWallet = wallet;
+        this.pendingWalletName = name;
 
         this.eventEmitter.emit({
             type: 'connecting',
@@ -81,6 +87,9 @@ export class ConnectionManager extends BaseCollaborator {
             if (!connect) throw new Error(`Wallet ${name} does not support standard connect`);
 
             const result = await connect({ silent: false });
+            if (attemptId !== this.connectAttemptId) {
+                throw new Error('Connection cancelled');
+            }
 
             const walletAccounts = wallet.accounts;
             const accountMap = new Map<string, WalletAccount>();
@@ -143,6 +152,12 @@ export class ConnectionManager extends BaseCollaborator {
 
             this.subscribeToWalletEvents();
         } catch (e) {
+            // If this connect attempt was superseded/cancelled, do not mutate state here.
+            // The cancel path is handled by disconnect().
+            if (attemptId !== this.connectAttemptId) {
+                throw e;
+            }
+
             const errorMessage = e instanceof Error ? e.message : String(e);
 
             this.eventEmitter.emit({
@@ -171,6 +186,11 @@ export class ConnectionManager extends BaseCollaborator {
             );
 
             throw e;
+        } finally {
+            if (this.pendingWallet === wallet && this.pendingWalletName === name) {
+                this.pendingWallet = null;
+                this.pendingWalletName = null;
+            }
         }
     }
 
@@ -178,24 +198,25 @@ export class ConnectionManager extends BaseCollaborator {
      * Disconnect from wallet
      */
     async disconnect(): Promise<void> {
+        // Invalidate any in-flight connect attempt so it can't update state later.
+        this.connectAttemptId++;
+
         if (this.walletChangeUnsub) {
             this.walletChangeUnsub();
             this.walletChangeUnsub = null;
         }
         this.stopPollingWalletAccounts();
 
-        const wallet = this.getState().selectedWallet;
-        if (wallet) {
-            const disconnect = getDisconnectFeature(wallet);
-            if (disconnect) {
-                await disconnect();
-            }
-        }
+        const wallet = this.getState().selectedWallet ?? this.pendingWallet;
+        this.pendingWallet = null;
+        this.pendingWalletName = null;
 
+        // Update state immediately so UI is never stuck in a "connecting" state.
         this.stateManager.updateState(
             {
                 selectedWallet: null,
                 connected: false,
+                connecting: false,
                 accounts: [],
                 selectedAccount: null,
             },
@@ -213,6 +234,18 @@ export class ConnectionManager extends BaseCollaborator {
         } else {
             // Fallback for storage adapters without clear()
             this.walletStorage?.set(undefined);
+        }
+
+        // Attempt wallet disconnect after state is reset; don't block UI.
+        if (wallet) {
+            const disconnect = getDisconnectFeature(wallet);
+            if (disconnect) {
+                try {
+                    await disconnect();
+                } catch {
+                    // ignore disconnect errors during cancellation
+                }
+            }
         }
     }
 

@@ -1,9 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { AppProvider } from '@solana/connector/react';
-// import { ConnectorDebugPanel } from '@solana/connector-debugger/react';
-import { getDefaultConfig, getDefaultMobileConfig } from '@solana/connector/headless';
+import { AppProvider, getDefaultConfig, getDefaultMobileConfig } from '@solana/connector/react';
 import type { ReactNode } from 'react';
 
 // Get origin synchronously on client, fallback for SSR
@@ -48,6 +46,11 @@ export function Providers({ children }: { children: ReactNode }) {
             autoConnect: true,
             enableMobile: true,
             clusters,
+            // WalletConnect: just set to true!
+            // Project ID is auto-read from NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID
+            // Metadata is auto-generated from appName/appUrl
+            // Callbacks are auto-wired by AppProvider
+            walletConnect: true,
         });
     }, []);
 
@@ -63,8 +66,6 @@ export function Providers({ children }: { children: ReactNode }) {
     return (
         <AppProvider connectorConfig={connectorConfig} mobile={mobile}>
             {children}
-            {/* Debug panel - only visible in development */}
-            {/* {process.env.NODE_ENV === 'development' && <ConnectorDebugPanel />} */}
         </AppProvider>
     );
 }

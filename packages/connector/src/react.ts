@@ -10,6 +10,13 @@
 // ============================================================================
 export { ConnectorProvider, useConnector, useConnectorClient } from './ui/connector-provider';
 export { UnifiedProvider, AppProvider } from './ui/unified-provider';
+export { WalletConnectProvider, useWalletConnectUri } from './ui/walletconnect-context';
+
+// ============================================================================
+// Configuration (re-exported for convenience)
+// ============================================================================
+export { getDefaultConfig, getDefaultMobileConfig } from './config';
+export type { DefaultConfigOptions, SimplifiedWalletConnectConfig } from './config';
 
 // ============================================================================
 // Error Boundaries
@@ -31,6 +38,7 @@ export * from './components';
 // ============================================================================
 export type { ConnectorSnapshot, MobileWalletAdapterConfig } from './ui/connector-provider';
 export type { AppProviderProps, UnifiedProviderProps } from './ui/unified-provider';
+export type { WalletConnectContextValue } from './ui/walletconnect-context';
 
 // Core types needed for React integration
 export type { Wallet, WalletAccount, WalletInfo } from './types/wallets';
@@ -39,7 +47,7 @@ export type { ConnectorConfig, ConnectorState } from './types/connector';
 export type { WalletStandardWallet, WalletStandardAccount } from './lib/wallet/standard-shim';
 
 // Essential configuration types
-export type { DefaultConfigOptions, ExtendedConnectorConfig } from './config';
+export type { ExtendedConnectorConfig } from './config';
 
 // Re-export wallet-ui types for React components
 export type { SolanaCluster, SolanaClusterId } from '@wallet-ui/core';

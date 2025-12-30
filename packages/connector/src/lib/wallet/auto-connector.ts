@@ -5,6 +5,7 @@ import type { ConnectionManager } from './connection-manager';
 import type { StateManager } from '../core/state-manager';
 import { getWalletsRegistry, ready } from './standard-shim';
 import { createLogger } from '../utils/secure-logger';
+import { applyWalletIconOverride } from './wallet-icon-overrides';
 
 const logger = createLogger('AutoConnector');
 
@@ -197,11 +198,13 @@ export class AutoConnector {
                 accounts: [] as const,
             };
 
+            const walletWithIcon = applyWalletIconOverride(wallet);
+
             this.stateManager.updateState(
                 {
                     wallets: [
                         {
-                            wallet,
+                            wallet: walletWithIcon,
                             installed: true,
                             connectable: true,
                         },
@@ -219,7 +222,7 @@ export class AutoConnector {
             const standardWallets = walletsApi.get();
             const registryWallet = standardWallets.find(w => w.name === storedWalletName);
 
-            const walletToUse = registryWallet || wallet;
+            const walletToUse = applyWalletIconOverride(registryWallet || walletWithIcon);
 
             if (this.debug) {
                 logger.info('Attempting to connect via instant auto-connect', {

@@ -53,16 +53,17 @@ function Spinner({ className }: { className?: string }) {
 
 export function ConnectButton({ className }: ConnectButtonProps) {
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const { connected, connecting, selectedWallet, selectedAccount, wallets } = useConnector();
-
-    if (connecting) {
-        return (
-            <Button size="sm" variant="outline" disabled className={className}>
-                <Spinner className="h-4 w-4" />
-                <span className="text-xs">Connecting...</span>
-            </Button>
-        );
-    }
+    
+    // All wallet state including WalletConnect URI comes from useConnector
+    const { 
+        connected, 
+        connecting, 
+        selectedWallet, 
+        selectedAccount, 
+        wallets,
+        walletConnectUri,
+        clearWalletConnectUri,
+    } = useConnector();
 
     if (connected && selectedAccount && selectedWallet) {
         const shortAddress = `${selectedAccount.slice(0, 4)}...${selectedAccount.slice(-4)}`;
@@ -96,12 +97,33 @@ export function ConnectButton({ className }: ConnectButtonProps) {
         );
     }
 
+    // Show loading button when connecting (but modal stays rendered)
+    const buttonContent = connecting ? (
+        <>
+            <Spinner className="h-4 w-4" />
+            <span className="text-xs">Connecting...</span>
+        </>
+    ) : (
+        <span className="!text-[14px]">Connect Wallet</span>
+    );
+
     return (
         <>
             <Button size="sm" variant="outline" onClick={() => setIsModalOpen(true)} className={className}>
-                <span className="!text-[14px]">Connect Wallet</span>
+                {buttonContent}
             </Button>
-            <WalletModal open={isModalOpen} onOpenChange={setIsModalOpen} />
+            <WalletModal
+                open={isModalOpen}
+                onOpenChange={(open) => {
+                    setIsModalOpen(open);
+                    // Clear WalletConnect URI when modal closes
+                    if (!open) {
+                        clearWalletConnectUri();
+                    }
+                }}
+                walletConnectUri={walletConnectUri}
+                onClearWalletConnectUri={clearWalletConnectUri}
+            />
         </>
     );
 }

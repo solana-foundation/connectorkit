@@ -8,24 +8,30 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Wallet, ExternalLink } from 'lucide-react';
+import { Wallet, ExternalLink, Copy, Check, ChevronLeft } from 'lucide-react';
 import {
     //IconQuestionmark,
     IconXmark,
 } from 'symbols-react';
 import { useState, useEffect } from 'react';
 import { Spinner } from '@/components/ui/spinner';
+import { QRCodeSVG } from 'qrcode.react';
 
 interface WalletModalProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
+    /** WalletConnect URI for QR code display */
+    walletConnectUri?: string | null;
+    /** Callback to clear the WalletConnect URI */
+    onClearWalletConnectUri?: () => void;
 }
 
-export function WalletModal({ open, onOpenChange }: WalletModalProps) {
-    const { wallets, select, connecting, selectedWallet } = useConnector();
+export function WalletModal({ open, onOpenChange, walletConnectUri, onClearWalletConnectUri }: WalletModalProps) {
+    const { wallets, select, connecting, selectedWallet, disconnect } = useConnector();
     const [connectingWallet, setConnectingWallet] = useState<string | null>(null);
     const [isClient, setIsClient] = useState(false);
     const [recentlyConnected, setRecentlyConnected] = useState<string | null>(null);
+    const [copied, setCopied] = useState(false);
 
     useEffect(() => {
         setIsClient(true);
@@ -45,18 +51,61 @@ export function WalletModal({ open, onOpenChange }: WalletModalProps) {
         }
     }, [selectedWallet]);
 
+    const isWalletConnectFlow = connectingWallet === 'WalletConnect' || !!walletConnectUri;
+
+    function cancelConnection() {
+        onClearWalletConnectUri?.();
+        setConnectingWallet(null);
+        // Important: reset connector state even if connect() is still in-flight
+        // (disconnect() also cancels pending connection attempts in the connector)
+        disconnect().catch(() => {});
+    }
+
+    function handleOpenChange(nextOpen: boolean) {
+        if (!nextOpen && (connecting || connectingWallet || walletConnectUri)) {
+            cancelConnection();
+        }
+        onOpenChange(nextOpen);
+    }
+
     const handleSelectWallet = async (walletName: string) => {
         setConnectingWallet(walletName);
         try {
+            if (walletName === 'WalletConnect') {
+                // Ensure stale URIs don't flash
+                onClearWalletConnectUri?.();
+            }
             await select(walletName);
             localStorage.setItem('recentlyConnectedWallet', walletName);
             setRecentlyConnected(walletName);
-            onOpenChange(false);
+            // Don't close modal for WalletConnect - wait for connection
+            if (walletName !== 'WalletConnect') {
+                onOpenChange(false);
+            }
         } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            if (message.includes('Connection cancelled')) {
+                return;
+            }
             console.error('Failed to connect wallet:', error);
         } finally {
             setConnectingWallet(null);
         }
+    };
+
+    const handleCopyUri = async () => {
+        if (!walletConnectUri) return;
+        try {
+            await navigator.clipboard.writeText(walletConnectUri);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        } catch (err) {
+            console.error('Failed to copy URI:', err);
+        }
+    };
+
+    const handleBackFromWalletConnect = () => {
+        cancelConnection();
     };
 
     const installedWallets = wallets.filter(w => w.installed);
@@ -83,29 +132,76 @@ export function WalletModal({ open, onOpenChange }: WalletModalProps) {
     };
 
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
+        <Dialog open={open} onOpenChange={handleOpenChange}>
             <DialogContent className="sm:max-w-md [&>button]:hidden rounded-[24px]">
                 <DialogHeader className="flex flex-row items-center justify-between">
-                    {/* <Button
-                        type="button"
-                        variant="outline"
-                        className="rounded-[16px] size-8 shrink-0 p-2 cursor-pointer"
-                        onClick={() => window.open('https://docs.solana.com/wallet-guide', '_blank')}
-                    >
-                        <IconQuestionmark className="size-3" />
-                    </Button> */}
-                    <DialogTitle>Connect your wallet</DialogTitle>
+                    {isWalletConnectFlow ? (
+                        <Button
+                            type="button"
+                            variant="outline"
+                            className="rounded-[16px] size-8 shrink-0 p-2 cursor-pointer"
+                            onClick={handleBackFromWalletConnect}
+                        >
+                            <ChevronLeft className="size-4" />
+                        </Button>
+                    ) : null}
+                    <DialogTitle>{isWalletConnectFlow ? 'WalletConnect' : 'Connect your wallet'}</DialogTitle>
                     <DialogPrimitive.Close asChild>
                         <Button
                             variant="outline"
                             className="rounded-[16px] size-8 p-2 shrink-0 cursor-pointer"
-                            onClick={() => onOpenChange(false)}
                         >
                             <IconXmark className="size-3" />
                         </Button>
                     </DialogPrimitive.Close>
                 </DialogHeader>
 
+                {/* WalletConnect QR Code Display */}
+                {isWalletConnectFlow ? (
+                    <div className="space-y-4 py-2">
+                        <p className="text-center text-sm text-muted-foreground">
+                            Scan with your mobile wallet
+                        </p>
+
+                        {/* QR Code */}
+                        <div className="flex justify-center">
+                            <div className="p-4 bg-white rounded-2xl shadow-sm">
+                                {walletConnectUri ? (
+                                    <QRCodeSVG value={walletConnectUri} size={200} level="M" includeMargin={false} />
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center w-[200px] h-[200px]">
+                                        <Spinner className="h-6 w-6 animate-spin" />
+                                        <p className="mt-3 text-xs text-muted-foreground">Generating QR code…</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Copy URI button */}
+                        <Button
+                            variant="outline"
+                            onClick={handleCopyUri}
+                            disabled={!walletConnectUri}
+                            className="w-full rounded-[16px]"
+                        >
+                            {copied ? (
+                                <>
+                                    <Check className="w-4 h-4 mr-2" />
+                                    Copied!
+                                </>
+                            ) : (
+                                <>
+                                    <Copy className="w-4 h-4 mr-2" />
+                                    Copy link instead
+                                </>
+                            )}
+                        </Button>
+
+                        <p className="text-xs text-center text-muted-foreground">
+                            Works with Phantom, Trust Wallet, Exodus, and other WalletConnect-compatible wallets
+                        </p>
+                    </div>
+                ) : (
                 <div className="space-y-4">
                     {!isClient ? (
                         <div className="text-center py-8">
@@ -126,7 +222,7 @@ export function WalletModal({ open, onOpenChange }: WalletModalProps) {
                                                     variant="outline"
                                                     className="h-auto justify-between p-4 rounded-[16px]"
                                                     onClick={() => handleSelectWallet(walletInfo.wallet.name)}
-                                                    disabled={connecting || isConnecting}
+                                                    disabled={isConnecting}
                                                 >
                                                     <div className="flex items-center gap-3 flex-1">
                                                         <div className="flex-1 text-left">
@@ -193,7 +289,7 @@ export function WalletModal({ open, onOpenChange }: WalletModalProps) {
                                                                 onClick={() =>
                                                                     handleSelectWallet(walletInfo.wallet.name)
                                                                 }
-                                                                disabled={connecting || isConnecting}
+                                                                disabled={isConnecting}
                                                             >
                                                                 <div className="flex items-center gap-3 flex-1">
                                                                     <div className="flex-1 text-left">
@@ -320,6 +416,7 @@ export function WalletModal({ open, onOpenChange }: WalletModalProps) {
                         </>
                     )}
                 </div>
+                )}
             </DialogContent>
         </Dialog>
     );

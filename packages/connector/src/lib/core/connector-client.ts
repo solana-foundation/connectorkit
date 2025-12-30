@@ -23,6 +23,7 @@ import { getClusterRpcUrl } from '../../utils/cluster';
 import { AUTO_CONNECT_DELAY_MS, DEFAULT_MAX_TRACKED_TRANSACTIONS } from '../constants';
 import { createLogger } from '../utils/secure-logger';
 import { tryCatchSync } from './try-catch';
+import type { WalletConnectRegistration } from '../wallet/walletconnect';
 
 const logger = createLogger('ConnectorClient');
 
@@ -38,6 +39,7 @@ export class ConnectorClient {
     private healthMonitor: HealthMonitor;
     private initialized = false;
     private config: ConnectorConfig;
+    private walletConnectRegistration: WalletConnectRegistration | null = null;
 
     constructor(config: ConnectorConfig = {}) {
         this.config = config;
@@ -109,6 +111,15 @@ export class ConnectorClient {
         const { error } = tryCatchSync(() => {
             this.walletDetector.initialize();
 
+            // Register WalletConnect wallet if enabled
+            if (this.config.walletConnect?.enabled) {
+                this.initializeWalletConnect().catch(err => {
+                    if (this.config.debug) {
+                        logger.error('WalletConnect initialization failed', { error: err });
+                    }
+                });
+            }
+
             if (this.config.autoConnect) {
                 setTimeout(() => {
                     this.autoConnector.attemptAutoConnect().catch(err => {
@@ -124,6 +135,29 @@ export class ConnectorClient {
 
         if (error && this.config.debug) {
             logger.error('Connector initialization failed', { error });
+        }
+    }
+
+    /**
+     * Initialize WalletConnect integration
+     * Dynamically imports and registers the WalletConnect wallet
+     */
+    private async initializeWalletConnect(): Promise<void> {
+        if (!this.config.walletConnect?.enabled) return;
+
+        try {
+            // Dynamically import to avoid bundling WalletConnect if not used
+            const { registerWalletConnectWallet } = await import('../wallet/walletconnect');
+            this.walletConnectRegistration = await registerWalletConnectWallet(this.config.walletConnect);
+
+            if (this.config.debug) {
+                logger.info('WalletConnect wallet registered successfully');
+            }
+        } catch (error) {
+            if (this.config.debug) {
+                logger.error('Failed to register WalletConnect wallet', { error });
+            }
+            // Don't throw - WalletConnect is optional functionality
         }
     }
 
@@ -264,6 +298,18 @@ export class ConnectorClient {
     }
 
     destroy(): void {
+        // Unregister WalletConnect wallet if it was registered
+        if (this.walletConnectRegistration) {
+            try {
+                this.walletConnectRegistration.unregister();
+                this.walletConnectRegistration = null;
+            } catch (error) {
+                if (this.config.debug) {
+                    logger.warn('Error unregistering WalletConnect wallet', { error });
+                }
+            }
+        }
+
         this.connectionManager.disconnect().catch(() => {});
         this.walletDetector.destroy();
         this.eventEmitter.offAll();
