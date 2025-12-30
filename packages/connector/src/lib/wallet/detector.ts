@@ -3,6 +3,7 @@ import type { Wallet, WalletInfo } from '../../types/wallets';
 import { BaseCollaborator } from '../core/base-collaborator';
 import { WalletAuthenticityVerifier } from './authenticity-verifier';
 import { createLogger } from '../utils/secure-logger';
+import { applyWalletIconOverride } from './wallet-icon-overrides';
 
 const logger = createLogger('WalletDetector');
 
@@ -241,14 +242,16 @@ export class WalletDetector extends BaseCollaborator {
      * Convert a Wallet Standard wallet to WalletInfo with capability checks
      */
     private mapToWalletInfo(wallet: Wallet): WalletInfo {
-        const hasConnect = hasFeature(wallet, 'standard:connect');
-        const hasDisconnect = hasFeature(wallet, 'standard:disconnect');
+        const walletWithIcon = applyWalletIconOverride(wallet);
+        const hasConnect = hasFeature(walletWithIcon, 'standard:connect');
+        const hasDisconnect = hasFeature(walletWithIcon, 'standard:disconnect');
         const isSolana =
-            Array.isArray(wallet.chains) && wallet.chains.some(c => typeof c === 'string' && c.includes('solana'));
+            Array.isArray(walletWithIcon.chains) &&
+            walletWithIcon.chains.some(c => typeof c === 'string' && c.includes('solana'));
         const connectable = hasConnect && hasDisconnect && isSolana;
 
         return {
-            wallet,
+            wallet: walletWithIcon,
             installed: true,
             connectable,
         };

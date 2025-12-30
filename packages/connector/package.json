@@ -1,6 +1,6 @@
 {
     "name": "@solana/connector",
-    "version": "0.1.9",
+    "version": "0.1.10",
     "description": "Headless wallet connector client and React provider built on Wallet Standard",
     "main": "./dist/index.js",
     "module": "./dist/index.mjs",
