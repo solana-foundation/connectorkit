@@ -7,15 +7,12 @@ import QRCodeUtil from 'qrcode';
  * Generate QR code matrix from value
  */
 function generateMatrix(value: string, errorCorrectionLevel: 'L' | 'M' | 'Q' | 'H') {
-    const arr = Array.prototype.slice.call(
-        QRCodeUtil.create(value, { errorCorrectionLevel }).modules.data,
-        0
-    );
+    const arr = Array.prototype.slice.call(QRCodeUtil.create(value, { errorCorrectionLevel }).modules.data, 0);
     const sqrt = Math.sqrt(arr.length);
     return arr.reduce(
         (rows: number[][], key: number, index: number) =>
             (index % sqrt === 0 ? rows.push([key]) : rows[rows.length - 1].push(key)) && rows,
-        [] as number[][]
+        [] as number[][],
     );
 }
 
@@ -81,7 +78,7 @@ function QRCodeSVG({
                         height={cellSize * (7 - i * 2)}
                         x={x1 + cellSize * i}
                         y={y1 + cellSize * i}
-                    />
+                    />,
                 );
             }
         });
@@ -96,13 +93,7 @@ function QRCodeSVG({
             row.forEach((_: number, j: number) => {
                 if (matrix[i][j]) {
                     // Skip dots under finder patterns
-                    if (
-                        !(
-                            (i < 7 && j < 7) ||
-                            (i > matrix.length - 8 && j < 7) ||
-                            (i < 7 && j > matrix.length - 8)
-                        )
-                    ) {
+                    if (!((i < 7 && j < 7) || (i > matrix.length - 8 && j < 7) || (i < 7 && j > matrix.length - 8))) {
                         // Skip center area if clearArea is true
                         if (
                             !clearArea ||
@@ -120,7 +111,7 @@ function QRCodeSVG({
                                     cy={j * cellSize + cellSize / 2}
                                     fill={dotColor}
                                     r={cellSize / 3}
-                                />
+                                />,
                             );
                         }
                     }
@@ -152,7 +143,15 @@ function QRCodeSVG({
 /**
  * Viewfinder corner brackets SVG
  */
-function ViewfinderFrame({ size, color = '#2D2D2D', opacity = 0.01 }: { size: number; color?: string; opacity?: number }) {
+function ViewfinderFrame({
+    size,
+    color = '#2D2D2D',
+    opacity = 0.01,
+}: {
+    size: number;
+    color?: string;
+    opacity?: number;
+}) {
     return (
         <svg
             width={size}
@@ -232,7 +231,7 @@ export function CustomQRCode({
     // QR codes need solid backgrounds for scanners to work reliably
     const resolvedBackground = backgroundColor || '#ffffff';
     const resolvedDotColor = dotColor || '#000000';
-    const resolvedFrameColor = error ? '#FF0000' : (frameColor || '#2D2D2D');
+    const resolvedFrameColor = error ? '#FF0000' : frameColor || '#2D2D2D';
     const frameOpacity = error ? 0.56 : 0.01;
 
     return (
@@ -259,7 +258,9 @@ export function CustomQRCode({
                 {/* Gradient glow background */}
                 <div
                     className={`absolute inset-0 opacity-25 blur-[15px] pointer-events-none ${
-                        error ? 'bg-gradient-to-br from-red-500 to-red-600' : 'bg-gradient-to-br from-violet-100 to-blue-200'
+                        error
+                            ? 'bg-gradient-to-br from-red-500 to-red-600'
+                            : 'bg-gradient-to-br from-violet-100 to-blue-200'
                     }`}
                     style={{ transform: 'scale(0.9)' }}
                 />
@@ -269,7 +270,8 @@ export function CustomQRCode({
                     <div
                         className="absolute inset-0 z-30 pointer-events-none overflow-hidden"
                         style={{
-                            background: 'linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,0.6) 50%, rgba(255,255,255,0) 100%)',
+                            background:
+                                'linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,0.6) 50%, rgba(255,255,255,0) 100%)',
                             animation: 'qr-scan-slide 2s ease-in-out infinite',
                         }}
                     />
@@ -326,7 +328,15 @@ export function CustomQRCode({
 /**
  * Placeholder shown while QR code is loading
  */
-function QRPlaceholder({ size, dotColor, backgroundColor }: { size: number; dotColor: string; backgroundColor: string }) {
+function QRPlaceholder({
+    size,
+    dotColor,
+    backgroundColor,
+}: {
+    size: number;
+    dotColor: string;
+    backgroundColor: string;
+}) {
     return (
         <div className="relative flex items-center justify-center" style={{ width: size - 40, height: size - 40 }}>
             {/* Dot pattern background */}
