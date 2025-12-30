@@ -68,22 +68,22 @@ function AppProviderInner({ children, connectorConfig, mobile, providers = [] }:
 
 /**
  * Main application provider for ConnectorKit
- * 
+ *
  * Automatically sets up:
  * - Wallet connection management
  * - WalletConnect URI state (when enabled)
  * - Mobile Wallet Adapter (when configured)
  * - Error boundaries (when configured)
- * 
+ *
  * @example
  * ```tsx
  * import { AppProvider, getDefaultConfig } from '@solana/connector/react';
- * 
+ *
  * const config = getDefaultConfig({
  *   appName: 'My App',
  *   walletConnect: true, // Auto-detects project ID from env
  * });
- * 
+ *
  * export function Providers({ children }) {
  *   return (
  *     <AppProvider connectorConfig={config}>

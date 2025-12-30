@@ -56,9 +56,7 @@ export interface WalletConnectRegistration {
  * unregister();
  * ```
  */
-export async function registerWalletConnectWallet(
-    config: WalletConnectConfig,
-): Promise<WalletConnectRegistration> {
+export async function registerWalletConnectWallet(config: WalletConnectConfig): Promise<WalletConnectRegistration> {
     if (typeof window === 'undefined') {
         throw new Error('WalletConnect registration can only be done in a browser environment');
     }

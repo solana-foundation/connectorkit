@@ -279,9 +279,7 @@ export function useConnector(): ConnectorSnapshot {
         }
 
         // Resolve connector metadata from connectors array
-        const connector = connectorId
-            ? state.connectors.find(c => c.id === connectorId) ?? null
-            : null;
+        const connector = connectorId ? (state.connectors.find(c => c.id === connectorId) ?? null) : null;
 
         return {
             walletStatus,

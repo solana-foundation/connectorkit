@@ -71,7 +71,10 @@ describe('AutoConnector', () => {
             detectDirectWallet: vi.fn(() => null),
             getConnectorById: vi.fn(() => undefined),
             initialize: vi.fn(),
-        } satisfies Pick<WalletDetector, 'getDetectedWallets' | 'detectDirectWallet' | 'getConnectorById' | 'initialize'>;
+        } satisfies Pick<
+            WalletDetector,
+            'getDetectedWallets' | 'detectDirectWallet' | 'getConnectorById' | 'initialize'
+        >;
 
         const connectionManagerMock = {
             connect: vi.fn().mockResolvedValue(undefined),
@@ -271,7 +274,9 @@ describe('AutoConnector', () => {
             // Set up legacy wallet detection
             (mockWalletStorage.get as ReturnType<typeof vi.fn>).mockReturnValue('Phantom');
             (mockWalletDetector.detectDirectWallet as ReturnType<typeof vi.fn>).mockReturnValue({
-                connect: vi.fn().mockResolvedValue({ publicKey: { toString: () => 'addr', toBytes: () => new Uint8Array() } }),
+                connect: vi
+                    .fn()
+                    .mockResolvedValue({ publicKey: { toString: () => 'addr', toBytes: () => new Uint8Array() } }),
                 disconnect: vi.fn(),
             });
 

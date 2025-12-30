@@ -56,15 +56,17 @@ function createMockWallet(options?: {
 
     const disconnect = vi.fn().mockResolvedValue(undefined);
 
-    const eventsOn = vi.fn().mockImplementation((event: string, listener: (props: { accounts?: readonly WalletAccount[] }) => void) => {
-        if (!eventListeners.has(event)) {
-            eventListeners.set(event, new Set());
-        }
-        eventListeners.get(event)!.add(listener);
-        return () => {
-            eventListeners.get(event)?.delete(listener);
-        };
-    });
+    const eventsOn = vi
+        .fn()
+        .mockImplementation((event: string, listener: (props: { accounts?: readonly WalletAccount[] }) => void) => {
+            if (!eventListeners.has(event)) {
+                eventListeners.set(event, new Set());
+            }
+            eventListeners.get(event)!.add(listener);
+            return () => {
+                eventListeners.get(event)?.delete(listener);
+            };
+        });
 
     const features: Record<string, unknown> = {
         'standard:connect': { connect, version: '1.0.0' },
@@ -85,7 +87,9 @@ function createMockWallet(options?: {
     };
 
     // Helper to emit events for testing
-    (wallet as unknown as { _emitChange: (accounts: WalletAccount[]) => void })._emitChange = (newAccounts: WalletAccount[]) => {
+    (wallet as unknown as { _emitChange: (accounts: WalletAccount[]) => void })._emitChange = (
+        newAccounts: WalletAccount[],
+    ) => {
         const listeners = eventListeners.get('change');
         if (listeners) {
             listeners.forEach(listener => listener({ accounts: newAccounts }));
@@ -449,7 +453,9 @@ describe('ConnectionManager', () => {
             emitSpy.mockClear();
 
             // Emit change event with only first account (second disappears)
-            mockStateManager.updateState({ selectedAccount: 'Account222222222222222222222222222222222222' as import('@solana/addresses').Address });
+            mockStateManager.updateState({
+                selectedAccount: 'Account222222222222222222222222222222222222' as import('@solana/addresses').Address,
+            });
             const remainingAccount = createMockAccount('Account111111111111111111111111111111111111');
             (wallet as unknown as { _emitChange: (accounts: WalletAccount[]) => void })._emitChange([remainingAccount]);
 
@@ -476,10 +482,7 @@ describe('ConnectionManager', () => {
             await connectionManager.selectAccount('Account222222222222222222222222222222222222');
 
             // Emit change event with both accounts (add a third)
-            const newAccounts = [
-                ...accounts,
-                createMockAccount('Account333333333333333333333333333333333333'),
-            ];
+            const newAccounts = [...accounts, createMockAccount('Account333333333333333333333333333333333333')];
             (wallet as unknown as { _emitChange: (accounts: WalletAccount[]) => void })._emitChange(newAccounts);
 
             // Selected account should remain the same

@@ -48,7 +48,10 @@ declare module '@walletconnect/universal-provider' {
         connect(params: ConnectParams): Promise<SessionTypes['struct'] | undefined>;
         disconnect(): Promise<void>;
 
-        request<T = unknown>(args: { method: string; params?: unknown[] | Record<string, unknown> | object }, chain?: string): Promise<T>;
+        request<T = unknown>(
+            args: { method: string; params?: unknown[] | Record<string, unknown> | object },
+            chain?: string,
+        ): Promise<T>;
 
         on(event: 'display_uri', listener: (uri: string) => void): void;
         on(event: 'session_ping', listener: () => void): void;

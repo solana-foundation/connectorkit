@@ -18,12 +18,7 @@
 
 import { useContext, useMemo, useSyncExternalStore, useCallback } from 'react';
 import { ConnectorContext } from '../ui/connector-provider';
-import type {
-    WalletStatus,
-    WalletConnectorId,
-    SessionAccount,
-    WalletSession,
-} from '../types/session';
+import type { WalletStatus, WalletConnectorId, SessionAccount, WalletSession } from '../types/session';
 import type { Address } from '@solana/addresses';
 
 /**

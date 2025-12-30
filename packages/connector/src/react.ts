@@ -55,13 +55,7 @@ export type {
     SessionAccount,
     ConnectOptions,
 } from './types/session';
-export {
-    createConnectorId,
-    isWalletConnectorId,
-    isConnected,
-    isConnecting,
-    isDisconnected,
-} from './types/session';
+export { createConnectorId, isWalletConnectorId, isConnected, isConnecting, isDisconnected } from './types/session';
 
 // Essential configuration types
 export type { ExtendedConnectorConfig } from './config';

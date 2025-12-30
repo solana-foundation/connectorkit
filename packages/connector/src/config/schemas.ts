@@ -81,9 +81,7 @@ export const walletConnectObjectConfigSchema = z.object({
  * - `true` (boolean shorthand to enable with defaults)
  * - Detailed object configuration with projectId and metadata
  */
-export const walletConnectConfigSchema = z
-    .union([z.literal(true), walletConnectObjectConfigSchema])
-    .optional();
+export const walletConnectConfigSchema = z.union([z.literal(true), walletConnectObjectConfigSchema]).optional();
 
 // ============================================================================
 // Storage Configuration

@@ -44,7 +44,9 @@ describe('createWalletConnectTransport', () => {
                 topic: 'mock-topic',
                 namespaces: {
                     solana: {
-                        accounts: ['solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp:HMJfh9P8FEF5eVHp3XypYWThUYCQ9sWNZZQQxVP2jjr1'],
+                        accounts: [
+                            'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp:HMJfh9P8FEF5eVHp3XypYWThUYCQ9sWNZZQQxVP2jjr1',
+                        ],
                         chains: ['solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp'],
                     },
                 },
@@ -52,7 +54,9 @@ describe('createWalletConnectTransport', () => {
             return provider.session;
         });
 
-        vi.spyOn(UniversalProvider as unknown as { init: (opts: unknown) => Promise<any> }, 'init').mockResolvedValue(provider);
+        vi.spyOn(UniversalProvider as unknown as { init: (opts: unknown) => Promise<any> }, 'init').mockResolvedValue(
+            provider,
+        );
 
         const transport = await createWalletConnectTransport(config);
 
@@ -85,7 +89,9 @@ describe('createWalletConnectTransport', () => {
             return await new Promise(() => {});
         });
 
-        vi.spyOn(UniversalProvider as unknown as { init: (opts: unknown) => Promise<any> }, 'init').mockResolvedValue(provider);
+        vi.spyOn(UniversalProvider as unknown as { init: (opts: unknown) => Promise<any> }, 'init').mockResolvedValue(
+            provider,
+        );
 
         const transport = await createWalletConnectTransport(config);
 
@@ -101,7 +107,9 @@ describe('createWalletConnectTransport', () => {
                 topic: 'mock-topic',
                 namespaces: {
                     solana: {
-                        accounts: ['solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp:HMJfh9P8FEF5eVHp3XypYWThUYCQ9sWNZZQQxVP2jjr1'],
+                        accounts: [
+                            'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp:HMJfh9P8FEF5eVHp3XypYWThUYCQ9sWNZZQQxVP2jjr1',
+                        ],
                         chains: ['solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp'],
                     },
                 },
@@ -135,7 +143,9 @@ describe('createWalletConnectTransport', () => {
                 topic: 'mock-topic',
                 namespaces: {
                     solana: {
-                        accounts: ['solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp:HMJfh9P8FEF5eVHp3XypYWThUYCQ9sWNZZQQxVP2jjr1'],
+                        accounts: [
+                            'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp:HMJfh9P8FEF5eVHp3XypYWThUYCQ9sWNZZQQxVP2jjr1',
+                        ],
                         chains: ['solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp'],
                     },
                 },
@@ -143,7 +153,9 @@ describe('createWalletConnectTransport', () => {
             return provider.session;
         });
 
-        vi.spyOn(UniversalProvider as unknown as { init: (opts: unknown) => Promise<any> }, 'init').mockResolvedValue(provider);
+        vi.spyOn(UniversalProvider as unknown as { init: (opts: unknown) => Promise<any> }, 'init').mockResolvedValue(
+            provider,
+        );
 
         const transport = await createWalletConnectTransport(config);
         await expect(transport.connect()).resolves.toBeUndefined();
@@ -152,4 +164,3 @@ describe('createWalletConnectTransport', () => {
         expect(provider.connect).toHaveBeenCalled();
     });
 });
-

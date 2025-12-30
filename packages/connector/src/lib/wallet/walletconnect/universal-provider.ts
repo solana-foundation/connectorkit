@@ -53,9 +53,7 @@ interface ProviderState {
  * This adapter lazily loads @walletconnect/universal-provider and implements
  * the WalletConnectTransport interface for use with the WalletConnect wallet shim.
  */
-export async function createWalletConnectTransport(
-    config: WalletConnectConfig,
-): Promise<WalletConnectTransport> {
+export async function createWalletConnectTransport(config: WalletConnectConfig): Promise<WalletConnectTransport> {
     const state: ProviderState = {
         provider: null,
         initialized: false,
@@ -113,8 +111,9 @@ export async function createWalletConnectTransport(
         provider: import('@walletconnect/universal-provider').default,
         deletePairings = false,
     ): Promise<void> {
-        const cleanup = (provider as unknown as { cleanupPendingPairings?: (opts?: { deletePairings?: boolean }) => Promise<void> })
-            .cleanupPendingPairings;
+        const cleanup = (
+            provider as unknown as { cleanupPendingPairings?: (opts?: { deletePairings?: boolean }) => Promise<void> }
+        ).cleanupPendingPairings;
         if (!cleanup) return;
         try {
             await cleanup.call(provider, { deletePairings });
@@ -133,7 +132,9 @@ export async function createWalletConnectTransport(
         }
     }
 
-    async function safeDisconnectProvider(provider: import('@walletconnect/universal-provider').default): Promise<void> {
+    async function safeDisconnectProvider(
+        provider: import('@walletconnect/universal-provider').default,
+    ): Promise<void> {
         try {
             await provider.disconnect();
         } catch (error) {
@@ -334,17 +335,12 @@ export async function createWalletConnectTransport(
             }
         },
 
-        async request<T = unknown>(args: {
-            method: string;
-            params: unknown;
-            chainId?: string;
-        }): Promise<T> {
+        async request<T = unknown>(args: { method: string; params: unknown; chainId?: string }): Promise<T> {
             const provider = await initProvider();
 
             if (!provider.session) {
                 throw new Error('WalletConnect: no active session. Call connect() first.');
             }
-
 
             try {
                 return await provider.request<T>(

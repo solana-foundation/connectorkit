@@ -1,12 +1,6 @@
 'use client';
 
-import {
-    useBalance,
-    useCluster,
-    useConnector,
-    useTokens,
-    useTransactions,
-} from '@solana/connector';
+import { useBalance, useCluster, useConnector, useTokens, useTransactions } from '@solana/connector';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Wallet, Copy, Check, RefreshCw, Coins, ExternalLink, LogOut } from 'lucide-react';
@@ -79,16 +73,8 @@ function getTransactionSubtitle(tx: { type: string; formattedTime: string; instr
 
 // Hook example components
 function UseConnectorExample() {
-    const {
-        walletStatus,
-        isConnected,
-        isConnecting,
-        account,
-        connector,
-        connectors,
-        connectWallet,
-        disconnectWallet,
-    } = useConnector();
+    const { walletStatus, isConnected, isConnecting, account, connector, connectors, connectWallet, disconnectWallet } =
+        useConnector();
     const status = walletStatus.status;
     const [copied, setCopied] = useState(false);
 
@@ -631,8 +617,7 @@ const hookExamples: ExampleConfig[] = [
     {
         id: 'use-connector',
         name: 'useConnector',
-        description:
-            'Unified hook for wallet state, connectors, and actions. Single import, everything you need.',
+        description: 'Unified hook for wallet state, connectors, and actions. Single import, everything you need.',
         code: `import { useConnector } from '@solana/connector';
 
 function WalletStatus() {

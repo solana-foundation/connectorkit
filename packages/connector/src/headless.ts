@@ -217,8 +217,4 @@ export {
     type WalletConnectRegistration,
 } from './lib/wallet/walletconnect';
 
-export type {
-    WalletConnectConfig,
-    WalletConnectMetadata,
-    WalletConnectTransport,
-} from './types/walletconnect';
+export type { WalletConnectConfig, WalletConnectMetadata, WalletConnectTransport } from './types/walletconnect';

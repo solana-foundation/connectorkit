@@ -218,21 +218,21 @@ export function createTransactionSigner(config: TransactionSignerConfig): Transa
                     const serializedTxs = prepared.map(p => p.serialized);
                     const wasWeb3js = prepared[0].wasWeb3js;
 
-                    type SignAllResult = 
-                        | { signedTransaction: Uint8Array }[]  // Wallet Standard format
+                    type SignAllResult =
+                        | { signedTransaction: Uint8Array }[] // Wallet Standard format
                         | { signedTransactions: Uint8Array[] }; // Legacy format
-                    
-                    const result = await signFeature.signAllTransactions({
+
+                    const result = (await signFeature.signAllTransactions({
                         account,
                         transactions: serializedTxs,
                         ...(cluster ? { chain: cluster.id } : {}),
-                    }) as SignAllResult;
+                    })) as SignAllResult;
 
                     // Handle both Wallet Standard formats:
                     // 1. Array of { signedTransaction: Uint8Array } (standard format)
                     // 2. Legacy { signedTransactions: Uint8Array[] } format
                     let signedBytesArray: Uint8Array[];
-                    
+
                     if (Array.isArray(result)) {
                         // Standard format: [{ signedTransaction: Uint8Array }, ...]
                         signedBytesArray = result.map(item => item.signedTransaction);

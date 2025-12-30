@@ -9,7 +9,7 @@ import {
     HooksExamplesSection,
     TransactionsSection,
 } from '@/components/playground';
-import { Anchor} from 'lucide-react';
+import { Anchor } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ConnectButton } from '@/components/connector/radix-ui/connect-button';
 import { IconPuzzlepieceFill, IconSparkle, IconSquareStack3dUpFill } from 'symbols-react';

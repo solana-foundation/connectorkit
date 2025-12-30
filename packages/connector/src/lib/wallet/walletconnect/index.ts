@@ -7,10 +7,7 @@
  */
 
 export { createWalletConnectWallet } from './create-walletconnect-wallet';
-export {
-    createWalletConnectTransport,
-    createMockWalletConnectTransport,
-} from './universal-provider';
+export { createWalletConnectTransport, createMockWalletConnectTransport } from './universal-provider';
 export {
     registerWalletConnectWallet,
     isWalletConnectAvailable,

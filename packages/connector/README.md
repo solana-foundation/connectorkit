@@ -423,15 +423,15 @@ The vNext API supports silent-first auto-connect, which attempts to reconnect wi
 const { connect } = useConnectWallet();
 
 // Silent connect (won't prompt user)
-await connect('wallet-standard:phantom', { 
-    silent: true, 
-    allowInteractiveFallback: false 
+await connect('wallet-standard:phantom', {
+    silent: true,
+    allowInteractiveFallback: false,
 });
 
 // Silent-first with interactive fallback (prompts if silent fails)
-await connect('wallet-standard:phantom', { 
-    silent: true, 
-    allowInteractiveFallback: true 
+await connect('wallet-standard:phantom', {
+    silent: true,
+    allowInteractiveFallback: true,
 });
 ```
 
@@ -442,12 +442,14 @@ await connect('wallet-standard:phantom', {
 ### Connect by Wallet Name → Connect by Connector ID
 
 **Before (Legacy):**
+
 ```typescript
 const { select, wallets } = useConnector();
 await select('Phantom');
 ```
 
 **After (vNext):**
+
 ```typescript
 const { connect } = useConnectWallet();
 await connect('wallet-standard:phantom');
@@ -457,27 +459,37 @@ await connect('wallet-standard:phantom');
 ### Check Connection Status
 
 **Before (Legacy):**
+
 ```typescript
 const { connected, connecting } = useConnector();
-if (connected) { /* ... */ }
+if (connected) {
+    /* ... */
+}
 ```
 
 **After (vNext):**
+
 ```typescript
 const { status, isConnected, isConnecting } = useWallet();
-if (status === 'connected') { /* ... */ }
+if (status === 'connected') {
+    /* ... */
+}
 // Or use the boolean shorthand:
-if (isConnected) { /* ... */ }
+if (isConnected) {
+    /* ... */
+}
 ```
 
 ### Get Selected Account
 
 **Before (Legacy):**
+
 ```typescript
 const { selectedAccount } = useConnector();
 ```
 
 **After (vNext):**
+
 ```typescript
 const { account } = useWallet();
 // Or for full account info:
@@ -487,12 +499,14 @@ const { accounts, account } = useWallet();
 ### Disconnect
 
 **Before (Legacy):**
+
 ```typescript
 const { disconnect } = useConnector();
 await disconnect();
 ```
 
 **After (vNext):**
+
 ```typescript
 const { disconnect } = useDisconnectWallet();
 await disconnect();
@@ -886,6 +900,7 @@ function WalletConnectQRModal({ uri, onClose }: { uri: string; onClose: () => vo
 Once enabled, "WalletConnect" appears as a wallet option in your wallet list. When selected, the `onDisplayUri` callback fires with a URI that should be displayed as a QR code for mobile wallet scanning.
 
 **Supported WalletConnect Solana methods:**
+
 - `solana_getAccounts` / `solana_requestAccounts` - Get connected accounts
 - `solana_signMessage` - Sign arbitrary messages
 - `solana_signTransaction` - Sign transactions
@@ -1376,12 +1391,12 @@ import { useConnector, useAccount } from '@solana/connector/react';
 
 #### vNext Hooks (Recommended)
 
-| Hook                   | Description                    | Returns                                                          |
-| ---------------------- | ------------------------------ | ---------------------------------------------------------------- |
-| `useWallet()`          | Wallet status state machine    | `{ status, isConnected, isConnecting, account, accounts, error }` |
-| `useWalletConnectors()`| Available wallet connectors    | `WalletConnectorMetadata[]`                                      |
-| `useConnectWallet()`   | Connect by connector ID        | `{ connect, isConnecting, error, resetError }`                   |
-| `useDisconnectWallet()`| Disconnect current wallet      | `{ disconnect, isDisconnecting }`                                |
+| Hook                    | Description                 | Returns                                                           |
+| ----------------------- | --------------------------- | ----------------------------------------------------------------- |
+| `useWallet()`           | Wallet status state machine | `{ status, isConnected, isConnecting, account, accounts, error }` |
+| `useWalletConnectors()` | Available wallet connectors | `WalletConnectorMetadata[]`                                       |
+| `useConnectWallet()`    | Connect by connector ID     | `{ connect, isConnecting, error, resetError }`                    |
+| `useDisconnectWallet()` | Disconnect current wallet   | `{ disconnect, isDisconnecting }`                                 |
 
 #### Legacy Hooks
 

@@ -68,12 +68,12 @@ export interface DefaultConfigOptions {
     /**
      * WalletConnect configuration for connecting via QR code / deep link.
      * When enabled, a "WalletConnect" wallet appears in the wallet list.
-     * 
+     *
      * Can be:
      * - `true` to enable with auto-detected project ID from NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID env var
      * - An object with optional overrides (projectId, metadata, etc.)
      * - `undefined` or `false` to disable
-     * 
+     *
      * When using `true` or minimal config, the following are auto-configured:
      * - `projectId`: Read from NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID
      * - `metadata.name`: Uses appName
@@ -82,19 +82,19 @@ export interface DefaultConfigOptions {
      * - `metadata.icons`: Uses appUrl/icon.svg
      * - `getCurrentChain`: Auto-reads from cluster storage
      * - `onDisplayUri/onSessionEstablished/onSessionDisconnected`: Auto-wired by AppProvider
-     * 
+     *
      * @example
      * ```ts
      * // Simplest - just enable it (reads project ID from env)
      * getDefaultConfig({ appName: 'My App', walletConnect: true })
-     * 
+     *
      * // With explicit project ID
-     * getDefaultConfig({ 
-     *   appName: 'My App', 
-     *   walletConnect: { projectId: 'my-project-id' } 
+     * getDefaultConfig({
+     *   appName: 'My App',
+     *   walletConnect: { projectId: 'my-project-id' }
      * })
      * ```
-     * 
+     *
      * @see https://docs.walletconnect.network/wallet-sdk/chain-support/solana
      */
     walletConnect?: boolean | SimplifiedWalletConnectConfig;
@@ -310,15 +310,15 @@ function buildWalletConnectConfig(
 
     // Get project ID from config or environment
     const configProjectId = typeof walletConnect === 'object' ? walletConnect.projectId : undefined;
-    const envProjectId = typeof process !== 'undefined' 
-        ? process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID 
-        : undefined;
+    const envProjectId = typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID : undefined;
     const projectId = configProjectId || envProjectId;
 
     // If no project ID available, WalletConnect is disabled
     if (!projectId) {
         if (typeof walletConnect === 'object' || walletConnect === true) {
-            logger.warn('WalletConnect enabled but no project ID found. Set NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID or provide projectId in config.');
+            logger.warn(
+                'WalletConnect enabled but no project ID found. Set NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID or provide projectId in config.',
+            );
         }
         return undefined;
     }

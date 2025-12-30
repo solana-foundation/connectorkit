@@ -187,8 +187,9 @@ describe('headless entrypoint', () => {
         });
 
         it('should export polyfill utilities without React', async () => {
-            const { installPolyfills, isPolyfillInstalled, isCryptoAvailable, getPolyfillStatus } =
-                await import('./headless');
+            const { installPolyfills, isPolyfillInstalled, isCryptoAvailable, getPolyfillStatus } = await import(
+                './headless'
+            );
 
             expect(installPolyfills).toBeDefined();
             expect(isPolyfillInstalled).toBeDefined();
@@ -285,7 +286,7 @@ describe('headless entrypoint', () => {
 
             const disconnected: WalletStatus = { status: 'disconnected' };
             const connecting: WalletStatus = { status: 'connecting', connectorId };
-            
+
             // Create a minimal mock session for testing
             const mockAccount: SessionAccount = {
                 address: 'TestAccount11111111111111111111111111111111' as import('@solana/addresses').Address,

@@ -9,11 +9,7 @@ import { ConnectButton } from '@/components/connector/radix-ui/connect-button';
 import { WalletDropdownContent } from '@/components/connector/radix-ui/wallet-dropdown-content';
 import { ConnectButton as ConnectButtonBaseUI } from '@/components/connector/base-ui/connect-button';
 import { WalletDropdownContent as WalletDropdownContentBaseUI } from '@/components/connector/base-ui/wallet-dropdown-content';
-import {
-    useConnector,
-    type WalletConnectorId,
-    type WalletConnectorMetadata,
-} from '@solana/connector/react';
+import { useConnector, type WalletConnectorId, type WalletConnectorMetadata } from '@solana/connector/react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
@@ -709,9 +705,7 @@ function WalletModalContent() {
                                             <div className="flex items-center gap-2">
                                                 {isThisConnecting && <Spinner className="h-4 w-4" />}
                                                 <Avatar className="h-10 w-10">
-                                                    {connector.icon && (
-                                                        <AvatarImage src={connector.icon} />
-                                                    )}
+                                                    {connector.icon && <AvatarImage src={connector.icon} />}
                                                     <AvatarFallback>
                                                         <Wallet className="h-5 w-5" />
                                                     </AvatarFallback>
@@ -742,9 +736,7 @@ function WalletModalContent() {
                                                     >
                                                         <span>{connector.name}</span>
                                                         <Avatar className="h-8 w-8">
-                                                            {connector.icon && (
-                                                                <AvatarImage src={connector.icon} />
-                                                            )}
+                                                            {connector.icon && <AvatarImage src={connector.icon} />}
                                                             <AvatarFallback>
                                                                 <Wallet className="h-4 w-4" />
                                                             </AvatarFallback>
@@ -769,23 +761,17 @@ function WalletModalContent() {
                                                 key={connector.id}
                                                 variant="outline"
                                                 className="h-auto justify-between p-4 rounded-[16px]"
-                                                onClick={() =>
-                                                    window.open(getInstallUrl(connector.name), '_blank')
-                                                }
+                                                onClick={() => window.open(getInstallUrl(connector.name), '_blank')}
                                             >
                                                 <div className="flex items-center gap-3">
                                                     <Avatar className="h-8 w-8">
-                                                        {connector.icon && (
-                                                            <AvatarImage src={connector.icon} />
-                                                        )}
+                                                        {connector.icon && <AvatarImage src={connector.icon} />}
                                                         <AvatarFallback>
                                                             <Wallet className="h-4 w-4" />
                                                         </AvatarFallback>
                                                     </Avatar>
                                                     <div className="text-left">
-                                                        <div className="font-medium text-sm">
-                                                            {connector.name}
-                                                        </div>
+                                                        <div className="font-medium text-sm">{connector.name}</div>
                                                         <div className="text-xs text-muted-foreground">
                                                             Not available
                                                         </div>
@@ -1040,9 +1026,7 @@ function WalletModalContentBaseUI() {
                                                 key={connector.id}
                                                 variant="outline"
                                                 className="h-auto justify-between p-4 rounded-[16px] w-full"
-                                                onClick={() =>
-                                                    window.open(getInstallUrl(connector.name), '_blank')
-                                                }
+                                                onClick={() => window.open(getInstallUrl(connector.name), '_blank')}
                                             >
                                                 <div className="flex items-center gap-3">
                                                     <BaseUIAvatar
@@ -1052,9 +1036,7 @@ function WalletModalContentBaseUI() {
                                                         className="h-8 w-8"
                                                     />
                                                     <div className="text-left">
-                                                        <div className="font-medium text-sm">
-                                                            {connector.name}
-                                                        </div>
+                                                        <div className="font-medium text-sm">{connector.name}</div>
                                                         <div className="text-xs text-muted-foreground">
                                                             Not available
                                                         </div>

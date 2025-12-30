@@ -124,7 +124,17 @@ export function WalletListElement({
 
     // Full custom render
     if (render) {
-        return <>{render({ wallets, installedWallets, select: handleSelect, connectById: handleConnectById, connecting })}</>;
+        return (
+            <>
+                {render({
+                    wallets,
+                    installedWallets,
+                    select: handleSelect,
+                    connectById: handleConnectById,
+                    connecting,
+                })}
+            </>
+        );
     }
 
     if (displayWallets.length === 0) {

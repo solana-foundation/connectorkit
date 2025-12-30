@@ -20,14 +20,7 @@ export function ConnectButton({ className }: ConnectButtonProps) {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-    const {
-        isConnected,
-        isConnecting,
-        account,
-        connector,
-        walletConnectUri,
-        clearWalletConnectUri,
-    } = useConnector();
+    const { isConnected, isConnecting, account, connector, walletConnectUri, clearWalletConnectUri } = useConnector();
 
     if (isConnected && account && connector) {
         const shortAddress = `${account.slice(0, 4)}...${account.slice(-4)}`;

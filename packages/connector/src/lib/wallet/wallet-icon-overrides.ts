@@ -80,4 +80,3 @@ export function applyWalletIconOverride(wallet: Wallet): Wallet {
 
     return createIconProxy(wallet, override);
 }
-

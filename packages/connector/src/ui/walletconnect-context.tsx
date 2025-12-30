@@ -19,7 +19,7 @@ const WalletConnectContext = createContext<WalletConnectContextValue | null>(nul
 
 /**
  * Provider component for WalletConnect URI state
- * 
+ *
  * This is automatically wrapped by AppProvider when WalletConnect is enabled.
  * You typically don't need to use this directly.
  */
@@ -59,23 +59,19 @@ export function WalletConnectProvider({ children }: { children: ReactNode }) {
         setUriState(null);
     }, []);
 
-    return (
-        <WalletConnectContext.Provider value={{ uri, setUri, clearUri }}>
-            {children}
-        </WalletConnectContext.Provider>
-    );
+    return <WalletConnectContext.Provider value={{ uri, setUri, clearUri }}>{children}</WalletConnectContext.Provider>;
 }
 
 /**
  * Hook to access the WalletConnect URI for QR code display
- * 
+ *
  * @example
  * ```tsx
  * import { useWalletConnectUri } from '@solana/connector/react';
- * 
+ *
  * function WalletModal() {
  *   const { uri, clearUri } = useWalletConnectUri();
- *   
+ *
  *   return uri ? (
  *     <QRCodeSVG value={uri} />
  *   ) : (
@@ -86,7 +82,7 @@ export function WalletConnectProvider({ children }: { children: ReactNode }) {
  */
 export function useWalletConnectUri(): WalletConnectContextValue {
     const context = useContext(WalletConnectContext);
-    
+
     // Return a no-op context if not within provider (graceful fallback)
     // This allows the hook to be used even when WalletConnect is not enabled
     if (!context) {
@@ -96,6 +92,6 @@ export function useWalletConnectUri(): WalletConnectContextValue {
             clearUri: () => {},
         };
     }
-    
+
     return context;
 }

@@ -253,7 +253,7 @@ describe('createEnhancedStorageWalletState (vNext)', () => {
         // Note: Due to the way the EnhancedStorage mock works, the storage starts with
         // its initial value (null). The migration logic only runs if the storage value
         // is falsy. To properly test this scenario, we need to set up the storage first.
-        
+
         // Create storage and set an existing state
         const storage = createEnhancedStorageWalletState();
         const existingState: PersistedWalletState = {

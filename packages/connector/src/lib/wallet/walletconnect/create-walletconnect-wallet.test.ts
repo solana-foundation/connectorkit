@@ -421,9 +421,10 @@ describe('createWalletConnectWallet', () => {
             const wallet = createWalletConnectWallet(config, mockTransport);
 
             const signMessageFeature = wallet.features['solana:signMessage'] as {
-                signMessage: (args: { account: { address: string }; message: Uint8Array }) => Promise<
-                    { signature: Uint8Array; signedMessage: Uint8Array }[]
-                >;
+                signMessage: (args: {
+                    account: { address: string };
+                    message: Uint8Array;
+                }) => Promise<{ signature: Uint8Array; signedMessage: Uint8Array }[]>;
             };
 
             const message = new Uint8Array([1, 2, 3, 4, 5]);
@@ -550,10 +551,7 @@ describe('createWalletConnectWallet', () => {
             const wallet = createWalletConnectWallet(config, mockTransport);
 
             const signTxFeature = wallet.features['solana:signTransaction'] as {
-                signTransaction: (args: {
-                    account: { address: string };
-                    transaction: Uint8Array;
-                }) => Promise<unknown>;
+                signTransaction: (args: { account: { address: string }; transaction: Uint8Array }) => Promise<unknown>;
             };
 
             await signTxFeature.signTransaction({

@@ -4,7 +4,11 @@ import { StateManager } from '../core/state-manager';
 import { EventEmitter } from '../core/event-emitter';
 import type { ConnectorState } from '../../types/connector';
 import { getWalletsRegistry } from './standard-shim';
-import { createMockBackpackWallet, createMockPhantomWallet, createMockSolflareWallet } from '../../__tests__/mocks/wallet-standard-mock';
+import {
+    createMockBackpackWallet,
+    createMockPhantomWallet,
+    createMockSolflareWallet,
+} from '../../__tests__/mocks/wallet-standard-mock';
 import { applyWalletIconOverride, getWalletIconOverride } from './wallet-icon-overrides';
 
 // Mock dependencies

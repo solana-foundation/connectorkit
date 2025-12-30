@@ -51,12 +51,9 @@ describe('isWalletError', () => {
 describe('createWalletError', () => {
     it('should create a wallet error with all properties', () => {
         const baseError = new Error('Test message');
-        const walletError = createWalletError(
-            baseError,
-            WalletErrorType.CONNECTION_FAILED,
-            true,
-            { walletName: 'Phantom' },
-        );
+        const walletError = createWalletError(baseError, WalletErrorType.CONNECTION_FAILED, true, {
+            walletName: 'Phantom',
+        });
 
         expect(walletError.message).toBe('Test message');
         expect(walletError.type).toBe(WalletErrorType.CONNECTION_FAILED);
@@ -66,22 +63,14 @@ describe('createWalletError', () => {
 
     it('should create a non-recoverable error', () => {
         const baseError = new Error('Test');
-        const walletError = createWalletError(
-            baseError,
-            WalletErrorType.INSUFFICIENT_FUNDS,
-            false,
-        );
+        const walletError = createWalletError(baseError, WalletErrorType.INSUFFICIENT_FUNDS, false);
 
         expect(walletError.recoverable).toBe(false);
     });
 
     it('should be recognized by isWalletError', () => {
         const baseError = new Error('Test');
-        const walletError = createWalletError(
-            baseError,
-            WalletErrorType.USER_REJECTED,
-            true,
-        );
+        const walletError = createWalletError(baseError, WalletErrorType.USER_REJECTED, true);
 
         expect(isWalletError(walletError)).toBe(true);
     });
