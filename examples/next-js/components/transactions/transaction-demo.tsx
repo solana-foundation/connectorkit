@@ -1,6 +1,6 @@
 'use client';
 
-import { useConnector } from '@solana/connector';
+import { useConnector } from '@solana/connector/react';
 import { Alert } from '@/components/ui/alert';
 import { Info } from 'lucide-react';
 import { LegacySolTransfer } from './legacy-sol-transfer';
@@ -10,9 +10,9 @@ import { ChainUtilitiesDemo } from './chain-utilities-demo';
 import { ConnectionAbstractionDemo } from './connection-abstraction-demo';
 
 export function TransactionDemo() {
-    const { connected } = useConnector();
+    const { isConnected } = useConnector();
 
-    if (!connected) {
+    if (!isConnected) {
         return (
             <Alert>
                 <Info className="h-4 w-4" />

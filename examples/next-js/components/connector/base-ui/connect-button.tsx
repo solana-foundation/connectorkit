@@ -1,6 +1,6 @@
 'use client';
 
-import { useConnector } from '@solana/connector';
+import { useConnector } from '@solana/connector/react';
 import { useState } from 'react';
 import { WalletModal } from './wallet-modal';
 import { WalletDropdownContent } from './wallet-dropdown-content';
@@ -53,29 +53,26 @@ function Spinner({ className }: { className?: string }) {
 
 export function ConnectButton({ className }: ConnectButtonProps) {
     const [isModalOpen, setIsModalOpen] = useState(false);
-    
-    // All wallet state including WalletConnect URI comes from useConnector
-    const { 
-        connected, 
-        connecting, 
-        selectedWallet, 
-        selectedAccount, 
-        wallets,
+
+    const {
+        isConnected,
+        isConnecting,
+        account,
+        connector,
         walletConnectUri,
         clearWalletConnectUri,
     } = useConnector();
 
-    if (connected && selectedAccount && selectedWallet) {
-        const shortAddress = `${selectedAccount.slice(0, 4)}...${selectedAccount.slice(-4)}`;
-        const walletWithIcon = wallets.find(w => w.wallet.name === selectedWallet.name);
-        const walletIcon = walletWithIcon?.wallet.icon || selectedWallet.icon;
+    if (isConnected && account && connector) {
+        const shortAddress = `${account.slice(0, 4)}...${account.slice(-4)}`;
+        const walletIcon = connector.icon || undefined;
 
         return (
             <Menu>
                 <MenuTrigger className={`h-8 px-3 ${className || ''}`}>
                     <Avatar
                         src={walletIcon}
-                        alt={selectedWallet.name}
+                        alt={connector.name}
                         fallback={<Wallet className="h-3 w-3" />}
                         className="h-5 w-5"
                     />
@@ -86,9 +83,9 @@ export function ConnectButton({ className }: ConnectButtonProps) {
                     <MenuPositioner sideOffset={8} align="end">
                         <MenuPopup className="rounded-[20px] p-0 outline-none">
                             <WalletDropdownContent
-                                selectedAccount={selectedAccount}
+                                selectedAccount={account}
                                 walletIcon={walletIcon}
-                                walletName={selectedWallet.name}
+                                walletName={connector.name}
                             />
                         </MenuPopup>
                     </MenuPositioner>
@@ -98,7 +95,7 @@ export function ConnectButton({ className }: ConnectButtonProps) {
     }
 
     // Show loading button when connecting (but modal stays rendered)
-    const buttonContent = connecting ? (
+    const buttonContent = isConnecting ? (
         <>
             <Spinner className="h-4 w-4" />
             <span className="text-xs">Connecting...</span>
@@ -114,7 +111,7 @@ export function ConnectButton({ className }: ConnectButtonProps) {
             </Button>
             <WalletModal
                 open={isModalOpen}
-                onOpenChange={(open) => {
+                onOpenChange={open => {
                     setIsModalOpen(open);
                     // Clear WalletConnect URI when modal closes
                     if (!open) {

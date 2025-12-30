@@ -204,7 +204,7 @@ components/
 
 Use these components as reference to build your own custom implementation:
 
-- Study how hooks are used (`useConnector`, `useAccount`, `useCluster`)
+- Study how hooks are used (`useWallet`, `useWalletConnectors`, `useConnectWallet`, `useDisconnectWallet`, `useAccount`, `useCluster`)
 - Adapt the UI patterns to your design system
 - Add custom features specific to your use case
 

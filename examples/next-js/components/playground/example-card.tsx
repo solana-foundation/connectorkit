@@ -7,7 +7,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { CopyButton } from '@/components/ui/copy-button';
 import { CodeBlock } from '@/components/ui/code-block';
 import { ExampleCardHeaderActionsProvider, ExampleCardHeaderActionsSlot } from './example-card-actions';
-import { useConnector } from '@solana/connector';
+import { useConnector } from '@solana/connector/react';
 import { Plug } from 'lucide-react';
 import { IconTypescriptLogo } from 'symbols-react';
 
@@ -27,7 +27,7 @@ interface ExampleCardProps {
 }
 
 export function ExampleCard({ example, requiresConnection = true }: ExampleCardProps) {
-    const { connected } = useConnector();
+    const { isConnected } = useConnector();
     const [tab, setTab] = useState<'preview' | 'code'>('preview');
 
     return (
@@ -71,7 +71,7 @@ export function ExampleCard({ example, requiresConnection = true }: ExampleCardP
                                     }}
                                 >
                                     <CardContent className="p-6 flex items-center justify-center min-h-[250px]">
-                                        {requiresConnection && !connected ? (
+                                        {requiresConnection && !isConnected ? (
                                             <div className="flex items-center justify-center gap-2 text-center text-sand-600 text-body-md font-inter p-2 border-sand-300 border rounded-lg border-dashed bg-bg1">
                                                 <Plug className="h-4 w-4 rotate-45" />
                                                 Connect wallet to preview

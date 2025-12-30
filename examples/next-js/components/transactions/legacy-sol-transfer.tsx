@@ -4,7 +4,7 @@ import { useCallback, useMemo } from 'react';
 import { Connection, Transaction, SystemProgram, PublicKey } from '@solana/web3.js';
 import { signature as createSignature, address } from '@solana/kit';
 import { useWalletAdapterCompat } from '@solana/connector/compat';
-import { useTransactionSigner, useConnector, useCluster, useConnectorClient } from '@solana/connector';
+import { useTransactionSigner, useCluster, useConnectorClient, useConnector } from '@solana/connector';
 import { PipelineHeaderButton, PipelineVisualization } from '@/components/pipeline';
 import { waitForSignatureConfirmation } from './rpc-utils';
 import { VisualPipeline } from '@/lib/visual-pipeline';
@@ -19,12 +19,12 @@ import { useExampleCardHeaderActions } from '@/components/playground/example-car
  */
 export function LegacySolTransfer() {
     const { signer } = useTransactionSigner();
-    const { disconnect } = useConnector();
+    const { disconnectWallet } = useConnector();
     const { cluster } = useCluster();
     const client = useConnectorClient();
 
     // Create wallet adapter compatible interface
-    const walletAdapter = useWalletAdapterCompat(signer, disconnect);
+    const walletAdapter = useWalletAdapterCompat(signer, disconnectWallet);
 
     const visualPipeline = useMemo(
         () =>

@@ -6,6 +6,8 @@ export default defineConfig({
         headless: 'src/headless.ts',
         react: 'src/react.ts',
         compat: 'src/compat.ts',
+        remote: 'src/remote/index.ts',
+        server: 'src/server/index.ts',
     },
     format: ['esm', 'cjs'],
     dts: true,
@@ -26,6 +28,10 @@ export default defineConfig({
         '@wallet-standard/base',
         '@wallet-standard/features',
         '@solana-mobile/wallet-standard-mobile',
+        // Server-only dependencies (dynamically imported, not bundled)
+        '@solana-keychain/core',
+        '@solana-keychain/fireblocks',
+        '@solana-keychain/privy',
     ],
     esbuildOptions: options => {
         // Aggressive tree-shaking optimizations

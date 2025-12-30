@@ -30,12 +30,12 @@ import { useExampleCardHeaderActions } from '@/components/playground/example-car
 
 export function LegacySolTransfer() {
     const { signer } = useTransactionSigner();
-    const { disconnect } = useConnector();
+    const { disconnectWallet } = useConnector();
     const { cluster } = useCluster();
     const client = useConnectorClient();
 
     // Create wallet adapter compatible interface
-    const walletAdapter = useWalletAdapterCompat(signer, disconnect);
+    const walletAdapter = useWalletAdapterCompat(signer, disconnectWallet);
 
     const visualPipeline = useMemo(
         () =>
@@ -269,20 +269,33 @@ export function ModernSolTransfer() {
     createMessageSignerFromWallet, 
     createSignableMessage 
 } from '@solana/connector/headless';
-import { useConnector, useConnectorClient } from '@solana/connector';
+import { useConnector, useCluster, useConnectorClient } from '@solana/connector';
+import { Connection } from '@solana/web3.js';
+import { useMemo } from 'react';
 
 function KitSignerDemo() {
-    const { selectedWallet, accounts, selectedAccount, cluster } = useConnector();
+    const { walletStatus, connectorId } = useConnector();
+    const { cluster } = useCluster();
     const client = useConnectorClient();
     
-    const account = accounts.find(acc => acc.address === selectedAccount)?.raw;
+    // Get the active connector instance (Wallet Standard)
+    const wallet = useMemo(() => {
+        if (!client || !connectorId) return null;
+        return client.getConnector(connectorId);
+    }, [client, connectorId]);
+
+    // Wallet Standard account (only available when connected)
+    const account = walletStatus.status === 'connected'
+        ? walletStatus.session.selectedAccount.account
+        : null;
 
     // Create Kit-compatible signers from wallet
     const kitSigners = useMemo(() => {
-        if (!selectedWallet || !account || !cluster) return null;
-        const connection = new Connection(client.getRpcUrl());
-        return createKitSignersFromWallet(selectedWallet, account, connection);
-    }, [selectedWallet, account, cluster, client]);
+        if (!wallet || !account || !cluster || !client) return null;
+        const rpcUrl = client.getRpcUrl();
+        const connection = rpcUrl ? new Connection(rpcUrl) : null;
+        return createKitSignersFromWallet(wallet, account, connection, undefined);
+    }, [wallet, account, cluster, client]);
 
     async function signMessage(message: string) {
         if (!kitSigners?.messageSigner) return;

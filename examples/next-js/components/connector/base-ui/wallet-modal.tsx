@@ -1,6 +1,10 @@
 'use client';
 
-import { useConnector } from '@solana/connector';
+import {
+    useConnector,
+    type WalletConnectorId,
+    type WalletConnectorMetadata,
+} from '@solana/connector/react';
 import { Dialog, DialogContent, DialogTitle, DialogClose } from '@/components/ui-base/dialog';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui-base/collapsible';
 import { Button } from '@/components/ui-base/button';
@@ -92,12 +96,21 @@ function ErrorAlert({ message, onDismiss }: { message: string; onDismiss: () => 
 }
 
 export function WalletModal({ open, onOpenChange, walletConnectUri, onClearWalletConnectUri }: WalletModalProps) {
-    const { wallets, select, connecting, disconnect } = useConnector();
-    const [connectingWallet, setConnectingWallet] = useState<string | null>(null);
+    const {
+        walletStatus,
+        isConnecting,
+        connectorId,
+        connectors,
+        connectWallet,
+        disconnectWallet,
+    } = useConnector();
+    const status = walletStatus.status;
+
+    const [connectingConnectorId, setConnectingConnectorId] = useState<WalletConnectorId | null>(null);
     const [isClient, setIsClient] = useState(false);
-    const [recentlyConnected, setRecentlyConnected] = useState<string | null>(null);
+    const [recentlyConnectedConnectorId, setRecentlyConnectedConnectorId] = useState<WalletConnectorId | null>(null);
     const [isOtherWalletsOpen, setIsOtherWalletsOpen] = useState(false);
-    const [errorWallet, setErrorWallet] = useState<string | null>(null);
+    const [errorConnectorId, setErrorConnectorId] = useState<WalletConnectorId | null>(null);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [copied, setCopied] = useState(false);
 
@@ -106,38 +119,50 @@ export function WalletModal({ open, onOpenChange, walletConnectUri, onClearWalle
     }, []);
 
     useEffect(() => {
-        const recent = localStorage.getItem('recentlyConnectedWallet');
+        const recent = localStorage.getItem('recentlyConnectedConnectorId');
         if (recent) {
-            setRecentlyConnected(recent);
+            setRecentlyConnectedConnectorId(recent as WalletConnectorId);
         }
     }, []);
 
-    const isWalletConnectFlow = connectingWallet === 'WalletConnect' || !!walletConnectUri;
+    useEffect(() => {
+        if (status !== 'connected') return;
+        if (!connectorId) return;
+        localStorage.setItem('recentlyConnectedConnectorId', connectorId);
+        setRecentlyConnectedConnectorId(connectorId);
+    }, [status, connectorId]);
+
+    const walletConnectConnector = connectors.find(c => c.name === 'WalletConnect') ?? null;
+    const isWalletConnectFlow =
+        (!!walletConnectConnector &&
+            (connectingConnectorId === walletConnectConnector.id ||
+                (status === 'connecting' && connectorId === walletConnectConnector.id))) ||
+        !!walletConnectUri;
 
     function cancelConnection() {
         onClearWalletConnectUri?.();
-        setConnectingWallet(null);
-        disconnect().catch(() => {});
+        setConnectingConnectorId(null);
+        disconnectWallet().catch(() => {});
     }
 
     // Clear error state when modal closes or user tries another wallet
     const clearError = () => {
-        setErrorWallet(null);
+        setErrorConnectorId(null);
         setErrorMessage(null);
     };
 
-    const handleSelectWallet = async (walletName: string) => {
+    const handleSelectWallet = async (connector: WalletConnectorMetadata) => {
         clearError();
-        setConnectingWallet(walletName);
+        setConnectingConnectorId(connector.id);
         try {
-            if (walletName === 'WalletConnect') {
+            if (connector.name === 'WalletConnect') {
                 onClearWalletConnectUri?.();
             }
-            await select(walletName);
-            localStorage.setItem('recentlyConnectedWallet', walletName);
-            setRecentlyConnected(walletName);
+            await connectWallet(connector.id);
+            localStorage.setItem('recentlyConnectedConnectorId', connector.id);
+            setRecentlyConnectedConnectorId(connector.id);
             // Don't close modal for WalletConnect - wait for connection
-            if (walletName !== 'WalletConnect') {
+            if (connector.name !== 'WalletConnect') {
                 onOpenChange(false);
             }
         } catch (error) {
@@ -146,18 +171,19 @@ export function WalletModal({ open, onOpenChange, walletConnectUri, onClearWalle
             if (message.includes('Connection cancelled')) return;
 
             // Set error state for UI feedback
-            setErrorWallet(walletName);
+            setErrorConnectorId(connector.id);
             setErrorMessage(message);
 
             // Log for telemetry/debugging (includes full error details)
             console.error('Failed to connect wallet:', {
-                wallet: walletName,
+                wallet: connector.name,
+                connectorId: connector.id,
                 error,
                 message,
                 timestamp: new Date().toISOString(),
             });
         } finally {
-            setConnectingWallet(null);
+            setConnectingConnectorId(null);
         }
     };
 
@@ -176,19 +202,19 @@ export function WalletModal({ open, onOpenChange, walletConnectUri, onClearWalle
         cancelConnection();
     };
 
-    const installedWallets = wallets.filter(w => w.installed);
-    const notInstalledWallets = wallets.filter(w => !w.installed);
+    const readyConnectors = connectors.filter(c => c.ready);
+    const notReadyConnectors = connectors.filter(c => !c.ready);
 
-    const sortedInstalledWallets = [...installedWallets].sort((a, b) => {
-        const aIsRecent = recentlyConnected === a.wallet.name;
-        const bIsRecent = recentlyConnected === b.wallet.name;
+    const sortedReadyConnectors = [...readyConnectors].sort((a, b) => {
+        const aIsRecent = recentlyConnectedConnectorId === a.id;
+        const bIsRecent = recentlyConnectedConnectorId === b.id;
         if (aIsRecent && !bIsRecent) return -1;
         if (!aIsRecent && bIsRecent) return 1;
         return 0;
     });
 
-    const primaryWallets = sortedInstalledWallets.slice(0, 3);
-    const otherWallets = sortedInstalledWallets.slice(3);
+    const primaryWallets = sortedReadyConnectors.slice(0, 3);
+    const otherWallets = sortedReadyConnectors.slice(3);
 
     const getInstallUrl = (walletName: string, walletUrl?: string): string | undefined => {
         // Prefer wallet metadata URL if available
@@ -212,7 +238,7 @@ export function WalletModal({ open, onOpenChange, walletConnectUri, onClearWalle
     const handleOpenChange = (isOpen: boolean) => {
         if (!isOpen) {
             clearError();
-            if (connecting || connectingWallet || walletConnectUri) {
+            if (isConnecting || connectingConnectorId || walletConnectUri) {
                 cancelConnection();
             }
         }
@@ -300,31 +326,33 @@ export function WalletModal({ open, onOpenChange, walletConnectUri, onClearWalle
                             {primaryWallets.length > 0 && (
                                 <div className="space-y-2">
                                     <div className="grid gap-2">
-                                        {primaryWallets.map(walletInfo => {
-                                            const isConnecting = connectingWallet === walletInfo.wallet.name;
-                                            const isRecent = recentlyConnected === walletInfo.wallet.name;
-                                            const hasError = errorWallet === walletInfo.wallet.name;
+                                        {primaryWallets.map(connector => {
+                                            const isThisConnecting =
+                                                connectingConnectorId === connector.id ||
+                                                (isConnecting && connectorId === connector.id);
+                                            const isRecent = recentlyConnectedConnectorId === connector.id;
+                                            const hasError = errorConnectorId === connector.id;
                                             return (
                                                 <Button
-                                                    key={walletInfo.wallet.name}
+                                                    key={connector.id}
                                                     variant="outline"
                                                     className={`h-auto justify-between p-4 rounded-[16px] w-full ${
                                                         hasError
                                                             ? 'border-destructive/50 bg-destructive/5 hover:bg-destructive/10'
                                                             : ''
                                                     }`}
-                                                    onClick={() => handleSelectWallet(walletInfo.wallet.name)}
-                                                    disabled={isConnecting}
+                                                    onClick={() => handleSelectWallet(connector)}
+                                                    disabled={isThisConnecting}
                                                 >
                                                     <div className="flex items-center gap-3 flex-1">
                                                         <div className="flex-1 text-left">
                                                             <div className="flex items-center gap-2">
                                                                 <span className="font-semibold text-md">
-                                                                    {walletInfo.wallet.name}
+                                                                    {connector.name}
                                                                 </span>
                                                                 {isRecent && <Badge className="text-xs">Recent</Badge>}
                                                             </div>
-                                                            {isConnecting && (
+                                                            {isThisConnecting && (
                                                                 <div className="text-xs text-muted-foreground">
                                                                     Connecting...
                                                                 </div>
@@ -337,10 +365,10 @@ export function WalletModal({ open, onOpenChange, walletConnectUri, onClearWalle
                                                         </div>
                                                     </div>
                                                     <div className="flex items-center gap-2">
-                                                        {isConnecting && <Spinner className="h-4 w-4" />}
+                                                        {isThisConnecting && <Spinner className="h-4 w-4" />}
                                                         <Avatar
-                                                            src={walletInfo.wallet.icon}
-                                                            alt={walletInfo.wallet.name}
+                                                            src={connector.icon}
+                                                            alt={connector.name}
                                                             fallback={<Wallet className="h-5 w-5" />}
                                                             className="h-10 w-10"
                                                         />
@@ -364,33 +392,36 @@ export function WalletModal({ open, onOpenChange, walletConnectUri, onClearWalle
                                         </CollapsibleTrigger>
                                         <CollapsibleContent>
                                             <div className="grid gap-2 pt-2">
-                                                {otherWallets.map(walletInfo => {
-                                                    const isConnecting = connectingWallet === walletInfo.wallet.name;
-                                                    const isRecent = recentlyConnected === walletInfo.wallet.name;
-                                                    const hasError = errorWallet === walletInfo.wallet.name;
+                                                {otherWallets.map(connector => {
+                                                    const isThisConnecting =
+                                                        connectingConnectorId === connector.id ||
+                                                        (isConnecting && connectorId === connector.id);
+                                                    const isRecent =
+                                                        recentlyConnectedConnectorId === connector.id;
+                                                    const hasError = errorConnectorId === connector.id;
                                                     return (
                                                         <Button
-                                                            key={walletInfo.wallet.name}
+                                                            key={connector.id}
                                                             variant="outline"
                                                             className={`h-auto justify-between p-4 rounded-[16px] w-full ${
                                                                 hasError
                                                                     ? 'border-destructive/50 bg-destructive/5 hover:bg-destructive/10'
                                                                     : ''
                                                             }`}
-                                                            onClick={() => handleSelectWallet(walletInfo.wallet.name)}
-                                                            disabled={isConnecting}
+                                                            onClick={() => handleSelectWallet(connector)}
+                                                            disabled={isThisConnecting}
                                                         >
                                                             <div className="flex items-center gap-3 flex-1">
                                                                 <div className="flex-1 text-left">
                                                                     <div className="flex items-center gap-2">
                                                                         <span className="font-semibold text-sm">
-                                                                            {walletInfo.wallet.name}
+                                                                            {connector.name}
                                                                         </span>
                                                                         {isRecent && (
                                                                             <Badge className="text-xs">Recent</Badge>
                                                                         )}
                                                                     </div>
-                                                                    {isConnecting && (
+                                                                    {isThisConnecting && (
                                                                         <div className="text-xs text-muted-foreground">
                                                                             Connecting...
                                                                         </div>
@@ -403,10 +434,10 @@ export function WalletModal({ open, onOpenChange, walletConnectUri, onClearWalle
                                                                 </div>
                                                             </div>
                                                             <div className="flex items-center gap-2">
-                                                                {isConnecting && <Spinner className="h-4 w-4" />}
+                                                                {isThisConnecting && <Spinner className="h-4 w-4" />}
                                                                 <Avatar
-                                                                    src={walletInfo.wallet.icon}
-                                                                    alt={walletInfo.wallet.name}
+                                                                    src={connector.icon}
+                                                                    alt={connector.name}
                                                                     fallback={<Wallet className="h-5 w-5" />}
                                                                     className="h-10 w-10"
                                                                 />
@@ -420,38 +451,35 @@ export function WalletModal({ open, onOpenChange, walletConnectUri, onClearWalle
                                 </>
                             )}
 
-                            {notInstalledWallets.length > 0 && (
+                            {notReadyConnectors.length > 0 && (
                                 <>
                                     {(primaryWallets.length > 0 || otherWallets.length > 0) && <Separator />}
                                     <div className="space-y-2">
                                         <h3 className="text-sm font-medium text-muted-foreground px-1">
-                                            {installedWallets.length > 0 ? 'Other Wallets' : 'Popular Wallets'}
+                                            {readyConnectors.length > 0 ? 'Unavailable Wallets' : 'Wallets'}
                                         </h3>
                                         <div className="grid gap-2">
-                                            {notInstalledWallets.slice(0, 3).map(walletInfo => {
-                                                const installUrl = getInstallUrl(
-                                                    walletInfo.wallet.name,
-                                                    (walletInfo.wallet as { url?: string }).url,
-                                                );
+                                            {notReadyConnectors.slice(0, 3).map(connector => {
+                                                const installUrl = getInstallUrl(connector.name);
 
                                                 return (
                                                     <div
-                                                        key={walletInfo.wallet.name}
+                                                        key={connector.id}
                                                         className="flex items-center justify-between p-4 rounded-[16px] w-full border bg-background shadow-xs"
                                                     >
                                                         <div className="flex items-center gap-3">
                                                             <Avatar
-                                                                src={walletInfo.wallet.icon}
-                                                                alt={walletInfo.wallet.name}
+                                                                src={connector.icon}
+                                                                alt={connector.name}
                                                                 fallback={<Wallet className="h-4 w-4" />}
                                                                 className="h-8 w-8"
                                                             />
                                                             <div className="text-left">
                                                                 <div className="font-medium text-sm">
-                                                                    {walletInfo.wallet.name}
+                                                                    {connector.name}
                                                                 </div>
                                                                 <div className="text-xs text-muted-foreground">
-                                                                    Not installed
+                                                                    Not available
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -473,7 +501,7 @@ export function WalletModal({ open, onOpenChange, walletConnectUri, onClearWalle
                                 </>
                             )}
 
-                            {wallets.length === 0 && (
+                            {connectors.length === 0 && (
                                 <div className="rounded-lg border border-dashed p-8 text-center">
                                     <Wallet className="mx-auto h-12 w-12 text-muted-foreground mb-3" />
                                     <h3 className="font-semibold mb-2">No Wallets Detected</h3>

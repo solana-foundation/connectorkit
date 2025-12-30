@@ -73,6 +73,12 @@ export default function RootLayout({
 }>) {
     return (
         <html lang="en">
+            <head>
+                {/* <script
+                    crossOrigin="anonymous"
+                    src="//unpkg.com/react-scan/dist/auto.global.js"
+                /> */}
+            </head>
             <body className={`${abcDiatype.variable} ${berkeleyMono.variable} ${inter.variable} antialiased`}>
                 <Providers>
                     <AppNav />
