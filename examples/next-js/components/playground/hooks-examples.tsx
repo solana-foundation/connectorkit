@@ -1,6 +1,6 @@
 'use client';
 
-import { useBalance, useCluster, useConnector, useTokens, useTransactions } from '@solana/connector';
+import { useBalance, useCluster, useConnector, useTokens, useTransactions } from '@solana/connector/react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Wallet, Copy, Check, RefreshCw, Coins, ExternalLink, LogOut } from 'lucide-react';
@@ -231,7 +231,11 @@ function UseBalanceExample() {
                 <div className="p-4 rounded-lg border bg-card">
                     <div className="flex items-center justify-between mb-1">
                         <span className="text-xs text-muted-foreground">SOL Balance</span>
-                        <button onClick={() => refetch()} disabled={isLoading} className="p-1 hover:bg-muted rounded">
+                        <button
+                            onClick={() => void refetch()}
+                            disabled={isLoading}
+                            className="p-1 hover:bg-muted rounded"
+                        >
                             <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} />
                         </button>
                     </div>
@@ -309,7 +313,7 @@ function UseClusterExample() {
                         {clusters.map(c => (
                             <button
                                 key={c.id}
-                                onClick={() => setCluster(c.id)}
+                                onClick={() => void setCluster(c.id)}
                                 className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
                                     cluster?.id === c.id
                                         ? 'bg-sand-100 text-primary-foreground text-sand-1500'
@@ -408,9 +412,23 @@ function UseTokensExample() {
                 <div className="rounded-lg border bg-card">
                     <div className="flex items-center justify-between p-3 border-b">
                         <span className="text-sm font-medium">Tokens</span>
-                        <button onClick={() => refetch()} disabled={isLoading} className="p-1 hover:bg-muted rounded">
-                            <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-                        </button>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => void refetch()}
+                                disabled={isLoading}
+                                className="p-1 hover:bg-muted rounded"
+                            >
+                                <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+                            </button>
+                            <button
+                                type="button"
+                                onClick={abort}
+                                disabled={!isLoading}
+                                className="px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-muted rounded disabled:opacity-50"
+                            >
+                                Abort
+                            </button>
+                        </div>
                     </div>
                     <div className="divide-y max-h-[180px] overflow-y-auto">
                         {isLoading ? (
@@ -553,8 +571,25 @@ function UseTransactionsExample() {
             {/* Right: Combined Component */}
             <div className="flex-1 flex flex-col justify-center">
                 <div className="rounded-lg border bg-card">
-                    <div className="p-3 border-b">
+                    <div className="flex items-center justify-between p-3 border-b">
                         <span className="text-sm font-medium">Transactions</span>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => void refetch()}
+                                disabled={isLoading}
+                                className="p-1 hover:bg-muted rounded"
+                            >
+                                <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+                            </button>
+                            <button
+                                type="button"
+                                onClick={abort}
+                                disabled={!isLoading}
+                                className="px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-muted rounded disabled:opacity-50"
+                            >
+                                Abort
+                            </button>
+                        </div>
                     </div>
                     <div className="divide-y max-h-[180px] overflow-y-auto">
                         {isLoading ? (
@@ -607,6 +642,16 @@ function UseTransactionsExample() {
                             <p className="p-4 text-center text-muted-foreground text-sm">No transactions yet</p>
                         )}
                     </div>
+                    {hasMore && (
+                        <button
+                            type="button"
+                            onClick={() => void loadMore()}
+                            disabled={isLoading}
+                            className="w-full p-2 text-sm text-muted-foreground hover:bg-muted disabled:opacity-50 border-t"
+                        >
+                            {isLoading ? 'Loading...' : 'Load more...'}
+                        </button>
+                    )}
                 </div>
             </div>
         </div>
@@ -618,7 +663,7 @@ const hookExamples: ExampleConfig[] = [
         id: 'use-connector',
         name: 'useConnector',
         description: 'Unified hook for wallet state, connectors, and actions. Single import, everything you need.',
-        code: `import { useConnector } from '@solana/connector';
+        code: `import { useConnector } from '@solana/connector/react';
 
 function WalletStatus() {
     const {
@@ -639,7 +684,7 @@ function WalletStatus() {
             <div>
                 <p>Connected: {connector.name}</p>
                 <p>Address: {account}</p>
-                <button onClick={() => disconnectWallet()}>Disconnect</button>
+                <button onClick={() => void disconnectWallet()}>Disconnect</button>
             </div>
         );
     }
@@ -647,7 +692,7 @@ function WalletStatus() {
     return (
         <div>
             {connectors.filter(c => c.ready).map(c => (
-                <button key={c.id} onClick={() => connectWallet(c.id)}>
+                <button key={c.id} onClick={() => void connectWallet(c.id)}>
                     {c.name}
                 </button>
             ))}
@@ -661,7 +706,7 @@ function WalletStatus() {
         id: 'use-balance',
         name: 'useBalance',
         description: 'Fetch SOL balance for connected wallet. Includes loading state and refetch function.',
-        code: `import { useBalance } from '@solana/connector';
+        code: `import { useBalance } from '@solana/connector/react';
 
 function BalanceDisplay() {
     const { solBalance, isLoading, refetch } = useBalance();
@@ -669,7 +714,7 @@ function BalanceDisplay() {
     return (
         <div>
             <span>Balance: {solBalance?.toFixed(4) ?? '--'} SOL</span>
-            <button onClick={() => refetch()} disabled={isLoading}>
+            <button onClick={() => void refetch()} disabled={isLoading}>
                 {isLoading ? 'Loading...' : 'Refresh'}
             </button>
         </div>
@@ -682,7 +727,7 @@ function BalanceDisplay() {
         id: 'use-cluster',
         name: 'useCluster',
         description: 'Manage network/cluster state. Switch between mainnet, devnet, testnet, or custom clusters.',
-        code: `import { useCluster } from '@solana/connector';
+        code: `import { useCluster } from '@solana/connector/react';
 
 function NetworkSelector() {
     const { 
@@ -700,7 +745,7 @@ function NetworkSelector() {
             {clusters.map(c => (
                 <button 
                     key={c.id} 
-                    onClick={() => setCluster(c.id)}
+                    onClick={() => void setCluster(c.id)}
                     style={{ fontWeight: cluster?.id === c.id ? 'bold' : 'normal' }}
                 >
                     {c.label}
@@ -717,7 +762,7 @@ function NetworkSelector() {
         name: 'useTokens',
         description:
             'Fetch token holdings with Solana Token List metadata and optional CoinGecko pricing. Includes caching + refresh.',
-        code: `import { useTokens } from '@solana/connector';
+        code: `import { useTokens } from '@solana/connector/react';
 
 function TokenList() {
     const { tokens, isLoading, error, refetch, totalAccounts } = useTokens({
@@ -736,7 +781,7 @@ function TokenList() {
                     <span>{token.symbol ?? token.mint}: {token.formatted}</span>
                 </div>
             ))}
-            <button onClick={() => refetch()}>Refresh</button>
+            <button onClick={() => void refetch()}>Refresh</button>
             <div>Total token accounts: {totalAccounts}</div>
         </div>
     );
@@ -748,7 +793,7 @@ function TokenList() {
         id: 'use-transactions',
         name: 'useTransactions',
         description: 'Fetch transaction history with parsed metadata. Includes type detection and explorer URLs.',
-        code: `import { useTransactions } from '@solana/connector';
+        code: `import { useTransactions } from '@solana/connector/react';
 
 function TransactionHistory() {
     const { 
@@ -775,8 +820,8 @@ function TransactionHistory() {
                     <span>{tx.formattedTime}</span>
                 </a>
             ))}
-            {hasMore && <button onClick={loadMore}>Load More</button>}
-            <button onClick={() => refetch()}>Refresh</button>
+            {hasMore && <button onClick={() => void loadMore()}>Load More</button>}
+            <button onClick={() => void refetch()}>Refresh</button>
         </div>
     );
 }`,

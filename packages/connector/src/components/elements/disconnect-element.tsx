@@ -2,7 +2,8 @@
 
 import React from 'react';
 import type { ReactNode } from 'react';
-import { useConnector } from '../../ui/connector-provider';
+import { useDisconnectWallet } from '../../hooks/use-disconnect-wallet';
+import { useWallet } from '../../hooks/use-wallet';
 
 export interface DisconnectElementProps {
     /** Display variant */
@@ -55,25 +56,20 @@ export function DisconnectElement({
     onDisconnect,
     render,
 }: DisconnectElementProps) {
-    const { disconnect, connecting } = useConnector();
-    const [disconnecting, setDisconnecting] = React.useState(false);
+    const { isConnecting } = useWallet();
+    const { disconnect, isDisconnecting } = useDisconnectWallet();
 
     const handleDisconnect = async () => {
-        setDisconnecting(true);
-        try {
-            await disconnect();
-            onDisconnect?.();
-        } finally {
-            setDisconnecting(false);
-        }
+        await disconnect();
+        onDisconnect?.();
     };
 
     // Custom render
     if (render) {
-        return <>{render({ disconnect: handleDisconnect, disconnecting })}</>;
+        return <>{render({ disconnect: handleDisconnect, disconnecting: isDisconnecting })}</>;
     }
 
-    const isDisabled = connecting || disconnecting;
+    const isDisabled = isConnecting || isDisconnecting;
 
     const defaultIcon = showIcon && !icon && (
         <svg
@@ -111,7 +107,7 @@ export function DisconnectElement({
                 disabled={isDisabled}
                 data-slot="disconnect-element"
                 data-variant="button"
-                data-disconnecting={disconnecting}
+                data-disconnecting={isDisconnecting}
             >
                 {content}
             </button>
@@ -128,7 +124,7 @@ export function DisconnectElement({
                 disabled={isDisabled}
                 data-slot="disconnect-element"
                 data-variant="link"
-                data-disconnecting={disconnecting}
+                data-disconnecting={isDisconnecting}
             >
                 {content}
             </button>
@@ -145,7 +141,7 @@ export function DisconnectElement({
             disabled={isDisabled}
             data-slot="disconnect-element"
             data-variant="menuitem"
-            data-disconnecting={disconnecting}
+            data-disconnecting={isDisconnecting}
         >
             {content}
         </button>

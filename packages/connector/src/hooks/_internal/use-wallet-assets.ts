@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo } from 'react';
 import { address as toAddress } from '@solana/addresses';
-import { useAccount } from '../use-account';
+import { useWallet } from '../use-wallet';
 import { useSolanaClient } from '../use-kit-solana-client';
 import { useSharedQuery } from './use-shared-query';
 import type { SharedQueryOptions } from './use-shared-query';
@@ -207,7 +207,8 @@ export function useWalletAssets<TSelected = WalletAssetsData>(
         select,
     } = options;
 
-    const { address, connected } = useAccount();
+    const { account, isConnected } = useWallet();
+    const address = account ? String(account) : null;
     const { client: providerClient } = useSolanaClient();
 
     // Use override client if provided, otherwise use provider client
@@ -216,16 +217,16 @@ export function useWalletAssets<TSelected = WalletAssetsData>(
     // Generate cache key based on RPC URL and address only
     // This ensures useBalance and useTokens share the same cache entry
     const key = useMemo(() => {
-        if (!enabled || !connected || !address || !rpcClient) return null;
+        if (!enabled || !isConnected || !address || !rpcClient) return null;
         const rpcUrl =
             rpcClient.urlOrMoniker instanceof URL ? rpcClient.urlOrMoniker.toString() : String(rpcClient.urlOrMoniker);
         return getWalletAssetsQueryKey(rpcUrl, address);
-    }, [enabled, connected, address, rpcClient]);
+    }, [enabled, isConnected, address, rpcClient]);
 
     // Query function that fetches SOL balance and all token accounts
     const queryFn = useCallback(
         async (signal: AbortSignal): Promise<WalletAssetsData> => {
-            if (!connected || !address || !rpcClient) {
+            if (!isConnected || !address || !rpcClient) {
                 return { lamports: 0n, tokenAccounts: [] };
             }
 
@@ -282,7 +283,7 @@ export function useWalletAssets<TSelected = WalletAssetsData>(
                 tokenAccounts,
             };
         },
-        [connected, address, rpcClient],
+        [isConnected, address, rpcClient],
     );
 
     // Use shared query with optional select

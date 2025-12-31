@@ -198,7 +198,7 @@ import { RefreshCw } from 'lucide-react';
                 <p className="text-xs text-muted-foreground font-medium">SOL Balance</p>
                 <p className="text-2xl font-bold">{solBalance?.toFixed(4) ?? '--'} SOL</p>
             </div>
-            <button onClick={() => refetch()} disabled={isLoading} className="p-2 hover:bg-muted rounded-md">
+            <button onClick={() => void refetch()} disabled={isLoading} className="p-2 hover:bg-muted rounded-md">
                 <RefreshCw className={\`h-4 w-4 \${isLoading ? 'animate-spin' : ''}\`} />
             </button>
         </div>
@@ -219,7 +219,7 @@ import { RefreshCw } from 'lucide-react';
                                 <RenderPropValue name="isLoading">{String(isLoading)}</RenderPropValue>
                                 <RenderPropValue name="refetch">
                                     <button
-                                        onClick={() => refetch()}
+                                        onClick={() => void refetch()}
                                         disabled={isLoading}
                                         className="p-1 hover:bg-muted rounded-md transition-colors disabled:opacity-50"
                                     >
@@ -251,7 +251,7 @@ import { RefreshCw } from 'lucide-react';
                                     <p className="text-2xl font-bold">{solBalance?.toFixed(4) ?? '--'} SOL</p>
                                 </div>
                                 <button
-                                    onClick={() => refetch()}
+                                    onClick={() => void refetch()}
                                     disabled={isLoading}
                                     className="p-2 hover:bg-muted rounded-md transition-colors disabled:opacity-50"
                                 >
@@ -471,7 +471,7 @@ import { Coins, RefreshCw } from 'lucide-react';
         <div className="rounded-lg border bg-card w-[350px]">
             <div className="flex items-center justify-between p-3 border-b">
                 <span className="font-medium text-sm">Tokens ({tokens.length})</span>
-                <button onClick={() => refetch()} disabled={isLoading}>
+                <button onClick={() => void refetch()} disabled={isLoading}>
                     <RefreshCw className={\`h-3.5 w-3.5 \${isLoading ? 'animate-spin' : ''}\`} />
                 </button>
             </div>
@@ -516,7 +516,7 @@ import { Coins, RefreshCw } from 'lucide-react';
                                         <RenderPropValue name="isLoading">{String(isLoading)}</RenderPropValue>
                                         <RenderPropValue name="refetch">
                                             <button
-                                                onClick={() => refetch()}
+                                                onClick={() => void refetch()}
                                                 disabled={isLoading}
                                                 className="p-1 hover:bg-muted rounded-md transition-colors disabled:opacity-50"
                                             >
@@ -598,7 +598,7 @@ import { Coins, RefreshCw } from 'lucide-react';
                                     <div className="flex items-center justify-between p-3 border-b">
                                         <span className="font-medium text-sm">Tokens ({tokens.length})</span>
                                         <button
-                                            onClick={() => refetch()}
+                                            onClick={() => void refetch()}
                                             disabled={isLoading}
                                             className="p-1 hover:bg-muted rounded"
                                         >
