@@ -9,6 +9,13 @@ import { applyWalletIconOverride } from './wallet-icon-overrides';
 
 const logger = createLogger('WalletDetector');
 
+function isSolanaWallet(wallet: Wallet): boolean {
+    return (
+        Array.isArray(wallet.chains) &&
+        wallet.chains.some(chain => typeof chain === 'string' && chain.startsWith('solana:'))
+    );
+}
+
 /**
  * Legacy wallet PublicKey interface
  */
@@ -110,14 +117,19 @@ export class WalletDetector extends BaseCollaborator {
             const walletsApi = getWalletsRegistry();
             const update = () => {
                 const ws = walletsApi.get();
+
+                // - Only include Solana wallets (Wallet Standard supports multi-chain registries)
+                // - If multiple wallets share the same name (e.g. multi-chain variants), prefer the Solana one
+                //   by filtering to solana:* first, then deduplicating by name.
+                const solanaWallets = ws.filter(isSolanaWallet);
+                const unique = this.deduplicateWallets(solanaWallets);
+
                 const previousCount = this.getState().wallets.length;
-                const newCount = ws.length;
+                const newCount = unique.length;
 
                 if (newCount !== previousCount) {
                     this.log('🔍 WalletDetector: found wallets:', newCount);
                 }
-
-                const unique = this.deduplicateWallets(ws);
 
                 // Update connector registry (connectorId -> Wallet map)
                 this.updateConnectorRegistry(unique);
@@ -289,11 +301,11 @@ export class WalletDetector extends BaseCollaborator {
     private mapToConnectorMetadata(wallet: Wallet): WalletConnectorMetadata {
         const walletWithIcon = applyWalletIconOverride(wallet);
         const hasConnect = hasFeature(walletWithIcon, 'standard:connect');
-        const hasDisconnect = hasFeature(walletWithIcon, 'standard:disconnect');
-        const isSolana =
-            Array.isArray(walletWithIcon.chains) &&
-            walletWithIcon.chains.some(c => typeof c === 'string' && c.includes('solana'));
-        const ready = hasConnect && hasDisconnect && isSolana;
+        const isSolana = isSolanaWallet(walletWithIcon);
+        // Wallet UI considers a wallet "available" if it's in the registry and supports Solana.
+        // We additionally require standard:connect so the UX doesn't offer unconnectable wallets.
+        // Do NOT require standard:disconnect; some wallets omit it but still connect fine.
+        const ready = hasConnect && isSolana;
 
         return {
             id: createConnectorId(wallet.name),
@@ -311,11 +323,8 @@ export class WalletDetector extends BaseCollaborator {
     private mapToWalletInfo(wallet: Wallet): WalletInfo {
         const walletWithIcon = applyWalletIconOverride(wallet);
         const hasConnect = hasFeature(walletWithIcon, 'standard:connect');
-        const hasDisconnect = hasFeature(walletWithIcon, 'standard:disconnect');
-        const isSolana =
-            Array.isArray(walletWithIcon.chains) &&
-            walletWithIcon.chains.some(c => typeof c === 'string' && c.includes('solana'));
-        const connectable = hasConnect && hasDisconnect && isSolana;
+        const isSolana = isSolanaWallet(walletWithIcon);
+        const connectable = hasConnect && isSolana;
 
         return {
             wallet: walletWithIcon,
