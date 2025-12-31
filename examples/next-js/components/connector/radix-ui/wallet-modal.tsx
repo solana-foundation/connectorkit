@@ -280,7 +280,10 @@ export function WalletModal({ open, onOpenChange, walletConnectUri, onClearWalle
                                                 >
                                                     <div className="flex flex-1 items-center justify-between">
                                                         <span>Other Wallets</span>
-                                                        <HiddenWalletIcons wallets={otherWallets} className="shrink-0" />
+                                                        <HiddenWalletIcons
+                                                            wallets={otherWallets}
+                                                            className="shrink-0"
+                                                        />
                                                     </div>
                                                 </AccordionTrigger>
                                                 <AccordionContent>

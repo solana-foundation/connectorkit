@@ -120,7 +120,7 @@ export function WalletListElement({
             const availableConnectorIds = wallets.map(w => w.connectorId);
             console.warn(
                 `[WalletListElement] Wallet not found for connectorId: ${connectorId}. Available connectorIds (${availableConnectorIds.length}):`,
-                availableConnectorIds
+                availableConnectorIds,
             );
             return;
         }

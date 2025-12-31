@@ -38,10 +38,7 @@ export function HiddenWalletIcons({ wallets, maxIcons = 4, className }: HiddenWa
                 </div>
             ))}
             {Array.from({ length: placeholderCount }).map((_, index) => (
-                <div
-                    key={`placeholder-${index}`}
-                    className="h-4.5 w-4.5 rounded-full border border-border bg-muted"
-                />
+                <div key={`placeholder-${index}`} className="h-4.5 w-4.5 rounded-full border border-border bg-muted" />
             ))}
         </div>
     );

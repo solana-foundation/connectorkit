@@ -265,7 +265,7 @@ describe('ConnectionManager', () => {
             const state = mockStateManager.getSnapshot();
             expect(state.selectedAccount).toBe(preferredAddress);
             if (state.wallet.status === 'connected') {
-                expect(state.wallet.selectedAccount.address).toBe(preferredAddress);
+                expect(state.wallet.session.selectedAccount.address).toBe(preferredAddress);
             }
         });
 
