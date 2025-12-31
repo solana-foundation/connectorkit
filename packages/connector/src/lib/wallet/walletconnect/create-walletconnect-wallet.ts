@@ -212,12 +212,27 @@ export function createWalletConnectWallet(config: WalletConnectConfig, transport
         emitChange();
     }
 
-    // Subscribe to session changes from the transport
+    // Subscribe to session changes from the transport and capture unsubscribe function
+    let unsubscribeSessionChanged: (() => void) | undefined;
     if (transport.onSessionChanged) {
-        transport.onSessionChanged(refreshAccountsFromSession);
+        const unsubscribe = transport.onSessionChanged(refreshAccountsFromSession);
+        // Guard for transports that return void (no-op) - store only if it's a function
+        if (typeof unsubscribe === 'function') {
+            unsubscribeSessionChanged = unsubscribe;
+        }
     }
 
-    const wallet: Wallet = {
+    /**
+     * Cleanup function to unsubscribe from session changes
+     */
+    function cleanupSessionSubscription(): void {
+        if (unsubscribeSessionChanged) {
+            unsubscribeSessionChanged();
+            unsubscribeSessionChanged = undefined; // Clear reference to avoid double-calls
+        }
+    }
+
+    const wallet: Wallet & { cleanup?: () => void } = {
         version: '1.0.0',
         name: 'WalletConnect',
         icon: WALLETCONNECT_ICON,
@@ -225,6 +240,7 @@ export function createWalletConnectWallet(config: WalletConnectConfig, transport
         get accounts() {
             return accounts;
         },
+        cleanup: cleanupSessionSubscription,
         features: {
             // Standard connect feature
             'standard:connect': {
@@ -288,6 +304,8 @@ export function createWalletConnectWallet(config: WalletConnectConfig, transport
             'standard:disconnect': {
                 version: '1.0.0',
                 disconnect: async () => {
+                    // Unsubscribe from session changes before disconnecting
+                    cleanupSessionSubscription();
                     await transport.disconnect();
                     accounts = [];
                     emitChange();

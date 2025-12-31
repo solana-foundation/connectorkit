@@ -86,6 +86,7 @@ describe('AutoConnector', () => {
             getSnapshot: vi.fn(() => initialState),
             updateState: vi.fn((update: Partial<ConnectorState>) => {
                 Object.assign(initialState, update);
+                return true;
             }),
         } satisfies Pick<StateManager, 'getSnapshot' | 'updateState'>;
 
@@ -273,17 +274,23 @@ describe('AutoConnector', () => {
 
             // Set up legacy wallet detection
             (mockWalletStorage.get as ReturnType<typeof vi.fn>).mockReturnValue('Phantom');
-            (mockWalletDetector.detectDirectWallet as ReturnType<typeof vi.fn>).mockReturnValue({
-                connect: vi
-                    .fn()
-                    .mockResolvedValue({ publicKey: { toString: () => 'addr', toBytes: () => new Uint8Array() } }),
+            const mockLegacyConnect = vi
+                .fn()
+                .mockResolvedValue({ publicKey: { toString: () => 'addr', toBytes: () => new Uint8Array() } });
+            const mockLegacyConnector = {
+                connect: mockLegacyConnect,
                 disconnect: vi.fn(),
-            });
+            };
+            (mockWalletDetector.detectDirectWallet as ReturnType<typeof vi.fn>).mockReturnValue(mockLegacyConnector);
 
             await autoConnector.attemptAutoConnect();
 
             // Should have tried vNext first, then fallen back
             expect(mockConnectionManager.connectWallet).toHaveBeenCalled();
+            // Verify legacy fallback executed
+            expect(mockWalletDetector.detectDirectWallet).toHaveBeenCalledWith('Phantom');
+            expect(mockLegacyConnect).toHaveBeenCalled();
+            expect(mockConnectionManager.connect).toHaveBeenCalled();
         });
     });
 

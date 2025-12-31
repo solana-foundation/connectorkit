@@ -107,8 +107,8 @@ function QRCodeSVG({
                             dots.push(
                                 <circle
                                     key={`dot-${i}-${j}`}
-                                    cx={i * cellSize + cellSize / 2}
-                                    cy={j * cellSize + cellSize / 2}
+                                    cx={j * cellSize + cellSize / 2}
+                                    cy={i * cellSize + cellSize / 2}
                                     fill={dotColor}
                                     r={cellSize / 3}
                                 />,

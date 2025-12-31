@@ -8,7 +8,7 @@ import type {
     WalletSession,
     SessionAccount,
 } from '../../types/session';
-import { INITIAL_WALLET_STATUS } from '../../types/session';
+import { INITIAL_WALLET_STATUS, createConnectorId } from '../../types/session';
 import { BaseCollaborator } from '../core/base-collaborator';
 import type {
     StandardConnectFeature,
@@ -167,9 +167,6 @@ export class ConnectionManager extends BaseCollaborator {
             this.updateWalletStatus({
                 status: 'connected',
                 session,
-                connectorId,
-                accounts: sessionAccounts,
-                selectedAccount,
             });
 
             // Also update legacy state fields for backwards compatibility
@@ -272,10 +269,10 @@ export class ConnectionManager extends BaseCollaborator {
                 listeners.add(listener);
                 return () => listeners.delete(listener);
             },
-            selectAccount: (address: Address) => {
+            selectAccount: async (address: Address) => {
                 const account = accounts.find(a => a.address === address);
                 if (account) {
-                    this.selectAccount(address);
+                    return this.selectAccount(address);
                 }
             },
         };
@@ -359,9 +356,6 @@ export class ConnectionManager extends BaseCollaborator {
             this.updateWalletStatus({
                 status: 'connected',
                 session,
-                connectorId,
-                accounts: sessionAccounts,
-                selectedAccount,
             });
         }
 
@@ -434,11 +428,19 @@ export class ConnectionManager extends BaseCollaborator {
         const attemptId = ++this.connectAttemptId;
         this.pendingWallet = wallet;
         this.pendingWalletName = name;
+        const connectorId = createConnectorId(name);
 
         this.eventEmitter.emit({
             type: 'connecting',
             wallet: name as WalletName,
             timestamp: new Date().toISOString(),
+        });
+
+        // Keep vNext state machine in sync even when using legacy connect().
+        // Auto-connect relies on this method today, and many UIs use `walletStatus/isConnected`.
+        this.updateWalletStatus({
+            status: 'connecting',
+            connectorId,
         });
 
         this.stateManager.updateState({ connecting: true }, true);
@@ -455,13 +457,33 @@ export class ConnectionManager extends BaseCollaborator {
             const walletAccounts = wallet.accounts;
             const accountMap = new Map<string, WalletAccount>();
             for (const a of [...walletAccounts, ...result.accounts]) accountMap.set(a.address, a);
-            const accounts = Array.from(accountMap.values()).map(a => this.toAccountInfo(a));
+            const sessionAccounts: SessionAccount[] = Array.from(accountMap.values()).map(a => ({
+                address: a.address as Address,
+                label: a.label,
+                account: a,
+            }));
+
+            if (sessionAccounts.length === 0) {
+                throw new Error(`Wallet ${name} connected but returned no accounts`);
+            }
+
+            const accounts = sessionAccounts.map(a => this.toAccountInfo(a.account));
 
             const state = this.getState();
             const previouslySelected = state.selectedAccount;
             const previousAddresses = new Set(state.accounts.map((a: AccountInfo) => a.address));
             const firstNew = accounts.find(a => !previousAddresses.has(a.address));
             const selected = firstNew?.address ?? previouslySelected ?? accounts[0]?.address ?? null;
+
+            const selectedSessionAccount =
+                (selected ? sessionAccounts.find(a => a.address === selected) : undefined) ?? sessionAccounts[0];
+
+            // Update vNext wallet status to connected
+            const session = this.createSession(wallet, connectorId, sessionAccounts, selectedSessionAccount);
+            this.updateWalletStatus({
+                status: 'connected',
+                session,
+            });
 
             this.stateManager.updateState(
                 {
@@ -520,6 +542,7 @@ export class ConnectionManager extends BaseCollaborator {
             }
 
             const errorMessage = e instanceof Error ? e.message : String(e);
+            const error = e instanceof Error ? e : new Error(errorMessage);
 
             this.eventEmitter.emit({
                 type: 'connection:failed',
@@ -530,9 +553,17 @@ export class ConnectionManager extends BaseCollaborator {
 
             this.eventEmitter.emit({
                 type: 'error',
-                error: e instanceof Error ? e : new Error(errorMessage),
+                error,
                 context: 'wallet-connection',
                 timestamp: new Date().toISOString(),
+            });
+
+            // Keep vNext wallet status in sync
+            this.updateWalletStatus({
+                status: 'error',
+                error,
+                connectorId,
+                recoverable: this.isRecoverableError(error),
             });
 
             this.stateManager.updateState(

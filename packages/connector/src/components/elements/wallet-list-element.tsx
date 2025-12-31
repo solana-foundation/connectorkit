@@ -116,10 +116,16 @@ export function WalletListElement({
     const handleConnectById = async (connectorId: WalletConnectorId) => {
         // Find wallet name for legacy select (until we fully migrate)
         const wallet = wallets.find(w => w.connectorId === connectorId);
-        if (wallet) {
-            await select(wallet.name);
-            onConnect?.(connectorId);
+        if (!wallet) {
+            const availableConnectorIds = wallets.map(w => w.connectorId);
+            console.warn(
+                `[WalletListElement] Wallet not found for connectorId: ${connectorId}. Available connectorIds (${availableConnectorIds.length}):`,
+                availableConnectorIds
+            );
+            return;
         }
+        await select(wallet.name);
+        onConnect?.(connectorId);
     };
 
     // Full custom render

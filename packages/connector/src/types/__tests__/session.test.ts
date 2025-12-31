@@ -121,10 +121,7 @@ describe('wallet status type guards', () => {
 
     const connected: WalletStatusConnected = {
         status: 'connected',
-        connectorId: 'wallet-standard:phantom' as WalletConnectorId,
         session: mockSession,
-        accounts: [mockAccount],
-        selectedAccount: mockAccount,
     };
 
     const error: WalletStatusError = {
@@ -199,10 +196,7 @@ describe('toLegacyWalletState', () => {
     it('should convert connected status', () => {
         const legacy = toLegacyWalletState({
             status: 'connected',
-            connectorId: 'wallet-standard:phantom' as WalletConnectorId,
             session: mockSession,
-            accounts: [mockAccount],
-            selectedAccount: mockAccount,
         });
         expect(legacy.connected).toBe(true);
         expect(legacy.connecting).toBe(false);

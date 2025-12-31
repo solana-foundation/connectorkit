@@ -16,6 +16,7 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Wallet, ExternalLink, Plug } from 'lucide-react';
+import { HiddenWalletIcons } from '@/components/connector/shared/hidden-wallet-icons';
 import { BaseUILogo } from '@/components/icons/base-ui-logo';
 import { RadixUILogo } from '@/components/icons/radix-ui-logo';
 import { useState, useEffect } from 'react';
@@ -722,8 +723,14 @@ function WalletModalContent() {
                                 <Separator />
                                 <Accordion type="single" collapsible className="w-full">
                                     <AccordionItem value="other" className="border-none">
-                                        <AccordionTrigger className="border rounded-[16px] px-4 py-2 hover:no-underline">
-                                            Other Wallets
+                                        <AccordionTrigger
+                                            hideChevron
+                                            className="border rounded-[16px] px-4 py-2 hover:no-underline cursor-pointer active:scale-[0.98] hover:bg-accent hover:text-accent-foreground"
+                                        >
+                                            <div className="flex flex-1 items-center justify-between">
+                                                <span>Other Wallets</span>
+                                                <HiddenWalletIcons wallets={otherWallets} className="shrink-0" />
+                                            </div>
                                         </AccordionTrigger>
                                         <AccordionContent>
                                             <div className="grid gap-2 pt-2">
@@ -974,22 +981,10 @@ function WalletModalContentBaseUI() {
                                 <div className="w-full">
                                     <button
                                         onClick={() => setIsOtherWalletsOpen(!isOtherWalletsOpen)}
-                                        className="w-full flex items-center justify-between border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50 rounded-[16px] px-4 py-2 cursor-pointer"
+                                        className="w-full flex items-center justify-between border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50 rounded-[16px] px-4 py-2 cursor-pointer active:scale-[0.98]"
                                     >
-                                        <span>Other Wallets</span>
-                                        <svg
-                                            className={`h-4 w-4 shrink-0 transition-transform duration-200 ${isOtherWalletsOpen ? 'rotate-180' : ''}`}
-                                            fill="none"
-                                            stroke="currentColor"
-                                            viewBox="0 0 24 24"
-                                        >
-                                            <path
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                                strokeWidth={2}
-                                                d="M19 9l-7 7-7-7"
-                                            />
-                                        </svg>
+                                        <span className="font-medium text-sm">Other Wallets</span>
+                                        <HiddenWalletIcons wallets={otherWallets} className="shrink-0" />
                                     </button>
                                     {isOtherWalletsOpen && (
                                         <div className="grid gap-2 pt-2">

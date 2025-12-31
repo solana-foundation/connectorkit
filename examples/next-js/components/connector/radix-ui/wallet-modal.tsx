@@ -1,6 +1,7 @@
 'use client';
 
 import { useConnector, type WalletConnectorId, type WalletConnectorMetadata } from '@solana/connector/react';
+import { HiddenWalletIcons } from '@/components/connector/shared/hidden-wallet-icons';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { Button } from '@/components/ui/button';
@@ -273,8 +274,14 @@ export function WalletModal({ open, onOpenChange, walletConnectUri, onClearWalle
                                         {primaryWallets.length > 0 && <Separator />}
                                         <Accordion type="single" collapsible className="w-full">
                                             <AccordionItem value="other-wallets" className="border-none">
-                                                <AccordionTrigger className="border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50 rounded-[16px] px-4 py-2 hover:no-underline">
-                                                    <span>Other Wallets</span>
+                                                <AccordionTrigger
+                                                    hideChevron
+                                                    className="border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50 rounded-[16px] px-4 py-2 hover:no-underline cursor-pointer active:scale-[0.98]"
+                                                >
+                                                    <div className="flex flex-1 items-center justify-between">
+                                                        <span>Other Wallets</span>
+                                                        <HiddenWalletIcons wallets={otherWallets} className="shrink-0" />
+                                                    </div>
                                                 </AccordionTrigger>
                                                 <AccordionContent>
                                                     <div className="grid gap-2 pt-2">

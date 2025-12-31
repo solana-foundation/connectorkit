@@ -73,7 +73,7 @@ export interface ConnectorState {
      * @example
      * ```ts
      * if (state.wallet.status === 'connected') {
-     *   console.log(state.wallet.selectedAccount.address);
+     *   console.log(state.wallet.session.selectedAccount.address);
      * }
      * ```
      */
@@ -111,12 +111,12 @@ export interface ConnectorState {
     connecting: boolean;
 
     /**
-     * @deprecated Use `state.wallet.status === 'connected' && state.wallet.accounts` instead.
+     * @deprecated Use `state.wallet.status === 'connected' && state.wallet.session.accounts` instead.
      */
     accounts: AccountInfo[];
 
     /**
-     * @deprecated Use `state.wallet.status === 'connected' && state.wallet.selectedAccount.address` instead.
+     * @deprecated Use `state.wallet.status === 'connected' && state.wallet.session.selectedAccount.address` instead.
      */
     selectedAccount: Address | null;
 

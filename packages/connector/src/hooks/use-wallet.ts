@@ -110,9 +110,9 @@ export function useWallet(): UseWalletReturn {
         let error: Error | null = null;
 
         if (walletStatus.status === 'connected') {
-            connectorId = walletStatus.connectorId;
-            account = walletStatus.selectedAccount.address;
-            accounts = walletStatus.accounts;
+            connectorId = walletStatus.session.connectorId;
+            account = walletStatus.session.selectedAccount.address;
+            accounts = walletStatus.session.accounts;
             session = walletStatus.session;
         } else if (walletStatus.status === 'connecting') {
             connectorId = walletStatus.connectorId;

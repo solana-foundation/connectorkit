@@ -36,6 +36,15 @@ export function createConnectorId(walletName: string): WalletConnectorId {
 
 /**
  * Check if a string is a valid WalletConnectorId
+ *
+ * Valid formats:
+ * - `wallet-standard:<adapter-name>` - Wallet Standard adapters (e.g., 'wallet-standard:phantom')
+ * - `walletconnect` - WalletConnect connector
+ * - `mwa:<adapter-name>` - Mobile Wallet Adapter (MWA) connectors for mobile wallets
+ *   (e.g., 'mwa:phantom')
+ *
+ * The 'mwa:' prefix identifies connectors using the Solana Mobile Wallet Adapter protocol,
+ * which enables communication with mobile wallet apps on iOS and Android devices.
  */
 export function isWalletConnectorId(value: string): value is WalletConnectorId {
     return (
@@ -207,12 +216,6 @@ export interface WalletStatusConnected {
     status: 'connected';
     /** Active session */
     session: WalletSession;
-    /** Connector ID for convenience */
-    connectorId: WalletConnectorId;
-    /** All accounts from the wallet */
-    accounts: SessionAccount[];
-    /** Currently selected account */
-    selectedAccount: SessionAccount;
 }
 
 /**
@@ -307,8 +310,8 @@ export function toLegacyWalletState(wallet: WalletStatus): {
             return {
                 connected: true,
                 connecting: false,
-                selectedAccount: wallet.selectedAccount.address,
-                accounts: wallet.accounts.map(a => ({ address: a.address, label: a.label })),
+                selectedAccount: wallet.session.selectedAccount.address,
+                accounts: wallet.session.accounts.map(a => ({ address: a.address, label: a.label })),
             };
         case 'error':
             return { connected: false, connecting: false, selectedAccount: null, accounts: [] };

@@ -268,9 +268,9 @@ export function useConnector(): ConnectorSnapshot {
         let walletError: Error | null = null;
 
         if (walletStatus.status === 'connected') {
-            connectorId = walletStatus.connectorId;
-            account = walletStatus.selectedAccount.address;
-            sessionAccounts = walletStatus.accounts;
+            connectorId = walletStatus.session.connectorId;
+            account = walletStatus.session.selectedAccount.address;
+            sessionAccounts = walletStatus.session.accounts;
         } else if (walletStatus.status === 'connecting') {
             connectorId = walletStatus.connectorId;
         } else if (walletStatus.status === 'error') {

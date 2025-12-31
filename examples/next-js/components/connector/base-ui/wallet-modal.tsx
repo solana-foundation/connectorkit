@@ -4,7 +4,8 @@ import { useConnector, type WalletConnectorId, type WalletConnectorMetadata } fr
 import { Dialog, DialogContent, DialogTitle, DialogClose } from '@/components/ui-base/dialog';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui-base/collapsible';
 import { Button } from '@/components/ui-base/button';
-import { Wallet, ExternalLink, ChevronDown, X, Copy, Check, ChevronLeft } from 'lucide-react';
+import { HiddenWalletIcons } from '@/components/connector/shared/hidden-wallet-icons';
+import { Wallet, ExternalLink, X, Copy, Check, ChevronLeft } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { CustomQRCode } from '@/components/ui/custom-qr-code';
 
@@ -386,11 +387,9 @@ export function WalletModal({ open, onOpenChange, walletConnectUri, onClearWalle
                                     <>
                                         {primaryWallets.length > 0 && <Separator />}
                                         <Collapsible open={isOtherWalletsOpen} onOpenChange={setIsOtherWalletsOpen}>
-                                            <CollapsibleTrigger className="w-full flex items-center justify-between border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground hover:no-underline dark:bg-input/30 dark:border-input dark:hover:bg-input/50 rounded-[16px] px-4 py-2 cursor-pointer">
-                                                <span>Other Wallets</span>
-                                                <ChevronDown
-                                                    className={`h-4 w-4 shrink-0 transition-transform duration-200 ${isOtherWalletsOpen ? 'rotate-180' : ''}`}
-                                                />
+                                            <CollapsibleTrigger className="w-full flex items-center justify-between border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground hover:no-underline dark:bg-input/30 dark:border-input dark:hover:bg-input/50 rounded-[16px] px-4 py-2 cursor-pointer active:scale-[0.98]">
+                                                <span className="font-semibold text-md">Other Wallets</span>
+                                                <HiddenWalletIcons wallets={otherWallets} className="shrink-0" />
                                             </CollapsibleTrigger>
                                             <CollapsibleContent>
                                                 <div className="grid gap-2 pt-2">
