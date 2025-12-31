@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback, useMemo, useEffect, useRef, useState } from 'react';
-import { useAccount } from './use-account';
 import { useCluster } from './use-cluster';
 import { useConnectorClient } from '../ui/connector-provider';
 import { createTimeoutSignal } from '../utils/abort';
@@ -18,6 +17,7 @@ import { fetchSolanaTokenListMetadata } from './_internal/solana-token-list';
 import type { CoinGeckoConfig } from '../types/connector';
 import type { SolanaClient } from '../lib/kit';
 import type { ClusterType } from '../utils/cluster';
+import { useWallet } from './use-wallet';
 
 /**
  * Generate the query key for tokens data.
@@ -633,7 +633,8 @@ export function useTokens(options: UseTokensOptions = {}): UseTokensReturn {
         client: clientOverride,
     } = options;
 
-    const { address, connected } = useAccount();
+    const { account, isConnected } = useWallet();
+    const address = useMemo(() => (account ? String(account) : null), [account]);
     const { type: clusterType } = useCluster();
     const connectorClient = useConnectorClient();
 
@@ -795,15 +796,15 @@ export function useTokens(options: UseTokensOptions = {}): UseTokensReturn {
     }, []);
 
     // Track previous connection state to detect disconnect
-    const wasConnectedRef = useRef(connected);
+    const wasConnectedRef = useRef(isConnected);
 
     // Clear caches on disconnect/session end
     useEffect(() => {
-        if (wasConnectedRef.current && !connected) {
+        if (wasConnectedRef.current && !isConnected) {
             clearTokenCaches();
         }
-        wasConnectedRef.current = connected;
-    }, [connected]);
+        wasConnectedRef.current = isConnected;
+    }, [isConnected]);
 
     // Preserve old behavior: don't surface "refresh failed" errors if we already have data
     const visibleError = updatedAt ? null : error;

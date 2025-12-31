@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { address as toAddress } from '@solana/addresses';
 import { signature as toSignature } from '@solana/keys';
 import type { SolanaCluster, SolanaClusterId } from '@wallet-ui/core';
-import { useAccount } from './use-account';
 import { useCluster } from './use-cluster';
 import { useSolanaClient } from './use-kit-solana-client';
 import { useConnectorClient } from '../ui/connector-provider';
@@ -14,6 +13,7 @@ import { getTransactionUrl, getClusterType, type ClusterType } from '../utils/cl
 import { LAMPORTS_PER_SOL } from '../lib/kit';
 import type { SolanaClient } from '../lib/kit';
 import { transformImageUrl } from '../utils/image';
+import { useWallet } from './use-wallet';
 
 /**
  * Options for generating the transactions query key
@@ -837,7 +837,8 @@ export function useTransactions(options: UseTransactionsOptions = {}): UseTransa
         client: clientOverride,
     } = options;
 
-    const { address, connected } = useAccount();
+    const { account, isConnected } = useWallet();
+    const address = useMemo(() => (account ? String(account) : null), [account]);
     const { cluster } = useCluster();
     const { client: providerClient } = useSolanaClient();
     const connectorClient = useConnectorClient();
@@ -1029,11 +1030,11 @@ export function useTransactions(options: UseTransactionsOptions = {}): UseTransa
 
     // Generate cache key based on RPC URL, address, cluster, and options
     const key = useMemo(() => {
-        if (!enabled || !connected || !address || !rpcClient || !cluster) return null;
+        if (!enabled || !isConnected || !address || !rpcClient || !cluster) return null;
         const rpcUrl =
             rpcClient.urlOrMoniker instanceof URL ? rpcClient.urlOrMoniker.toString() : String(rpcClient.urlOrMoniker);
         return getTransactionsQueryKey({ rpcUrl, address, clusterId: cluster.id, limit, fetchDetails });
-    }, [enabled, connected, address, rpcClient, cluster, limit, fetchDetails]);
+    }, [enabled, isConnected, address, rpcClient, cluster, limit, fetchDetails]);
 
     // Reset pagination immediately when the query key changes.
     // This prevents "old paginated transactions" flashing while the new key loads.
@@ -1195,7 +1196,7 @@ export function useTransactions(options: UseTransactionsOptions = {}): UseTransa
     // Query function for initial page (deduped via useSharedQuery)
     const queryFn = useCallback(
         async (signal: AbortSignal): Promise<TransactionInfo[]> => {
-            if (!connected || !address || !rpcClient || !cluster) {
+            if (!isConnected || !address || !rpcClient || !cluster) {
                 return [];
             }
 
@@ -1209,7 +1210,7 @@ export function useTransactions(options: UseTransactionsOptions = {}): UseTransa
 
             return result.transactions;
         },
-        [connected, address, rpcClient, cluster, fetchAndEnrichTransactions],
+        [isConnected, address, rpcClient, cluster, fetchAndEnrichTransactions],
     );
 
     // Use shared query for initial fetch (deduped across components)

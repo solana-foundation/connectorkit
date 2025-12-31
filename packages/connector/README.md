@@ -1430,17 +1430,17 @@ import { AppProvider, useConnector, useWallet, useConnectWallet } from '@solana/
 
 #### Legacy Hooks
 
-| Hook                        | Description                             | Returns                                                                            |
-| --------------------------- | --------------------------------------- | ---------------------------------------------------------------------------------- |
-| `useConnector()`            | Main wallet connection hook (vNext + legacy) | `ConnectorSnapshot`                                                           |
-| `useAccount()`              | Account management hook                 | `{ address, formatted, copy, copied, accounts, selectAccount }`                    |
-| `useCluster()`              | Network/cluster management hook         | `{ cluster, clusters, setCluster, isMainnet, isDevnet, rpcUrl }`                   |
-| `useWalletInfo()`           | Wallet metadata hook                    | `{ name, icon, wallet, connecting }`                                               |
-| `useTransactionSigner()`    | Legacy transaction signer (web3.js)     | `{ signer, ready, address, capabilities }`                                         |
-| `useKitTransactionSigner()` | Modern transaction signer (@solana/kit) | `{ signer, ready, address }`                                                       |
-| `useBalance()`              | SOL balance hook                        | `{ solBalance, isLoading, refetch }`                                               |
-| `useTokens()`               | SPL tokens hook                         | `{ tokens, isLoading, refetch }`                                                   |
-| `useTransactions()`         | Transaction history hook                | `{ transactions, isLoading, refetch }`                                             |
+| Hook                        | Description                                  | Returns                                                          |
+| --------------------------- | -------------------------------------------- | ---------------------------------------------------------------- |
+| `useConnector()`            | Main wallet connection hook (vNext + legacy) | `ConnectorSnapshot`                                              |
+| `useAccount()`              | Account management hook                      | `{ address, formatted, copy, copied, accounts, selectAccount }`  |
+| `useCluster()`              | Network/cluster management hook              | `{ cluster, clusters, setCluster, isMainnet, isDevnet, rpcUrl }` |
+| `useWalletInfo()`           | Wallet metadata hook                         | `{ name, icon, wallet, connecting }`                             |
+| `useTransactionSigner()`    | Legacy transaction signer (web3.js)          | `{ signer, ready, address, capabilities }`                       |
+| `useKitTransactionSigner()` | Modern transaction signer (@solana/kit)      | `{ signer, ready, address }`                                     |
+| `useBalance()`              | SOL balance hook                             | `{ solBalance, isLoading, refetch }`                             |
+| `useTokens()`               | SPL tokens hook                              | `{ tokens, isLoading, refetch }`                                 |
+| `useTransactions()`         | Transaction history hook                     | `{ transactions, isLoading, refetch }`                           |
 
 ### Configuration Functions
 
