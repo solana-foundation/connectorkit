@@ -1,11 +1,9 @@
 'use client';
 
-import { useMemo } from 'react';
-import { AppProvider } from '@solana/connector/react';
-// import { ConnectorDebugPanel } from '@solana/connector-debugger/react';
-import { getDefaultConfig, getDefaultMobileConfig } from '@solana/connector/headless';
-import { createRemoteSignerWallet } from '@solana/connector/remote';
 import type { ReactNode } from 'react';
+import { useMemo } from 'react';
+import { AppProvider, getDefaultConfig, getDefaultMobileConfig } from '@solana/connector/react';
+import { createRemoteSignerWallet } from '@solana/connector/remote';
 
 // Get origin synchronously on client, fallback for SSR
 const getOrigin = () => {
@@ -69,6 +67,11 @@ export function Providers({ children }: { children: ReactNode }) {
             enableMobile: true,
             clusters,
             additionalWallets,
+            // WalletConnect: just set to true!
+            // Project ID is auto-read from NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID
+            // Metadata is auto-generated from appName/appUrl
+            // Callbacks are auto-wired by AppProvider
+            walletConnect: true,
         });
     }, []);
 
@@ -84,8 +87,6 @@ export function Providers({ children }: { children: ReactNode }) {
     return (
         <AppProvider connectorConfig={connectorConfig} mobile={mobile}>
             {children}
-            {/* Debug panel - only visible in development */}
-            {/* {process.env.NODE_ENV === 'development' && <ConnectorDebugPanel />} */}
         </AppProvider>
     );
 }

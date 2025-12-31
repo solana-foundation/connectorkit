@@ -5,6 +5,8 @@ export default defineConfig({
     resolve: {
         alias: {
             '@': path.resolve(__dirname, './src'),
+            // Mock WalletConnect provider for tests (optional dependency)
+            '@walletconnect/universal-provider': path.resolve(__dirname, './src/__tests__/mocks/walletconnect-mock.ts'),
         },
     },
     esbuild: {

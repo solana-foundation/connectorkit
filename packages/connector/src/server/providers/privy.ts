@@ -121,5 +121,6 @@ async function signWithPrivy(
         },
     };
 
-    return encoder.encode(signedTx as Parameters<typeof encoder.encode>[0]);
+    const encoded = encoder.encode(signedTx as Parameters<typeof encoder.encode>[0]);
+    return new Uint8Array(encoded);
 }

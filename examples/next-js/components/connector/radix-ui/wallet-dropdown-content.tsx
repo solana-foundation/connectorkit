@@ -375,7 +375,7 @@ export function WalletDropdownContent({ selectedAccount, walletIcon, walletName 
                 <DisconnectElement
                     render={({ disconnect, disconnecting }) => (
                         <Button
-                            variant="destructive"
+                            variant="default"
                             className="w-full h-11 text-base rounded-[12px]"
                             onClick={disconnect}
                             disabled={disconnecting}

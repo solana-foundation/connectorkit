@@ -9,13 +9,14 @@ import { ConnectButton } from '@/components/connector/radix-ui/connect-button';
 import { WalletDropdownContent } from '@/components/connector/radix-ui/wallet-dropdown-content';
 import { ConnectButton as ConnectButtonBaseUI } from '@/components/connector/base-ui/connect-button';
 import { WalletDropdownContent as WalletDropdownContentBaseUI } from '@/components/connector/base-ui/wallet-dropdown-content';
-import { useConnector } from '@solana/connector';
+import { useConnector, type WalletConnectorId, type WalletConnectorMetadata } from '@solana/connector/react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Wallet, ExternalLink, Plug } from 'lucide-react';
+import { HiddenWalletIcons } from '@/components/connector/shared/hidden-wallet-icons';
 import { BaseUILogo } from '@/components/icons/base-ui-logo';
 import { RadixUILogo } from '@/components/icons/radix-ui-logo';
 import { useState, useEffect } from 'react';
@@ -25,7 +26,7 @@ import { IconTypescriptLogo } from 'symbols-react';
 // Code snippets for each component
 const connectButtonCode = `'use client';
 
-import { useConnector } from '@solana/connector';
+import { useConnector } from '@solana/connector/react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -34,32 +35,26 @@ import { motion } from 'motion/react';
 import { WalletModal } from './wallet-modal';
 import { WalletDropdownContent } from './wallet-dropdown-content';
 import { Wallet, ChevronDown } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
 
 export function ConnectButton({ className }: { className?: string }) {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-    const { connected, connecting, selectedWallet, selectedAccount, wallets } = useConnector();
+    const { isConnected, isConnecting, account, connector, walletConnectUri, clearWalletConnectUri } = useConnector();
 
-    if (connecting) {
-        return (
-            <Button size="sm" disabled className={className}>
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-            </Button>
-        );
-    }
-
-    if (connected && selectedAccount && selectedWallet) {
-        const shortAddress = \`\${selectedAccount.slice(0, 4)}...\${selectedAccount.slice(-4)}\`;
-        const walletWithIcon = wallets.find(w => w.wallet.name === selectedWallet.name);
-        const walletIcon = walletWithIcon?.wallet.icon || selectedWallet.icon;
+    if (isConnected && account && connector) {
+        const shortAddress = \`\${account.slice(0, 4)}...\${account.slice(-4)}\`;
+        const walletIcon = connector.icon || undefined;
 
         return (
             <DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
                 <DropdownMenuTrigger asChild>
                     <Button variant="outline" size="sm" className={className}>
                         <Avatar className="h-5 w-5">
-                            {walletIcon && <AvatarImage src={walletIcon} />}
-                            <AvatarFallback><Wallet className="h-3 w-3" /></AvatarFallback>
+                            {walletIcon && <AvatarImage src={walletIcon} alt={connector.name} />}
+                            <AvatarFallback>
+                                <Wallet className="h-3 w-3" />
+                            </AvatarFallback>
                         </Avatar>
                         <span className="text-xs">{shortAddress}</span>
                         <motion.div animate={{ rotate: isDropdownOpen ? -180 : 0 }}>
@@ -69,9 +64,9 @@ export function ConnectButton({ className }: { className?: string }) {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="p-0 rounded-[20px]">
                     <WalletDropdownContent
-                        selectedAccount={selectedAccount}
+                        selectedAccount={String(account)}
                         walletIcon={walletIcon}
-                        walletName={selectedWallet.name}
+                        walletName={connector.name}
                     />
                 </DropdownMenuContent>
             </DropdownMenu>
@@ -81,16 +76,31 @@ export function ConnectButton({ className }: { className?: string }) {
     return (
         <>
             <Button size="sm" onClick={() => setIsModalOpen(true)} className={className}>
-                Connect Wallet
+                {isConnecting ? (
+                    <>
+                        <Spinner className="h-4 w-4" />
+                        <span className="text-xs">Connecting...</span>
+                    </>
+                ) : (
+                    'Connect Wallet'
+                )}
             </Button>
-            <WalletModal open={isModalOpen} onOpenChange={setIsModalOpen} />
+            <WalletModal
+                open={isModalOpen}
+                onOpenChange={open => {
+                    setIsModalOpen(open);
+                    if (!open) clearWalletConnectUri();
+                }}
+                walletConnectUri={walletConnectUri}
+                onClearWalletConnectUri={clearWalletConnectUri}
+            />
         </>
     );
 }`;
 
 const walletModalCode = `'use client';
 
-import { useConnector } from '@solana/connector';
+import { useConnector, type WalletConnectorId, type WalletConnectorMetadata } from '@solana/connector/react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -100,32 +110,50 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Wallet, ExternalLink } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
-export function WalletModal({ open, onOpenChange }) {
-    const { wallets, select, connecting, selectedWallet } = useConnector();
-    const [connectingWallet, setConnectingWallet] = useState(null);
-    const [recentlyConnected, setRecentlyConnected] = useState(null);
+export function WalletModal({ open, onOpenChange, walletConnectUri, onClearWalletConnectUri }) {
+    const { walletStatus, isConnecting, connectorId, connectors, connectWallet, disconnectWallet } = useConnector();
+    const status = walletStatus.status;
+    const [connectingConnectorId, setConnectingConnectorId] = useState<WalletConnectorId | null>(null);
+    const [recentlyConnectedConnectorId, setRecentlyConnectedConnectorId] = useState<WalletConnectorId | null>(null);
 
     useEffect(() => {
-        const recent = localStorage.getItem('recentlyConnectedWallet');
-        if (recent) setRecentlyConnected(recent);
+        const recent = localStorage.getItem('recentlyConnectedConnectorId');
+        if (recent) setRecentlyConnectedConnectorId(recent as WalletConnectorId);
     }, []);
 
-    const handleSelectWallet = async (walletName) => {
-        setConnectingWallet(walletName);
+    useEffect(() => {
+        if (status !== 'connected') return;
+        if (!connectorId) return;
+        localStorage.setItem('recentlyConnectedConnectorId', connectorId);
+        setRecentlyConnectedConnectorId(connectorId);
+    }, [status, connectorId]);
+
+    function cancelConnection() {
+        onClearWalletConnectUri?.();
+        setConnectingConnectorId(null);
+        disconnectWallet().catch(() => {});
+    }
+
+    const handleSelectWallet = async (connector: WalletConnectorMetadata) => {
+        setConnectingConnectorId(connector.id);
         try {
-            await select(walletName);
-            localStorage.setItem('recentlyConnectedWallet', walletName);
-            onOpenChange(false);
+            if (connector.name === 'WalletConnect') {
+                onClearWalletConnectUri?.();
+            }
+            await connectWallet(connector.id);
+            localStorage.setItem('recentlyConnectedConnectorId', connector.id);
+            setRecentlyConnectedConnectorId(connector.id);
+            if (connector.name !== 'WalletConnect') onOpenChange(false);
         } catch (error) {
             console.error('Failed to connect:', error);
         } finally {
-            setConnectingWallet(null);
+            setConnectingConnectorId(null);
         }
     };
 
-    const installedWallets = wallets.filter(w => w.installed);
-    const primaryWallets = installedWallets.slice(0, 3);
-    const otherWallets = installedWallets.slice(3);
+    const readyConnectors = connectors.filter(c => c.ready);
+    const primaryWallets = readyConnectors.slice(0, 3);
+    const otherWallets = readyConnectors.slice(3);
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -134,18 +162,20 @@ export function WalletModal({ open, onOpenChange }) {
                     <DialogTitle>Connect your wallet</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4">
-                    {primaryWallets.map(wallet => (
+                    {primaryWallets.map(connector => (
                         <Button
-                            key={wallet.wallet.name}
+                            key={connector.id}
                             variant="outline"
                             className="w-full justify-between p-4 rounded-[16px]"
-                            onClick={() => handleSelectWallet(wallet.wallet.name)}
-                            disabled={connecting}
+                            onClick={() => handleSelectWallet(connector)}
+                            disabled={isConnecting}
                         >
-                            <span>{wallet.wallet.name}</span>
+                            <span>{connector.name}</span>
                             <Avatar className="h-10 w-10">
-                                <AvatarImage src={wallet.wallet.icon} />
-                                <AvatarFallback><Wallet /></AvatarFallback>
+                                <AvatarImage src={connector.icon} />
+                                <AvatarFallback>
+                                    <Wallet />
+                                </AvatarFallback>
                             </Avatar>
                         </Button>
                     ))}
@@ -154,9 +184,14 @@ export function WalletModal({ open, onOpenChange }) {
                             <AccordionItem value="more">
                                 <AccordionTrigger>Other Wallets</AccordionTrigger>
                                 <AccordionContent>
-                                    {otherWallets.map(wallet => (
-                                        <Button key={wallet.wallet.name} variant="outline" className="w-full mb-2">
-                                            {wallet.wallet.name}
+                                    {otherWallets.map(connector => (
+                                        <Button
+                                            key={connector.id}
+                                            variant="outline"
+                                            className="w-full mb-2"
+                                            onClick={() => handleSelectWallet(connector)}
+                                        >
+                                            {connector.name}
                                         </Button>
                                     ))}
                                 </AccordionContent>
@@ -275,7 +310,7 @@ export function WalletDropdownContent({ selectedAccount, walletIcon, walletName 
 // Base UI Code Snippets
 const connectButtonCodeBaseUI = `'use client';
 
-import { useConnector } from '@solana/connector';
+import { useConnector } from '@solana/connector/react';
 import { Menu } from '@base-ui/react/menu';
 import { useState } from 'react';
 import { motion } from 'motion/react';
@@ -299,9 +334,9 @@ function Avatar({ src, alt, fallback, className }) {
 
 export function ConnectButtonBaseUI({ className }) {
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const { connected, connecting, selectedWallet, selectedAccount, wallets } = useConnector();
+    const { isConnected, isConnecting, account, connector } = useConnector();
 
-    if (connecting) {
+    if (isConnecting) {
         return (
             <button disabled className="inline-flex items-center gap-2 h-8 px-3 rounded-md border bg-background opacity-50">
                 <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
@@ -310,22 +345,30 @@ export function ConnectButtonBaseUI({ className }) {
         );
     }
 
-    if (connected && selectedAccount && selectedWallet) {
-        const shortAddress = \`\${selectedAccount.slice(0, 4)}...\${selectedAccount.slice(-4)}\`;
-        const walletWithIcon = wallets.find(w => w.wallet.name === selectedWallet.name);
-        const walletIcon = walletWithIcon?.wallet.icon || selectedWallet.icon;
+    if (isConnected && account && connector) {
+        const shortAddress = \`\${account.slice(0, 4)}...\${account.slice(-4)}\`;
+        const walletIcon = connector.icon || undefined;
 
         return (
             <Menu.Root>
                 <Menu.Trigger className="inline-flex items-center gap-2 h-8 px-3 rounded-md border bg-background hover:bg-accent">
-                    <Avatar src={walletIcon} alt={selectedWallet.name} fallback={<Wallet className="h-3 w-3" />} className="h-5 w-5" />
+                    <Avatar
+                        src={walletIcon}
+                        alt={connector.name}
+                        fallback={<Wallet className="h-3 w-3" />}
+                        className="h-5 w-5"
+                    />
                     <span className="text-xs">{shortAddress}</span>
                     <ChevronDown className="h-4 w-4 opacity-50" />
                 </Menu.Trigger>
                 <Menu.Portal>
                     <Menu.Positioner sideOffset={8} align="end">
                         <Menu.Popup className="rounded-[20px] bg-background p-0 shadow-lg outline outline-1 outline-gray-200">
-                            <WalletDropdownContentBaseUI selectedAccount={selectedAccount} walletIcon={walletIcon} walletName={selectedWallet.name} />
+                            <WalletDropdownContentBaseUI
+                                selectedAccount={String(account)}
+                                walletIcon={walletIcon}
+                                walletName={connector.name}
+                            />
                         </Menu.Popup>
                     </Menu.Positioner>
                 </Menu.Portal>
@@ -345,39 +388,48 @@ export function ConnectButtonBaseUI({ className }) {
 
 const walletModalCodeBaseUI = `'use client';
 
-import { useConnector } from '@solana/connector';
+import { useConnector, type WalletConnectorId, type WalletConnectorMetadata } from '@solana/connector/react';
 import { Dialog } from '@base-ui/react/dialog';
 import { Collapsible } from '@base-ui/react/collapsible';
 import { Wallet, ExternalLink, ChevronDown, X } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 export function WalletModalBaseUI({ open, onOpenChange }) {
-    const { wallets, select, connecting } = useConnector();
-    const [connectingWallet, setConnectingWallet] = useState(null);
+    const { walletStatus, isConnecting, connectorId, connectors, connectWallet, disconnectWallet } = useConnector();
+    const status = walletStatus.status;
+    const [connectingConnectorId, setConnectingConnectorId] = useState<WalletConnectorId | null>(null);
     const [isOtherWalletsOpen, setIsOtherWalletsOpen] = useState(false);
-    const [recentlyConnected, setRecentlyConnected] = useState(null);
+    const [recentlyConnectedConnectorId, setRecentlyConnectedConnectorId] = useState<WalletConnectorId | null>(null);
 
     useEffect(() => {
-        const recent = localStorage.getItem('recentlyConnectedWallet');
-        if (recent) setRecentlyConnected(recent);
+        const recent = localStorage.getItem('recentlyConnectedConnectorId');
+        if (recent) setRecentlyConnectedConnectorId(recent as WalletConnectorId);
     }, []);
 
-    const handleSelectWallet = async (walletName) => {
-        setConnectingWallet(walletName);
+    useEffect(() => {
+        if (status !== 'connected') return;
+        if (!connectorId) return;
+        localStorage.setItem('recentlyConnectedConnectorId', connectorId);
+        setRecentlyConnectedConnectorId(connectorId);
+    }, [status, connectorId]);
+
+    const handleSelectWallet = async (connector: WalletConnectorMetadata) => {
+        setConnectingConnectorId(connector.id);
         try {
-            await select(walletName);
-            localStorage.setItem('recentlyConnectedWallet', walletName);
+            await connectWallet(connector.id);
+            localStorage.setItem('recentlyConnectedConnectorId', connector.id);
+            setRecentlyConnectedConnectorId(connector.id);
             onOpenChange(false);
         } catch (error) {
             console.error('Failed to connect:', error);
         } finally {
-            setConnectingWallet(null);
+            setConnectingConnectorId(null);
         }
     };
 
-    const installedWallets = wallets.filter(w => w.installed);
-    const primaryWallets = installedWallets.slice(0, 3);
-    const otherWallets = installedWallets.slice(3);
+    const readyConnectors = connectors.filter(c => c.ready);
+    const primaryWallets = readyConnectors.slice(0, 3);
+    const otherWallets = readyConnectors.slice(3);
 
     return (
         <Dialog.Root open={open} onOpenChange={onOpenChange}>
@@ -391,15 +443,15 @@ export function WalletModalBaseUI({ open, onOpenChange }) {
                         </Dialog.Close>
                     </div>
                     <div className="space-y-4">
-                        {primaryWallets.map(wallet => (
+                        {primaryWallets.map(connector => (
                             <button
-                                key={wallet.wallet.name}
+                                key={connector.id}
                                 className="w-full flex justify-between items-center p-4 rounded-[16px] border hover:bg-accent"
-                                onClick={() => handleSelectWallet(wallet.wallet.name)}
-                                disabled={connecting}
+                                onClick={() => handleSelectWallet(connector)}
+                                disabled={isConnecting}
                             >
-                                <span className="font-semibold">{wallet.wallet.name}</span>
-                                <img src={wallet.wallet.icon} className="h-10 w-10 rounded-full" />
+                                <span className="font-semibold">{connector.name}</span>
+                                <img src={connector.icon} className="h-10 w-10 rounded-full" />
                             </button>
                         ))}
                         {otherWallets.length > 0 && (
@@ -410,10 +462,14 @@ export function WalletModalBaseUI({ open, onOpenChange }) {
                                 </Collapsible.Trigger>
                                 <Collapsible.Panel className="overflow-hidden">
                                     <div className="grid gap-2 pt-2">
-                                        {otherWallets.map(wallet => (
-                                            <button key={wallet.wallet.name} className="w-full flex justify-between items-center p-4 rounded-[16px] border">
-                                                <span>{wallet.wallet.name}</span>
-                                                <img src={wallet.wallet.icon} className="h-8 w-8 rounded-full" />
+                                        {otherWallets.map(connector => (
+                                            <button
+                                                key={connector.id}
+                                                className="w-full flex justify-between items-center p-4 rounded-[16px] border"
+                                                onClick={() => handleSelectWallet(connector)}
+                                            >
+                                                <span>{connector.name}</span>
+                                                <img src={connector.icon} className="h-8 w-8 rounded-full" />
                                             </button>
                                         ))}
                                     </div>
@@ -557,40 +613,50 @@ export function WalletDropdownContentBaseUI({ selectedAccount, walletIcon, walle
 
 // Inline WalletModalContent component (without Dialog wrapper)
 function WalletModalContent() {
-    const { wallets, select, connecting, selectedWallet } = useConnector();
-    const [connectingWallet, setConnectingWallet] = useState<string | null>(null);
+    const { walletStatus, isConnecting, connectorId, connectors, connectWallet } = useConnector();
+    const status = walletStatus.status;
+
+    const [connectingConnectorId, setConnectingConnectorId] = useState<WalletConnectorId | null>(null);
     const [isClient, setIsClient] = useState(false);
-    const [recentlyConnected, setRecentlyConnected] = useState<string | null>(null);
+    const [recentlyConnectedConnectorId, setRecentlyConnectedConnectorId] = useState<WalletConnectorId | null>(null);
 
     useEffect(() => {
         setIsClient(true);
     }, []);
 
     useEffect(() => {
-        const recent = localStorage.getItem('recentlyConnectedWallet');
-        if (recent) setRecentlyConnected(recent);
+        const recent = localStorage.getItem('recentlyConnectedConnectorId');
+        if (recent) setRecentlyConnectedConnectorId(recent as WalletConnectorId);
     }, []);
 
-    const handleSelectWallet = async (walletName: string) => {
-        setConnectingWallet(walletName);
+    useEffect(() => {
+        if (status !== 'connected') return;
+        if (!connectorId) return;
+        localStorage.setItem('recentlyConnectedConnectorId', connectorId);
+        setRecentlyConnectedConnectorId(connectorId);
+    }, [status, connectorId]);
+
+    const handleSelectWallet = async (connector: WalletConnectorMetadata) => {
+        setConnectingConnectorId(connector.id);
         try {
-            await select(walletName);
+            await connectWallet(connector.id);
         } catch (error) {
             console.error('Failed to connect:', error);
         } finally {
-            setConnectingWallet(null);
+            setConnectingConnectorId(null);
         }
     };
 
-    const installedWallets = wallets.filter(w => w.installed);
-    const notInstalledWallets = wallets.filter(w => !w.installed);
-    const sortedInstalledWallets = [...installedWallets].sort((a, b) => {
-        if (recentlyConnected === a.wallet.name) return -1;
-        if (recentlyConnected === b.wallet.name) return 1;
+    const readyConnectors = connectors.filter(c => c.ready);
+    const notReadyConnectors = connectors.filter(c => !c.ready);
+
+    const sortedReadyConnectors = [...readyConnectors].sort((a, b) => {
+        if (recentlyConnectedConnectorId === a.id) return -1;
+        if (recentlyConnectedConnectorId === b.id) return 1;
         return 0;
     });
-    const primaryWallets = sortedInstalledWallets.slice(0, 3);
-    const otherWallets = sortedInstalledWallets.slice(3);
+    const primaryWallets = sortedReadyConnectors.slice(0, 3);
+    const otherWallets = sortedReadyConnectors.slice(3);
 
     const getInstallUrl = (walletName: string) => {
         const name = walletName.toLowerCase();
@@ -616,19 +682,21 @@ function WalletModalContent() {
                     <>
                         {primaryWallets.length > 0 && (
                             <div className="grid gap-2">
-                                {primaryWallets.map(walletInfo => {
-                                    const isConnecting = connectingWallet === walletInfo.wallet.name;
-                                    const isRecent = recentlyConnected === walletInfo.wallet.name;
+                                {primaryWallets.map(connector => {
+                                    const isThisConnecting =
+                                        connectingConnectorId === connector.id ||
+                                        (isConnecting && connectorId === connector.id);
+                                    const isRecent = recentlyConnectedConnectorId === connector.id;
                                     return (
                                         <Button
-                                            key={walletInfo.wallet.name}
+                                            key={connector.id}
                                             variant="outline"
                                             className="h-auto justify-between p-4 rounded-[16px]"
-                                            onClick={() => handleSelectWallet(walletInfo.wallet.name)}
-                                            disabled={connecting || isConnecting}
+                                            onClick={() => handleSelectWallet(connector)}
+                                            disabled={isThisConnecting}
                                         >
                                             <div className="flex items-center gap-2">
-                                                <span className="font-semibold">{walletInfo.wallet.name}</span>
+                                                <span className="font-semibold">{connector.name}</span>
                                                 {isRecent && (
                                                     <Badge variant="secondary" className="text-xs">
                                                         Recent
@@ -636,11 +704,9 @@ function WalletModalContent() {
                                                 )}
                                             </div>
                                             <div className="flex items-center gap-2">
-                                                {isConnecting && <Spinner className="h-4 w-4" />}
+                                                {isThisConnecting && <Spinner className="h-4 w-4" />}
                                                 <Avatar className="h-10 w-10">
-                                                    {walletInfo.wallet.icon && (
-                                                        <AvatarImage src={walletInfo.wallet.icon} />
-                                                    )}
+                                                    {connector.icon && <AvatarImage src={connector.icon} />}
                                                     <AvatarFallback>
                                                         <Wallet className="h-5 w-5" />
                                                     </AvatarFallback>
@@ -657,23 +723,27 @@ function WalletModalContent() {
                                 <Separator />
                                 <Accordion type="single" collapsible className="w-full">
                                     <AccordionItem value="other" className="border-none">
-                                        <AccordionTrigger className="border rounded-[16px] px-4 py-2 hover:no-underline">
-                                            Other Wallets
+                                        <AccordionTrigger
+                                            hideChevron
+                                            className="border rounded-[16px] px-4 py-2 hover:no-underline cursor-pointer active:scale-[0.98] hover:bg-accent hover:text-accent-foreground"
+                                        >
+                                            <div className="flex flex-1 items-center justify-between">
+                                                <span>Other Wallets</span>
+                                                <HiddenWalletIcons wallets={otherWallets} className="shrink-0" />
+                                            </div>
                                         </AccordionTrigger>
                                         <AccordionContent>
                                             <div className="grid gap-2 pt-2">
-                                                {otherWallets.map(walletInfo => (
+                                                {otherWallets.map(connector => (
                                                     <Button
-                                                        key={walletInfo.wallet.name}
+                                                        key={connector.id}
                                                         variant="outline"
                                                         className="h-auto justify-between p-4 rounded-[16px]"
-                                                        onClick={() => handleSelectWallet(walletInfo.wallet.name)}
+                                                        onClick={() => handleSelectWallet(connector)}
                                                     >
-                                                        <span>{walletInfo.wallet.name}</span>
+                                                        <span>{connector.name}</span>
                                                         <Avatar className="h-8 w-8">
-                                                            {walletInfo.wallet.icon && (
-                                                                <AvatarImage src={walletInfo.wallet.icon} />
-                                                            )}
+                                                            {connector.icon && <AvatarImage src={connector.icon} />}
                                                             <AvatarFallback>
                                                                 <Wallet className="h-4 w-4" />
                                                             </AvatarFallback>
@@ -687,36 +757,30 @@ function WalletModalContent() {
                             </>
                         )}
 
-                        {notInstalledWallets.length > 0 && (
+                        {notReadyConnectors.length > 0 && (
                             <>
                                 <Separator />
                                 <div className="space-y-2">
-                                    <h3 className="text-sm font-medium text-muted-foreground">Popular Wallets</h3>
+                                    <h3 className="text-sm font-medium text-muted-foreground">Unavailable Wallets</h3>
                                     <div className="grid gap-2">
-                                        {notInstalledWallets.slice(0, 3).map(walletInfo => (
+                                        {notReadyConnectors.slice(0, 3).map(connector => (
                                             <Button
-                                                key={walletInfo.wallet.name}
+                                                key={connector.id}
                                                 variant="outline"
                                                 className="h-auto justify-between p-4 rounded-[16px]"
-                                                onClick={() =>
-                                                    window.open(getInstallUrl(walletInfo.wallet.name), '_blank')
-                                                }
+                                                onClick={() => window.open(getInstallUrl(connector.name), '_blank')}
                                             >
                                                 <div className="flex items-center gap-3">
                                                     <Avatar className="h-8 w-8">
-                                                        {walletInfo.wallet.icon && (
-                                                            <AvatarImage src={walletInfo.wallet.icon} />
-                                                        )}
+                                                        {connector.icon && <AvatarImage src={connector.icon} />}
                                                         <AvatarFallback>
                                                             <Wallet className="h-4 w-4" />
                                                         </AvatarFallback>
                                                     </Avatar>
                                                     <div className="text-left">
-                                                        <div className="font-medium text-sm">
-                                                            {walletInfo.wallet.name}
-                                                        </div>
+                                                        <div className="font-medium text-sm">{connector.name}</div>
                                                         <div className="text-xs text-muted-foreground">
-                                                            Not installed
+                                                            Not available
                                                         </div>
                                                     </div>
                                                 </div>
@@ -728,7 +792,7 @@ function WalletModalContent() {
                             </>
                         )}
 
-                        {wallets.length === 0 && (
+                        {connectors.length === 0 && (
                             <div className="rounded-lg border border-dashed p-8 text-center">
                                 <Wallet className="mx-auto h-12 w-12 text-muted-foreground mb-3" />
                                 <h3 className="font-semibold mb-2">No Wallets Detected</h3>
@@ -749,10 +813,12 @@ function WalletModalContent() {
 
 // Inline WalletModalContent for Base UI (without Dialog wrapper)
 function WalletModalContentBaseUI() {
-    const { wallets, select, connecting } = useConnector();
-    const [connectingWallet, setConnectingWallet] = useState<string | null>(null);
+    const { walletStatus, isConnecting, connectorId, connectors, connectWallet } = useConnector();
+    const status = walletStatus.status;
+
+    const [connectingConnectorId, setConnectingConnectorId] = useState<WalletConnectorId | null>(null);
     const [isClient, setIsClient] = useState(false);
-    const [recentlyConnected, setRecentlyConnected] = useState<string | null>(null);
+    const [recentlyConnectedConnectorId, setRecentlyConnectedConnectorId] = useState<WalletConnectorId | null>(null);
     const [isOtherWalletsOpen, setIsOtherWalletsOpen] = useState(false);
 
     useEffect(() => {
@@ -760,30 +826,38 @@ function WalletModalContentBaseUI() {
     }, []);
 
     useEffect(() => {
-        const recent = localStorage.getItem('recentlyConnectedWallet');
-        if (recent) setRecentlyConnected(recent);
+        const recent = localStorage.getItem('recentlyConnectedConnectorId');
+        if (recent) setRecentlyConnectedConnectorId(recent as WalletConnectorId);
     }, []);
 
-    const handleSelectWallet = async (walletName: string) => {
-        setConnectingWallet(walletName);
+    useEffect(() => {
+        if (status !== 'connected') return;
+        if (!connectorId) return;
+        localStorage.setItem('recentlyConnectedConnectorId', connectorId);
+        setRecentlyConnectedConnectorId(connectorId);
+    }, [status, connectorId]);
+
+    const handleSelectWallet = async (connector: WalletConnectorMetadata) => {
+        setConnectingConnectorId(connector.id);
         try {
-            await select(walletName);
+            await connectWallet(connector.id);
         } catch (error) {
             console.error('Failed to connect:', error);
         } finally {
-            setConnectingWallet(null);
+            setConnectingConnectorId(null);
         }
     };
 
-    const installedWallets = wallets.filter(w => w.installed);
-    const notInstalledWallets = wallets.filter(w => !w.installed);
-    const sortedInstalledWallets = [...installedWallets].sort((a, b) => {
-        if (recentlyConnected === a.wallet.name) return -1;
-        if (recentlyConnected === b.wallet.name) return 1;
+    const readyConnectors = connectors.filter(c => c.ready);
+    const notReadyConnectors = connectors.filter(c => !c.ready);
+
+    const sortedReadyConnectors = [...readyConnectors].sort((a, b) => {
+        if (recentlyConnectedConnectorId === a.id) return -1;
+        if (recentlyConnectedConnectorId === b.id) return 1;
         return 0;
     });
-    const primaryWallets = sortedInstalledWallets.slice(0, 3);
-    const otherWallets = sortedInstalledWallets.slice(3);
+    const primaryWallets = sortedReadyConnectors.slice(0, 3);
+    const otherWallets = sortedReadyConnectors.slice(3);
 
     const getInstallUrl = (walletName: string) => {
         const name = walletName.toLowerCase();
@@ -865,19 +939,21 @@ function WalletModalContentBaseUI() {
                     <>
                         {primaryWallets.length > 0 && (
                             <div className="grid gap-2">
-                                {primaryWallets.map(walletInfo => {
-                                    const isConnecting = connectingWallet === walletInfo.wallet.name;
-                                    const isRecent = recentlyConnected === walletInfo.wallet.name;
+                                {primaryWallets.map(connector => {
+                                    const isThisConnecting =
+                                        connectingConnectorId === connector.id ||
+                                        (isConnecting && connectorId === connector.id);
+                                    const isRecent = recentlyConnectedConnectorId === connector.id;
                                     return (
                                         <BaseUIButton
-                                            key={walletInfo.wallet.name}
+                                            key={connector.id}
                                             variant="outline"
                                             className="h-auto justify-between p-4 rounded-[16px] w-full"
-                                            onClick={() => handleSelectWallet(walletInfo.wallet.name)}
-                                            disabled={connecting || isConnecting}
+                                            onClick={() => handleSelectWallet(connector)}
+                                            disabled={isThisConnecting}
                                         >
                                             <div className="flex items-center gap-2">
-                                                <span className="font-semibold">{walletInfo.wallet.name}</span>
+                                                <span className="font-semibold">{connector.name}</span>
                                                 {isRecent && (
                                                     <span className="inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold bg-secondary text-secondary-foreground">
                                                         Recent
@@ -885,10 +961,10 @@ function WalletModalContentBaseUI() {
                                                 )}
                                             </div>
                                             <div className="flex items-center gap-2">
-                                                {isConnecting && <Spinner className="h-4 w-4" />}
+                                                {isThisConnecting && <Spinner className="h-4 w-4" />}
                                                 <BaseUIAvatar
-                                                    src={walletInfo.wallet.icon}
-                                                    alt={walletInfo.wallet.name}
+                                                    src={connector.icon}
+                                                    alt={connector.name}
                                                     fallback={<Wallet className="h-5 w-5" />}
                                                     className="h-10 w-10"
                                                 />
@@ -905,36 +981,24 @@ function WalletModalContentBaseUI() {
                                 <div className="w-full">
                                     <button
                                         onClick={() => setIsOtherWalletsOpen(!isOtherWalletsOpen)}
-                                        className="w-full flex items-center justify-between border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50 rounded-[16px] px-4 py-2 cursor-pointer"
+                                        className="w-full flex items-center justify-between border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50 rounded-[16px] px-4 py-2 cursor-pointer active:scale-[0.98]"
                                     >
-                                        <span>Other Wallets</span>
-                                        <svg
-                                            className={`h-4 w-4 shrink-0 transition-transform duration-200 ${isOtherWalletsOpen ? 'rotate-180' : ''}`}
-                                            fill="none"
-                                            stroke="currentColor"
-                                            viewBox="0 0 24 24"
-                                        >
-                                            <path
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                                strokeWidth={2}
-                                                d="M19 9l-7 7-7-7"
-                                            />
-                                        </svg>
+                                        <span className="font-medium text-sm">Other Wallets</span>
+                                        <HiddenWalletIcons wallets={otherWallets} className="shrink-0" />
                                     </button>
                                     {isOtherWalletsOpen && (
                                         <div className="grid gap-2 pt-2">
-                                            {otherWallets.map(walletInfo => (
+                                            {otherWallets.map(connector => (
                                                 <BaseUIButton
-                                                    key={walletInfo.wallet.name}
+                                                    key={connector.id}
                                                     variant="outline"
                                                     className="h-auto justify-between p-4 rounded-[16px] w-full"
-                                                    onClick={() => handleSelectWallet(walletInfo.wallet.name)}
+                                                    onClick={() => handleSelectWallet(connector)}
                                                 >
-                                                    <span>{walletInfo.wallet.name}</span>
+                                                    <span>{connector.name}</span>
                                                     <BaseUIAvatar
-                                                        src={walletInfo.wallet.icon}
-                                                        alt={walletInfo.wallet.name}
+                                                        src={connector.icon}
+                                                        alt={connector.name}
                                                         fallback={<Wallet className="h-4 w-4" />}
                                                         className="h-8 w-8"
                                                     />
@@ -946,34 +1010,30 @@ function WalletModalContentBaseUI() {
                             </>
                         )}
 
-                        {notInstalledWallets.length > 0 && (
+                        {notReadyConnectors.length > 0 && (
                             <>
                                 <div className="shrink-0 bg-border h-[1px] w-full" />
                                 <div className="space-y-2">
-                                    <h3 className="text-sm font-medium text-muted-foreground">Popular Wallets</h3>
+                                    <h3 className="text-sm font-medium text-muted-foreground">Unavailable Wallets</h3>
                                     <div className="grid gap-2">
-                                        {notInstalledWallets.slice(0, 3).map(walletInfo => (
+                                        {notReadyConnectors.slice(0, 3).map(connector => (
                                             <BaseUIButton
-                                                key={walletInfo.wallet.name}
+                                                key={connector.id}
                                                 variant="outline"
                                                 className="h-auto justify-between p-4 rounded-[16px] w-full"
-                                                onClick={() =>
-                                                    window.open(getInstallUrl(walletInfo.wallet.name), '_blank')
-                                                }
+                                                onClick={() => window.open(getInstallUrl(connector.name), '_blank')}
                                             >
                                                 <div className="flex items-center gap-3">
                                                     <BaseUIAvatar
-                                                        src={walletInfo.wallet.icon}
-                                                        alt={walletInfo.wallet.name}
+                                                        src={connector.icon}
+                                                        alt={connector.name}
                                                         fallback={<Wallet className="h-4 w-4" />}
                                                         className="h-8 w-8"
                                                     />
                                                     <div className="text-left">
-                                                        <div className="font-medium text-sm">
-                                                            {walletInfo.wallet.name}
-                                                        </div>
+                                                        <div className="font-medium text-sm">{connector.name}</div>
                                                         <div className="text-xs text-muted-foreground">
-                                                            Not installed
+                                                            Not available
                                                         </div>
                                                     </div>
                                                 </div>
@@ -985,7 +1045,7 @@ function WalletModalContentBaseUI() {
                             </>
                         )}
 
-                        {wallets.length === 0 && (
+                        {connectors.length === 0 && (
                             <div className="rounded-lg border border-dashed p-8 text-center">
                                 <Wallet className="mx-auto h-12 w-12 text-muted-foreground mb-3" />
                                 <h3 className="font-semibold mb-2">No Wallets Detected</h3>
@@ -1144,9 +1204,11 @@ function ComponentSection({
 }
 
 export function FeaturedSection() {
-    const { connected, selectedWallet, selectedAccount, wallets } = useConnector();
-    const walletWithIcon = wallets.find(w => w.wallet.name === selectedWallet?.name);
-    const walletIcon = walletWithIcon?.wallet.icon || selectedWallet?.icon;
+    const { isConnected, account, connector } = useConnector();
+
+    const selectedAccount = account ? String(account) : null;
+    const walletIcon = connector?.icon || undefined;
+    const walletName = connector?.name || '';
 
     return (
         <div>
@@ -1235,12 +1297,12 @@ export function FeaturedSection() {
                 fileName="wallet-dropdown-content.tsx"
                 fileNameBaseUI="wallet-dropdown-content-baseui.tsx"
                 childrenBaseUI={
-                    connected && selectedAccount && selectedWallet ? (
+                    isConnected && selectedAccount && connector ? (
                         <div className="rounded-[20px] border shadow-lg bg-card">
                             <WalletDropdownContentBaseUI
                                 selectedAccount={selectedAccount}
                                 walletIcon={walletIcon}
-                                walletName={selectedWallet.name}
+                                walletName={walletName}
                             />
                         </div>
                     ) : (
@@ -1251,12 +1313,12 @@ export function FeaturedSection() {
                     )
                 }
             >
-                {connected && selectedAccount && selectedWallet ? (
+                {isConnected && selectedAccount && connector ? (
                     <div className="rounded-[20px] border shadow-lg bg-card">
                         <WalletDropdownContent
                             selectedAccount={selectedAccount}
                             walletIcon={walletIcon}
-                            walletName={selectedWallet.name}
+                            walletName={walletName}
                         />
                     </div>
                 ) : (

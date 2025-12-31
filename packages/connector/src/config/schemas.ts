@@ -48,6 +48,42 @@ export const coinGeckoConfigSchema = z
     .optional();
 
 // ============================================================================
+// WalletConnect Configuration
+// ============================================================================
+
+/**
+ * WalletConnect metadata schema
+ */
+export const walletConnectMetadataSchema = z.object({
+    name: z.string().min(1, 'WalletConnect app name is required'),
+    description: z.string(),
+    url: urlSchema,
+    icons: z.array(z.string()),
+});
+
+/**
+ * WalletConnect detailed object configuration schema
+ */
+export const walletConnectObjectConfigSchema = z.object({
+    enabled: z.boolean().optional(),
+    projectId: z.string().min(1, 'WalletConnect projectId is required'),
+    metadata: walletConnectMetadataSchema,
+    defaultChain: z.enum(['solana:mainnet', 'solana:devnet', 'solana:testnet']).optional(),
+    onDisplayUri: z.custom<(uri: string) => void>(val => typeof val === 'function').optional(),
+    onSessionEstablished: z.custom<() => void>(val => typeof val === 'function').optional(),
+    onSessionDisconnected: z.custom<() => void>(val => typeof val === 'function').optional(),
+    relayUrl: urlSchema.optional(),
+});
+
+/**
+ * WalletConnect configuration schema
+ * Accepts either:
+ * - `true` (boolean shorthand to enable with defaults)
+ * - Detailed object configuration with projectId and metadata
+ */
+export const walletConnectConfigSchema = z.union([z.literal(true), walletConnectObjectConfigSchema]).optional();
+
+// ============================================================================
 // Storage Configuration
 // ============================================================================
 
@@ -135,6 +171,7 @@ export const defaultConfigOptionsSchema = z.object({
     customClusters: z.array(solanaClusterSchema).optional(),
     programLabels: z.record(z.string(), z.string()).optional(),
     coingecko: coinGeckoConfigSchema,
+    walletConnect: walletConnectConfigSchema,
 
     // Additional wallets (remote signers, etc.)
     additionalWallets: z.array(walletSchema).optional(),
@@ -156,6 +193,7 @@ export const connectorConfigSchema = z
         imageProxy: z.string().optional(),
         programLabels: z.record(z.string(), z.string()).optional(),
         coingecko: coinGeckoConfigSchema,
+        walletConnect: walletConnectConfigSchema,
         additionalWallets: z.array(walletSchema).optional(),
     })
     .optional();
@@ -167,6 +205,7 @@ export const connectorConfigSchema = z
 export type SolanaNetworkInput = z.input<typeof solanaNetworkSchema>;
 export type SolanaClusterIdInput = z.input<typeof solanaClusterIdSchema>;
 export type CoinGeckoConfigInput = z.input<typeof coinGeckoConfigSchema>;
+export type WalletConnectConfigInput = z.input<typeof walletConnectConfigSchema>;
 export type DefaultConfigOptionsInput = z.input<typeof defaultConfigOptionsSchema>;
 
 // ============================================================================

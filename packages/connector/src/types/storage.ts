@@ -50,6 +50,35 @@ export interface EnhancedStorageClusterOptions extends BaseEnhancedStorageOption
 }
 
 /**
- * Options for wallet storage
+ * Options for wallet storage (legacy)
  */
 export interface EnhancedStorageWalletOptions extends BaseEnhancedStorageOptions<string | undefined> {}
+
+// ============================================================================
+// vNext Wallet State Storage Types
+// ============================================================================
+
+/**
+ * Persisted wallet state for vNext auto-connect.
+ * Stores connector ID instead of wallet name for stability.
+ */
+export interface PersistedWalletState {
+    /** Storage format version for future migrations */
+    version: number;
+    /** Stable connector ID (e.g., 'wallet-standard:phantom') */
+    connectorId: string;
+    /** Last selected account address */
+    lastAccount?: string;
+    /** Whether auto-connect is enabled for this wallet */
+    autoConnect: boolean;
+    /** Timestamp of last connection */
+    lastConnected?: string;
+}
+
+/**
+ * Options for vNext wallet state storage
+ */
+export interface EnhancedStorageWalletStateOptions extends BaseEnhancedStorageOptions<PersistedWalletState | null> {
+    /** Migration handler for legacy wallet name storage */
+    migrateLegacy?: (legacyWalletName: string) => string | null;
+}

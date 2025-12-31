@@ -69,8 +69,6 @@ export async function loadFireblocksSigner(config: FireblocksProviderConfig): Pr
 
         async signMessage(message: Uint8Array): Promise<Uint8Array> {
             // Use the signer's signMessages method
-            const { SignableMessage } = await import('@solana/signers');
-
             // Create a SignableMessage
             const signableMessage = {
                 content: message,
@@ -131,5 +129,6 @@ async function signWithFireblocks(
         },
     };
 
-    return encoder.encode(signedTx as Parameters<typeof encoder.encode>[0]);
+    const encoded = encoder.encode(signedTx as Parameters<typeof encoder.encode>[0]);
+    return new Uint8Array(encoded);
 }

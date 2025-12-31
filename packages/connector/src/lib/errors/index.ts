@@ -2,6 +2,9 @@
  * @solana/connector - Unified Error System
  */
 
+// Re-export wallet-specific error types (React-free)
+export * from './wallet-errors';
+
 export abstract class ConnectorError extends Error {
     abstract readonly code: string;
     abstract readonly recoverable: boolean;

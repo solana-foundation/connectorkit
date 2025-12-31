@@ -1,6 +1,6 @@
 'use client';
 
-import { useConnector } from '@solana/connector';
+import { useConnector } from '@solana/connector/react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -19,30 +19,19 @@ interface ConnectButtonProps {
 export function ConnectButton({ className }: ConnectButtonProps) {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-    const { connected, connecting, selectedWallet, selectedAccount, wallets } = useConnector();
 
-    if (connecting) {
-        return (
-            <Button size="sm" variant="outline" disabled className={className}>
-                <Spinner className="h-4 w-4" />
-                <span className="text-xs">Connecting...</span>
-            </Button>
-        );
-    }
+    const { isConnected, isConnecting, account, connector, walletConnectUri, clearWalletConnectUri } = useConnector();
 
-    if (connected && selectedAccount && selectedWallet) {
-        const shortAddress = `${selectedAccount.slice(0, 4)}...${selectedAccount.slice(-4)}`;
-
-        // Get wallet icon from wallets list (has proper icons) or fallback to selectedWallet
-        const walletWithIcon = wallets.find(w => w.wallet.name === selectedWallet.name);
-        const walletIcon = walletWithIcon?.wallet.icon || selectedWallet.icon;
+    if (isConnected && account && connector) {
+        const shortAddress = `${account.slice(0, 4)}...${account.slice(-4)}`;
+        const walletIcon = connector.icon || undefined;
 
         return (
             <DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
                 <DropdownMenuTrigger asChild>
                     <Button variant="outline" size="sm" className={cn('gap-2', className)}>
                         <Avatar className="h-5 w-5">
-                            {walletIcon && <AvatarImage src={walletIcon} alt={selectedWallet.name} />}
+                            {walletIcon && <AvatarImage src={walletIcon} alt={connector.name} />}
                             <AvatarFallback>
                                 <Wallet className="h-3 w-3" />
                             </AvatarFallback>
@@ -58,21 +47,42 @@ export function ConnectButton({ className }: ConnectButtonProps) {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" side="bottom" className="p-0 rounded-[20px]">
                     <WalletDropdownContent
-                        selectedAccount={selectedAccount}
+                        selectedAccount={account}
                         walletIcon={walletIcon}
-                        walletName={selectedWallet.name}
+                        walletName={connector.name}
                     />
                 </DropdownMenuContent>
             </DropdownMenu>
         );
     }
 
+    // Show loading button when connecting (but modal stays rendered)
+    const buttonContent = isConnecting ? (
+        <>
+            <Spinner className="h-4 w-4" />
+            <span className="text-xs">Connecting...</span>
+        </>
+    ) : (
+        'Connect Wallet'
+    );
+
     return (
         <>
             <Button size="sm" variant="outline" onClick={() => setIsModalOpen(true)} className={className}>
-                Connect Wallet
+                {buttonContent}
             </Button>
-            <WalletModal open={isModalOpen} onOpenChange={setIsModalOpen} />
+            <WalletModal
+                open={isModalOpen}
+                onOpenChange={open => {
+                    setIsModalOpen(open);
+                    // Clear WalletConnect URI when modal closes
+                    if (!open) {
+                        clearWalletConnectUri();
+                    }
+                }}
+                walletConnectUri={walletConnectUri}
+                onClearWalletConnectUri={clearWalletConnectUri}
+            />
         </>
     );
 }

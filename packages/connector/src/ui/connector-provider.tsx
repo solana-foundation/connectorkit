@@ -6,28 +6,21 @@ import { ConnectorClient } from '../lib/core/connector-client';
 import type { ConnectorConfig } from '../types/connector';
 import type { ExtendedConnectorConfig } from '../config/default-config';
 import { ConnectorErrorBoundary } from './error-boundary';
+import { useWalletConnectUri } from './walletconnect-context';
 import { installPolyfills } from '../lib/utils/polyfills';
 import { createLogger } from '../lib/utils/secure-logger';
+import type { MobileWalletAdapterConfig, RegisterMwaConfig } from '../types/mobile';
 import type {
-    AuthorizationCache,
-    ChainSelector,
-    SolanaMobileWalletAdapterWallet,
-} from '@solana-mobile/wallet-standard-mobile';
-import type { IdentifierArray } from '@wallet-standard/base';
+    WalletConnectorId,
+    WalletConnectorMetadata,
+    ConnectOptions,
+    WalletStatus,
+    SessionAccount,
+} from '../types/session';
+import type { Address } from '@solana/addresses';
 
-/** Configuration for registerMwa - defined locally as the package doesn't export this type */
-interface RegisterMwaConfig {
-    appIdentity: {
-        name: string;
-        uri?: string;
-        icon?: string;
-    };
-    authorizationCache: AuthorizationCache;
-    chains: IdentifierArray;
-    chainSelector: ChainSelector;
-    remoteHostAuthority?: string;
-    onWalletNotFound: (mobileWalletAdapter: SolanaMobileWalletAdapterWallet) => Promise<void>;
-}
+// Re-export for backwards compatibility
+export type { MobileWalletAdapterConfig };
 
 const logger = createLogger('ConnectorProvider');
 
@@ -40,26 +33,56 @@ declare global {
 }
 
 export type ConnectorSnapshot = ReturnType<ConnectorClient['getSnapshot']> & {
+    // ========================================================================
+    // Legacy Actions (kept for backwards compatibility)
+    // ========================================================================
+    /** @deprecated Use `connectWallet(connectorId)` instead */
     select: (walletName: string) => Promise<void>;
+    /** @deprecated Use `disconnectWallet()` instead */
     disconnect: () => Promise<void>;
     selectAccount: (address: string) => Promise<void>;
+
+    // ========================================================================
+    // WalletConnect URI
+    // ========================================================================
+    /** WalletConnect URI for QR code display (null when not connecting via WalletConnect) */
+    walletConnectUri: string | null;
+    /** Clear the WalletConnect URI (call when modal closes or connection completes) */
+    clearWalletConnectUri: () => void;
+
+    // ========================================================================
+    // vNext Actions
+    // ========================================================================
+    /** Connect to a wallet by connector ID (vNext) */
+    connectWallet: (connectorId: WalletConnectorId, options?: ConnectOptions) => Promise<void>;
+    /** Disconnect the current wallet session (vNext) */
+    disconnectWallet: () => Promise<void>;
+
+    // ========================================================================
+    // vNext Derived Fields (from wallet status state machine)
+    // ========================================================================
+    /** Full wallet status object (discriminated union) */
+    walletStatus: WalletStatus;
+    /** Whether a wallet is connected */
+    isConnected: boolean;
+    /** Whether a wallet connection is in progress */
+    isConnecting: boolean;
+    /** Whether an error occurred */
+    isError: boolean;
+    /** Error object if status is 'error', otherwise null */
+    walletError: Error | null;
+    /** Currently selected account address (null if not connected) */
+    account: Address | null;
+    /** All available accounts in the session (empty if not connected) */
+    sessionAccounts: SessionAccount[];
+    /** Connected connector ID (null if not connected) */
+    connectorId: WalletConnectorId | null;
+    /** Resolved connector metadata for the connected wallet (null if not connected) */
+    connector: WalletConnectorMetadata | null;
 };
 
 export const ConnectorContext = createContext<ConnectorClient | null>(null);
 ConnectorContext.displayName = 'ConnectorContext';
-
-export interface MobileWalletAdapterConfig {
-    appIdentity: {
-        name: string;
-        uri?: string;
-        icon?: string;
-    };
-    remoteHostAuthority?: string;
-    chains?: RegisterMwaConfig['chains'];
-    authorizationCache?: AuthorizationCache;
-    chainSelector?: ChainSelector;
-    onWalletNotFound?: (wallet: SolanaMobileWalletAdapterWallet) => Promise<void>;
-}
 
 function ConnectorProviderInternal({
     children,
@@ -209,27 +232,77 @@ export function useConnector(): ConnectorSnapshot {
         );
     }
 
+    // Get WalletConnect URI from context (gracefully returns null if not in WalletConnect flow)
+    const { uri: walletConnectUri, clearUri: clearWalletConnectUri } = useWalletConnectUri();
+
     const state = useSyncExternalStore(
         React.useCallback(cb => client.subscribe(cb), [client]),
         React.useCallback(() => client.getSnapshot(), [client]),
         React.useCallback(() => client.getSnapshot(), [client]),
     );
 
+    // Legacy + vNext actions
     const methods = useMemo(
         () => ({
+            // Legacy (kept for backwards compatibility)
             select: client.select.bind(client),
             disconnect: client.disconnect.bind(client),
             selectAccount: client.selectAccount.bind(client),
+            // vNext
+            connectWallet: client.connectWallet.bind(client),
+            disconnectWallet: client.disconnectWallet.bind(client),
         }),
         [client],
     );
+
+    // Derive vNext convenience fields from wallet status state machine
+    const vNextFields = useMemo(() => {
+        const walletStatus = state.wallet;
+        const isConnected = walletStatus.status === 'connected';
+        const isConnecting = walletStatus.status === 'connecting';
+        const isError = walletStatus.status === 'error';
+
+        let connectorId: WalletConnectorId | null = null;
+        let account: Address | null = null;
+        let sessionAccounts: SessionAccount[] = [];
+        let walletError: Error | null = null;
+
+        if (walletStatus.status === 'connected') {
+            connectorId = walletStatus.session.connectorId;
+            account = walletStatus.session.selectedAccount.address;
+            sessionAccounts = walletStatus.session.accounts;
+        } else if (walletStatus.status === 'connecting') {
+            connectorId = walletStatus.connectorId;
+        } else if (walletStatus.status === 'error') {
+            walletError = walletStatus.error;
+            connectorId = walletStatus.connectorId ?? null;
+        }
+
+        // Resolve connector metadata from connectors array
+        const connector = connectorId ? (state.connectors.find(c => c.id === connectorId) ?? null) : null;
+
+        return {
+            walletStatus,
+            isConnected,
+            isConnecting,
+            isError,
+            walletError,
+            account,
+            sessionAccounts,
+            connectorId,
+            connector,
+        };
+    }, [state.wallet, state.connectors]);
 
     return useMemo(
         () => ({
             ...state,
             ...methods,
+            ...vNextFields,
+            walletConnectUri,
+            clearWalletConnectUri,
         }),
-        [state, methods],
+        [state, methods, vNextFields, walletConnectUri, clearWalletConnectUri],
     );
 }
 

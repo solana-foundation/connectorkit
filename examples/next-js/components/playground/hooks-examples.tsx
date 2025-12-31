@@ -1,6 +1,6 @@
 'use client';
 
-import { useConnector, useBalance, useCluster, useTokens, useTransactions } from '@solana/connector';
+import { useBalance, useCluster, useConnector, useTokens, useTransactions } from '@solana/connector';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Wallet, Copy, Check, RefreshCw, Coins, ExternalLink, LogOut } from 'lucide-react';
@@ -73,10 +73,13 @@ function getTransactionSubtitle(tx: { type: string; formattedTime: string; instr
 
 // Hook example components
 function UseConnectorExample() {
-    const { connected, connecting, selectedWallet, selectedAccount, wallets, select, disconnect } = useConnector();
+    const { walletStatus, isConnected, isConnecting, account, connector, connectors, connectWallet, disconnectWallet } =
+        useConnector();
+    const status = walletStatus.status;
     const [copied, setCopied] = useState(false);
 
     const handleCopy = () => {
+        const selectedAccount = account ? String(account) : null;
         if (selectedAccount) {
             navigator.clipboard.writeText(selectedAccount);
             setCopied(true);
@@ -84,11 +87,12 @@ function UseConnectorExample() {
         }
     };
 
+    const selectedAccount = account ? String(account) : null;
     const shortAddress = selectedAccount ? `${selectedAccount.slice(0, 4)}...${selectedAccount.slice(-4)}` : '—';
 
     // Combined component render
     const renderCombined = () => {
-        if (connecting) {
+        if (isConnecting) {
             return (
                 <div className="p-4 rounded-lg border bg-card">
                     <div className="flex items-center gap-2">
@@ -99,25 +103,25 @@ function UseConnectorExample() {
             );
         }
 
-        if (connected && selectedAccount && selectedWallet) {
+        if (isConnected && selectedAccount && connector) {
             return (
                 <div className="p-4 rounded-lg border bg-card space-y-3">
                     <div className="flex items-center gap-3">
                         <Avatar className="h-10 w-10">
-                            {selectedWallet.icon && <AvatarImage src={selectedWallet.icon} />}
+                            {connector.icon && <AvatarImage src={connector.icon} />}
                             <AvatarFallback>
                                 <Wallet className="h-5 w-5" />
                             </AvatarFallback>
                         </Avatar>
                         <div className="flex-1">
-                            <p className="font-medium text-sm">{selectedWallet.name}</p>
+                            <p className="font-medium text-sm">{connector.name}</p>
                             <p className="text-xs text-muted-foreground font-mono">{shortAddress}</p>
                         </div>
                         <button onClick={handleCopy} className="p-2 hover:bg-muted rounded-md">
                             {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
                         </button>
                     </div>
-                    <Button variant="destructive" size="sm" className="w-full" onClick={() => disconnect()}>
+                    <Button variant="destructive" size="sm" className="w-full" onClick={() => void disconnectWallet()}>
                         <LogOut className="h-4 w-4 mr-2" />
                         Disconnect
                     </Button>
@@ -128,24 +132,24 @@ function UseConnectorExample() {
         return (
             <div className="p-4 rounded-lg border bg-card space-y-2">
                 <p className="text-sm text-muted-foreground mb-2">Select a wallet:</p>
-                {wallets
-                    .filter(w => w.installed)
+                {connectors
+                    .filter(c => c.ready)
                     .slice(0, 3)
-                    .map(w => (
+                    .map(c => (
                         <Button
-                            key={w.wallet.name}
+                            key={c.id}
                             variant="outline"
                             size="sm"
                             className="w-full justify-start"
-                            onClick={() => select(w.wallet.name)}
+                            onClick={() => void connectWallet(c.id)}
                         >
                             <Avatar className="h-5 w-5 mr-2">
-                                {w.wallet.icon && <AvatarImage src={w.wallet.icon} />}
+                                {c.icon && <AvatarImage src={c.icon} />}
                                 <AvatarFallback>
                                     <Wallet className="h-3 w-3" />
                                 </AvatarFallback>
                             </Avatar>
-                            {w.wallet.name}
+                            {c.name}
                         </Button>
                     ))}
             </div>
@@ -160,13 +164,14 @@ function UseConnectorExample() {
                     useConnector()
                 </span>
                 <div className="space-y-0.5 pt-1">
-                    <HookReturnValue name="connected" value={String(connected)} />
-                    <HookReturnValue name="connecting" value={String(connecting)} />
-                    <HookReturnValue name="selectedWallet" value={selectedWallet?.name ?? 'null'} />
-                    <HookReturnValue name="selectedAccount" value={shortAddress} />
-                    <HookReturnValue name="wallets" value={`[${wallets.length} items]`} />
-                    <HookReturnValue name="select" value="fn()" />
-                    <HookReturnValue name="disconnect" value="fn()" />
+                    <HookReturnValue name="status" value={status} />
+                    <HookReturnValue name="isConnected" value={String(isConnected)} />
+                    <HookReturnValue name="isConnecting" value={String(isConnecting)} />
+                    <HookReturnValue name="connector" value={connector?.name ?? 'null'} />
+                    <HookReturnValue name="account" value={shortAddress} />
+                    <HookReturnValue name="connectors" value={`[${connectors.length} items]`} />
+                    <HookReturnValue name="connectWallet" value="fn()" />
+                    <HookReturnValue name="disconnectWallet" value="fn()" />
                 </div>
             </div>
 
@@ -612,38 +617,38 @@ const hookExamples: ExampleConfig[] = [
     {
         id: 'use-connector',
         name: 'useConnector',
-        description:
-            'Core hook for wallet connection state. Access connected status, wallets, select/disconnect functions.',
+        description: 'Unified hook for wallet state, connectors, and actions. Single import, everything you need.',
         code: `import { useConnector } from '@solana/connector';
 
 function WalletStatus() {
-    const { 
-        connected,
-        connecting,
-        selectedWallet,
-        selectedAccount,
-        wallets,
-        select,
-        disconnect 
+    const {
+        walletStatus,
+        isConnected,
+        isConnecting,
+        account,
+        connector,
+        connectors,
+        connectWallet,
+        disconnectWallet,
     } = useConnector();
 
-    if (connecting) return <div>Connecting...</div>;
+    if (isConnecting) return <div>Connecting...</div>;
 
-    if (connected && selectedAccount) {
+    if (isConnected && account && connector) {
         return (
             <div>
-                <p>Connected: {selectedWallet?.name}</p>
-                <p>Address: {selectedAccount}</p>
-                <button onClick={() => disconnect()}>Disconnect</button>
+                <p>Connected: {connector.name}</p>
+                <p>Address: {account}</p>
+                <button onClick={() => disconnectWallet()}>Disconnect</button>
             </div>
         );
     }
 
     return (
         <div>
-            {wallets.filter(w => w.installed).map(w => (
-                <button key={w.wallet.name} onClick={() => select(w.wallet.name)}>
-                    {w.wallet.name}
+            {connectors.filter(c => c.ready).map(c => (
+                <button key={c.id} onClick={() => connectWallet(c.id)}>
+                    {c.name}
                 </button>
             ))}
         </div>

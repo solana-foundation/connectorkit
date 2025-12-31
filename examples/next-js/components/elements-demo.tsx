@@ -5,7 +5,7 @@
  */
 
 import React from 'react';
-import { useConnector } from '@solana/connector';
+import { useConnector } from '@solana/connector/react';
 import {
     AccountElement,
     BalanceElement,
@@ -18,9 +18,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Separator } from '@/components/ui/separator';
 
 export function ElementsDemo() {
-    const { connected } = useConnector();
+    const { isConnected } = useConnector();
 
-    if (!connected) {
+    if (!isConnected) {
         return (
             <Card>
                 <CardHeader>

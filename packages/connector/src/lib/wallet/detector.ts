@@ -1,10 +1,20 @@
 import { getWalletsRegistry, ready } from './standard-shim';
 import type { Wallet, WalletInfo } from '../../types/wallets';
+import type { WalletConnectorId, WalletConnectorMetadata } from '../../types/session';
+import { createConnectorId } from '../../types/session';
 import { BaseCollaborator } from '../core/base-collaborator';
 import { WalletAuthenticityVerifier } from './authenticity-verifier';
 import { createLogger } from '../utils/secure-logger';
+import { applyWalletIconOverride } from './wallet-icon-overrides';
 
 const logger = createLogger('WalletDetector');
+
+function isSolanaWallet(wallet: Wallet): boolean {
+    return (
+        Array.isArray(wallet.chains) &&
+        wallet.chains.some(chain => typeof chain === 'string' && chain.startsWith('solana:'))
+    );
+}
 
 /**
  * Legacy wallet PublicKey interface
@@ -76,10 +86,13 @@ function verifyWalletName(wallet: DirectWallet | Record<string, unknown>, reques
  *
  * Integrates with Wallet Standard registry and provides direct wallet detection.
  * Supports additional wallets (e.g., remote signers) via `setAdditionalWallets()`.
+ * Maintains a stable connector ID -> Wallet mapping for vNext APIs.
  */
 export class WalletDetector extends BaseCollaborator {
     private unsubscribers: Array<() => void> = [];
     private additionalWallets: Wallet[] = [];
+    /** Map from stable connector ID to Wallet reference (not stored in state) */
+    private connectorRegistry = new Map<WalletConnectorId, Wallet>();
 
     constructor(
         stateManager: import('../core/state-manager').StateManager,
@@ -116,19 +129,26 @@ export class WalletDetector extends BaseCollaborator {
 
         try {
             const walletsApi = getWalletsRegistry();
-            const registryWallets = walletsApi.get();
+            const ws = walletsApi.get();
 
-            // Merge registry wallets with additional wallets
-            const allWallets = [...registryWallets, ...this.additionalWallets];
-            const unique = this.deduplicateWallets(allWallets);
+            // - Only include Solana wallets (Wallet Standard supports multi-chain registries)
+            // - If multiple wallets share the same name (e.g. multi-chain variants), prefer the Solana one
+            //   by filtering to solana:* first, then deduplicating by name.
+            const registryWallets = ws.filter(isSolanaWallet);
+            const additionalWallets = this.additionalWallets.filter(isSolanaWallet);
+            const unique = this.deduplicateWallets([...registryWallets, ...additionalWallets]);
+
+            // Update connector registry (connectorId -> Wallet map)
+            this.updateConnectorRegistry(unique);
 
             this.stateManager.updateState({
                 wallets: unique.map(w => this.mapToWalletInfo(w)),
+                connectors: unique.map(w => this.mapToConnectorMetadata(w)),
             });
 
             this.log('🔍 WalletDetector: refreshed wallets', {
                 registry: registryWallets.length,
-                additional: this.additionalWallets.length,
+                additional: additionalWallets.length,
                 total: unique.length,
             });
         } catch {
@@ -152,24 +172,32 @@ export class WalletDetector extends BaseCollaborator {
         try {
             const walletsApi = getWalletsRegistry();
             const update = () => {
-                const registryWallets = walletsApi.get();
+                const ws = walletsApi.get();
                 const previousCount = this.getState().wallets.length;
 
-                // Merge registry wallets with additional wallets
-                const allWallets = [...registryWallets, ...this.additionalWallets];
-                const unique = this.deduplicateWallets(allWallets);
+                // - Only include Solana wallets (Wallet Standard supports multi-chain registries)
+                // - If multiple wallets share the same name (e.g. multi-chain variants), prefer the Solana one
+                //   by filtering to solana:* first, then deduplicating by name.
+                const registryWallets = ws.filter(isSolanaWallet);
+                const additionalWallets = this.additionalWallets.filter(isSolanaWallet);
+                const unique = this.deduplicateWallets([...registryWallets, ...additionalWallets]);
                 const newCount = unique.length;
 
                 if (newCount !== previousCount) {
                     this.log('🔍 WalletDetector: found wallets:', {
                         registry: registryWallets.length,
-                        additional: this.additionalWallets.length,
+                        additional: additionalWallets.length,
                         total: newCount,
                     });
                 }
 
+                // Update connector registry (connectorId -> Wallet map)
+                this.updateConnectorRegistry(unique);
+
+                // Update state with both legacy WalletInfo[] and vNext connectors[]
                 this.stateManager.updateState({
                     wallets: unique.map(w => this.mapToWalletInfo(w)),
+                    connectors: unique.map(w => this.mapToConnectorMetadata(w)),
                 });
 
                 if (newCount !== previousCount && newCount > 0) {
@@ -286,24 +314,80 @@ export class WalletDetector extends BaseCollaborator {
     }
 
     /**
-     * Get currently detected wallets
+     * Get currently detected wallets (legacy)
+     * @deprecated Use getConnectors() for vNext API
      */
     getDetectedWallets(): WalletInfo[] {
         return this.getState().wallets;
     }
 
     /**
-     * Convert a Wallet Standard wallet to WalletInfo with capability checks
+     * Get all available connectors (vNext API)
      */
-    private mapToWalletInfo(wallet: Wallet): WalletInfo {
-        const hasConnect = hasFeature(wallet, 'standard:connect');
-        const hasDisconnect = hasFeature(wallet, 'standard:disconnect');
-        const isSolana =
-            Array.isArray(wallet.chains) && wallet.chains.some(c => typeof c === 'string' && c.includes('solana'));
-        const connectable = hasConnect && hasDisconnect && isSolana;
+    getConnectors(): WalletConnectorMetadata[] {
+        return this.getState().connectors;
+    }
+
+    /**
+     * Get a wallet by its stable connector ID (vNext API)
+     * Returns the Wallet reference for connection operations
+     */
+    getConnectorById(connectorId: WalletConnectorId): Wallet | undefined {
+        return this.connectorRegistry.get(connectorId);
+    }
+
+    /**
+     * Get connector metadata by ID
+     */
+    getConnectorMetadata(connectorId: WalletConnectorId): WalletConnectorMetadata | undefined {
+        return this.getState().connectors.find(c => c.id === connectorId);
+    }
+
+    /**
+     * Update the connector registry map
+     */
+    private updateConnectorRegistry(wallets: Wallet[]): void {
+        // Clear and rebuild to handle unregistered wallets
+        this.connectorRegistry.clear();
+        for (const wallet of wallets) {
+            const connectorId = createConnectorId(wallet.name);
+            this.connectorRegistry.set(connectorId, wallet);
+        }
+    }
+
+    /**
+     * Convert a Wallet Standard wallet to WalletConnectorMetadata (serializable)
+     */
+    private mapToConnectorMetadata(wallet: Wallet): WalletConnectorMetadata {
+        const walletWithIcon = applyWalletIconOverride(wallet);
+        const hasConnect = hasFeature(walletWithIcon, 'standard:connect');
+        const isSolana = isSolanaWallet(walletWithIcon);
+        // Wallet UI considers a wallet "available" if it's in the registry and supports Solana.
+        // We additionally require standard:connect so the UX doesn't offer unconnectable wallets.
+        // Do NOT require standard:disconnect; some wallets omit it but still connect fine.
+        const ready = hasConnect && isSolana;
 
         return {
-            wallet,
+            id: createConnectorId(wallet.name),
+            name: wallet.name,
+            icon: typeof walletWithIcon.icon === 'string' ? walletWithIcon.icon : '',
+            ready,
+            chains: walletWithIcon.chains ?? [],
+            features: Object.keys(walletWithIcon.features ?? {}),
+        };
+    }
+
+    /**
+     * Convert a Wallet Standard wallet to WalletInfo with capability checks (legacy)
+     */
+    private mapToWalletInfo(wallet: Wallet): WalletInfo {
+        const walletWithIcon = applyWalletIconOverride(wallet);
+        const hasConnect = hasFeature(walletWithIcon, 'standard:connect');
+        const isSolana = isSolanaWallet(walletWithIcon);
+        const connectable = hasConnect && isSolana;
+
+        return {
+            wallet: walletWithIcon,
             installed: true,
             connectable,
         };

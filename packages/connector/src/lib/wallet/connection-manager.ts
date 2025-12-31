@@ -1,6 +1,14 @@
 import type { Wallet, WalletAccount, WalletName } from '../../types/wallets';
 import type { AccountInfo } from '../../types/accounts';
 import type { StorageAdapter } from '../../types/storage';
+import type {
+    WalletConnectorId,
+    ConnectOptions,
+    WalletStatus,
+    WalletSession,
+    SessionAccount,
+} from '../../types/session';
+import { INITIAL_WALLET_STATUS, createConnectorId } from '../../types/session';
 import { BaseCollaborator } from '../core/base-collaborator';
 import type {
     StandardConnectFeature,
@@ -49,6 +57,9 @@ export class ConnectionManager extends BaseCollaborator {
     private walletChangeUnsub: (() => void) | null = null;
     private pollTimer: ReturnType<typeof setTimeout> | null = null;
     private pollAttempts = 0;
+    private connectAttemptId = 0;
+    private pendingWallet: Wallet | null = null;
+    private pendingWalletName: string | null = null;
 
     constructor(
         stateManager: import('../core/state-manager').StateManager,
@@ -60,18 +71,376 @@ export class ConnectionManager extends BaseCollaborator {
         this.walletStorage = walletStorage;
     }
 
+    // ========================================================================
+    // vNext Connection Methods (connector-id based, silent-first)
+    // ========================================================================
+
     /**
-     * Connect to a wallet
+     * Connect to a wallet using the vNext API with silent-first support.
+     *
+     * @param wallet - Wallet Standard wallet instance
+     * @param connectorId - Stable connector identifier
+     * @param options - Connection options (silent mode, preferred account, etc.)
+     */
+    async connectWallet(wallet: Wallet, connectorId: WalletConnectorId, options?: ConnectOptions): Promise<void> {
+        if (typeof window === 'undefined') return;
+
+        const attemptId = ++this.connectAttemptId;
+        this.pendingWallet = wallet;
+        this.pendingWalletName = wallet.name;
+
+        const { silent = false, allowInteractiveFallback = true, preferredAccount } = options ?? {};
+
+        // Set wallet status to connecting
+        this.updateWalletStatus({
+            status: 'connecting',
+            connectorId,
+        });
+
+        this.stateManager.updateState({ connecting: true }, true);
+
+        this.eventEmitter.emit({
+            type: 'connecting',
+            wallet: wallet.name as WalletName,
+            timestamp: new Date().toISOString(),
+        });
+
+        try {
+            const connect = getConnectFeature(wallet);
+            if (!connect) throw new Error(`Wallet ${wallet.name} does not support standard connect`);
+
+            // Attempt silent connection first if requested
+            let result;
+            if (silent) {
+                try {
+                    result = await connect({ silent: true });
+                    if (attemptId !== this.connectAttemptId) throw new Error('Connection cancelled');
+
+                    // Check if silent connect returned accounts
+                    const hasAccounts = result.accounts.length > 0 || wallet.accounts.length > 0;
+                    if (!hasAccounts && allowInteractiveFallback) {
+                        this.log('Silent connect returned no accounts, trying interactive...');
+                        result = await connect({ silent: false });
+                    } else if (!hasAccounts) {
+                        throw new Error('Silent connection failed: no accounts returned');
+                    }
+                } catch (silentError) {
+                    if (attemptId !== this.connectAttemptId) throw new Error('Connection cancelled');
+
+                    if (allowInteractiveFallback) {
+                        this.log('Silent connect failed, trying interactive...', silentError);
+                        result = await connect({ silent: false });
+                    } else {
+                        throw silentError;
+                    }
+                }
+            } else {
+                result = await connect({ silent: false });
+            }
+
+            if (attemptId !== this.connectAttemptId) throw new Error('Connection cancelled');
+
+            // Merge accounts from wallet and connect result
+            const walletAccounts = wallet.accounts;
+            const accountMap = new Map<string, WalletAccount>();
+            for (const a of [...walletAccounts, ...result.accounts]) accountMap.set(a.address, a);
+
+            const sessionAccounts: SessionAccount[] = Array.from(accountMap.values()).map(a => ({
+                address: a.address as Address,
+                label: a.label,
+                account: a,
+            }));
+
+            const legacyAccounts = sessionAccounts.map(a => this.toAccountInfo(a.account));
+
+            // Select account: preferredAccount > first new account > first account
+            let selectedAccount = sessionAccounts[0];
+            if (preferredAccount) {
+                const preferred = sessionAccounts.find(a => a.address === preferredAccount);
+                if (preferred) selectedAccount = preferred;
+            }
+
+            // Create session
+            const session = this.createSession(wallet, connectorId, sessionAccounts, selectedAccount);
+
+            // Update wallet status to connected
+            this.updateWalletStatus({
+                status: 'connected',
+                session,
+            });
+
+            // Also update legacy state fields for backwards compatibility
+            this.stateManager.updateState(
+                {
+                    selectedWallet: wallet,
+                    connected: true,
+                    connecting: false,
+                    accounts: legacyAccounts,
+                    selectedAccount: selectedAccount?.address ?? null,
+                },
+                true,
+            );
+
+            this.log('✅ Connection successful (vNext)', {
+                connectorId,
+                selectedAccount: selectedAccount?.address,
+                accountsCount: sessionAccounts.length,
+            });
+
+            if (selectedAccount) {
+                this.eventEmitter.emit({
+                    type: 'wallet:connected',
+                    wallet: wallet.name as WalletName,
+                    account: selectedAccount.address,
+                    timestamp: new Date().toISOString(),
+                });
+            }
+
+            // Save wallet to storage
+            if (this.walletStorage) {
+                const isAvailable =
+                    !('isAvailable' in this.walletStorage) ||
+                    typeof this.walletStorage.isAvailable !== 'function' ||
+                    this.walletStorage.isAvailable();
+
+                if (isAvailable) {
+                    this.walletStorage.set(wallet.name);
+                }
+            }
+
+            this.subscribeToWalletEventsVNext(wallet, connectorId);
+        } catch (e) {
+            if (attemptId !== this.connectAttemptId) throw e;
+
+            const errorMessage = e instanceof Error ? e.message : String(e);
+            const error = e instanceof Error ? e : new Error(errorMessage);
+
+            // Update wallet status to error
+            this.updateWalletStatus({
+                status: 'error',
+                error,
+                connectorId,
+                recoverable: this.isRecoverableError(error),
+            });
+
+            this.stateManager.updateState(
+                {
+                    selectedWallet: null,
+                    connected: false,
+                    connecting: false,
+                    accounts: [],
+                    selectedAccount: null,
+                },
+                true,
+            );
+
+            this.eventEmitter.emit({
+                type: 'connection:failed',
+                wallet: wallet.name as WalletName,
+                error: errorMessage,
+                timestamp: new Date().toISOString(),
+            });
+
+            throw e;
+        } finally {
+            if (this.pendingWallet === wallet) {
+                this.pendingWallet = null;
+                this.pendingWalletName = null;
+            }
+        }
+    }
+
+    /**
+     * Create a WalletSession object
+     */
+    private createSession(
+        wallet: Wallet,
+        connectorId: WalletConnectorId,
+        accounts: SessionAccount[],
+        selectedAccount: SessionAccount,
+    ): WalletSession {
+        const listeners = new Set<(accounts: SessionAccount[]) => void>();
+
+        return {
+            connectorId,
+            accounts,
+            selectedAccount,
+            onAccountsChanged: (listener: (accounts: SessionAccount[]) => void) => {
+                listeners.add(listener);
+                return () => listeners.delete(listener);
+            },
+            selectAccount: async (address: Address) => {
+                const account = accounts.find(a => a.address === address);
+                if (account) {
+                    return this.selectAccount(address);
+                }
+            },
+        };
+    }
+
+    /**
+     * Update wallet status in state
+     */
+    private updateWalletStatus(status: WalletStatus): void {
+        this.stateManager.updateState({ wallet: status });
+    }
+
+    /**
+     * Subscribe to wallet events (vNext version with improved account change handling)
+     */
+    private subscribeToWalletEventsVNext(wallet: Wallet, connectorId: WalletConnectorId): void {
+        if (this.walletChangeUnsub) {
+            this.walletChangeUnsub();
+            this.walletChangeUnsub = null;
+        }
+        this.stopPollingWalletAccounts();
+
+        const eventsOn = getEventsFeature(wallet);
+        if (!eventsOn) {
+            this.startPollingWalletAccountsVNext(wallet, connectorId);
+            return;
+        }
+
+        try {
+            this.walletChangeUnsub = eventsOn('change', properties => {
+                const changeAccounts = properties?.accounts ?? [];
+                this.handleAccountsChanged(changeAccounts, connectorId, wallet);
+            });
+        } catch (error) {
+            this.startPollingWalletAccountsVNext(wallet, connectorId);
+        }
+    }
+
+    /**
+     * Handle accounts changed event with proper validation
+     */
+    private handleAccountsChanged(
+        newAccounts: readonly WalletAccount[],
+        connectorId: WalletConnectorId,
+        wallet: Wallet,
+    ): void {
+        const state = this.getState();
+
+        // If no accounts, disconnect
+        if (newAccounts.length === 0) {
+            this.log('No accounts available, disconnecting...');
+            this.disconnect();
+            return;
+        }
+
+        const sessionAccounts: SessionAccount[] = newAccounts.map(a => ({
+            address: a.address as Address,
+            label: a.label,
+            account: a,
+        }));
+
+        const legacyAccounts = sessionAccounts.map(a => this.toAccountInfo(a.account));
+
+        // Check if selected account is still available
+        const currentSelected = state.selectedAccount;
+        let selectedAccount = sessionAccounts.find(a => a.address === currentSelected);
+
+        // If selected account is gone, select first available
+        if (!selectedAccount) {
+            selectedAccount = sessionAccounts[0];
+            this.eventEmitter.emit({
+                type: 'account:changed',
+                account: selectedAccount.address,
+                timestamp: new Date().toISOString(),
+            });
+        }
+
+        // Update session in wallet status
+        if (state.wallet.status === 'connected') {
+            const session = this.createSession(wallet, connectorId, sessionAccounts, selectedAccount);
+            this.updateWalletStatus({
+                status: 'connected',
+                session,
+            });
+        }
+
+        // Update legacy state
+        this.stateManager.updateState({
+            accounts: legacyAccounts,
+            selectedAccount: selectedAccount.address,
+        });
+    }
+
+    /**
+     * Start polling wallet accounts (vNext version)
+     */
+    private startPollingWalletAccountsVNext(wallet: Wallet, connectorId: WalletConnectorId): void {
+        if (this.pollTimer) return;
+
+        this.pollAttempts = 0;
+
+        const poll = () => {
+            if (this.pollAttempts >= MAX_POLL_ATTEMPTS) {
+                this.stopPollingWalletAccounts();
+                this.log('Stopped wallet polling after max attempts');
+                return;
+            }
+
+            try {
+                const walletAccounts = wallet.accounts;
+                if (walletAccounts.length > 0) {
+                    this.handleAccountsChanged(walletAccounts, connectorId, wallet);
+                    this.pollAttempts = 0; // Reset on success
+                }
+            } catch (error) {
+                this.log('Wallet polling error:', error);
+            }
+
+            this.pollAttempts++;
+            const intervalIndex = Math.min(this.pollAttempts, POLL_INTERVALS_MS.length - 1);
+            const interval = POLL_INTERVALS_MS[intervalIndex];
+            this.pollTimer = setTimeout(poll, interval);
+        };
+
+        poll();
+    }
+
+    /**
+     * Check if an error is recoverable
+     */
+    private isRecoverableError(error: Error): boolean {
+        const message = error.message.toLowerCase();
+        return (
+            message.includes('user rejected') ||
+            message.includes('user denied') ||
+            message.includes('cancelled') ||
+            message.includes('canceled')
+        );
+    }
+
+    // ========================================================================
+    // Legacy Connection Methods (kept for backwards compatibility)
+    // ========================================================================
+
+    /**
+     * Connect to a wallet (legacy API)
+     * @deprecated Use connectWallet() instead
      */
     async connect(wallet: Wallet, walletName?: string): Promise<void> {
         if (typeof window === 'undefined') return;
 
         const name = walletName || wallet.name;
+        const attemptId = ++this.connectAttemptId;
+        this.pendingWallet = wallet;
+        this.pendingWalletName = name;
+        const connectorId = createConnectorId(name);
 
         this.eventEmitter.emit({
             type: 'connecting',
             wallet: name as WalletName,
             timestamp: new Date().toISOString(),
+        });
+
+        // Keep vNext state machine in sync even when using legacy connect().
+        // Auto-connect relies on this method today, and many UIs use `walletStatus/isConnected`.
+        this.updateWalletStatus({
+            status: 'connecting',
+            connectorId,
         });
 
         this.stateManager.updateState({ connecting: true }, true);
@@ -81,17 +450,40 @@ export class ConnectionManager extends BaseCollaborator {
             if (!connect) throw new Error(`Wallet ${name} does not support standard connect`);
 
             const result = await connect({ silent: false });
+            if (attemptId !== this.connectAttemptId) {
+                throw new Error('Connection cancelled');
+            }
 
             const walletAccounts = wallet.accounts;
             const accountMap = new Map<string, WalletAccount>();
             for (const a of [...walletAccounts, ...result.accounts]) accountMap.set(a.address, a);
-            const accounts = Array.from(accountMap.values()).map(a => this.toAccountInfo(a));
+            const sessionAccounts: SessionAccount[] = Array.from(accountMap.values()).map(a => ({
+                address: a.address as Address,
+                label: a.label,
+                account: a,
+            }));
+
+            if (sessionAccounts.length === 0) {
+                throw new Error(`Wallet ${name} connected but returned no accounts`);
+            }
+
+            const accounts = sessionAccounts.map(a => this.toAccountInfo(a.account));
 
             const state = this.getState();
             const previouslySelected = state.selectedAccount;
             const previousAddresses = new Set(state.accounts.map((a: AccountInfo) => a.address));
             const firstNew = accounts.find(a => !previousAddresses.has(a.address));
             const selected = firstNew?.address ?? previouslySelected ?? accounts[0]?.address ?? null;
+
+            const selectedSessionAccount =
+                (selected ? sessionAccounts.find(a => a.address === selected) : undefined) ?? sessionAccounts[0];
+
+            // Update vNext wallet status to connected
+            const session = this.createSession(wallet, connectorId, sessionAccounts, selectedSessionAccount);
+            this.updateWalletStatus({
+                status: 'connected',
+                session,
+            });
 
             this.stateManager.updateState(
                 {
@@ -143,7 +535,14 @@ export class ConnectionManager extends BaseCollaborator {
 
             this.subscribeToWalletEvents();
         } catch (e) {
+            // If this connect attempt was superseded/cancelled, do not mutate state here.
+            // The cancel path is handled by disconnect().
+            if (attemptId !== this.connectAttemptId) {
+                throw e;
+            }
+
             const errorMessage = e instanceof Error ? e.message : String(e);
+            const error = e instanceof Error ? e : new Error(errorMessage);
 
             this.eventEmitter.emit({
                 type: 'connection:failed',
@@ -154,9 +553,17 @@ export class ConnectionManager extends BaseCollaborator {
 
             this.eventEmitter.emit({
                 type: 'error',
-                error: e instanceof Error ? e : new Error(errorMessage),
+                error,
                 context: 'wallet-connection',
                 timestamp: new Date().toISOString(),
+            });
+
+            // Keep vNext wallet status in sync
+            this.updateWalletStatus({
+                status: 'error',
+                error,
+                connectorId,
+                recoverable: this.isRecoverableError(error),
             });
 
             this.stateManager.updateState(
@@ -171,6 +578,11 @@ export class ConnectionManager extends BaseCollaborator {
             );
 
             throw e;
+        } finally {
+            if (this.pendingWallet === wallet && this.pendingWalletName === name) {
+                this.pendingWallet = null;
+                this.pendingWalletName = null;
+            }
         }
     }
 
@@ -178,24 +590,28 @@ export class ConnectionManager extends BaseCollaborator {
      * Disconnect from wallet
      */
     async disconnect(): Promise<void> {
+        // Invalidate any in-flight connect attempt so it can't update state later.
+        this.connectAttemptId++;
+
         if (this.walletChangeUnsub) {
             this.walletChangeUnsub();
             this.walletChangeUnsub = null;
         }
         this.stopPollingWalletAccounts();
 
-        const wallet = this.getState().selectedWallet;
-        if (wallet) {
-            const disconnect = getDisconnectFeature(wallet);
-            if (disconnect) {
-                await disconnect();
-            }
-        }
+        const wallet = this.getState().selectedWallet ?? this.pendingWallet;
+        this.pendingWallet = null;
+        this.pendingWalletName = null;
 
+        // Update wallet status to disconnected (vNext)
+        this.updateWalletStatus(INITIAL_WALLET_STATUS);
+
+        // Update legacy state immediately so UI is never stuck in a "connecting" state.
         this.stateManager.updateState(
             {
                 selectedWallet: null,
                 connected: false,
+                connecting: false,
                 accounts: [],
                 selectedAccount: null,
             },
@@ -213,6 +629,18 @@ export class ConnectionManager extends BaseCollaborator {
         } else {
             // Fallback for storage adapters without clear()
             this.walletStorage?.set(undefined);
+        }
+
+        // Attempt wallet disconnect after state is reset; don't block UI.
+        if (wallet) {
+            const disconnect = getDisconnectFeature(wallet);
+            if (disconnect) {
+                try {
+                    await disconnect();
+                } catch {
+                    // ignore disconnect errors during cancellation
+                }
+            }
         }
     }
 

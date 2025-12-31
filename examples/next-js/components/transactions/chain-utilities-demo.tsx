@@ -7,7 +7,7 @@
  * Shows bidirectional conversion between Wallet Standard chain IDs and cluster types.
  */
 
-import { useConnector } from '@solana/connector';
+import { useCluster } from '@solana/connector';
 import {
     getChainIdFromCluster,
     getChainIdFromClusterId,
@@ -23,7 +23,7 @@ import { Badge } from '@/components/ui/badge';
 import { Alert } from '@/components/ui/alert';
 
 export function ChainUtilitiesDemo() {
-    const { cluster, clusters } = useConnector();
+    const { cluster, clusters } = useCluster();
 
     // Get chain ID from current cluster
     const currentChainId = cluster ? getChainIdFromCluster(cluster) : null;

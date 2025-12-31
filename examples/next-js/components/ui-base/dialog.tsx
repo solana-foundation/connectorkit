@@ -37,6 +37,7 @@ const DialogContent = React.forwardRef<
         <DialogBackdrop />
         <BaseDialog.Popup
             ref={ref}
+            aria-describedby={undefined}
             className={cn(
                 'fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-lg rounded-lg border bg-background p-6 shadow-lg outline-none transition-all duration-150 data-[ending-style]:scale-95 data-[ending-style]:opacity-0 data-[starting-style]:scale-95 data-[starting-style]:opacity-0 z-[9999]',
                 className,

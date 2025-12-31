@@ -54,13 +54,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
                   {
                       id: 'solana:mainnet' as const,
                       label: 'Mainnet (Custom RPC)',
-                      name: 'mainnet-beta' as const,
                       url: customRpcUrl,
                   },
                   {
                       id: 'solana:devnet' as const,
                       label: 'Devnet',
-                      name: 'devnet' as const,
                       url: 'https://api.devnet.solana.com',
                   },
               ]
@@ -97,22 +95,38 @@ export function Providers({ children }: { children: React.ReactNode }) {
 ```typescript
 'use client';
 
-import { useConnector, useAccount } from '@solana/connector';
+import { useConnector } from '@solana/connector/react';
 
 export function ConnectButton() {
-    const { wallets, select, disconnect, connected, connecting, selectedWallet, selectedAccount } = useConnector();
-    const { address, formatted, copy } = useAccount();
+    const {
+        connectors,
+        connectWallet,
+        disconnectWallet,
+        isConnected,
+        isConnecting,
+        isError,
+        walletError,
+        account,
+    } = useConnector();
 
-    if (connecting) {
-        return <button disabled>Connecting...</button>;
-    }
-
-    if (!connected) {
+    if (isError) {
         return (
             <div>
-                {wallets.map(w => (
-                    <button key={w.wallet.name} onClick={() => select(w.wallet.name)}>
-                        Connect {w.wallet.name}
+                <p>Error: {walletError?.message ?? 'Unknown error'}</p>
+            </div>
+        );
+    }
+
+    if (!isConnected) {
+        return (
+            <div>
+                {connectors.map(connector => (
+                    <button
+                        key={connector.id}
+                        onClick={() => connectWallet(connector.id)}
+                        disabled={isConnecting || !connector.ready}
+                    >
+                        {isConnecting ? 'Connecting...' : `Connect ${connector.name}`}
                     </button>
                 ))}
             </div>
@@ -121,8 +135,10 @@ export function ConnectButton() {
 
     return (
         <div>
-            <button onClick={copy}>{formatted}</button>
-            <button onClick={disconnect}>Disconnect</button>
+            <span>{account}</span>
+            <button onClick={disconnectWallet}>
+                Disconnect
+            </button>
         </div>
     );
 }
@@ -141,21 +157,37 @@ These are the main hooks you'll use in your components.
 Main hook for wallet connection and state.
 
 ```typescript
-import { useConnector } from '@solana/connector';
+import { useConnector } from '@solana/connector/react';
 
 function Component() {
     const {
-        // State
-        wallets, // WalletInfo[] - All available wallets
-        selectedWallet, // Wallet | null - Currently connected wallet
-        selectedAccount, // string | null - Currently selected account address
-        accounts, // AccountInfo[] - Connected accounts
-        connected, // boolean - Connection status
-        connecting, // boolean - Connecting in progress
+        // vNext state (recommended)
+        connectors, // WalletConnectorMetadata[] - available wallet connectors
+        walletStatus, // WalletStatus - discriminated union state machine
+        connectorId, // WalletConnectorId | null - connected connector id
+        connector, // WalletConnectorMetadata | null - connected connector metadata
+        account, // Address | null - selected account address
+        sessionAccounts, // SessionAccount[] - all accounts in session
+        isConnected, // boolean - shorthand
+        isConnecting, // boolean - shorthand
+        isError, // boolean - shorthand
+        walletError, // Error | null - set when status is 'error'
 
-        // Actions
-        select, // (walletName: string) => Promise<void>
-        disconnect, // () => Promise<void>
+        // vNext actions (recommended)
+        connectWallet, // (connectorId, options?) => Promise<void>
+        disconnectWallet, // () => Promise<void>
+
+        // Legacy fields (deprecated; kept for backwards compatibility)
+        wallets,
+        selectedWallet,
+        selectedAccount,
+        accounts,
+        connected,
+        connecting,
+
+        // Legacy actions (deprecated; kept for backwards compatibility)
+        select,
+        disconnect,
     } = useConnector();
 }
 ```
@@ -165,32 +197,37 @@ function Component() {
 ```typescript
 'use client';
 
-import { useConnector } from '@solana/connector';
-import { useState } from 'react';
+import { useConnector } from '@solana/connector/react';
 
 export function ConnectButton() {
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const { connected, connecting, selectedWallet, selectedAccount, wallets, select } = useConnector();
+    const { connectors, connectWallet, disconnectWallet, isConnected, isConnecting, account } = useConnector();
 
-    if (connecting) {
+    if (isConnecting) {
         return <button disabled>Connecting...</button>;
     }
 
-    if (connected && selectedAccount && selectedWallet) {
-        const shortAddress = `${selectedAccount.slice(0, 4)}...${selectedAccount.slice(-4)}`;
+    if (isConnected && account) {
+        const shortAddress = `${account.slice(0, 4)}...${account.slice(-4)}`;
         return (
             <div>
                 <span>{shortAddress}</span>
-                <button onClick={() => select(selectedWallet.name)}>Switch Wallet</button>
+                <button onClick={disconnectWallet}>Disconnect</button>
             </div>
         );
     }
 
     return (
-        <>
-            <button onClick={() => setIsModalOpen(true)}>Connect Wallet</button>
-            {/* Wallet selection modal */}
-        </>
+        <div>
+            {connectors.map(connector => (
+                <button
+                    key={connector.id}
+                    onClick={() => connectWallet(connector.id)}
+                    disabled={isConnecting || !connector.ready}
+                >
+                    Connect {connector.name}
+                </button>
+            ))}
+        </div>
     );
 }
 ```
@@ -304,6 +341,214 @@ function Component() {
         connecting, // boolean - Connection in progress
     } = useWalletInfo();
 }
+```
+
+---
+
+## vNext API (Recommended)
+
+The vNext API provides a cleaner, more type-safe approach to wallet connections using stable connector IDs and a wallet status state machine.
+
+You can access the same vNext state + actions either through the focused hooks below, or via `useConnector()` (single hook) which also includes legacy compatibility fields.
+
+### `useWallet()`
+
+Primary hook for wallet status in vNext. Uses a discriminated union for type-safe status checks.
+
+```typescript
+import { useWallet } from '@solana/connector/react';
+
+function Component() {
+    const {
+        status,      // 'disconnected' | 'connecting' | 'connected' | 'error'
+        isConnected, // boolean shorthand
+        isConnecting,// boolean shorthand
+        account,     // Address | null - Selected account address
+        accounts,    // SessionAccount[] - All available accounts
+        connectorId, // WalletConnectorId | null - Connected wallet ID
+        error,       // Error | null - Error if status is 'error'
+    } = useWallet();
+
+    if (status === 'connected') {
+        // TypeScript knows account is non-null here
+        return <p>Connected: {account}</p>;
+    }
+}
+```
+
+### `useWalletConnectors()`
+
+Get available wallet connectors with stable IDs.
+
+```typescript
+import { useWalletConnectors } from '@solana/connector/react';
+
+function WalletList() {
+    const connectors = useWalletConnectors();
+
+    return (
+        <ul>
+            {connectors.map(connector => (
+                <li key={connector.id}>
+                    <img src={connector.icon} alt={connector.name} />
+                    {connector.name}
+                    {connector.ready ? '✓' : 'Not Ready'}
+                </li>
+            ))}
+        </ul>
+    );
+}
+```
+
+### `useConnectWallet()`
+
+Connect to a wallet using its stable connector ID.
+
+```typescript
+import { useConnectWallet, useWalletConnectors } from '@solana/connector/react';
+
+function ConnectButton() {
+    const { connect, isConnecting, error, resetError } = useConnectWallet();
+    const connectors = useWalletConnectors();
+
+    return (
+        <div>
+            {connectors.map(connector => (
+                <button
+                    key={connector.id}
+                    onClick={() => connect(connector.id)}
+                    disabled={isConnecting || !connector.ready}
+                >
+                    Connect {connector.name}
+                </button>
+            ))}
+            {error && (
+                <p>
+                    Error: {error.message}
+                    <button onClick={resetError}>Dismiss</button>
+                </p>
+            )}
+        </div>
+    );
+}
+```
+
+### `useDisconnectWallet()`
+
+Disconnect the current wallet session.
+
+```typescript
+import { useDisconnectWallet, useWallet } from '@solana/connector/react';
+
+function DisconnectButton() {
+    const { isConnected } = useWallet();
+    const { disconnect, isDisconnecting } = useDisconnectWallet();
+
+    if (!isConnected) return null;
+
+    return (
+        <button onClick={disconnect} disabled={isDisconnecting}>
+            {isDisconnecting ? 'Disconnecting...' : 'Disconnect'}
+        </button>
+    );
+}
+```
+
+### Silent-First Auto-Connect
+
+The vNext API supports silent-first auto-connect, which attempts to reconnect without prompting the user:
+
+```typescript
+const { connect } = useConnectWallet();
+
+// Silent connect (won't prompt user)
+await connect('wallet-standard:phantom', {
+    silent: true,
+    allowInteractiveFallback: false,
+});
+
+// Silent-first with interactive fallback (prompts if silent fails)
+await connect('wallet-standard:phantom', {
+    silent: true,
+    allowInteractiveFallback: true,
+});
+```
+
+---
+
+## Migration Guide (Legacy → vNext)
+
+### Connect by Wallet Name → Connect by Connector ID
+
+**Before (Legacy):**
+
+```typescript
+const { select, wallets } = useConnector();
+await select('Phantom');
+```
+
+**After (vNext):**
+
+```typescript
+const { connect } = useConnectWallet();
+await connect('wallet-standard:phantom');
+// Or use connectors from useWalletConnectors()
+```
+
+### Check Connection Status
+
+**Before (Legacy):**
+
+```typescript
+const { connected, connecting } = useConnector();
+if (connected) {
+    /* ... */
+}
+```
+
+**After (vNext):**
+
+```typescript
+const { status, isConnected, isConnecting } = useWallet();
+if (status === 'connected') {
+    /* ... */
+}
+// Or use the boolean shorthand:
+if (isConnected) {
+    /* ... */
+}
+```
+
+### Get Selected Account
+
+**Before (Legacy):**
+
+```typescript
+const { selectedAccount } = useConnector();
+```
+
+**After (vNext):**
+
+```typescript
+const { account } = useWallet();
+// Or for full account info:
+const { accounts, account } = useWallet();
+```
+
+### Disconnect
+
+**Before (Legacy):**
+
+```typescript
+const { disconnect } = useConnector();
+await disconnect();
+```
+
+**After (vNext):**
+
+```typescript
+const { disconnect } = useDisconnectWallet();
+await disconnect();
 ```
 
 ---
@@ -578,13 +823,11 @@ const config = getDefaultConfig({
         {
             id: 'solana:mainnet' as const,
             label: 'Mainnet (Custom RPC)',
-            name: 'mainnet-beta' as const,
             url: 'https://my-custom-rpc.com',
         },
         {
             id: 'solana:devnet' as const,
             label: 'Devnet',
-            name: 'devnet' as const,
             url: 'https://api.devnet.solana.com',
         },
     ],
@@ -605,6 +848,96 @@ const mobile = getDefaultMobileConfig({
     {children}
 </AppProvider>
 ```
+
+### WalletConnect Integration
+
+Connect mobile wallets via QR code or deep link using WalletConnect. This enables users to connect wallets like Trust Wallet, Exodus, and other WalletConnect-compatible Solana wallets.
+
+**1. Install WalletConnect dependency:**
+
+```bash
+npm install @walletconnect/universal-provider
+```
+
+**2. Get a WalletConnect Cloud Project ID:**
+
+Visit [cloud.walletconnect.com](https://cloud.walletconnect.com/) and create a project to get your `projectId`.
+
+**3. Enable WalletConnect in your config:**
+
+```typescript
+'use client';
+
+import { getDefaultConfig } from '@solana/connector/headless';
+import { useMemo } from 'react';
+import { AppProvider } from '@solana/connector/react';
+
+export function Providers({ children }: { children: React.ReactNode }) {
+    const connectorConfig = useMemo(() => {
+        return getDefaultConfig({
+            appName: 'My App',
+            appUrl: 'https://myapp.com',
+            // Reads NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID from env
+            walletConnect: true,
+        });
+    }, []);
+
+    return (
+        <AppProvider connectorConfig={connectorConfig}>
+            {children}
+            <WalletConnectQRModal />
+        </AppProvider>
+    );
+}
+```
+
+**4. Render a QR code when a pairing URI is available:**
+
+```typescript
+'use client';
+
+import { useConnector } from '@solana/connector/react';
+import { QRCodeSVG } from 'qrcode.react'; // npm install qrcode.react
+
+export function WalletConnectQRModal() {
+    const { walletConnectUri, clearWalletConnectUri } = useConnector();
+
+    if (!walletConnectUri) return null;
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+            <div className="w-full max-w-sm rounded-xl bg-white p-6">
+                <h2 className="text-lg font-semibold">Scan with your wallet</h2>
+                <div className="mt-4 flex justify-center">
+                    <QRCodeSVG value={walletConnectUri} size={256} />
+                </div>
+                <p className="mt-4 text-center text-sm text-gray-500">
+                    Open your WalletConnect-compatible wallet and scan this QR code
+                </p>
+                <button
+                    type="button"
+                    onClick={clearWalletConnectUri}
+                    className="mt-4 w-full rounded bg-gray-100 py-2"
+                >
+                    Cancel
+                </button>
+            </div>
+        </div>
+    );
+}
+```
+
+Once enabled, "WalletConnect" appears as a connector (id: `walletconnect`) in your wallet list. When selected, `useConnector().walletConnectUri` will be set to a `wc:` URI that you can display as a QR code or use for deep linking.
+
+**Supported WalletConnect Solana methods:**
+
+- `solana_getAccounts` / `solana_requestAccounts` - Get connected accounts
+- `solana_signMessage` - Sign arbitrary messages
+- `solana_signTransaction` - Sign transactions
+- `solana_signAllTransactions` - Sign multiple transactions
+- `solana_signAndSendTransaction` - Sign and broadcast transactions
+
+See the [WalletConnect Solana documentation](https://docs.walletconnect.network/wallet-sdk/chain-support/solana) for more details.
 
 ---
 
@@ -662,7 +995,6 @@ const config = getDefaultConfig({
         {
             id: 'solana:mainnet' as const,
             label: 'Mainnet',
-            name: 'mainnet-beta' as const,
             url: `${getOrigin()}/api/rpc`, // Proxy URL
         },
         // ... other clusters
@@ -995,27 +1327,28 @@ if (!result.success) {
 Use `ConnectorClient` for non-React frameworks:
 
 ```typescript
-import { ConnectorClient, getDefaultConfig } from '@solana/connector/headless';
+import { ConnectorClient, getDefaultConfig, createConnectorId } from '@solana/connector/headless';
 
 // Create client
 const client = new ConnectorClient(getDefaultConfig({ appName: 'My App' }));
 
 // Get state
 const state = client.getSnapshot();
-console.log('Wallets:', state.wallets);
+console.log('Connectors:', state.connectors);
 
-// Connect
-await client.select('Phantom');
+// Connect (vNext)
+await client.connectWallet(createConnectorId('Phantom'));
 
 // Subscribe to changes
 const unsubscribe = client.subscribe(state => {
     console.log('State updated:', state);
 });
 
-// Disconnect
-await client.disconnect();
+// Disconnect (vNext)
+await client.disconnectWallet();
 
 // Cleanup
+unsubscribe();
 client.destroy();
 ```
 
@@ -1063,7 +1396,7 @@ const config = getDefaultConfig({
 
 ```typescript
 // Full library - includes React and headless
-import { ConnectorProvider, useConnector, useAccount } from '@solana/connector';
+import { AppProvider, useConnector, getDefaultConfig } from '@solana/connector';
 ```
 
 ### Headless Export (Framework Agnostic)
@@ -1077,7 +1410,7 @@ import { ConnectorClient, getDefaultConfig } from '@solana/connector/headless';
 
 ```typescript
 // React-specific exports only
-import { useConnector, useAccount } from '@solana/connector/react';
+import { AppProvider, useConnector, useWallet, useConnectWallet } from '@solana/connector/react';
 ```
 
 ---
@@ -1086,9 +1419,20 @@ import { useConnector, useAccount } from '@solana/connector/react';
 
 ### Hooks
 
+#### vNext Hooks (Recommended)
+
+| Hook                    | Description                 | Returns                                                           |
+| ----------------------- | --------------------------- | ----------------------------------------------------------------- |
+| `useWallet()`           | Wallet status state machine | `{ status, isConnected, isConnecting, account, accounts, error }` |
+| `useWalletConnectors()` | Available wallet connectors | `WalletConnectorMetadata[]`                                       |
+| `useConnectWallet()`    | Connect by connector ID     | `{ connect, isConnecting, error, resetError }`                    |
+| `useDisconnectWallet()` | Disconnect current wallet   | `{ disconnect, isDisconnecting }`                                 |
+
+#### Legacy Hooks
+
 | Hook                        | Description                             | Returns                                                                            |
 | --------------------------- | --------------------------------------- | ---------------------------------------------------------------------------------- |
-| `useConnector()`            | Main wallet connection hook             | `{ wallets, selectedWallet, accounts, connected, connecting, select, disconnect }` |
+| `useConnector()`            | Main wallet connection hook (vNext + legacy) | `ConnectorSnapshot`                                                           |
 | `useAccount()`              | Account management hook                 | `{ address, formatted, copy, copied, accounts, selectAccount }`                    |
 | `useCluster()`              | Network/cluster management hook         | `{ cluster, clusters, setCluster, isMainnet, isDevnet, rpcUrl }`                   |
 | `useWalletInfo()`           | Wallet metadata hook                    | `{ name, icon, wallet, connecting }`                                               |
@@ -1124,7 +1468,7 @@ import type {
     // Configuration
     ConnectorConfig,
     DefaultConfigOptions,
-    UnifiedConfig,
+    ExtendedConnectorConfig,
 
     // State & Info
     ConnectorState,
@@ -1139,6 +1483,14 @@ import type {
     // Clusters
     SolanaCluster,
     SolanaClusterId,
+
+    // vNext Session Types
+    WalletConnectorId,
+    WalletConnectorMetadata,
+    WalletSession,
+    WalletStatus,
+    SessionAccount,
+    ConnectOptions,
 
     // Hook Returns
     UseClusterReturn,
@@ -1208,6 +1560,7 @@ Compatible with all [Wallet Standard](https://github.com/wallet-standard/wallet-
 - **Glow** - Browser extension
 - **Brave Wallet** - Built-in browser wallet
 - **Solana Mobile** - All mobile wallet adapter compatible wallets
+- **WalletConnect** - Connect any WalletConnect-compatible mobile wallet via QR code
 - **Any Wallet Standard wallet** - Full compatibility
 
 ---

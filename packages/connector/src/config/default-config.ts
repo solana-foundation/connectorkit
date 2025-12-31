@@ -1,4 +1,5 @@
 import type { ConnectorConfig, CoinGeckoConfig } from '../types/connector';
+import type { WalletConnectConfig } from '../types/walletconnect';
 import type { SolanaCluster, SolanaClusterId } from '@wallet-ui/core';
 import type { Wallet } from '../types/wallets';
 import { createSolanaMainnet, createSolanaDevnet, createSolanaTestnet, createSolanaLocalnet } from '@wallet-ui/core';
@@ -66,25 +67,68 @@ export interface DefaultConfigOptions {
      */
     coingecko?: CoinGeckoConfig;
     /**
-     * Additional wallets to include alongside Wallet Standard wallets.
-     * Use this to add remote/server-backed signers created via `createRemoteSignerWallet()`.
+     * WalletConnect configuration for connecting via QR code / deep link.
+     * When enabled, a "WalletConnect" wallet appears in the wallet list.
+     *
+     * Can be:
+     * - `true` to enable with auto-detected project ID from NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID env var
+     * - An object with optional overrides (projectId, metadata, etc.)
+     * - `undefined` or `false` to disable
+     *
+     * When using `true` or minimal config, the following are auto-configured:
+     * - `projectId`: Read from NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID
+     * - `metadata.name`: Uses appName
+     * - `metadata.url`: Uses appUrl or window.location.origin
+     * - `metadata.description`: Auto-generated from appName
+     * - `metadata.icons`: Uses appUrl/icon.svg
+     * - `getCurrentChain`: Auto-reads from cluster storage
+     * - `onDisplayUri/onSessionEstablished/onSessionDisconnected`: Auto-wired by AppProvider
      *
      * @example
-     * ```typescript
-     * import { createRemoteSignerWallet } from '@solana/connector/remote';
+     * ```ts
+     * // Simplest - just enable it (reads project ID from env)
+     * getDefaultConfig({ appName: 'My App', walletConnect: true })
      *
-     * const remoteWallet = createRemoteSignerWallet({
-     *   endpoint: '/api/connector-signer',
-     *   name: 'Treasury Signer',
-     * });
-     *
-     * const config = getDefaultConfig({
+     * // With explicit project ID
+     * getDefaultConfig({
      *   appName: 'My App',
-     *   additionalWallets: [remoteWallet],
-     * });
+     *   walletConnect: { projectId: 'my-project-id' }
+     * })
      * ```
+     *
+     * @see https://docs.walletconnect.network/wallet-sdk/chain-support/solana
+     */
+    walletConnect?: boolean | SimplifiedWalletConnectConfig;
+
+    /**
+     * Additional wallets to include alongside Wallet Standard wallets.
+     * Use this to add remote/server-backed signers created via `createRemoteSignerWallet()`.
      */
     additionalWallets?: Wallet[];
+}
+
+/**
+ * Simplified WalletConnect configuration
+ * Most fields are auto-generated from appName/appUrl if not provided
+ */
+export interface SimplifiedWalletConnectConfig {
+    /**
+     * WalletConnect Cloud project ID.
+     * If not provided, reads from NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID env var.
+     */
+    projectId?: string;
+    /**
+     * Optional metadata overrides. Merged with auto-generated metadata.
+     */
+    metadata?: Partial<WalletConnectConfig['metadata']>;
+    /**
+     * Default chain. Defaults to 'solana:mainnet'.
+     */
+    defaultChain?: WalletConnectConfig['defaultChain'];
+    /**
+     * Optional relay URL override.
+     */
+    relayUrl?: string;
 }
 
 /** Extended ConnectorConfig with app metadata */
@@ -147,6 +191,7 @@ export function getDefaultConfig(options: DefaultConfigOptions): ExtendedConnect
         imageProxy,
         programLabels,
         coingecko,
+        walletConnect,
         additionalWallets,
     } = options;
 
@@ -226,6 +271,12 @@ export function getDefaultConfig(options: DefaultConfigOptions): ExtendedConnect
         wallet: new EnhancedStorageAdapter(walletStorage),
     };
 
+    // Compute the actual cluster storage key (same logic as createEnhancedStorageCluster)
+    const actualClusterStorageKey = clusterStorageKey ?? 'connector-kit:v1:cluster';
+
+    // Build WalletConnect config from simplified options
+    const walletConnectConfig = buildWalletConnectConfig(walletConnect, appName, appUrl, actualClusterStorageKey);
+
     const config: ExtendedConnectorConfig = {
         autoConnect,
         debug: debug ?? process.env.NODE_ENV === 'development',
@@ -247,10 +298,78 @@ export function getDefaultConfig(options: DefaultConfigOptions): ExtendedConnect
         imageProxy,
         programLabels,
         coingecko,
+        walletConnect: walletConnectConfig,
         additionalWallets,
     };
 
     return config;
+}
+
+/**
+ * Build full WalletConnect config from simplified options
+ */
+function buildWalletConnectConfig(
+    walletConnect: boolean | SimplifiedWalletConnectConfig | undefined,
+    appName: string,
+    appUrl?: string,
+    clusterStorageKey?: string,
+): WalletConnectConfig | undefined {
+    // Disabled
+    if (!walletConnect) return undefined;
+
+    // Get project ID from config or environment
+    const configProjectId = typeof walletConnect === 'object' ? walletConnect.projectId : undefined;
+    const envProjectId = typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID : undefined;
+    const projectId = configProjectId || envProjectId;
+
+    // If no project ID available, WalletConnect is disabled
+    if (!projectId) {
+        if (typeof walletConnect === 'object' || walletConnect === true) {
+            logger.warn(
+                'WalletConnect enabled but no project ID found. Set NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID or provide projectId in config.',
+            );
+        }
+        return undefined;
+    }
+
+    // Determine origin for metadata
+    const origin = appUrl || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000');
+
+    // Get custom metadata if provided
+    const customMetadata = typeof walletConnect === 'object' ? walletConnect.metadata : undefined;
+    const customDefaultChain = typeof walletConnect === 'object' ? walletConnect.defaultChain : undefined;
+    const customRelayUrl = typeof walletConnect === 'object' ? walletConnect.relayUrl : undefined;
+
+    return {
+        enabled: true,
+        projectId,
+        metadata: {
+            name: customMetadata?.name ?? appName,
+            description: customMetadata?.description ?? `${appName} - Powered by ConnectorKit`,
+            url: customMetadata?.url ?? origin,
+            icons: customMetadata?.icons ?? [`${origin}/icon.svg`],
+        },
+        defaultChain: customDefaultChain ?? 'solana:mainnet',
+        relayUrl: customRelayUrl,
+        // Auto-sync with cluster storage
+        getCurrentChain: () => {
+            if (typeof window === 'undefined') return 'solana:mainnet';
+            const storageKey = clusterStorageKey || 'connector-kit:v1:cluster';
+            try {
+                const stored = localStorage.getItem(storageKey);
+                if (stored) {
+                    const id = JSON.parse(stored) as string;
+                    if (id === 'solana:mainnet' || id === 'solana:devnet' || id === 'solana:testnet') {
+                        return id;
+                    }
+                }
+            } catch {
+                // Ignore parse errors
+            }
+            return customDefaultChain ?? 'solana:mainnet';
+        },
+        // Note: onDisplayUri, onSessionEstablished, onSessionDisconnected are auto-wired by AppProvider
+    };
 }
 
 /**

@@ -6,28 +6,15 @@
 'use client';
 
 import React, { Component, ErrorInfo, ReactNode, useCallback, useState, useTransition, useMemo } from 'react';
-import { isConnectorError, getUserFriendlyMessage, type ConnectorError } from '../lib/errors';
+import { isConnectorError, getUserFriendlyMessage, type ConnectorError, WalletErrorType } from '../lib/errors';
+import type { WalletError } from '../lib/errors';
 import { createLogger } from '../lib/utils/secure-logger';
 
 const logger = createLogger('ErrorBoundary');
 
-// Error types specific to wallet connections
-export enum WalletErrorType {
-    CONNECTION_FAILED = 'CONNECTION_FAILED',
-    TRANSACTION_FAILED = 'TRANSACTION_FAILED',
-    NETWORK_ERROR = 'NETWORK_ERROR',
-    WALLET_NOT_FOUND = 'WALLET_NOT_FOUND',
-    USER_REJECTED = 'USER_REJECTED',
-    INSUFFICIENT_FUNDS = 'INSUFFICIENT_FUNDS',
-    UNKNOWN_ERROR = 'UNKNOWN_ERROR',
-}
-
-export interface WalletError extends Error {
-    type: WalletErrorType;
-    recoverable: boolean;
-    context?: Record<string, unknown>;
-    retryAction?: () => Promise<void>;
-}
+// Re-export for backwards compatibility
+export { WalletErrorType };
+export type { WalletError };
 
 export interface ErrorBoundaryState {
     hasError: boolean;
@@ -106,7 +93,7 @@ function classifyError(error: Error): WalletError {
     if (walletError.type) return walletError;
 
     // Classify based on message patterns (legacy fallback)
-    let type = WalletErrorType.UNKNOWN_ERROR;
+    let type: WalletErrorType = WalletErrorType.UNKNOWN_ERROR;
     let recoverable = false;
 
     if (error.message.includes('User rejected') || error.message.includes('User denied')) {

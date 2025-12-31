@@ -1,8 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useMemo } from 'react';
 import {
-    address,
     createSolanaRpc,
     pipe,
     createTransactionMessage,
@@ -10,17 +9,25 @@ import {
     setTransactionMessageLifetimeUsingBlockhash,
     appendTransactionMessageInstructions,
     sendAndConfirmTransactionFactory,
-    getSignatureFromTransaction,
     signTransactionMessageWithSigners,
     createSolanaRpcSubscriptions,
     lamports,
     assertIsTransactionWithBlockhashLifetime,
+    signature as createSignature,
     type TransactionSigner,
 } from '@solana/kit';
 import { getTransferSolInstruction } from '@solana-program/system';
-import { useKitTransactionSigner, useCluster, useConnectorClient, LAMPORTS_PER_SOL } from '@solana/connector';
-import { TransactionForm } from './transaction-form';
-import { TransactionResult } from './transaction-result';
+import { useKitTransactionSigner, useCluster, useConnectorClient } from '@solana/connector';
+import { PipelineHeaderButton, PipelineVisualization } from '@/components/pipeline';
+import {
+    getBase58SignatureFromSignedTransaction,
+    getBase64EncodedWireTransaction,
+    getWebSocketUrlForRpcUrl,
+    isRpcProxyUrl,
+    waitForSignatureConfirmation,
+} from './rpc-utils';
+import { VisualPipeline } from '@/lib/visual-pipeline';
+import { useExampleCardHeaderActions } from '@/components/playground/example-card-actions';
 
 /**
  * Modern SOL Transfer Component
@@ -33,99 +40,138 @@ export function ModernSolTransfer() {
     const { signer, ready } = useKitTransactionSigner();
     const { cluster } = useCluster();
     const client = useConnectorClient();
-    const [signature, setSignature] = useState<string | null>(null);
 
-    async function handleTransfer(recipientAddress: string, amount: number) {
-        if (!signer || !client) {
-            throw new Error('Wallet not connected or client not available');
-        }
+    const visualPipeline = useMemo(
+        () =>
+            new VisualPipeline('modern-self-transfer', [
+                { name: 'Build instruction', type: 'instruction' },
+                { name: 'Self transfer', type: 'transaction' },
+            ]),
+        [],
+    );
+
+    const getExplorerUrl = useCallback(
+        (signature: string) => {
+            const clusterSlug = cluster?.id?.replace('solana:', '');
+            if (!clusterSlug || clusterSlug === 'mainnet' || clusterSlug === 'mainnet-beta') {
+                return `https://explorer.solana.com/tx/${signature}`;
+            }
+            return `https://explorer.solana.com/tx/${signature}?cluster=${clusterSlug}`;
+        },
+        [cluster?.id],
+    );
+
+    const executeSelfTransfer = useCallback(async () => {
+        if (!signer || !client) return;
 
         // Get RPC URL from connector client
         const rpcUrl = client.getRpcUrl();
-        if (!rpcUrl) {
-            throw new Error('No RPC endpoint configured');
-        }
+        if (!rpcUrl) throw new Error('No RPC endpoint configured');
 
         // Create RPC client using web3.js 2.0
         const rpc = createSolanaRpc(rpcUrl);
-        const rpcSubscriptions = createSolanaRpcSubscriptions(rpcUrl.replace('http', 'ws'));
 
-        // Create addresses using gill's address() API
-        const senderAddress = signer.address;
+        let signatureBase58: string | null = null;
 
-        // Get recent blockhash using web3.js 2.0 RPC
-        const { value: latestBlockhash } = await rpc.getLatestBlockhash().send();
-
-        // Convert SOL to lamports using kit's helper and constant
-        const amountInLamports = lamports(BigInt(Math.floor(amount * Number(LAMPORTS_PER_SOL))));
-
-        // Create transfer instruction using @solana/kit's modern API
-        // Cast to TransactionSigner for compatibility with instruction builders
-        const transferInstruction = getTransferSolInstruction({
-            source: signer as TransactionSigner,
-            destination: address(recipientAddress),
-            amount: amountInLamports,
-        });
-
-        // Build transaction message with fee payer and lifetime
-        const transactionMessage = pipe(
-            createTransactionMessage({ version: 0 }),
-            tx => setTransactionMessageFeePayerSigner(signer, tx),
-            tx => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
-            tx => appendTransactionMessageInstructions([transferInstruction], tx),
-        );
-
-        console.log('🚀 Modern SOL Transfer: Starting transaction signing');
-
-        let signedTransaction;
         try {
-            signedTransaction = await signTransactionMessageWithSigners(transactionMessage);
-            console.log('✅ Modern SOL Transfer: Transaction signed successfully', {
-                signatures: Object.keys(signedTransaction.signatures),
+            await visualPipeline.execute(async () => {
+                visualPipeline.setStepState('Build instruction', { type: 'building' });
+                visualPipeline.setStepState('Self transfer', { type: 'building' });
+
+                // Get recent blockhash using web3.js 2.0 RPC
+                const { value: latestBlockhash } = await rpc.getLatestBlockhash().send();
+
+                // 1 lamport self-transfer (net effect: only pay fees)
+                const amountInLamports = lamports(1n);
+
+                // Create transfer instruction using @solana/kit's modern API
+                // Cast to TransactionSigner for compatibility with instruction builders
+                const transferInstruction = getTransferSolInstruction({
+                    source: signer as TransactionSigner,
+                    destination: signer.address,
+                    amount: amountInLamports,
+                });
+
+                // Build transaction message with fee payer and lifetime
+                const transactionMessage = pipe(
+                    createTransactionMessage({ version: 0 }),
+                    tx => setTransactionMessageFeePayerSigner(signer, tx),
+                    tx => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
+                    tx => appendTransactionMessageInstructions([transferInstruction], tx),
+                );
+
+                visualPipeline.setStepState('Self transfer', { type: 'signing' });
+
+                const signedTransaction = await signTransactionMessageWithSigners(transactionMessage);
+                signatureBase58 = getBase58SignatureFromSignedTransaction(signedTransaction);
+
+                // Track transaction in debugger
+                client.trackTransaction({
+                    signature: createSignature(signatureBase58),
+                    status: 'pending',
+                    method: 'sendTransaction',
+                    feePayer: signer.address,
+                });
+
+                visualPipeline.setStepState('Build instruction', {
+                    type: 'confirmed',
+                    signature: signatureBase58,
+                    cost: 0,
+                });
+                visualPipeline.setStepState('Self transfer', { type: 'sending' });
+
+                // Assert transaction has blockhash lifetime (we set it above with setTransactionMessageLifetimeUsingBlockhash)
+                assertIsTransactionWithBlockhashLifetime(signedTransaction);
+
+                if (isRpcProxyUrl(rpcUrl)) {
+                    // Next.js `/api/rpc` proxy is HTTP-only; confirm via polling (no WebSocket).
+                    const encodedTransaction = getBase64EncodedWireTransaction(signedTransaction);
+                    await rpc.sendTransaction(encodedTransaction, { encoding: 'base64' }).send();
+                    await waitForSignatureConfirmation({
+                        signature: signatureBase58,
+                        commitment: 'confirmed',
+                        getSignatureStatuses: async sig =>
+                            await rpc.getSignatureStatuses([createSignature(sig)]).send(),
+                    });
+                } else {
+                    const rpcSubscriptions = createSolanaRpcSubscriptions(getWebSocketUrlForRpcUrl(rpcUrl));
+                    await sendAndConfirmTransactionFactory({ rpc, rpcSubscriptions })(signedTransaction, {
+                        commitment: 'confirmed',
+                    });
+                }
+
+                visualPipeline.setStepState('Self transfer', {
+                    type: 'confirmed',
+                    signature: signatureBase58,
+                    cost: 0.000005,
+                });
+                client.updateTransactionStatus(createSignature(signatureBase58), 'confirmed');
             });
         } catch (error) {
-            console.error('❌ Modern SOL Transfer: Signing failed', error);
-            throw new Error(`Failed to sign transaction: ${error instanceof Error ? error.message : String(error)}`);
+            if (signatureBase58) {
+                client.updateTransactionStatus(
+                    createSignature(signatureBase58),
+                    'failed',
+                    error instanceof Error ? error.message : String(error),
+                );
+            }
         }
+    }, [client, signer, visualPipeline]);
 
-        console.log('📡 Modern SOL Transfer: Sending and confirming transaction');
-        try {
-            // Assert transaction has blockhash lifetime (we set it above with setTransactionMessageLifetimeUsingBlockhash)
-            assertIsTransactionWithBlockhashLifetime(signedTransaction);
-            await sendAndConfirmTransactionFactory({ rpc, rpcSubscriptions })(signedTransaction, {
-                commitment: 'confirmed',
-            });
-            console.log('✅ Modern SOL Transfer: Transaction confirmed');
-        } catch (error) {
-            console.error('❌ Modern SOL Transfer: Send/confirm failed', error);
-            throw new Error(`Failed to send transaction: ${error instanceof Error ? error.message : String(error)}`);
-        }
+    const headerAction = useMemo(
+        () => (
+            <PipelineHeaderButton
+                visualPipeline={visualPipeline}
+                disabled={!ready || !client}
+                onExecute={executeSelfTransfer}
+            />
+        ),
+        [client, executeSelfTransfer, ready, visualPipeline],
+    );
 
-        const transactionSignature = getSignatureFromTransaction(signedTransaction);
-        setSignature(transactionSignature);
-        console.log('🎉 Modern SOL Transfer: Transaction complete!', { signature: transactionSignature });
-
-        // Track transaction in debugger
-        if (client) {
-            client.trackTransaction({
-                signature: transactionSignature,
-                status: 'confirmed',
-                method: 'signAndSendTransaction',
-                feePayer: senderAddress,
-            });
-        }
-    }
+    useExampleCardHeaderActions(headerAction);
 
     return (
-        <div className="space-y-4">
-            <TransactionForm
-                title="Modern SOL Transfer"
-                description="Using modern @solana/kit with gill-compatible signer"
-                onSubmit={handleTransfer}
-                disabled={!ready}
-                defaultRecipient="DemoWa11et1111111111111111111111111111111111"
-            />
-            {signature && <TransactionResult signature={signature} cluster={cluster?.id || 'devnet'} />}
-        </div>
+        <PipelineVisualization visualPipeline={visualPipeline} strategy="sequential" getExplorerUrl={getExplorerUrl} />
     );
 }
