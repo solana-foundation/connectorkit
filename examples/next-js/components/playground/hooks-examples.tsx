@@ -6,14 +6,13 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Wallet, Copy, Check, RefreshCw, Coins, ExternalLink, LogOut } from 'lucide-react';
 import { ExampleCard, type ExampleConfig } from './example-card';
 import { useState } from 'react';
+import { PropNameWithTooltip } from './prop-tooltips';
 
 // Helper component for displaying hook return values as mini badge
 function HookReturnValue({ name, value }: { name: string; value: string }) {
     return (
         <div className="flex items-center justify-between py-1.5 gap-2">
-            <span className="px-2 py-0.5 text-[11px] font-mono text-sand-700 bg-white border border-sand-300 rounded-md">
-                {name}
-            </span>
+            <PropNameWithTooltip name={name} />
             <span className="text-xs font-mono text-sand-600 truncate max-w-[120px]">{value}</span>
         </div>
     );
@@ -121,7 +120,7 @@ function UseConnectorExample() {
                             {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
                         </button>
                     </div>
-                    <Button variant="destructive" size="sm" className="w-full" onClick={() => void disconnectWallet()}>
+                    <Button variant="default" size="sm" className="w-full" onClick={() => void disconnectWallet()}>
                         <LogOut className="h-4 w-4 mr-2" />
                         Disconnect
                     </Button>

@@ -6,6 +6,14 @@
  */
 
 import type { RemoteSigner, PrivyProviderConfig } from '../route-handlers';
+import type { SignableMessage } from '@solana/signers';
+
+interface KeychainSignerLike {
+    address: string;
+    isAvailable: () => Promise<boolean>;
+    signMessages: (messages: SignableMessage[]) => Promise<Record<string, Uint8Array>[]>;
+    signTransactions: (transactions: unknown[]) => Promise<Record<string, Uint8Array>[]>;
+}
 
 /**
  * Load and initialize a Privy signer
@@ -16,15 +24,19 @@ import type { RemoteSigner, PrivyProviderConfig } from '../route-handlers';
 export async function loadPrivySigner(config: PrivyProviderConfig): Promise<RemoteSigner> {
     // Dynamically import @solana/keychain
     // This keeps the dependency optional and only loaded when needed
-    let PrivySigner: typeof import('@solana/keychain-privy').PrivySigner;
+    let PrivySigner: { create: (args: unknown) => Promise<KeychainSignerLike> } | undefined;
 
     try {
-        const module = await import('@solana/keychain-privy');
-        PrivySigner = module.PrivySigner;
+        const module = (await import('@solana/keychain-privy')) as unknown as { PrivySigner?: unknown };
+        PrivySigner = module.PrivySigner as { create: (args: unknown) => Promise<KeychainSignerLike> } | undefined;
     } catch (error) {
         throw new Error(
-            '@solana/keychain is not installed. ' + 'Install it with: pnpm add @solana/keychain',
+            '@solana/keychain-privy is not installed. ' + 'Install it with: pnpm add @solana/keychain-privy',
         );
+    }
+
+    if (!PrivySigner) {
+        throw new Error('@solana/keychain-privy does not export PrivySigner');
     }
 
     // Create the Privy signer (async factory)
@@ -65,9 +77,7 @@ export async function loadPrivySigner(config: PrivyProviderConfig): Promise<Remo
                 signatures: {} as Record<string, Uint8Array>,
             };
 
-            const results = await signer.signMessages([
-                signableMessage as unknown as import('@solana/signers').SignableMessage,
-            ]);
+            const results = await signer.signMessages([signableMessage as unknown as SignableMessage]);
 
             // Extract the signature from the first result
             const sigDict = results[0];
@@ -90,7 +100,7 @@ export async function loadPrivySigner(config: PrivyProviderConfig): Promise<Remo
  * Sign transaction bytes using the Privy signer
  */
 async function signWithPrivy(
-    signer: import('@solana/keychain-privy').PrivySigner,
+    signer: KeychainSignerLike,
     transactionBytes: Uint8Array,
 ): Promise<Uint8Array> {
     // Import transaction utilities
@@ -101,7 +111,7 @@ async function signWithPrivy(
     const transaction = decoder.decode(transactionBytes);
 
     // Sign the transaction
-    const results = await signer.signTransactions([transaction as Parameters<typeof signer.signTransactions>[0][0]]);
+    const results = await signer.signTransactions([transaction as unknown]);
 
     // Get the signature
     const sigDict = results[0];

@@ -13,14 +13,13 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Wallet, Copy, Check, RefreshCw, LogOut, Coins, ExternalLink } from 'lucide-react';
 import { ExampleCard, type ExampleConfig } from './example-card';
+import { PropNameWithTooltip } from './prop-tooltips';
 
 // Helper component for displaying render props in badge style (matches hooks-examples)
 function RenderPropValue({ name, children }: { name: string; children: React.ReactNode }) {
     return (
         <div className="flex items-center justify-between py-1.5 gap-2">
-            <span className="px-2 py-0.5 text-[11px] font-mono text-sand-700 bg-white border border-sand-300 rounded-md">
-                {name}
-            </span>
+            <PropNameWithTooltip name={name} />
             <div className="flex items-center text-xs font-mono text-sand-600 truncate">{children}</div>
         </div>
     );
@@ -442,7 +441,7 @@ import { LogOut } from 'lucide-react';
                         {/* Right: Combined Component */}
                         <div className="flex-1 flex flex-col justify-center">
                             <Button
-                                variant="destructive"
+                                variant="default"
                                 onClick={disconnect}
                                 disabled={disconnecting}
                                 className="w-full"

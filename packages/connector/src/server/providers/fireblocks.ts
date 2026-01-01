@@ -6,6 +6,18 @@
  */
 
 import type { RemoteSigner, FireblocksProviderConfig } from '../route-handlers';
+import type { SignableMessage } from '@solana/signers';
+
+interface KeychainSignerLike {
+    address: string;
+    isAvailable: () => Promise<boolean>;
+    signMessages: (messages: SignableMessage[]) => Promise<Record<string, Uint8Array>[]>;
+    signTransactions: (transactions: unknown[]) => Promise<Record<string, Uint8Array>[]>;
+}
+
+interface FireblocksSignerLike extends KeychainSignerLike {
+    init: () => Promise<void>;
+}
 
 /**
  * Load and initialize a Fireblocks signer
@@ -16,16 +28,19 @@ import type { RemoteSigner, FireblocksProviderConfig } from '../route-handlers';
 export async function loadFireblocksSigner(config: FireblocksProviderConfig): Promise<RemoteSigner> {
     // Dynamically import @solana/keychain
     // This keeps the dependency optional and only loaded when needed
-    let FireblocksSigner: typeof import('@solana/keychain-fireblocks').FireblocksSigner;
+    let FireblocksSigner: (new (args: unknown) => FireblocksSignerLike) | undefined;
 
     try {
-        const module = await import('@solana/keychain-fireblocks');
-        FireblocksSigner = module.FireblocksSigner;
+        const module = (await import('@solana/keychain-fireblocks')) as unknown as { FireblocksSigner?: unknown };
+        FireblocksSigner = module.FireblocksSigner as (new (args: unknown) => FireblocksSignerLike) | undefined;
     } catch (error) {
         throw new Error(
-            '@solana/keychain is not installed. ' +
-                'Install it with: pnpm add @solana/keychain',
+            '@solana/keychain-fireblocks is not installed. ' + 'Install it with: pnpm add @solana/keychain-fireblocks',
         );
+    }
+
+    if (!FireblocksSigner) {
+        throw new Error('@solana/keychain-fireblocks does not export FireblocksSigner');
     }
 
     // Create and initialize the Fireblocks signer
@@ -75,7 +90,7 @@ export async function loadFireblocksSigner(config: FireblocksProviderConfig): Pr
                 signatures: {} as Record<string, Uint8Array>,
             };
 
-            const results = await signer.signMessages([signableMessage as unknown as import('@solana/signers').SignableMessage]);
+            const results = await signer.signMessages([signableMessage as unknown as SignableMessage]);
 
             // Extract the signature from the first result
             const sigDict = results[0];
@@ -98,7 +113,7 @@ export async function loadFireblocksSigner(config: FireblocksProviderConfig): Pr
  * Sign transaction bytes using the Fireblocks signer
  */
 async function signWithFireblocks(
-    signer: import('@solana/keychain-fireblocks').FireblocksSigner,
+    signer: FireblocksSignerLike,
     transactionBytes: Uint8Array,
 ): Promise<Uint8Array> {
     // Import transaction utilities
@@ -109,7 +124,7 @@ async function signWithFireblocks(
     const transaction = decoder.decode(transactionBytes);
 
     // Sign the transaction
-    const results = await signer.signTransactions([transaction as Parameters<typeof signer.signTransactions>[0][0]]);
+    const results = await signer.signTransactions([transaction as unknown]);
 
     // Get the signature
     const sigDict = results[0];
