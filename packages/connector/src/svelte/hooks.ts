@@ -10,7 +10,7 @@ export const useConnectorClient = (): ConnectorClient => {
     const client = getContext<ConnectorClient>(CONNECTOR_CLIENT_CONTEXT_KEY);
 
     if (!client) {
-        throw new Error('ConnectorProvider not found. Wrap your app in <ConnectionProvider />');
+        throw new Error('ConnectorProvider not found. Wrap your app in <ConnectorProvider />');
     }
 
     return client;
@@ -21,7 +21,7 @@ export const useConnector = () => {
     const store = getContext<Readable<ConnectorState>>(CONNECTOR_STORE_CONTEXT_KEY);
 
     if (!store) {
-        throw new Error('ConnectorStore not found. Wrap your app in <ConnectionProvider />');
+        throw new Error('ConnectorStore not found. Wrap your app in <ConnectorProvider />');
     }
 
     return {
