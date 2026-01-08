@@ -1,4 +1,5 @@
 import { defineConfig } from 'tsup';
+import esbuildPluginSvelte from 'esbuild-svelte';
 
 export default defineConfig({
     entry: {
@@ -6,6 +7,7 @@ export default defineConfig({
         headless: 'src/headless.ts',
         react: 'src/react.ts',
         compat: 'src/compat.ts',
+        svelte: 'src/svelte.ts',
     },
     format: ['esm', 'cjs'],
     dts: true,
@@ -21,6 +23,7 @@ export default defineConfig({
     external: [
         'react',
         'react-dom',
+        'svelte',
         '@wallet-ui/core',
         '@wallet-standard/app',
         '@wallet-standard/base',
@@ -38,4 +41,5 @@ export default defineConfig({
         options.platform = 'neutral';
         options.target = 'es2020';
     },
+    esbuildPlugins: [esbuildPluginSvelte()],
 });

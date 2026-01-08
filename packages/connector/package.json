@@ -22,6 +22,11 @@
             "import": "./dist/react.mjs",
             "require": "./dist/react.js"
         },
+        "./svelte": {
+            "types": "./dist/svelte.d.ts",
+            "svelte": "./src/svelte.ts",
+            "default": "./src/svelte.ts"
+        },
         "./compat": {
             "types": "./dist/compat.d.ts",
             "import": "./dist/compat.mjs",
@@ -29,7 +34,8 @@
         }
     },
     "files": [
-        "dist/**"
+        "dist/**",
+        "src/**"
     ],
     "scripts": {
         "build": "tsup",
@@ -49,10 +55,14 @@
     "peerDependencies": {
         "@solana/web3.js": "^1.0.0",
         "react": ">=18.0.0",
+        "svelte": "^4.0.0 || ^5.0.0",
         "@walletconnect/universal-provider": "^2.0.0"
     },
     "peerDependenciesMeta": {
         "react": {
+            "optional": true
+        },
+        "svelte": {
             "optional": true
         },
         "@walletconnect/universal-provider": {
@@ -67,7 +77,6 @@
     },
     "dependencies": {
         "@solana-mobile/wallet-standard-mobile": "^0.4.3",
-        "@solana/webcrypto-ed25519-polyfill": "^4.0.0",
         "@solana/addresses": "^5.0.0",
         "@solana/codecs": "^5.0.0",
         "@solana/keys": "^5.0.0",
@@ -75,6 +84,7 @@
         "@solana/signers": "^5.0.0",
         "@solana/transaction-messages": "^5.0.0",
         "@solana/transactions": "^5.0.0",
+        "@solana/webcrypto-ed25519-polyfill": "^4.0.0",
         "@wallet-standard/app": "^1.1.0",
         "@wallet-standard/base": "^1.1.0",
         "@wallet-standard/features": "^1.1.0",
@@ -88,9 +98,12 @@
         "@types/react": "^19.2.2",
         "@vitest/coverage-v8": "^3.2.4",
         "@vitest/ui": "^3.2.4",
+        "bits-ui": "^2.14.4",
+        "esbuild-svelte": "^0.9.4",
         "happy-dom": "^20.0.7",
         "react": "^19.2.1",
         "react-dom": "^19.2.1",
+        "svelte": "^5.46.1",
         "tsup": "^8.5.0",
         "typescript": "^5.9.3",
         "vitest": "^3.2.4"
