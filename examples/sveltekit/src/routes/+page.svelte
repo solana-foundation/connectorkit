@@ -76,11 +76,11 @@
       );
 
       status = 'Signing...';
-      const signedTx = await signTransactionMessageWithSigners(message);
+      const signedTx = await signTransactionMessageWithSigners(message as any);
 
       status = 'Sending...';
       const sendAndConfirm = sendAndConfirmTransactionFactory({ rpc, rpcSubscriptions });
-      await sendAndConfirm(signedTx, { commitment: 'confirmed' });
+      await sendAndConfirm(signedTx as any, { commitment: 'confirmed' } as any);
 
       lastSignature = getSignatureFromTransaction(signedTx);
       status = 'Confirmed!';
@@ -240,7 +240,7 @@
         <div class="wallet-grid">
             {#each $wallets as w}
                 <button class="connect-wallet-btn" on:click={() => select(w.wallet.name)}>
-                    {#if w.icon}
+                    {#if w.wallet.icon}
                         <img src={w.wallet.icon} alt="" />
                     {/if}
                     <span>{w.wallet.name}</span>
