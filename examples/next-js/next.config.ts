@@ -2,7 +2,7 @@ import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
     // Mark keychain packages as external - they're dynamically imported
-    // and resolved via pnpm overrides to local packages
+    // and resolved at runtime when installed (optional server dependencies)
     serverExternalPackages: [
         '@solana/keychain',
         '@solana/keychain-core',

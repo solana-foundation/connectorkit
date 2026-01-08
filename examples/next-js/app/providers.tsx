@@ -51,7 +51,7 @@ export function Providers({ children }: { children: ReactNode }) {
             ? [
                   createRemoteSignerWallet({
                       endpoint: `${origin}/api/connector-signer`,
-                      name: 'Treasury Signer',
+                      name: 'Privy',
                       // Optional: provide auth headers for the signing API
                       // getAuthHeaders: () => ({
                       //     'Authorization': `Bearer ${getSessionToken()}`

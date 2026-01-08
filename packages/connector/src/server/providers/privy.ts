@@ -31,7 +31,7 @@ export async function loadPrivySigner(config: PrivyProviderConfig): Promise<Remo
         PrivySigner = module.PrivySigner as { create: (args: unknown) => Promise<KeychainSignerLike> } | undefined;
     } catch (error) {
         throw new Error(
-            '@solana/keychain-privy is not installed. ' + 'Install it with: pnpm add @solana/keychain-privy',
+            '@solana/keychain-privy is not installed. ' + 'Install it with: npm install @solana/keychain-privy',
         );
     }
 
@@ -99,10 +99,7 @@ export async function loadPrivySigner(config: PrivyProviderConfig): Promise<Remo
 /**
  * Sign transaction bytes using the Privy signer
  */
-async function signWithPrivy(
-    signer: KeychainSignerLike,
-    transactionBytes: Uint8Array,
-): Promise<Uint8Array> {
+async function signWithPrivy(signer: KeychainSignerLike, transactionBytes: Uint8Array): Promise<Uint8Array> {
     // Import transaction utilities
     const { getTransactionDecoder, getTransactionEncoder } = await import('@solana/transactions');
 

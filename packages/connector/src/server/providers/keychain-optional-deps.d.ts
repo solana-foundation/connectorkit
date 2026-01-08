@@ -11,4 +11,3 @@
  */
 declare module '@solana/keychain-fireblocks' {}
 declare module '@solana/keychain-privy' {}
-

@@ -9,16 +9,6 @@
         "examples/*",
         "tools/*"
     ],
-    "pnpm": {
-        "overrides": {
-            "@solana/keychain-core": "link:./references/solana-keychain-main/typescript/packages/core",
-            "@solana/keychain-aws-kms": "link:./references/solana-keychain-main/typescript/packages/aws-kms",
-            "@solana/keychain-fireblocks": "link:./references/solana-keychain-main/typescript/packages/fireblocks",
-            "@solana/keychain-privy": "link:./references/solana-keychain-main/typescript/packages/privy",
-            "@solana/keychain-turnkey": "link:./references/solana-keychain-main/typescript/packages/turnkey",
-            "@solana/keychain-vault": "link:./references/solana-keychain-main/typescript/packages/vault"
-        }
-    },
     "scripts": {
         "build": "turbo build",
         "dev": "turbo dev",
@@ -49,5 +39,5 @@
     "engines": {
         "node": ">=18.0.0"
     },
-    "packageManager": "pnpm@10.26.1"
+    "packageManager": "pnpm@10.27.0"
 }

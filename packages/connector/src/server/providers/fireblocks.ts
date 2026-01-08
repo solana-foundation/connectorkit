@@ -35,7 +35,8 @@ export async function loadFireblocksSigner(config: FireblocksProviderConfig): Pr
         FireblocksSigner = module.FireblocksSigner as (new (args: unknown) => FireblocksSignerLike) | undefined;
     } catch (error) {
         throw new Error(
-            '@solana/keychain-fireblocks is not installed. ' + 'Install it with: pnpm add @solana/keychain-fireblocks',
+            '@solana/keychain-fireblocks is not installed. ' +
+                'Install it with: npm install @solana/keychain-fireblocks',
         );
     }
 
@@ -112,10 +113,7 @@ export async function loadFireblocksSigner(config: FireblocksProviderConfig): Pr
 /**
  * Sign transaction bytes using the Fireblocks signer
  */
-async function signWithFireblocks(
-    signer: FireblocksSignerLike,
-    transactionBytes: Uint8Array,
-): Promise<Uint8Array> {
+async function signWithFireblocks(signer: FireblocksSignerLike, transactionBytes: Uint8Array): Promise<Uint8Array> {
     // Import transaction utilities
     const { getTransactionDecoder, getTransactionEncoder } = await import('@solana/transactions');
 

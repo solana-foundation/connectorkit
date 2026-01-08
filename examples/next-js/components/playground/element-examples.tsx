@@ -440,12 +440,7 @@ import { LogOut } from 'lucide-react';
 
                         {/* Right: Combined Component */}
                         <div className="flex-1 flex flex-col justify-center">
-                            <Button
-                                variant="default"
-                                onClick={disconnect}
-                                disabled={disconnecting}
-                                className="w-full"
-                            >
+                            <Button variant="default" onClick={disconnect} disabled={disconnecting} className="w-full">
                                 <LogOut className="mr-2 h-4 w-4" />
                                 {disconnecting ? 'Disconnecting...' : 'Disconnect Wallet'}
                             </Button>

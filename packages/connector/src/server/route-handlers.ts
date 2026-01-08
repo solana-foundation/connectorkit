@@ -467,7 +467,11 @@ export function createRemoteSignerRouteHandlers(config: RemoteSignerRouteHandler
                 }
 
                 default:
-                    return errorResponse('INVALID_OPERATION', `Unknown operation: ${(body as { operation: string }).operation}`, 400);
+                    return errorResponse(
+                        'INVALID_OPERATION',
+                        `Unknown operation: ${(body as { operation: string }).operation}`,
+                        400,
+                    );
             }
         } catch (error) {
             console.error('[connector/server] POST error:', error);
@@ -479,11 +483,7 @@ export function createRemoteSignerRouteHandlers(config: RemoteSignerRouteHandler
                 }
             }
 
-            return errorResponse(
-                'SIGNING_FAILED',
-                error instanceof Error ? error.message : 'Signing failed',
-                500,
-            );
+            return errorResponse('SIGNING_FAILED', error instanceof Error ? error.message : 'Signing failed', 500);
         }
     }
 

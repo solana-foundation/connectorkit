@@ -17,7 +17,7 @@ const PROP_TOOLTIPS: Record<string, PropTooltipData> = {
     },
     isConnecting: {
         description: 'True while a wallet connection attempt is in progress.',
-        usage: "if (isConnecting) return <Spinner />;",
+        usage: 'if (isConnecting) return <Spinner />;',
     },
     connector: {
         description: 'Metadata for the connected wallet connector (name/icon/id).',
@@ -69,7 +69,7 @@ const PROP_TOOLTIPS: Record<string, PropTooltipData> = {
     },
     isLoading: {
         description: 'True while the hook/element is fetching or refetching data.',
-        usage: "if (isLoading) return <Skeleton />;",
+        usage: 'if (isLoading) return <Skeleton />;',
     },
     error: {
         description: 'Error from the most recent fetch attempt (null if none).',
@@ -137,7 +137,7 @@ const PROP_TOOLTIPS: Record<string, PropTooltipData> = {
     },
     disconnecting: {
         description: 'True while disconnect is in progress.',
-        usage: "disabled={disconnecting}",
+        usage: 'disabled={disconnecting}',
     },
 };
 
@@ -182,4 +182,3 @@ export function PropNameWithTooltip({ name, className }: { name: string; classNa
         </span>
     );
 }
-

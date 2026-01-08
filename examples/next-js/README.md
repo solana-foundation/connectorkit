@@ -226,52 +226,52 @@ This example includes support for server-backed signing using Fireblocks, Privy,
 
 1. **Configure Environment Variables**
 
-   Create a `.env.local` file with your provider credentials:
+    Create a `.env.local` file with your provider credentials:
 
-   ```bash
-   # Enable remote signer in the UI
-   NEXT_PUBLIC_ENABLE_REMOTE_SIGNER=true
+    ```bash
+    # Enable remote signer in the UI
+    NEXT_PUBLIC_ENABLE_REMOTE_SIGNER=true
 
-   # Auth token for the signing API (generate a secure random string)
-   CONNECTOR_SIGNER_TOKEN=your-secure-token-here
+    # Auth token for the signing API (generate a secure random string)
+    CONNECTOR_SIGNER_TOKEN=your-secure-token-here
 
-   # Solana RPC URL (for signAndSend operations)
-   SOLANA_RPC_URL=https://api.mainnet-beta.solana.com
+    # Solana RPC URL (for signAndSend operations)
+    SOLANA_RPC_URL=https://api.mainnet-beta.solana.com
 
-   # --- Fireblocks Configuration ---
-   FIREBLOCKS_API_KEY=your-api-key
-   FIREBLOCKS_PRIVATE_KEY="-----BEGIN RSA PRIVATE KEY-----\n...\n-----END RSA PRIVATE KEY-----"
-   FIREBLOCKS_VAULT_ID=0
+    # --- Fireblocks Configuration ---
+    FIREBLOCKS_API_KEY=your-api-key
+    FIREBLOCKS_PRIVATE_KEY="-----BEGIN RSA PRIVATE KEY-----\n...\n-----END RSA PRIVATE KEY-----"
+    FIREBLOCKS_VAULT_ID=0
 
-   # --- OR Privy Configuration ---
-   # PRIVY_APP_ID=your-app-id
-   # PRIVY_APP_SECRET=your-app-secret
-   # PRIVY_WALLET_ID=wallet-id
-   ```
+    # --- OR Privy Configuration ---
+    # PRIVY_APP_ID=your-app-id
+    # PRIVY_APP_SECRET=your-app-secret
+    # PRIVY_WALLET_ID=wallet-id
+    ```
 
 2. **Install Provider Dependencies** (when available on npm)
 
-   The `@solana-keychain/*` packages provide Fireblocks and Privy integrations.
-   Once published, install only the one you need:
+    The `@solana-keychain/*` packages provide Fireblocks and Privy integrations.
+    Once published, install only the one you need:
 
-   ```bash
-   # For Fireblocks (when published)
-   pnpm add @solana-keychain/fireblocks
+    ```bash
+    # For Fireblocks (when published)
+    pnpm add @solana-keychain/fireblocks
 
-   # For Privy (when published)
-   pnpm add @solana-keychain/privy
-   ```
+    # For Privy (when published)
+    pnpm add @solana-keychain/privy
+    ```
 
-   **Note:** If these packages aren't published yet, you can use the `custom` provider
-   type to implement your own signer (see route.ts for the interface).
+    **Note:** If these packages aren't published yet, you can use the `custom` provider
+    type to implement your own signer (see route.ts for the interface).
 
 3. **Run the Example**
 
-   ```bash
-   pnpm dev
-   ```
+    ```bash
+    pnpm dev
+    ```
 
-   The "Treasury Signer" will now appear in the wallet selection modal alongside browser wallets.
+    The "Treasury Signer" will now appear in the wallet selection modal alongside browser wallets.
 
 ### How It Works
 
@@ -307,7 +307,7 @@ Edit `app/api/connector-signer/route.ts` to add custom authorization:
 ```typescript
 const { GET, POST } = createRemoteSignerRouteHandlers({
     provider: getProviderConfig(),
-    authorize: async (request) => {
+    authorize: async request => {
         // Example: verify user session
         const session = await getServerSession(request);
         return session?.user?.role === 'admin';
