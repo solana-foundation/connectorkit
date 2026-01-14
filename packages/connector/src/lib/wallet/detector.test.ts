@@ -4,6 +4,7 @@ import { StateManager } from '../core/state-manager';
 import { EventEmitter } from '../core/event-emitter';
 import type { ConnectorState } from '../../types/connector';
 import { getWalletsRegistry } from './standard-shim';
+import { INITIAL_WALLET_STATUS } from '../../types/session';
 import {
     createMockBackpackWallet,
     createMockPhantomWallet,
@@ -36,6 +37,10 @@ describe('WalletDetector', () => {
 
     beforeEach(() => {
         const initialState: ConnectorState = {
+            // vNext
+            wallet: INITIAL_WALLET_STATUS,
+            connectors: [],
+
             wallets: [],
             selectedWallet: null,
             connected: false,
@@ -192,5 +197,85 @@ describe('WalletDetector', () => {
         expect(wrapped.features).toBeDefined();
         expect(wrapped.chains).toBeDefined();
         expect(wrapped.icon).toBe(getWalletIconOverride('Phantom'));
+    });
+
+    it('should apply allowList filtering (case-insensitive) to detected connectors', () => {
+        const phantom = createMockPhantomWallet();
+        const solflare = createMockSolflareWallet();
+        const backpack = createMockBackpackWallet();
+
+        vi.mocked(getWalletsRegistry).mockReturnValue({
+            get: vi.fn(() => [phantom, solflare, backpack]),
+            on: vi.fn(() => vi.fn()),
+        } as unknown as ReturnType<typeof getWalletsRegistry>);
+
+        detector.setWalletDisplayConfig({ allowList: ['phantom', 'Solflare'] });
+        detector.initialize();
+
+        const { connectors } = mockStateManager.getSnapshot();
+        const names = connectors.map(c => c.name);
+
+        expect(names).toEqual(['Phantom', 'Solflare']);
+    });
+
+    it('should apply denyList filtering to detected connectors', () => {
+        const phantom = createMockPhantomWallet();
+        const solflare = createMockSolflareWallet();
+        const backpack = createMockBackpackWallet();
+
+        vi.mocked(getWalletsRegistry).mockReturnValue({
+            get: vi.fn(() => [phantom, solflare, backpack]),
+            on: vi.fn(() => vi.fn()),
+        } as unknown as ReturnType<typeof getWalletsRegistry>);
+
+        detector.setWalletDisplayConfig({ denyList: ['Backpack'] });
+        detector.initialize();
+
+        const { connectors } = mockStateManager.getSnapshot();
+        const names = connectors.map(c => c.name);
+
+        expect(names).toEqual(['Phantom', 'Solflare']);
+    });
+
+    it('should apply featured ordering without dropping other wallets', () => {
+        const phantom = createMockPhantomWallet();
+        const solflare = createMockSolflareWallet();
+        const backpack = createMockBackpackWallet();
+
+        vi.mocked(getWalletsRegistry).mockReturnValue({
+            get: vi.fn(() => [phantom, solflare, backpack]),
+            on: vi.fn(() => vi.fn()),
+        } as unknown as ReturnType<typeof getWalletsRegistry>);
+
+        detector.setWalletDisplayConfig({ featured: ['Solflare', 'Phantom'] });
+        detector.initialize();
+
+        const { connectors } = mockStateManager.getSnapshot();
+        const names = connectors.map(c => c.name);
+
+        expect(names).toEqual(['Solflare', 'Phantom', 'Backpack']);
+    });
+
+    it('denyList should win over allowList/featured when the same wallet appears in multiple lists', () => {
+        const phantom = createMockPhantomWallet();
+        const solflare = createMockSolflareWallet();
+        const backpack = createMockBackpackWallet();
+
+        vi.mocked(getWalletsRegistry).mockReturnValue({
+            get: vi.fn(() => [phantom, solflare, backpack]),
+            on: vi.fn(() => vi.fn()),
+        } as unknown as ReturnType<typeof getWalletsRegistry>);
+
+        detector.setWalletDisplayConfig({
+            allowList: ['Phantom', 'Backpack'],
+            denyList: ['Backpack'],
+            featured: ['Backpack', 'Phantom'],
+        });
+        detector.initialize();
+
+        const { connectors } = mockStateManager.getSnapshot();
+        const names = connectors.map(c => c.name);
+
+        expect(names).toEqual(['Phantom']);
     });
 });

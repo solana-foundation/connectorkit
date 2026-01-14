@@ -1,5 +1,6 @@
 import { getWalletsRegistry, ready } from './standard-shim';
 import type { Wallet, WalletInfo } from '../../types/wallets';
+import type { WalletDisplayConfig } from '../../types/connector';
 import type { WalletConnectorId, WalletConnectorMetadata } from '../../types/session';
 import { createConnectorId } from '../../types/session';
 import { BaseCollaborator } from '../core/base-collaborator';
@@ -14,6 +15,48 @@ function isSolanaWallet(wallet: Wallet): boolean {
         Array.isArray(wallet.chains) &&
         wallet.chains.some(chain => typeof chain === 'string' && chain.startsWith('solana:'))
     );
+}
+
+function normalizeWalletName(value: string): string {
+    return value.trim().toLowerCase();
+}
+
+function applyWalletDisplayConfig(wallets: readonly Wallet[], config: WalletDisplayConfig | undefined): Wallet[] {
+    if (!config) return [...wallets];
+
+    const allowList = (config.allowList ?? []).map(normalizeWalletName).filter(Boolean);
+    const denyList = (config.denyList ?? []).map(normalizeWalletName).filter(Boolean);
+    const featured = (config.featured ?? []).map(normalizeWalletName).filter(Boolean);
+
+    const allowSet = new Set(allowList);
+    const denySet = new Set(denyList);
+
+    let filtered = wallets.filter(wallet => {
+        const name = normalizeWalletName(wallet.name);
+        if (denySet.has(name)) return false;
+        if (allowSet.size > 0 && !allowSet.has(name)) return false;
+        return true;
+    });
+
+    if (featured.length === 0) return filtered;
+
+    const byName = new Map<string, Wallet>();
+    for (const wallet of filtered) {
+        byName.set(normalizeWalletName(wallet.name), wallet);
+    }
+
+    const featuredWallets: Wallet[] = [];
+    const featuredNames = new Set<string>();
+    for (const name of featured) {
+        if (featuredNames.has(name)) continue;
+        const wallet = byName.get(name);
+        if (!wallet) continue;
+        featuredNames.add(name);
+        featuredWallets.push(wallet);
+    }
+
+    const remaining = filtered.filter(wallet => !featuredNames.has(normalizeWalletName(wallet.name)));
+    return [...featuredWallets, ...remaining];
 }
 
 /**
@@ -91,6 +134,7 @@ function verifyWalletName(wallet: DirectWallet | Record<string, unknown>, reques
 export class WalletDetector extends BaseCollaborator {
     private unsubscribers: Array<() => void> = [];
     private additionalWallets: Wallet[] = [];
+    private walletDisplayConfig: WalletDisplayConfig | undefined;
     /** Map from stable connector ID to Wallet reference (not stored in state) */
     private connectorRegistry = new Map<WalletConnectorId, Wallet>();
 
@@ -122,6 +166,18 @@ export class WalletDetector extends BaseCollaborator {
     }
 
     /**
+     * Set wallet display controls for Wallet Standard auto-discovery.
+     * This affects which detected wallets are exposed as connectors (and therefore selectable / autoConnect-able).
+     */
+    setWalletDisplayConfig(config: WalletDisplayConfig | undefined): void {
+        this.walletDisplayConfig = config;
+        // If already initialized (listeners attached), refresh immediately to apply.
+        if (this.unsubscribers.length > 0) {
+            this.refreshWallets();
+        }
+    }
+
+    /**
      * Refresh wallet list (re-detect and merge)
      */
     private refreshWallets(): void {
@@ -137,19 +193,20 @@ export class WalletDetector extends BaseCollaborator {
             const registryWallets = ws.filter(isSolanaWallet);
             const additionalWallets = this.additionalWallets.filter(isSolanaWallet);
             const unique = this.deduplicateWallets([...registryWallets, ...additionalWallets]);
+            const filtered = applyWalletDisplayConfig(unique, this.walletDisplayConfig);
 
             // Update connector registry (connectorId -> Wallet map)
-            this.updateConnectorRegistry(unique);
+            this.updateConnectorRegistry(filtered);
 
             this.stateManager.updateState({
-                wallets: unique.map(w => this.mapToWalletInfo(w)),
-                connectors: unique.map(w => this.mapToConnectorMetadata(w)),
+                wallets: filtered.map(w => this.mapToWalletInfo(w)),
+                connectors: filtered.map(w => this.mapToConnectorMetadata(w)),
             });
 
             this.log('🔍 WalletDetector: refreshed wallets', {
                 registry: registryWallets.length,
                 additional: additionalWallets.length,
-                total: unique.length,
+                total: filtered.length,
             });
         } catch {
             // Ignore errors during refresh
@@ -181,7 +238,8 @@ export class WalletDetector extends BaseCollaborator {
                 const registryWallets = ws.filter(isSolanaWallet);
                 const additionalWallets = this.additionalWallets.filter(isSolanaWallet);
                 const unique = this.deduplicateWallets([...registryWallets, ...additionalWallets]);
-                const newCount = unique.length;
+                const filtered = applyWalletDisplayConfig(unique, this.walletDisplayConfig);
+                const newCount = filtered.length;
 
                 if (newCount !== previousCount) {
                     this.log('🔍 WalletDetector: found wallets:', {
@@ -192,12 +250,12 @@ export class WalletDetector extends BaseCollaborator {
                 }
 
                 // Update connector registry (connectorId -> Wallet map)
-                this.updateConnectorRegistry(unique);
+                this.updateConnectorRegistry(filtered);
 
                 // Update state with both legacy WalletInfo[] and vNext connectors[]
                 this.stateManager.updateState({
-                    wallets: unique.map(w => this.mapToWalletInfo(w)),
-                    connectors: unique.map(w => this.mapToConnectorMetadata(w)),
+                    wallets: filtered.map(w => this.mapToWalletInfo(w)),
+                    connectors: filtered.map(w => this.mapToConnectorMetadata(w)),
                 });
 
                 if (newCount !== previousCount && newCount > 0) {

@@ -136,9 +136,40 @@ export type Listener = (s: ConnectorState) => void;
 /**
  * Connector configuration options
  */
+export interface WalletDisplayConfig {
+    /**
+     * Explicit allowlist of wallet display names to expose as connectors.
+     *
+     * - Matching is case-insensitive and uses exact name equality (after trimming).
+     * - When provided and non-empty, only wallets in this list are shown/available.
+     */
+    allowList?: string[];
+
+    /**
+     * Denylist of wallet display names to hide/remove.
+     *
+     * - Matching is case-insensitive and uses exact name equality (after trimming).
+     * - Deny wins over allow/featured when the same wallet appears in multiple lists.
+     */
+    denyList?: string[];
+
+    /**
+     * Wallets to prioritize to the top of the list (in the provided order).
+     *
+     * - Matching is case-insensitive and uses exact name equality (after trimming).
+     * - Does not filter wallets by itself; it only reorders remaining wallets.
+     */
+    featured?: string[];
+}
+
 export interface ConnectorConfig {
     autoConnect?: boolean;
     debug?: boolean;
+    /**
+     * Wallet list controls for Wallet Standard auto-discovery.
+     * This affects which detected wallets are exposed as connectors (and therefore selectable / autoConnect-able).
+     */
+    wallets?: WalletDisplayConfig;
     /** Storage configuration using enhanced storage adapters */
     storage?: {
         account: StorageAdapter<string | undefined>;

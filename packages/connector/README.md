@@ -70,6 +70,12 @@ export function Providers({ children }: { children: React.ReactNode }) {
             autoConnect: true,
             enableMobile: true,
             clusters,
+            // Optional: Control which detected wallets are shown/available (Wallet Standard auto-discovery)
+            wallets: {
+                allowList: ['Phantom', 'Solflare', 'Backpack'],
+                denyList: ['Keplr', 'MetaMask'],
+                featured: ['Phantom', 'Solflare'],
+            },
         });
     }, []);
 
@@ -89,6 +95,16 @@ export function Providers({ children }: { children: React.ReactNode }) {
     );
 }
 ```
+
+**Optional: Wallet filtering & ordering**
+
+ConnectorKit auto-detects wallets via Wallet Standard. To improve UX for users with many installed wallets, you can filter/prioritize the detected list using `wallets`.
+
+- `allowList`: only expose these wallet names
+- `denyList`: hide these wallet names (deny wins)
+- `featured`: show these wallets first
+
+This is **full-scope** filtering: hidden wallets are removed from `connectors` and cannot be selected or auto-connected.
 
 ### 3. Use Hooks (in any component)
 
@@ -1467,6 +1483,7 @@ import { AppProvider, useConnector, useWallet, useConnectWallet } from '@solana/
 import type {
     // Configuration
     ConnectorConfig,
+    WalletDisplayConfig,
     DefaultConfigOptions,
     ExtendedConnectorConfig,
 

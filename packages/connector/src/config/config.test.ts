@@ -6,6 +6,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { getDefaultConfig, getDefaultMobileConfig } from './default-config';
+import { validateConfigOptions } from './schemas';
 import type { DefaultConfigOptions } from './default-config';
 import type { SolanaCluster } from '@wallet-ui/core';
 
@@ -172,6 +173,38 @@ describe('Configuration System', () => {
             const config = getDefaultConfig(baseOptions);
 
             expect(config.storage).toBeDefined();
+        });
+
+        it('should pass through wallet display config when provided', () => {
+            const config = getDefaultConfig({
+                ...baseOptions,
+                wallets: {
+                    allowList: ['Phantom', 'Solflare'],
+                    denyList: ['Keplr'],
+                    featured: ['Phantom'],
+                },
+            });
+
+            expect(config.wallets).toEqual({
+                allowList: ['Phantom', 'Solflare'],
+                denyList: ['Keplr'],
+                featured: ['Phantom'],
+            });
+        });
+
+        it('should validate wallet display config options', () => {
+            const result = validateConfigOptions({
+                appName: 'Test App',
+                wallets: {
+                    allowList: ['Phantom'],
+                    denyList: ['Keplr'],
+                    featured: ['Solflare'],
+                },
+            });
+
+            expect(result.success).toBe(true);
+            if (!result.success) return;
+            expect(result.data.wallets).toBeDefined();
         });
     });
 

@@ -143,6 +143,27 @@ export const walletSchema = z.custom<import('@wallet-standard/base').Wallet>(
     { message: 'Invalid Wallet Standard wallet object' },
 );
 
+/**
+ * Non-empty trimmed string schema for wallet names.
+ * Trims whitespace and rejects empty strings.
+ */
+const nonEmptyTrimmedStringSchema = z
+    .string()
+    .transform(s => s.trim())
+    .refine(s => s.length > 0, { message: 'Wallet name cannot be empty or whitespace-only' });
+
+/**
+ * Wallet list controls for Wallet Standard auto-discovery.
+ * Matches by wallet display name (case-insensitive, exact match after trimming).
+ */
+export const walletDisplayConfigSchema = z
+    .object({
+        allowList: z.array(nonEmptyTrimmedStringSchema).optional(),
+        denyList: z.array(nonEmptyTrimmedStringSchema).optional(),
+        featured: z.array(nonEmptyTrimmedStringSchema).optional(),
+    })
+    .optional();
+
 export const defaultConfigOptionsSchema = z.object({
     // Required
     appName: z.string().min(1, 'Application name is required'),
@@ -176,6 +197,9 @@ export const defaultConfigOptionsSchema = z.object({
     // Additional wallets (remote signers, etc.)
     additionalWallets: z.array(walletSchema).optional(),
 
+    // Wallet display controls
+    wallets: walletDisplayConfigSchema,
+
     // Functions (can't validate implementation, just existence)
     onError: z.custom<(...args: unknown[]) => unknown>((val: unknown) => typeof val === 'function').optional(),
 });
@@ -188,6 +212,7 @@ export const connectorConfigSchema = z
     .strictObject({
         autoConnect: z.boolean().optional(),
         debug: z.boolean().optional(),
+        wallets: walletDisplayConfigSchema,
         storage: storageConfigSchema,
         cluster: clusterConfigSchema,
         imageProxy: z.string().optional(),

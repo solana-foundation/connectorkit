@@ -121,6 +121,9 @@ export class ConnectorClient {
                 this.walletDetector.setAdditionalWallets(this.config.additionalWallets);
             }
 
+            // Apply wallet list controls (allow/deny/featured) before detection
+            this.walletDetector.setWalletDisplayConfig(this.config.wallets);
+
             this.walletDetector.initialize();
 
             // Register WalletConnect wallet if enabled
