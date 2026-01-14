@@ -144,14 +144,23 @@ export const walletSchema = z.custom<import('@wallet-standard/base').Wallet>(
 );
 
 /**
+ * Non-empty trimmed string schema for wallet names.
+ * Trims whitespace and rejects empty strings.
+ */
+const nonEmptyTrimmedStringSchema = z
+    .string()
+    .transform(s => s.trim())
+    .refine(s => s.length > 0, { message: 'Wallet name cannot be empty or whitespace-only' });
+
+/**
  * Wallet list controls for Wallet Standard auto-discovery.
  * Matches by wallet display name (case-insensitive, exact match after trimming).
  */
 export const walletDisplayConfigSchema = z
     .object({
-        allowList: z.array(z.string()).optional(),
-        denyList: z.array(z.string()).optional(),
-        featured: z.array(z.string()).optional(),
+        allowList: z.array(nonEmptyTrimmedStringSchema).optional(),
+        denyList: z.array(nonEmptyTrimmedStringSchema).optional(),
+        featured: z.array(nonEmptyTrimmedStringSchema).optional(),
     })
     .optional();
 
