@@ -43,7 +43,7 @@ export type { WalletConnectContextValue } from './ui/walletconnect-context';
 // Core types needed for React integration
 export type { Wallet, WalletAccount, WalletInfo } from './types/wallets';
 export type { AccountInfo } from './types/accounts';
-export type { ConnectorConfig, ConnectorState } from './types/connector';
+export type { ConnectorConfig, ConnectorState, WalletDisplayConfig } from './types/connector';
 export type { WalletStandardWallet, WalletStandardAccount } from './lib/wallet/standard-shim';
 
 // vNext Session Types

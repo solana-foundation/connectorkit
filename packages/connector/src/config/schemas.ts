@@ -143,6 +143,18 @@ export const walletSchema = z.custom<import('@wallet-standard/base').Wallet>(
     { message: 'Invalid Wallet Standard wallet object' },
 );
 
+/**
+ * Wallet list controls for Wallet Standard auto-discovery.
+ * Matches by wallet display name (case-insensitive, exact match after trimming).
+ */
+export const walletDisplayConfigSchema = z
+    .object({
+        allowList: z.array(z.string()).optional(),
+        denyList: z.array(z.string()).optional(),
+        featured: z.array(z.string()).optional(),
+    })
+    .optional();
+
 export const defaultConfigOptionsSchema = z.object({
     // Required
     appName: z.string().min(1, 'Application name is required'),
@@ -176,6 +188,9 @@ export const defaultConfigOptionsSchema = z.object({
     // Additional wallets (remote signers, etc.)
     additionalWallets: z.array(walletSchema).optional(),
 
+    // Wallet display controls
+    wallets: walletDisplayConfigSchema,
+
     // Functions (can't validate implementation, just existence)
     onError: z.custom<(...args: unknown[]) => unknown>((val: unknown) => typeof val === 'function').optional(),
 });
@@ -188,6 +203,7 @@ export const connectorConfigSchema = z
     .strictObject({
         autoConnect: z.boolean().optional(),
         debug: z.boolean().optional(),
+        wallets: walletDisplayConfigSchema,
         storage: storageConfigSchema,
         cluster: clusterConfigSchema,
         imageProxy: z.string().optional(),

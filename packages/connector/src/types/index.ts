@@ -15,6 +15,7 @@ export type { AccountInfo } from './accounts';
 export type {
     ConnectorState,
     ConnectorConfig,
+    WalletDisplayConfig,
     CoinGeckoConfig,
     ConnectorHealth,
     ConnectorDebugMetrics,

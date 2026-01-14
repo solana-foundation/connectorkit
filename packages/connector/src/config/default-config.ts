@@ -1,4 +1,4 @@
-import type { ConnectorConfig, CoinGeckoConfig } from '../types/connector';
+import type { ConnectorConfig, CoinGeckoConfig, WalletDisplayConfig } from '../types/connector';
 import type { WalletConnectConfig } from '../types/walletconnect';
 import type { SolanaCluster, SolanaClusterId } from '@wallet-ui/core';
 import type { Wallet } from '../types/wallets';
@@ -105,6 +105,12 @@ export interface DefaultConfigOptions {
      * Use this to add remote/server-backed signers created via `createRemoteSignerWallet()`.
      */
     additionalWallets?: Wallet[];
+
+    /**
+     * Optional wallet display controls for Wallet Standard auto-discovery.
+     * Use this to filter/prioritize which detected wallets are exposed as connectors.
+     */
+    wallets?: WalletDisplayConfig;
 }
 
 /**
@@ -193,6 +199,7 @@ export function getDefaultConfig(options: DefaultConfigOptions): ExtendedConnect
         coingecko,
         walletConnect,
         additionalWallets,
+        wallets,
     } = options;
 
     const defaultClusters: SolanaCluster[] = clusters ?? [
@@ -285,6 +292,7 @@ export function getDefaultConfig(options: DefaultConfigOptions): ExtendedConnect
         appUrl,
         enableMobile,
         network,
+        wallets,
         cluster: {
             clusters: defaultClusters,
             persistSelection: persistClusterSelection,
