@@ -8,7 +8,9 @@ Framework-agnostic devtools for `@solana/connector`. Works with any web framewor
 - **Auto-detection**: Automatically finds `window.__connectorClient` when available
 - **TanStack-style API**: Simple `mount(el)` / `unmount()` lifecycle
 - **Plugin system**: Built-in Overview, Events, and Transactions tabs
-- **Persistent settings**: Remembers position, open state, and active tab
+- **In-flight transactions**: Captures `transaction:preparing` before a signature exists and progresses through signing → sent
+- **Transaction inspection**: Decodes wire bytes (fee payer, size, compute budget) and fetches RPC details (status/confirmations + `getTransaction` JSON/logs)
+- **Persistent settings + cache**: Remembers panel state and persists a devtools cache (clearable from the UI)
 
 ## Installation
 
@@ -102,10 +104,22 @@ interface ConnectorDevtoolsConfig {
     defaultOpen?: boolean;
     /** Initial panel height in pixels */
     panelHeight?: number;
+    /** Hide the trigger button */
+    triggerHidden?: boolean;
     /** Maximum events to keep in memory */
     maxEvents?: number;
     /** Maximum transactions to track */
     maxTransactions?: number;
+    /**
+     * Optional RPC URL used by the Transactions tab for RPC fetches.
+     * If omitted, devtools uses the connector's current cluster RPC URL.
+     */
+    rpcUrl?: string;
+    /**
+     * Optional session/build id for scoping the persisted devtools cache.
+     * If this value changes between page loads, the cached history is discarded.
+     */
+    persistSessionId?: string;
 }
 ```
 
@@ -153,6 +167,11 @@ interface PluginContext {
     client: ConnectorClient;
     theme: 'dark' | 'light';
     subscribe: (callback: () => void) => () => void;
+    getConfig: () => ConnectorDevtoolsConfig;
+    getCache?: () => DevtoolsCacheV1;
+    subscribeCache?: (callback: () => void) => () => void;
+    updateCache?: (updater: (cache: DevtoolsCacheV1) => DevtoolsCacheV1) => void;
+    clearCache?: (scope?: 'all' | 'events' | 'transactions') => void;
 }
 ```
 

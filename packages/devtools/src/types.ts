@@ -69,6 +69,29 @@ export interface DevtoolsTrackedTransaction {
     error?: string;
     slot?: number;
     confirmations?: number | null;
+    /** Base64-encoded wire transaction bytes (if captured) */
+    wireTransactionBase64?: string;
+    /** Size of the wire transaction in bytes (if known) */
+    size?: number;
+    /** Fee payer address (if decoded) */
+    feePayer?: string;
+}
+
+export type DevtoolsInflightTransactionStage = 'preparing' | 'signing' | 'sent';
+
+export interface DevtoolsInflightTransaction {
+    /** Local-only id for correlating inflight events */
+    id: string;
+    stage: DevtoolsInflightTransactionStage;
+    timestamp: string;
+    /** Size of the wire transaction in bytes */
+    size: number;
+    /** Base64-encoded wire transaction bytes */
+    transactionBase64: string;
+    /** Signature once the transaction is sent */
+    signature?: string;
+    /** Any error message associated with this inflight transaction */
+    error?: string;
 }
 
 export interface DevtoolsEventsCache {
@@ -81,6 +104,7 @@ export interface DevtoolsEventsCache {
 
 export interface DevtoolsTransactionsCache {
     items: DevtoolsTrackedTransaction[];
+    inflight: DevtoolsInflightTransaction[];
 }
 
 export interface DevtoolsCacheV1 {
