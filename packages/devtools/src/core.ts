@@ -190,6 +190,11 @@ export class ConnectorDevtools {
         this.#unsubscribeTheme?.();
         this.#unsubscribeTheme = undefined;
 
+        // Cleanup devtools element listeners/subscriptions (Shadow DOM may attach document-level handlers)
+        if (this.#devtoolsElement) {
+            (this.#devtoolsElement as any).__cdtCleanup?.();
+        }
+
         // Remove from DOM
         if (this.#devtoolsElement && this.#mountElement) {
             this.#mountElement.removeChild(this.#devtoolsElement);
