@@ -52,10 +52,9 @@ function readU64LE(bytes: Uint8Array, offset: number): bigint | undefined {
     return view.getBigUint64(0, true);
 }
 
-export function getComputeBudgetSummaryFromCompiledMessage(compiledMessage: CompiledTransactionMessageLike): Pick<
-    DecodedWireTransactionSummary,
-    'computeUnitLimit' | 'computeUnitPriceMicroLamports'
-> {
+export function getComputeBudgetSummaryFromCompiledMessage(
+    compiledMessage: CompiledTransactionMessageLike,
+): Pick<DecodedWireTransactionSummary, 'computeUnitLimit' | 'computeUnitPriceMicroLamports'> {
     let computeUnitLimit: number | undefined;
     let computeUnitPriceMicroLamports: bigint | undefined;
 
@@ -82,12 +81,15 @@ export function decodeWireTransactionBase64(transactionBase64: string): DecodedW
     const decodedTransaction = transactionDecoder.decode(txBytes) as Transaction;
 
     const compiledMessageDecoder = getCompiledTransactionMessageDecoder();
-    const compiledMessage = compiledMessageDecoder.decode(decodedTransaction.messageBytes) as unknown as CompiledTransactionMessageLike;
+    const compiledMessage = compiledMessageDecoder.decode(
+        decodedTransaction.messageBytes,
+    ) as unknown as CompiledTransactionMessageLike;
 
     const requiredSigners = Object.keys(decodedTransaction.signatures).length;
     const feePayer = compiledMessage.staticAccounts[0];
 
-    const { computeUnitLimit, computeUnitPriceMicroLamports } = getComputeBudgetSummaryFromCompiledMessage(compiledMessage);
+    const { computeUnitLimit, computeUnitPriceMicroLamports } =
+        getComputeBudgetSummaryFromCompiledMessage(compiledMessage);
 
     return {
         compiledMessage,
@@ -115,4 +117,3 @@ export async function decompileMessageFromWireTransactionBase64(transactionBase6
     const rpc = createSolanaRpc(rpcUrl) as any;
     return await decompileTransactionMessageFetchingLookupTables(decoded.compiledMessage as any, rpc);
 }
-

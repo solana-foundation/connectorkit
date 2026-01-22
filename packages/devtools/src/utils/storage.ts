@@ -2,7 +2,12 @@
  * localStorage utilities for persisting devtools state
  */
 
-import { STORAGE_KEYS, type DevtoolsCacheV1, type DevtoolsPersistedState, type ConnectorDevtoolsConfig } from '../types';
+import {
+    STORAGE_KEYS,
+    type DevtoolsCacheV1,
+    type DevtoolsPersistedState,
+    type ConnectorDevtoolsConfig,
+} from '../types';
 
 /**
  * Safely get item from localStorage

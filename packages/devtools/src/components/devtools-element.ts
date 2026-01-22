@@ -26,6 +26,15 @@ interface DevtoolsElementOptions {
     onStateChange: (partial: Partial<DevtoolsPersistedState>) => void;
 }
 
+export interface DevtoolsElement extends HTMLElement {
+    /**
+     * Cleanup hook invoked by `ConnectorDevtools.unmount()`.
+     *
+     * Must remove any document/window-level listeners and subscriptions.
+     */
+    __cdtCleanup?: () => void;
+}
+
 type PanelAnimState = 'hidden' | 'enter' | 'entered' | 'exit';
 
 let hasPlayedTriggerEntrance = false;
@@ -33,11 +42,11 @@ let hasPlayedTriggerEntrance = false;
 /**
  * Create the devtools element with Shadow DOM
  */
-export function createDevtoolsElement(options: DevtoolsElementOptions): HTMLElement {
+export function createDevtoolsElement(options: DevtoolsElementOptions): DevtoolsElement {
     const { config, state, plugins, context, onStateChange } = options;
 
     // Create container element
-    const container = document.createElement('div');
+    const container = document.createElement('div') as DevtoolsElement;
     container.className = 'connector-devtools-root';
 
     // Attach shadow DOM for style isolation
@@ -372,12 +381,13 @@ ${BASE_STYLES}
                 <span>Devtools</span>
               </div>
               <div class="cdt-tabs">
+                ${/* Plugin icon/name are developer-configured, not user input. icon must be trusted static SVG. */ ''}
                 ${plugins
                     .map(
                         plugin => `
                   <button class="cdt-tab ${activeTab === plugin.id ? 'cdt-active' : ''}" data-tab="${plugin.id}">
                     ${plugin.icon ?? ''}
-                    <span>${plugin.name}</span>
+                    <span>${plugin.name.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</span>
                   </button>
                 `,
                     )
@@ -602,7 +612,7 @@ ${BASE_STYLES}
     });
 
     // Expose cleanup hook for `ConnectorDevtools.unmount()`
-    (container as any).__cdtCleanup = () => {
+    container.__cdtCleanup = () => {
         clearPanelTimers();
         unsubscribeContext?.();
         unsubscribeClient?.();

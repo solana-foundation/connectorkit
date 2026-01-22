@@ -22,7 +22,7 @@ function getClusterStyleClass(clusterId: string): string {
 // Helper to format RPC URL for display
 function formatRpcUrl(url: string | null): string {
     if (!url) return 'N/A';
-    
+
     // Strip protocol and show the rest
     return url.replace(/^https?:\/\//, '');
 }
@@ -54,14 +54,14 @@ function getPersistenceInfo(autoConnect: boolean): PersistenceInfo {
     if (typeof window === 'undefined') {
         return { hasStoredWallet: false, storedWallet: null, storedCluster: null, willAutoConnect: false };
     }
-    
+
     try {
         const walletRaw = localStorage.getItem(STORAGE_KEYS.wallet);
         const clusterRaw = localStorage.getItem(STORAGE_KEYS.cluster);
-        
+
         const storedWallet = walletRaw ? JSON.parse(walletRaw) : null;
         const storedCluster = clusterRaw ? JSON.parse(clusterRaw) : null;
-        
+
         return {
             hasStoredWallet: Boolean(storedWallet),
             storedWallet,
@@ -76,7 +76,7 @@ function getPersistenceInfo(autoConnect: boolean): PersistenceInfo {
 // Clear all connector storage
 function clearAllStorage(): void {
     if (typeof window === 'undefined') return;
-    
+
     try {
         localStorage.removeItem(STORAGE_KEYS.account);
         localStorage.removeItem(STORAGE_KEYS.wallet);
@@ -89,7 +89,7 @@ function clearAllStorage(): void {
 // Check RPC health by getting current slot
 async function checkRpcHealth(rpcUrl: string): Promise<RpcHealth> {
     const start = performance.now();
-    
+
     try {
         const response = await fetch(rpcUrl, {
             method: 'POST',
@@ -101,22 +101,22 @@ async function checkRpcHealth(rpcUrl: string): Promise<RpcHealth> {
                 params: [{ commitment: 'processed' }],
             }),
         });
-        
+
         const latency = Math.round(performance.now() - start);
         const data = await response.json();
-        
+
         if (data.error) {
             return { status: 'error', latency, error: data.error.message };
         }
-        
+
         const slot = data.result;
         const status = latency > 1000 ? 'slow' : 'healthy';
-        
+
         return { status, latency, slot };
     } catch (err) {
         const latency = Math.round(performance.now() - start);
-        return { 
-            status: 'error', 
+        return {
+            status: 'error',
             latency,
             error: err instanceof Error ? err.message : 'Failed to connect',
         };
@@ -163,10 +163,14 @@ export function createOverviewPlugin(): ConnectorDevtoolsPlugin {
                 // Get RPC status badge
                 const getRpcStatusBadge = (health: RpcHealth) => {
                     switch (health.status) {
-                        case 'checking': return '<span class="cdt-badge cdt-badge-muted">Checking...</span>';
-                        case 'healthy': return '<span class="cdt-badge cdt-badge-success">Healthy</span>';
-                        case 'slow': return '<span class="cdt-badge cdt-badge-warning">Slow</span>';
-                        case 'error': return '<span class="cdt-badge cdt-badge-error">Error</span>';
+                        case 'checking':
+                            return '<span class="cdt-badge cdt-badge-muted">Checking...</span>';
+                        case 'healthy':
+                            return '<span class="cdt-badge cdt-badge-success">Healthy</span>';
+                        case 'slow':
+                            return '<span class="cdt-badge cdt-badge-warning">Slow</span>';
+                        case 'error':
+                            return '<span class="cdt-badge cdt-badge-error">Error</span>';
                     }
                 };
 
@@ -453,9 +457,11 @@ export function createOverviewPlugin(): ConnectorDevtoolsPlugin {
                                         ${ICONS.info}
                                         On Reload
                                     </div>
-                                    ${persistence.willAutoConnect 
-                                        ? '<span class="cdt-badge cdt-badge-success">Auto-connect</span>' 
-                                        : '<span class="cdt-badge cdt-badge-muted">Fresh start</span>'}
+                                    ${
+                                        persistence.willAutoConnect
+                                            ? '<span class="cdt-badge cdt-badge-success">Auto-connect</span>'
+                                            : '<span class="cdt-badge cdt-badge-muted">Fresh start</span>'
+                                    }
                                 </div>
                                 <div class="cdt-overview-rows">
                                     <div class="cdt-overview-row">
@@ -472,11 +478,13 @@ export function createOverviewPlugin(): ConnectorDevtoolsPlugin {
                                     </div>
                                 </div>
                                 <div class="cdt-persistence-hint">
-                                    ${persistence.willAutoConnect 
-                                        ? `Will reconnect to <strong>${persistence.storedWallet}</strong> on page reload.`
-                                        : persistence.hasStoredWallet
-                                            ? `Wallet stored but auto-connect is disabled.`
-                                            : `No stored wallet. User will see connect prompt.`}
+                                    ${
+                                        persistence.willAutoConnect
+                                            ? `Will reconnect to <strong>${persistence.storedWallet}</strong> on page reload.`
+                                            : persistence.hasStoredWallet
+                                              ? `Wallet stored but auto-connect is disabled.`
+                                              : `No stored wallet. User will see connect prompt.`
+                                    }
                                 </div>
                             </div>
 
@@ -534,13 +542,13 @@ export function createOverviewPlugin(): ConnectorDevtoolsPlugin {
             async function refreshRpcHealth() {
                 const config = ctx.getConfig();
                 const rpcUrlToCheck = config.rpcUrl ?? client.getRpcUrl();
-                
+
                 if (!rpcUrlToCheck) {
                     rpcHealth = { status: 'error', error: 'No RPC URL configured' };
                     renderContent();
                     return;
                 }
-                
+
                 rpcHealth = await checkRpcHealth(rpcUrlToCheck);
                 renderContent();
             }

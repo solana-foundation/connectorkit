@@ -7,8 +7,8 @@ Production-ready Solana wallet infrastructure. A headless, framework-agnostic wa
 
 ## Packages
 
-| Package                                           | Description                                                 |
-| ------------------------------------------------- | ----------------------------------------------------------- |
+| Package                                   | Description                                                |
+| ----------------------------------------- | ---------------------------------------------------------- |
 | [@solana/connector](./packages/connector) | Core wallet connector with React hooks and headless client |
 | [@solana/devtools](./packages/devtools)   | Framework-agnostic devtools with transaction tracking      |
 
@@ -85,10 +85,10 @@ import { ConnectorDevtools } from '@solana/devtools';
 
 // Create devtools (auto-detects window.__connectorClient from ConnectorProvider)
 const devtools = new ConnectorDevtools({
-  config: {
-    position: 'bottom-right',
-    theme: 'dark',
-  },
+    config: {
+        position: 'bottom-right',
+        theme: 'dark',
+    },
 });
 
 // Mount to DOM
@@ -108,26 +108,26 @@ devtools.unmount();
 import { useEffect } from 'react';
 
 export function DevtoolsLoader() {
-  useEffect(() => {
-    if (process.env.NODE_ENV !== 'development') return;
+    useEffect(() => {
+        if (process.env.NODE_ENV !== 'development') return;
 
-    let devtools: any;
-    let container: HTMLDivElement;
+        let devtools: any;
+        let container: HTMLDivElement;
 
-    import('@solana/devtools').then(({ ConnectorDevtools }) => {
-      container = document.createElement('div');
-      document.body.appendChild(container);
-      devtools = new ConnectorDevtools();
-      devtools.mount(container);
-    });
+        import('@solana/devtools').then(({ ConnectorDevtools }) => {
+            container = document.createElement('div');
+            document.body.appendChild(container);
+            devtools = new ConnectorDevtools();
+            devtools.mount(container);
+        });
 
-    return () => {
-      devtools?.unmount();
-      container?.remove();
-    };
-  }, []);
+        return () => {
+            devtools?.unmount();
+            container?.remove();
+        };
+    }, []);
 
-  return null;
+    return null;
 }
 ```
 

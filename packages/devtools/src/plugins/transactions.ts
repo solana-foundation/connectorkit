@@ -50,11 +50,7 @@ export function createTransactionsPlugin(_maxTransactions = 50): ConnectorDevtoo
 
     function safeJsonStringify(value: unknown, space = 2): string {
         try {
-            return JSON.stringify(
-                value,
-                (_key, v) => (typeof v === 'bigint' ? v.toString() : v),
-                space,
-            );
+            return JSON.stringify(value, (_key, v) => (typeof v === 'bigint' ? v.toString() : v), space);
         } catch (err) {
             return err instanceof Error ? err.message : String(err);
         }
@@ -248,12 +244,11 @@ export function createTransactionsPlugin(_maxTransactions = 50): ConnectorDevtoo
 
             // Best-effort: update connector + persisted cache when we can determine final status.
             if (status) {
-                const nextStatus: DevtoolsTrackedTransaction['status'] =
-                    status.err
-                        ? 'failed'
-                        : status.confirmationStatus === 'confirmed' || status.confirmationStatus === 'finalized'
-                            ? 'confirmed'
-                            : 'pending';
+                const nextStatus: DevtoolsTrackedTransaction['status'] = status.err
+                    ? 'failed'
+                    : status.confirmationStatus === 'confirmed' || status.confirmationStatus === 'finalized'
+                      ? 'confirmed'
+                      : 'pending';
 
                 if (nextStatus !== 'pending') {
                     ctx.client.updateTransactionStatus(
@@ -322,12 +317,10 @@ export function createTransactionsPlugin(_maxTransactions = 50): ConnectorDevtoo
                 const selectedDetails = selectedSignature ? detailsBySignature.get(selectedSignature) : undefined;
 
                 const selectedInflight = selectedInflightId
-                    ? inflight.find(ix => ix.id === selectedInflightId) ?? null
+                    ? (inflight.find(ix => ix.id === selectedInflightId) ?? null)
                     : null;
 
-                let selectedInflightDecoded:
-                    | ReturnType<typeof decodeWireTransactionBase64>
-                    | null = null;
+                let selectedInflightDecoded: ReturnType<typeof decodeWireTransactionBase64> | null = null;
 
                 if (selectedInflight?.transactionBase64) {
                     try {
@@ -338,7 +331,7 @@ export function createTransactionsPlugin(_maxTransactions = 50): ConnectorDevtoo
                 }
 
                 const selectedTx = selectedSignature
-                    ? transactions.find(t => t.signature === selectedSignature) ?? null
+                    ? (transactions.find(t => t.signature === selectedSignature) ?? null)
                     : null;
 
                 let selectedTxDecoded: ReturnType<typeof decodeWireTransactionBase64> | null = null;
@@ -357,10 +350,17 @@ export function createTransactionsPlugin(_maxTransactions = 50): ConnectorDevtoo
                     const rpcTx = selectedDetails?.tx as any;
                     const rpcMeta = rpcTx && typeof rpcTx === 'object' ? (rpcTx as any).meta : undefined;
                     const rpcTransaction = rpcTx && typeof rpcTx === 'object' ? (rpcTx as any).transaction : undefined;
-                    const rpcMessage = rpcTransaction && typeof rpcTransaction === 'object' ? (rpcTransaction as any).message : undefined;
+                    const rpcMessage =
+                        rpcTransaction && typeof rpcTransaction === 'object'
+                            ? (rpcTransaction as any).message
+                            : undefined;
 
-                    const rpcInstructions = Array.isArray(rpcMessage?.instructions) ? (rpcMessage.instructions as any[]) : [];
-                    const rpcAccountKeys = Array.isArray(rpcMessage?.accountKeys) ? (rpcMessage.accountKeys as any[]) : [];
+                    const rpcInstructions = Array.isArray(rpcMessage?.instructions)
+                        ? (rpcMessage.instructions as any[])
+                        : [];
+                    const rpcAccountKeys = Array.isArray(rpcMessage?.accountKeys)
+                        ? (rpcMessage.accountKeys as any[])
+                        : [];
                     const rpcLogs = Array.isArray(rpcMeta?.logMessages) ? (rpcMeta.logMessages as string[]) : [];
 
                     const feeLamports = toBigIntOrNull(rpcMeta?.fee);
@@ -426,10 +426,10 @@ export function createTransactionsPlugin(_maxTransactions = 50): ConnectorDevtoo
                                           typeof v === 'string'
                                               ? v
                                               : typeof v === 'number'
-                                                  ? String(v)
-                                                  : typeof v === 'bigint'
-                                                      ? v.toString()
-                                                      : safeJsonStringify(v, 0),
+                                                ? String(v)
+                                                : typeof v === 'bigint'
+                                                  ? v.toString()
+                                                  : safeJsonStringify(v, 0),
                                   }));
 
                                   const headerRows: Array<{ key: string; value: string }> = [
@@ -1028,9 +1028,14 @@ export function createTransactionsPlugin(_maxTransactions = 50): ConnectorDevtoo
                                                       let feePayer = '';
                                                       let cuHint = '';
                                                       try {
-                                                          const decoded = decodeWireTransactionBase64(ix.transactionBase64);
-                                                          feePayer = decoded.summary.feePayer ? truncateMiddle(decoded.summary.feePayer, 6, 6) : '';
-                                                          if (decoded.summary.computeUnitLimit) cuHint = `CU ${decoded.summary.computeUnitLimit.toLocaleString('en-US')}`;
+                                                          const decoded = decodeWireTransactionBase64(
+                                                              ix.transactionBase64,
+                                                          );
+                                                          feePayer = decoded.summary.feePayer
+                                                              ? truncateMiddle(decoded.summary.feePayer, 6, 6)
+                                                              : '';
+                                                          if (decoded.summary.computeUnitLimit)
+                                                              cuHint = `CU ${decoded.summary.computeUnitLimit.toLocaleString('en-US')}`;
                                                       } catch {}
 
                                                       return `
@@ -1135,7 +1140,10 @@ export function createTransactionsPlugin(_maxTransactions = 50): ConnectorDevtoo
                                         <div class="cdt-json">${safeJsonStringify(
                                             selectedInflightDecoded.compiledMessage.instructions.map(ix => ({
                                                 dataHexPreview: ix.data ? bytesToHexPreview(ix.data, 32) : '',
-                                                program: selectedInflightDecoded!.compiledMessage.staticAccounts[ix.programAddressIndex],
+                                                program:
+                                                    selectedInflightDecoded!.compiledMessage.staticAccounts[
+                                                        ix.programAddressIndex
+                                                    ],
                                                 programAddressIndex: ix.programAddressIndex,
                                                 accounts: ix.accountIndices?.length ?? 0,
                                             })),
@@ -1146,8 +1154,8 @@ export function createTransactionsPlugin(_maxTransactions = 50): ConnectorDevtoo
                                     }
                                 `
                                         : selectedTx
-                                            ? renderSentTransactionDetailsPanel()
-                                            : `<div class="cdt-empty">Select an inflight or sent transaction.</div>`
+                                          ? renderSentTransactionDetailsPanel()
+                                          : `<div class="cdt-empty">Select an inflight or sent transaction.</div>`
                                 }
                             </div>
                         </div>
@@ -1193,7 +1201,7 @@ export function createTransactionsPlugin(_maxTransactions = 50): ConnectorDevtoo
 
                 // Copy signature buttons in list rows
                 el.querySelectorAll<HTMLButtonElement>('[data-copy-sig]').forEach(btn => {
-                    btn.addEventListener('click', (e) => {
+                    btn.addEventListener('click', e => {
                         e.stopPropagation(); // Prevent row selection
                         const sig = btn.getAttribute('data-copy-sig');
                         if (sig) copyToClipboard(sig);

@@ -30,6 +30,7 @@ import {
     savePersistedState,
 } from './utils/storage';
 import { resolveTheme, subscribeToSystemTheme } from './utils/theme';
+import type { DevtoolsElement } from './components/devtools-element';
 import { createDevtoolsElement } from './components/devtools-element';
 import { createOverviewPlugin } from './plugins/overview';
 import { createEventsPlugin } from './plugins/events';
@@ -50,7 +51,7 @@ export class ConnectorDevtools {
     #plugins: ConnectorDevtoolsPlugin[];
     #isMounted = false;
     #mountElement: HTMLElement | null = null;
-    #devtoolsElement: HTMLElement | null = null;
+    #devtoolsElement: DevtoolsElement | null = null;
     #state: DevtoolsPersistedState;
     #unsubscribeTheme?: () => void;
     #stateSubscribers = new Set<() => void>();
@@ -251,7 +252,11 @@ export class ConnectorDevtools {
                     };
 
                     this.#updateCache(cache => {
-                        const nextInflight = [...cache.transactions.inflight, inflightTx].slice(-maxInflight);
+                        const nextInflight = [...cache.transactions.inflight];
+                        if (nextInflight.length >= maxInflight) {
+                            nextInflight.shift(); // Remove oldest
+                        }
+                        nextInflight.push(inflightTx);
                         return {
                             ...cache,
                             transactions: { ...cache.transactions, inflight: nextInflight },
@@ -313,11 +318,17 @@ export class ConnectorDevtools {
                         const nextItems =
                             existingIdx === -1
                                 ? [nextItem, ...cache.transactions.items]
-                                : cache.transactions.items.map((tx, i) => (i === existingIdx ? { ...tx, ...nextItem } : tx));
+                                : cache.transactions.items.map((tx, i) =>
+                                      i === existingIdx ? { ...tx, ...nextItem } : tx,
+                                  );
 
                         return {
                             ...cache,
-                            transactions: { ...cache.transactions, inflight: inflight.slice(-maxInflight), items: nextItems },
+                            transactions: {
+                                ...cache.transactions,
+                                inflight: inflight.slice(-maxInflight),
+                                items: nextItems,
+                            },
                         };
                     });
 
@@ -349,7 +360,9 @@ export class ConnectorDevtools {
                         const nextItems =
                             existingIdx === -1
                                 ? [nextItem, ...cache.transactions.items]
-                                : cache.transactions.items.map((tx, i) => (i === existingIdx ? { ...tx, ...nextItem } : tx));
+                                : cache.transactions.items.map((tx, i) =>
+                                      i === existingIdx ? { ...tx, ...nextItem } : tx,
+                                  );
 
                         const inflight = cache.transactions.inflight.slice();
 
@@ -370,7 +383,11 @@ export class ConnectorDevtools {
 
                         return {
                             ...cache,
-                            transactions: { ...cache.transactions, inflight: inflight.slice(-maxInflight), items: nextItems },
+                            transactions: {
+                                ...cache.transactions,
+                                inflight: inflight.slice(-maxInflight),
+                                items: nextItems,
+                            },
                         };
                     });
                     break;
@@ -473,7 +490,7 @@ export class ConnectorDevtools {
 
         // Cleanup devtools element listeners/subscriptions (Shadow DOM may attach document-level handlers)
         if (this.#devtoolsElement) {
-            (this.#devtoolsElement as any).__cdtCleanup?.();
+            this.#devtoolsElement.__cdtCleanup?.();
         }
 
         // Remove from DOM
