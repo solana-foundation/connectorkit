@@ -13,14 +13,13 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Wallet, Copy, Check, RefreshCw, LogOut, Coins, ExternalLink } from 'lucide-react';
 import { ExampleCard, type ExampleConfig } from './example-card';
+import { PropNameWithTooltip } from './prop-tooltips';
 
 // Helper component for displaying render props in badge style (matches hooks-examples)
 function RenderPropValue({ name, children }: { name: string; children: React.ReactNode }) {
     return (
         <div className="flex items-center justify-between py-1.5 gap-2">
-            <span className="px-2 py-0.5 text-[11px] font-mono text-sand-700 bg-white border border-sand-300 rounded-md">
-                {name}
-            </span>
+            <PropNameWithTooltip name={name} />
             <div className="flex items-center text-xs font-mono text-sand-600 truncate">{children}</div>
         </div>
     );
@@ -198,7 +197,7 @@ import { RefreshCw } from 'lucide-react';
                 <p className="text-xs text-muted-foreground font-medium">SOL Balance</p>
                 <p className="text-2xl font-bold">{solBalance?.toFixed(4) ?? '--'} SOL</p>
             </div>
-            <button onClick={() => refetch()} disabled={isLoading} className="p-2 hover:bg-muted rounded-md">
+            <button onClick={() => void refetch()} disabled={isLoading} className="p-2 hover:bg-muted rounded-md">
                 <RefreshCw className={\`h-4 w-4 \${isLoading ? 'animate-spin' : ''}\`} />
             </button>
         </div>
@@ -219,7 +218,7 @@ import { RefreshCw } from 'lucide-react';
                                 <RenderPropValue name="isLoading">{String(isLoading)}</RenderPropValue>
                                 <RenderPropValue name="refetch">
                                     <button
-                                        onClick={() => refetch()}
+                                        onClick={() => void refetch()}
                                         disabled={isLoading}
                                         className="p-1 hover:bg-muted rounded-md transition-colors disabled:opacity-50"
                                     >
@@ -251,7 +250,7 @@ import { RefreshCw } from 'lucide-react';
                                     <p className="text-2xl font-bold">{solBalance?.toFixed(4) ?? '--'} SOL</p>
                                 </div>
                                 <button
-                                    onClick={() => refetch()}
+                                    onClick={() => void refetch()}
                                     disabled={isLoading}
                                     className="p-2 hover:bg-muted rounded-md transition-colors disabled:opacity-50"
                                 >
@@ -441,12 +440,7 @@ import { LogOut } from 'lucide-react';
 
                         {/* Right: Combined Component */}
                         <div className="flex-1 flex flex-col justify-center">
-                            <Button
-                                variant="destructive"
-                                onClick={disconnect}
-                                disabled={disconnecting}
-                                className="w-full"
-                            >
+                            <Button variant="default" onClick={disconnect} disabled={disconnecting} className="w-full">
                                 <LogOut className="mr-2 h-4 w-4" />
                                 {disconnecting ? 'Disconnecting...' : 'Disconnect Wallet'}
                             </Button>
@@ -471,7 +465,7 @@ import { Coins, RefreshCw } from 'lucide-react';
         <div className="rounded-lg border bg-card w-[350px]">
             <div className="flex items-center justify-between p-3 border-b">
                 <span className="font-medium text-sm">Tokens ({tokens.length})</span>
-                <button onClick={() => refetch()} disabled={isLoading}>
+                <button onClick={() => void refetch()} disabled={isLoading}>
                     <RefreshCw className={\`h-3.5 w-3.5 \${isLoading ? 'animate-spin' : ''}\`} />
                 </button>
             </div>
@@ -516,7 +510,7 @@ import { Coins, RefreshCw } from 'lucide-react';
                                         <RenderPropValue name="isLoading">{String(isLoading)}</RenderPropValue>
                                         <RenderPropValue name="refetch">
                                             <button
-                                                onClick={() => refetch()}
+                                                onClick={() => void refetch()}
                                                 disabled={isLoading}
                                                 className="p-1 hover:bg-muted rounded-md transition-colors disabled:opacity-50"
                                             >
@@ -598,7 +592,7 @@ import { Coins, RefreshCw } from 'lucide-react';
                                     <div className="flex items-center justify-between p-3 border-b">
                                         <span className="font-medium text-sm">Tokens ({tokens.length})</span>
                                         <button
-                                            onClick={() => refetch()}
+                                            onClick={() => void refetch()}
                                             disabled={isLoading}
                                             className="p-1 hover:bg-muted rounded"
                                         >

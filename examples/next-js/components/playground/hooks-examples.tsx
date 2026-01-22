@@ -1,19 +1,18 @@
 'use client';
 
-import { useConnector, useBalance, useCluster, useTokens, useTransactions } from '@solana/connector';
+import { useBalance, useCluster, useConnector, useTokens, useTransactions } from '@solana/connector/react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Wallet, Copy, Check, RefreshCw, Coins, ExternalLink, LogOut } from 'lucide-react';
 import { ExampleCard, type ExampleConfig } from './example-card';
 import { useState } from 'react';
+import { PropNameWithTooltip } from './prop-tooltips';
 
 // Helper component for displaying hook return values as mini badge
 function HookReturnValue({ name, value }: { name: string; value: string }) {
     return (
         <div className="flex items-center justify-between py-1.5 gap-2">
-            <span className="px-2 py-0.5 text-[11px] font-mono text-sand-700 bg-white border border-sand-300 rounded-md">
-                {name}
-            </span>
+            <PropNameWithTooltip name={name} />
             <span className="text-xs font-mono text-sand-600 truncate max-w-[120px]">{value}</span>
         </div>
     );
@@ -73,10 +72,13 @@ function getTransactionSubtitle(tx: { type: string; formattedTime: string; instr
 
 // Hook example components
 function UseConnectorExample() {
-    const { connected, connecting, selectedWallet, selectedAccount, wallets, select, disconnect } = useConnector();
+    const { walletStatus, isConnected, isConnecting, account, connector, connectors, connectWallet, disconnectWallet } =
+        useConnector();
+    const status = walletStatus.status;
     const [copied, setCopied] = useState(false);
 
     const handleCopy = () => {
+        const selectedAccount = account ? String(account) : null;
         if (selectedAccount) {
             navigator.clipboard.writeText(selectedAccount);
             setCopied(true);
@@ -84,11 +86,12 @@ function UseConnectorExample() {
         }
     };
 
+    const selectedAccount = account ? String(account) : null;
     const shortAddress = selectedAccount ? `${selectedAccount.slice(0, 4)}...${selectedAccount.slice(-4)}` : '—';
 
     // Combined component render
     const renderCombined = () => {
-        if (connecting) {
+        if (isConnecting) {
             return (
                 <div className="p-4 rounded-lg border bg-card">
                     <div className="flex items-center gap-2">
@@ -99,25 +102,25 @@ function UseConnectorExample() {
             );
         }
 
-        if (connected && selectedAccount && selectedWallet) {
+        if (isConnected && selectedAccount && connector) {
             return (
                 <div className="p-4 rounded-lg border bg-card space-y-3">
                     <div className="flex items-center gap-3">
                         <Avatar className="h-10 w-10">
-                            {selectedWallet.icon && <AvatarImage src={selectedWallet.icon} />}
+                            {connector.icon && <AvatarImage src={connector.icon} />}
                             <AvatarFallback>
                                 <Wallet className="h-5 w-5" />
                             </AvatarFallback>
                         </Avatar>
                         <div className="flex-1">
-                            <p className="font-medium text-sm">{selectedWallet.name}</p>
+                            <p className="font-medium text-sm">{connector.name}</p>
                             <p className="text-xs text-muted-foreground font-mono">{shortAddress}</p>
                         </div>
                         <button onClick={handleCopy} className="p-2 hover:bg-muted rounded-md">
                             {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
                         </button>
                     </div>
-                    <Button variant="destructive" size="sm" className="w-full" onClick={() => disconnect()}>
+                    <Button variant="default" size="sm" className="w-full" onClick={() => void disconnectWallet()}>
                         <LogOut className="h-4 w-4 mr-2" />
                         Disconnect
                     </Button>
@@ -128,24 +131,24 @@ function UseConnectorExample() {
         return (
             <div className="p-4 rounded-lg border bg-card space-y-2">
                 <p className="text-sm text-muted-foreground mb-2">Select a wallet:</p>
-                {wallets
-                    .filter(w => w.installed)
+                {connectors
+                    .filter(c => c.ready)
                     .slice(0, 3)
-                    .map(w => (
+                    .map(c => (
                         <Button
-                            key={w.wallet.name}
+                            key={c.id}
                             variant="outline"
                             size="sm"
                             className="w-full justify-start"
-                            onClick={() => select(w.wallet.name)}
+                            onClick={() => void connectWallet(c.id)}
                         >
                             <Avatar className="h-5 w-5 mr-2">
-                                {w.wallet.icon && <AvatarImage src={w.wallet.icon} />}
+                                {c.icon && <AvatarImage src={c.icon} />}
                                 <AvatarFallback>
                                     <Wallet className="h-3 w-3" />
                                 </AvatarFallback>
                             </Avatar>
-                            {w.wallet.name}
+                            {c.name}
                         </Button>
                     ))}
             </div>
@@ -160,13 +163,14 @@ function UseConnectorExample() {
                     useConnector()
                 </span>
                 <div className="space-y-0.5 pt-1">
-                    <HookReturnValue name="connected" value={String(connected)} />
-                    <HookReturnValue name="connecting" value={String(connecting)} />
-                    <HookReturnValue name="selectedWallet" value={selectedWallet?.name ?? 'null'} />
-                    <HookReturnValue name="selectedAccount" value={shortAddress} />
-                    <HookReturnValue name="wallets" value={`[${wallets.length} items]`} />
-                    <HookReturnValue name="select" value="fn()" />
-                    <HookReturnValue name="disconnect" value="fn()" />
+                    <HookReturnValue name="status" value={status} />
+                    <HookReturnValue name="isConnected" value={String(isConnected)} />
+                    <HookReturnValue name="isConnecting" value={String(isConnecting)} />
+                    <HookReturnValue name="connector" value={connector?.name ?? 'null'} />
+                    <HookReturnValue name="account" value={shortAddress} />
+                    <HookReturnValue name="connectors" value={`[${connectors.length} items]`} />
+                    <HookReturnValue name="connectWallet" value="fn()" />
+                    <HookReturnValue name="disconnectWallet" value="fn()" />
                 </div>
             </div>
 
@@ -226,7 +230,11 @@ function UseBalanceExample() {
                 <div className="p-4 rounded-lg border bg-card">
                     <div className="flex items-center justify-between mb-1">
                         <span className="text-xs text-muted-foreground">SOL Balance</span>
-                        <button onClick={() => refetch()} disabled={isLoading} className="p-1 hover:bg-muted rounded">
+                        <button
+                            onClick={() => void refetch()}
+                            disabled={isLoading}
+                            className="p-1 hover:bg-muted rounded"
+                        >
                             <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} />
                         </button>
                     </div>
@@ -304,7 +312,7 @@ function UseClusterExample() {
                         {clusters.map(c => (
                             <button
                                 key={c.id}
-                                onClick={() => setCluster(c.id)}
+                                onClick={() => void setCluster(c.id)}
                                 className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
                                     cluster?.id === c.id
                                         ? 'bg-sand-100 text-primary-foreground text-sand-1500'
@@ -403,9 +411,23 @@ function UseTokensExample() {
                 <div className="rounded-lg border bg-card">
                     <div className="flex items-center justify-between p-3 border-b">
                         <span className="text-sm font-medium">Tokens</span>
-                        <button onClick={() => refetch()} disabled={isLoading} className="p-1 hover:bg-muted rounded">
-                            <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-                        </button>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => void refetch()}
+                                disabled={isLoading}
+                                className="p-1 hover:bg-muted rounded"
+                            >
+                                <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+                            </button>
+                            <button
+                                type="button"
+                                onClick={abort}
+                                disabled={!isLoading}
+                                className="px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-muted rounded disabled:opacity-50"
+                            >
+                                Abort
+                            </button>
+                        </div>
                     </div>
                     <div className="divide-y max-h-[180px] overflow-y-auto">
                         {isLoading ? (
@@ -548,8 +570,25 @@ function UseTransactionsExample() {
             {/* Right: Combined Component */}
             <div className="flex-1 flex flex-col justify-center">
                 <div className="rounded-lg border bg-card">
-                    <div className="p-3 border-b">
+                    <div className="flex items-center justify-between p-3 border-b">
                         <span className="text-sm font-medium">Transactions</span>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => void refetch()}
+                                disabled={isLoading}
+                                className="p-1 hover:bg-muted rounded"
+                            >
+                                <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+                            </button>
+                            <button
+                                type="button"
+                                onClick={abort}
+                                disabled={!isLoading}
+                                className="px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-muted rounded disabled:opacity-50"
+                            >
+                                Abort
+                            </button>
+                        </div>
                     </div>
                     <div className="divide-y max-h-[180px] overflow-y-auto">
                         {isLoading ? (
@@ -602,6 +641,16 @@ function UseTransactionsExample() {
                             <p className="p-4 text-center text-muted-foreground text-sm">No transactions yet</p>
                         )}
                     </div>
+                    {hasMore && (
+                        <button
+                            type="button"
+                            onClick={() => void loadMore()}
+                            disabled={isLoading}
+                            className="w-full p-2 text-sm text-muted-foreground hover:bg-muted disabled:opacity-50 border-t"
+                        >
+                            {isLoading ? 'Loading...' : 'Load more...'}
+                        </button>
+                    )}
                 </div>
             </div>
         </div>
@@ -612,38 +661,38 @@ const hookExamples: ExampleConfig[] = [
     {
         id: 'use-connector',
         name: 'useConnector',
-        description:
-            'Core hook for wallet connection state. Access connected status, wallets, select/disconnect functions.',
-        code: `import { useConnector } from '@solana/connector';
+        description: 'Unified hook for wallet state, connectors, and actions. Single import, everything you need.',
+        code: `import { useConnector } from '@solana/connector/react';
 
 function WalletStatus() {
-    const { 
-        connected,
-        connecting,
-        selectedWallet,
-        selectedAccount,
-        wallets,
-        select,
-        disconnect 
+    const {
+        walletStatus,
+        isConnected,
+        isConnecting,
+        account,
+        connector,
+        connectors,
+        connectWallet,
+        disconnectWallet,
     } = useConnector();
 
-    if (connecting) return <div>Connecting...</div>;
+    if (isConnecting) return <div>Connecting...</div>;
 
-    if (connected && selectedAccount) {
+    if (isConnected && account && connector) {
         return (
             <div>
-                <p>Connected: {selectedWallet?.name}</p>
-                <p>Address: {selectedAccount}</p>
-                <button onClick={() => disconnect()}>Disconnect</button>
+                <p>Connected: {connector.name}</p>
+                <p>Address: {account}</p>
+                <button onClick={() => void disconnectWallet()}>Disconnect</button>
             </div>
         );
     }
 
     return (
         <div>
-            {wallets.filter(w => w.installed).map(w => (
-                <button key={w.wallet.name} onClick={() => select(w.wallet.name)}>
-                    {w.wallet.name}
+            {connectors.filter(c => c.ready).map(c => (
+                <button key={c.id} onClick={() => void connectWallet(c.id)}>
+                    {c.name}
                 </button>
             ))}
         </div>
@@ -656,7 +705,7 @@ function WalletStatus() {
         id: 'use-balance',
         name: 'useBalance',
         description: 'Fetch SOL balance for connected wallet. Includes loading state and refetch function.',
-        code: `import { useBalance } from '@solana/connector';
+        code: `import { useBalance } from '@solana/connector/react';
 
 function BalanceDisplay() {
     const { solBalance, isLoading, refetch } = useBalance();
@@ -664,7 +713,7 @@ function BalanceDisplay() {
     return (
         <div>
             <span>Balance: {solBalance?.toFixed(4) ?? '--'} SOL</span>
-            <button onClick={() => refetch()} disabled={isLoading}>
+            <button onClick={() => void refetch()} disabled={isLoading}>
                 {isLoading ? 'Loading...' : 'Refresh'}
             </button>
         </div>
@@ -677,7 +726,7 @@ function BalanceDisplay() {
         id: 'use-cluster',
         name: 'useCluster',
         description: 'Manage network/cluster state. Switch between mainnet, devnet, testnet, or custom clusters.',
-        code: `import { useCluster } from '@solana/connector';
+        code: `import { useCluster } from '@solana/connector/react';
 
 function NetworkSelector() {
     const { 
@@ -695,7 +744,7 @@ function NetworkSelector() {
             {clusters.map(c => (
                 <button 
                     key={c.id} 
-                    onClick={() => setCluster(c.id)}
+                    onClick={() => void setCluster(c.id)}
                     style={{ fontWeight: cluster?.id === c.id ? 'bold' : 'normal' }}
                 >
                     {c.label}
@@ -712,7 +761,7 @@ function NetworkSelector() {
         name: 'useTokens',
         description:
             'Fetch token holdings with Solana Token List metadata and optional CoinGecko pricing. Includes caching + refresh.',
-        code: `import { useTokens } from '@solana/connector';
+        code: `import { useTokens } from '@solana/connector/react';
 
 function TokenList() {
     const { tokens, isLoading, error, refetch, totalAccounts } = useTokens({
@@ -731,7 +780,7 @@ function TokenList() {
                     <span>{token.symbol ?? token.mint}: {token.formatted}</span>
                 </div>
             ))}
-            <button onClick={() => refetch()}>Refresh</button>
+            <button onClick={() => void refetch()}>Refresh</button>
             <div>Total token accounts: {totalAccounts}</div>
         </div>
     );
@@ -743,7 +792,7 @@ function TokenList() {
         id: 'use-transactions',
         name: 'useTransactions',
         description: 'Fetch transaction history with parsed metadata. Includes type detection and explorer URLs.',
-        code: `import { useTransactions } from '@solana/connector';
+        code: `import { useTransactions } from '@solana/connector/react';
 
 function TransactionHistory() {
     const { 
@@ -770,8 +819,8 @@ function TransactionHistory() {
                     <span>{tx.formattedTime}</span>
                 </a>
             ))}
-            {hasMore && <button onClick={loadMore}>Load More</button>}
-            <button onClick={() => refetch()}>Refresh</button>
+            {hasMore && <button onClick={() => void loadMore()}>Load More</button>}
+            <button onClick={() => void refetch()}>Refresh</button>
         </div>
     );
 }`,

@@ -12,91 +12,248 @@ import { ExampleCard, type ExampleConfig } from './example-card';
 const transactionExamples: ExampleConfig[] = [
     {
         id: 'legacy-sol-transfer',
-        name: 'Legacy SOL Transfer',
-        description:
-            'Transfer SOL using @solana/web3.js v1 with the wallet adapter compatibility layer. Shows how ConnectorKit integrates with existing legacy codebases.',
-        code: `import { Connection, Transaction, SystemProgram, PublicKey, LAMPORTS_PER_SOL } from '@solana/web3.js';
+        name: 'Legacy Self Transfer',
+        description: 'Self-transfer 1 lamport using @solana/web3.js v1 with the wallet adapter compatibility layer.',
+        fileName: 'components/transactions/legacy-sol-transfer.tsx',
+        code: `'use client';
+
+import { useCallback, useMemo } from 'react';
+import { Connection, Transaction, SystemProgram, PublicKey } from '@solana/web3.js';
+import { signature as createSignature, address } from '@solana/kit';
 import { useWalletAdapterCompat } from '@solana/connector/compat';
 import { useTransactionSigner, useConnector, useCluster, useConnectorClient } from '@solana/connector';
+import { PipelineHeaderButton, PipelineVisualization } from '@/components/pipeline';
+import { VisualPipeline } from '@/lib/visual-pipeline';
+import { waitForSignatureConfirmation } from './rpc-utils';
+import { useExampleCardHeaderActions } from '@/components/playground/example-card-actions';
 
-function LegacySolTransfer() {
+export function LegacySolTransfer() {
     const { signer } = useTransactionSigner();
-    const { disconnect } = useConnector();
+    const { disconnectWallet } = useConnector();
     const { cluster } = useCluster();
     const client = useConnectorClient();
 
     // Create wallet adapter compatible interface
-    const walletAdapter = useWalletAdapterCompat(signer, disconnect);
+    const walletAdapter = useWalletAdapterCompat(signer, disconnectWallet);
 
-    async function handleTransfer(recipient: string, amount: number) {
+    const visualPipeline = useMemo(
+        () =>
+            new VisualPipeline('legacy-self-transfer', [
+                { name: 'Build transaction', type: 'instruction' },
+                { name: 'Self transfer', type: 'transaction' },
+            ]),
+        [],
+    );
+
+    const getExplorerUrl = useCallback(
+        (sig: string) => {
+            const clusterSlug = cluster?.id?.replace('solana:', '');
+            if (!clusterSlug || clusterSlug === 'mainnet' || clusterSlug === 'mainnet-beta') {
+                return 'https://explorer.solana.com/tx/' + sig;
+            }
+            return 'https://explorer.solana.com/tx/' + sig + '?cluster=' + clusterSlug;
+        },
+        [cluster?.id],
+    );
+
+    const executeSelfTransfer = useCallback(async () => {
+        if (!signer || !client) return;
+        const walletPublicKey = walletAdapter.publicKey;
+        if (!walletPublicKey) return;
+
         const rpcUrl = client.getRpcUrl();
+        if (!rpcUrl) throw new Error('No RPC endpoint configured');
+
         const connection = new Connection(rpcUrl, 'confirmed');
-        
-        const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
 
-        const transaction = new Transaction({
-            feePayer: new PublicKey(walletAdapter.publicKey),
-            blockhash,
-            lastValidBlockHeight,
-        }).add(
-            SystemProgram.transfer({
-                fromPubkey: new PublicKey(walletAdapter.publicKey),
-                toPubkey: new PublicKey(recipient),
-                lamports: amount * LAMPORTS_PER_SOL,
-            })
-        );
+        let sig: string | null = null;
+        let typedSignature: ReturnType<typeof createSignature> | null = null;
 
-        const signature = await walletAdapter.sendTransaction(transaction, connection);
-        await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight });
-    }
+        await visualPipeline.execute(async () => {
+            visualPipeline.setStepState('Build transaction', { type: 'building' });
+            visualPipeline.setStepState('Self transfer', { type: 'building' });
 
-    return <TransactionForm onSubmit={handleTransfer} disabled={!walletAdapter.connected} />;
+            const senderPubkey = new PublicKey(walletPublicKey);
+            const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
+
+            const transaction = new Transaction({
+                feePayer: senderPubkey,
+                blockhash,
+                lastValidBlockHeight,
+            }).add(
+                SystemProgram.transfer({
+                    fromPubkey: senderPubkey,
+                    toPubkey: senderPubkey,
+                    lamports: 1,
+                }),
+            );
+
+            visualPipeline.setStepState('Self transfer', { type: 'signing' });
+
+            sig = await walletAdapter.sendTransaction(transaction, connection);
+            typedSignature = createSignature(sig);
+
+            client.trackTransaction({
+                signature: typedSignature,
+                status: 'pending',
+                method: 'sendTransaction',
+                feePayer: address(walletPublicKey.toString()),
+            });
+
+            visualPipeline.setStepState('Build transaction', { type: 'confirmed', signature: sig, cost: 0 });
+            visualPipeline.setStepState('Self transfer', { type: 'sending' });
+
+            await waitForSignatureConfirmation({
+                signature: sig,
+                commitment: 'confirmed',
+                getSignatureStatuses: async signature =>
+                    await connection.getSignatureStatuses([signature], { searchTransactionHistory: true }),
+            });
+
+            visualPipeline.setStepState('Self transfer', { type: 'confirmed', signature: sig, cost: 0.000005 });
+            client.updateTransactionStatus(typedSignature, 'confirmed');
+        });
+    }, [client, signer, visualPipeline, walletAdapter]);
+
+    useExampleCardHeaderActions(
+        <PipelineHeaderButton
+            visualPipeline={visualPipeline}
+            disabled={!walletAdapter.connected || !client}
+            onExecute={executeSelfTransfer}
+        />,
+    );
+
+    return (
+        <PipelineVisualization visualPipeline={visualPipeline} strategy="sequential" getExplorerUrl={getExplorerUrl} />
+    );
 }`,
         render: () => <LegacySolTransfer />,
     },
     {
         id: 'modern-sol-transfer',
-        name: 'Modern SOL Transfer',
-        description:
-            'Transfer SOL using @solana/kit (web3.js 2.0) with the modern pipe-based transaction builder. Type-safe and fully compatible with Kit signers.',
-        code: `import { 
-    address, createSolanaRpc, pipe, createTransactionMessage,
-    setTransactionMessageFeePayerSigner, setTransactionMessageLifetimeUsingBlockhash,
-    appendTransactionMessageInstructions, signTransactionMessageWithSigners,
-    sendAndConfirmTransactionFactory, getSignatureFromTransaction, lamports
+        name: 'Modern Self Transfer',
+        description: 'Self-transfer 1 lamport using @solana/kit with a kit-compatible signer.',
+        fileName: 'components/transactions/modern-sol-transfer.tsx',
+        code: `'use client';
+
+import { useCallback, useMemo } from 'react';
+import {
+    createSolanaRpc,
+    pipe,
+    createTransactionMessage,
+    setTransactionMessageFeePayerSigner,
+    setTransactionMessageLifetimeUsingBlockhash,
+    appendTransactionMessageInstructions,
+    sendAndConfirmTransactionFactory,
+    signTransactionMessageWithSigners,
+    createSolanaRpcSubscriptions,
+    lamports,
+    assertIsTransactionWithBlockhashLifetime,
+    signature as createSignature,
+    type TransactionSigner,
 } from '@solana/kit';
 import { getTransferSolInstruction } from '@solana-program/system';
-import { useKitTransactionSigner, useCluster, useConnectorClient, LAMPORTS_PER_SOL } from '@solana/connector';
+import { useKitTransactionSigner, useCluster, useConnectorClient } from '@solana/connector';
+import { PipelineHeaderButton, PipelineVisualization } from '@/components/pipeline';
+import { VisualPipeline } from '@/lib/visual-pipeline';
+import { useExampleCardHeaderActions } from '@/components/playground/example-card-actions';
+import {
+    getBase58SignatureFromSignedTransaction,
+    getBase64EncodedWireTransaction,
+    getWebSocketUrlForRpcUrl,
+    isRpcProxyUrl,
+    waitForSignatureConfirmation,
+} from './rpc-utils';
 
-function ModernSolTransfer() {
+export function ModernSolTransfer() {
     const { signer, ready } = useKitTransactionSigner();
     const { cluster } = useCluster();
     const client = useConnectorClient();
 
-    async function handleTransfer(recipient: string, amount: number) {
-        const rpc = createSolanaRpc(client.getRpcUrl());
-        const rpcSubscriptions = createSolanaRpcSubscriptions(client.getRpcUrl().replace('http', 'ws'));
-        
-        const { value: latestBlockhash } = await rpc.getLatestBlockhash().send();
-        
-        const transferInstruction = getTransferSolInstruction({
-            source: signer,
-            destination: address(recipient),
-            amount: lamports(BigInt(amount * Number(LAMPORTS_PER_SOL))),
+    const visualPipeline = useMemo(
+        () =>
+            new VisualPipeline('modern-self-transfer', [
+                { name: 'Build instruction', type: 'instruction' },
+                { name: 'Self transfer', type: 'transaction' },
+            ]),
+        [],
+    );
+
+    const getExplorerUrl = useCallback(
+        (sig: string) => {
+            const clusterSlug = cluster?.id?.replace('solana:', '');
+            if (!clusterSlug || clusterSlug === 'mainnet' || clusterSlug === 'mainnet-beta') {
+                return 'https://explorer.solana.com/tx/' + sig;
+            }
+            return 'https://explorer.solana.com/tx/' + sig + '?cluster=' + clusterSlug;
+        },
+        [cluster?.id],
+    );
+
+    const executeSelfTransfer = useCallback(async () => {
+        if (!signer || !client) return;
+
+        const rpcUrl = client.getRpcUrl();
+        if (!rpcUrl) throw new Error('No RPC endpoint configured');
+        const rpc = createSolanaRpc(rpcUrl);
+
+        let signatureBase58: string | null = null;
+
+        await visualPipeline.execute(async () => {
+            visualPipeline.setStepState('Build instruction', { type: 'building' });
+            visualPipeline.setStepState('Self transfer', { type: 'building' });
+
+            const { value: latestBlockhash } = await rpc.getLatestBlockhash().send();
+            const transferInstruction = getTransferSolInstruction({
+                source: signer as TransactionSigner,
+                destination: signer.address,
+                amount: lamports(1n),
+            });
+
+            const transactionMessage = pipe(
+                createTransactionMessage({ version: 0 }),
+                tx => setTransactionMessageFeePayerSigner(signer, tx),
+                tx => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
+                tx => appendTransactionMessageInstructions([transferInstruction], tx),
+            );
+
+            visualPipeline.setStepState('Self transfer', { type: 'signing' });
+
+            const signedTransaction = await signTransactionMessageWithSigners(transactionMessage);
+            signatureBase58 = getBase58SignatureFromSignedTransaction(signedTransaction);
+
+            visualPipeline.setStepState('Build instruction', { type: 'confirmed', signature: signatureBase58, cost: 0 });
+            visualPipeline.setStepState('Self transfer', { type: 'sending' });
+
+            assertIsTransactionWithBlockhashLifetime(signedTransaction);
+
+            if (isRpcProxyUrl(rpcUrl)) {
+                const encodedTransaction = getBase64EncodedWireTransaction(signedTransaction);
+                await rpc.sendTransaction(encodedTransaction, { encoding: 'base64' }).send();
+                await waitForSignatureConfirmation({
+                    signature: signatureBase58,
+                    commitment: 'confirmed',
+                    getSignatureStatuses: async sig =>
+                        await rpc.getSignatureStatuses([createSignature(sig)]).send(),
+                });
+            } else {
+                const rpcSubscriptions = createSolanaRpcSubscriptions(getWebSocketUrlForRpcUrl(rpcUrl));
+                await sendAndConfirmTransactionFactory({ rpc, rpcSubscriptions })(signedTransaction, {
+                    commitment: 'confirmed',
+                });
+            }
+
+            visualPipeline.setStepState('Self transfer', { type: 'confirmed', signature: signatureBase58, cost: 0.000005 });
         });
+    }, [client, signer, visualPipeline]);
 
-        const transactionMessage = pipe(
-            createTransactionMessage({ version: 0 }),
-            tx => setTransactionMessageFeePayerSigner(signer, tx),
-            tx => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
-            tx => appendTransactionMessageInstructions([transferInstruction], tx),
-        );
+    useExampleCardHeaderActions(
+        <PipelineHeaderButton visualPipeline={visualPipeline} disabled={!ready || !client} onExecute={executeSelfTransfer} />,
+    );
 
-        const signedTx = await signTransactionMessageWithSigners(transactionMessage);
-        await sendAndConfirmTransactionFactory({ rpc, rpcSubscriptions })(signedTx, { commitment: 'confirmed' });
-    }
-
-    return <TransactionForm onSubmit={handleTransfer} disabled={!ready} />;
+    return (
+        <PipelineVisualization visualPipeline={visualPipeline} strategy="sequential" getExplorerUrl={getExplorerUrl} />
+    );
 }`,
         render: () => <ModernSolTransfer />,
     },
@@ -110,20 +267,33 @@ function ModernSolTransfer() {
     createMessageSignerFromWallet, 
     createSignableMessage 
 } from '@solana/connector/headless';
-import { useConnector, useConnectorClient } from '@solana/connector';
+import { useConnector, useCluster, useConnectorClient } from '@solana/connector';
+import { Connection } from '@solana/web3.js';
+import { useMemo } from 'react';
 
 function KitSignerDemo() {
-    const { selectedWallet, accounts, selectedAccount, cluster } = useConnector();
+    const { walletStatus, connectorId } = useConnector();
+    const { cluster } = useCluster();
     const client = useConnectorClient();
     
-    const account = accounts.find(acc => acc.address === selectedAccount)?.raw;
+    // Get the active connector instance (Wallet Standard)
+    const wallet = useMemo(() => {
+        if (!client || !connectorId) return null;
+        return client.getConnector(connectorId);
+    }, [client, connectorId]);
+
+    // Wallet Standard account (only available when connected)
+    const account = walletStatus.status === 'connected'
+        ? walletStatus.session.selectedAccount.account
+        : null;
 
     // Create Kit-compatible signers from wallet
     const kitSigners = useMemo(() => {
-        if (!selectedWallet || !account || !cluster) return null;
-        const connection = new Connection(client.getRpcUrl());
-        return createKitSignersFromWallet(selectedWallet, account, connection);
-    }, [selectedWallet, account, cluster, client]);
+        if (!wallet || !account || !cluster || !client) return null;
+        const rpcUrl = client.getRpcUrl();
+        const connection = rpcUrl ? new Connection(rpcUrl) : null;
+        return createKitSignersFromWallet(wallet, account, connection, undefined);
+    }, [wallet, account, cluster, client]);
 
     async function signMessage(message: string) {
         if (!kitSigners?.messageSigner) return;

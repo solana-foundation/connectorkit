@@ -2,19 +2,40 @@
 
 import React from 'react';
 import type { ReactNode } from 'react';
-import { useWalletInfo, type WalletDisplayInfo } from '../../hooks/use-wallet-info';
-import { useConnector } from '../../ui/connector-provider';
+import { useConnectWallet } from '../../hooks/use-connect-wallet';
+import { useWallet } from '../../hooks/use-wallet';
+import { useWalletConnectors } from '../../hooks/use-wallet-connectors';
+import type { WalletConnectorId } from '../../types/session';
+
+export interface WalletDisplayInfo {
+    /** Wallet name */
+    name: string;
+    /** Stable connector ID for vNext API */
+    connectorId: WalletConnectorId;
+    /** Wallet icon/logo URL if available */
+    icon?: string;
+    /** Whether the wallet is connectable/ready */
+    installed: boolean;
+    /** Whether the wallet supports Solana connections */
+    connectable?: boolean;
+}
 
 export interface WalletListElementRenderProps {
     wallets: WalletDisplayInfo[];
     installedWallets: WalletDisplayInfo[];
+    /** @deprecated Use `connectById` for vNext API */
     select: (walletName: string) => Promise<void>;
+    /** Connect by connector ID (vNext API) */
+    connectById: (connectorId: WalletConnectorId) => Promise<void>;
     connecting: boolean;
 }
 
 export interface WalletListElementWalletProps {
     wallet: WalletDisplayInfo;
+    /** @deprecated Use `connect` for clearer naming */
     select: () => Promise<void>;
+    /** Connect to this wallet (vNext API) */
+    connect: () => Promise<void>;
     connecting: boolean;
 }
 
@@ -27,8 +48,10 @@ export interface WalletListElementProps {
     variant?: 'list' | 'grid' | 'compact';
     /** Show wallet status badge */
     showStatus?: boolean;
-    /** Callback when a wallet is selected */
+    /** @deprecated Use `onConnect` for vNext API */
     onSelect?: (walletName: string) => void;
+    /** Callback when a wallet is connected (vNext API) */
+    onConnect?: (connectorId: WalletConnectorId) => void;
     /** Custom render function for full control */
     render?: (props: WalletListElementRenderProps) => ReactNode;
     /** Custom render function for individual wallet items */
@@ -87,23 +110,67 @@ export function WalletListElement({
     variant = 'list',
     showStatus = true,
     onSelect,
+    onConnect,
     render,
     renderWallet,
 }: WalletListElementProps) {
-    const { wallets, connecting } = useWalletInfo();
-    const { select } = useConnector();
+    const connectors = useWalletConnectors();
+    const { isConnecting: isConnectingGlobal } = useWallet();
+    const { connect, isConnecting: isConnectingLocal } = useConnectWallet();
+
+    const connecting = isConnectingGlobal || isConnectingLocal;
+
+    const wallets = React.useMemo<WalletDisplayInfo[]>(
+        () =>
+            connectors.map(c => ({
+                name: c.name,
+                connectorId: c.id,
+                icon: c.icon || undefined,
+                installed: c.ready,
+                connectable: c.ready,
+            })),
+        [connectors],
+    );
 
     const installedWallets = wallets.filter(w => w.installed);
     const displayWallets = installedOnly ? installedWallets : wallets;
 
+    // Legacy select by name
     const handleSelect = async (walletName: string) => {
-        await select(walletName);
+        const wallet = wallets.find(w => w.name === walletName);
+        if (!wallet) {
+            const availableWalletNames = wallets.map(w => w.name);
+            console.warn(
+                `[WalletListElement] Wallet not found for walletName: ${walletName}. Available wallets (${availableWalletNames.length}):`,
+                availableWalletNames,
+            );
+            return;
+        }
+
+        await connect(wallet.connectorId);
         onSelect?.(walletName);
+        onConnect?.(wallet.connectorId);
+    };
+
+    // vNext connect by connector ID
+    const handleConnectById = async (connectorId: WalletConnectorId) => {
+        await connect(connectorId);
+        onConnect?.(connectorId);
     };
 
     // Full custom render
     if (render) {
-        return <>{render({ wallets, installedWallets, select: handleSelect, connecting })}</>;
+        return (
+            <>
+                {render({
+                    wallets,
+                    installedWallets,
+                    select: handleSelect,
+                    connectById: handleConnectById,
+                    connecting,
+                })}
+            </>
+        );
     }
 
     if (displayWallets.length === 0) {
@@ -167,12 +234,14 @@ export function WalletListElement({
                 data-variant="grid"
             >
                 {displayWallets.map(wallet => {
+                    const handleWalletConnect = () => handleConnectById(wallet.connectorId);
                     if (renderWallet) {
                         return (
                             <React.Fragment key={wallet.name}>
                                 {renderWallet({
                                     wallet,
-                                    select: () => handleSelect(wallet.name),
+                                    select: handleWalletConnect,
+                                    connect: handleWalletConnect,
                                     connecting,
                                 })}
                             </React.Fragment>
@@ -184,10 +253,11 @@ export function WalletListElement({
                             key={wallet.name}
                             type="button"
                             className="ck-wallet-list-item ck-wallet-list-item--grid"
-                            onClick={() => handleSelect(wallet.name)}
-                            disabled={connecting || (!wallet.installed && installedOnly)}
+                            onClick={handleWalletConnect}
+                            disabled={connecting || !wallet.connectable}
                             data-slot="wallet-list-item"
                             data-wallet={wallet.name}
+                            data-connector-id={wallet.connectorId}
                             data-installed={wallet.installed}
                         >
                             <div className="ck-wallet-list-item-icon" data-slot="wallet-list-item-icon">
@@ -217,12 +287,14 @@ export function WalletListElement({
                 data-variant="compact"
             >
                 {displayWallets.map(wallet => {
+                    const handleWalletConnect = () => handleConnectById(wallet.connectorId);
                     if (renderWallet) {
                         return (
                             <React.Fragment key={wallet.name}>
                                 {renderWallet({
                                     wallet,
-                                    select: () => handleSelect(wallet.name),
+                                    select: handleWalletConnect,
+                                    connect: handleWalletConnect,
                                     connecting,
                                 })}
                             </React.Fragment>
@@ -234,10 +306,11 @@ export function WalletListElement({
                             key={wallet.name}
                             type="button"
                             className="ck-wallet-list-item ck-wallet-list-item--compact"
-                            onClick={() => handleSelect(wallet.name)}
-                            disabled={connecting || (!wallet.installed && installedOnly)}
+                            onClick={handleWalletConnect}
+                            disabled={connecting || !wallet.connectable}
                             data-slot="wallet-list-item"
                             data-wallet={wallet.name}
+                            data-connector-id={wallet.connectorId}
                             data-installed={wallet.installed}
                         >
                             <div className="ck-wallet-list-item-icon" data-slot="wallet-list-item-icon">
@@ -261,12 +334,14 @@ export function WalletListElement({
             data-variant="list"
         >
             {displayWallets.map(wallet => {
+                const handleWalletConnect = () => handleConnectById(wallet.connectorId);
                 if (renderWallet) {
                     return (
                         <React.Fragment key={wallet.name}>
                             {renderWallet({
                                 wallet,
-                                select: () => handleSelect(wallet.name),
+                                select: handleWalletConnect,
+                                connect: handleWalletConnect,
                                 connecting,
                             })}
                         </React.Fragment>
@@ -278,10 +353,11 @@ export function WalletListElement({
                         key={wallet.name}
                         type="button"
                         className="ck-wallet-list-item ck-wallet-list-item--list"
-                        onClick={() => handleSelect(wallet.name)}
-                        disabled={connecting || (!wallet.installed && installedOnly)}
+                        onClick={handleWalletConnect}
+                        disabled={connecting || !wallet.connectable}
                         data-slot="wallet-list-item"
                         data-wallet={wallet.name}
+                        data-connector-id={wallet.connectorId}
                         data-installed={wallet.installed}
                     >
                         <div className="ck-wallet-list-item-icon" data-slot="wallet-list-item-icon">

@@ -2,8 +2,10 @@
 
 import React from 'react';
 import type { ReactNode } from 'react';
-import { useAccount } from '../../hooks/use-account';
-import { useWalletInfo } from '../../hooks/use-wallet-info';
+import { useWallet } from '../../hooks/use-wallet';
+import { useWalletConnectors } from '../../hooks/use-wallet-connectors';
+import { copyAddressToClipboard, formatAddress } from '../../utils';
+import { COPY_FEEDBACK_DURATION_MS } from '../../lib/constants';
 
 export interface AccountElementRenderProps {
     address: string | null;
@@ -67,8 +69,51 @@ export function AccountElement({
     variant = 'compact',
     render,
 }: AccountElementProps) {
-    const { address, formatted, copy, copied } = useAccount();
-    const { name: walletName, icon: walletIcon } = useWalletInfo();
+    const { account, connectorId } = useWallet();
+    const connectors = useWalletConnectors();
+
+    const address = React.useMemo(() => (account ? String(account) : null), [account]);
+    const formatted = React.useMemo(() => (address ? formatAddress(address) : ''), [address]);
+
+    const connector = React.useMemo(() => {
+        if (!connectorId) return null;
+        return connectors.find(c => c.id === connectorId) ?? null;
+    }, [connectors, connectorId]);
+
+    const walletName = connector?.name ?? null;
+    const walletIcon = connector?.icon ? connector.icon : null;
+
+    const [copied, setCopied] = React.useState(false);
+    const copyTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+    const copy = React.useCallback(async () => {
+        if (!address) {
+            return {
+                success: false,
+            };
+        }
+
+        if (copyTimeoutRef.current) {
+            clearTimeout(copyTimeoutRef.current);
+        }
+
+        const result = await copyAddressToClipboard(address, {
+            onSuccess: () => {
+                setCopied(true);
+                copyTimeoutRef.current = setTimeout(() => setCopied(false), COPY_FEEDBACK_DURATION_MS);
+            },
+        });
+
+        return result;
+    }, [address]);
+
+    React.useEffect(() => {
+        return () => {
+            if (copyTimeoutRef.current) {
+                clearTimeout(copyTimeoutRef.current);
+            }
+        };
+    }, []);
 
     // Custom render
     if (render) {

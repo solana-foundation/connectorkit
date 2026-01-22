@@ -11,8 +11,73 @@ import { prepareTransactionForWallet, convertSignedTransaction } from '../../uti
 import { TransactionValidator } from './transaction-validator';
 import { createLogger } from '../utils/secure-logger';
 import { TransactionError, ValidationError, Errors } from '../errors';
+import { getBase58Decoder } from '@solana/codecs';
 
 const logger = createLogger('TransactionSigner');
+
+function signatureBytesToBase58(bytes: Uint8Array): string {
+    if (bytes.length !== 64) {
+        throw new Error(`Invalid signature length: expected 64 bytes, got ${bytes.length}`);
+    }
+    return getBase58Decoder().decode(bytes);
+}
+
+function extractSignatureString(result: unknown): string {
+    if (typeof result === 'string') {
+        return result;
+    }
+
+    if (result instanceof Uint8Array) {
+        return signatureBytesToBase58(result);
+    }
+
+    if (Array.isArray(result) && result.length > 0) {
+        // Wallet Standard typically returns an array of outputs, e.g. [{ signature: Uint8Array }]
+        return extractSignatureString(result[0]);
+    }
+
+    if (result && typeof result === 'object') {
+        const record = result as Record<string, unknown>;
+
+        if ('signature' in record) {
+            return extractSignatureString(record.signature);
+        }
+
+        if (Array.isArray(record.signatures) && record.signatures.length > 0) {
+            return extractSignatureString(record.signatures[0]);
+        }
+    }
+
+    throw new Error('Unexpected wallet response format for signAndSendTransaction');
+}
+
+function extractSignatureBytes(result: unknown): Uint8Array {
+    if (result instanceof Uint8Array) {
+        return result;
+    }
+
+    if (Array.isArray(result)) {
+        const [first] = result;
+        if (!first) {
+            throw new Error('Wallet returned empty results array');
+        }
+        return extractSignatureBytes(first);
+    }
+
+    if (result && typeof result === 'object') {
+        const record = result as Record<string, unknown>;
+
+        if ('signature' in record) {
+            return extractSignatureBytes(record.signature);
+        }
+
+        if (Array.isArray(record.signatures) && record.signatures.length > 0) {
+            return extractSignatureBytes(record.signatures[0]);
+        }
+    }
+
+    throw new Error('Unexpected wallet response format for signMessage');
+}
 
 export interface TransactionSigner {
     /** The wallet address that will sign transactions */
@@ -181,14 +246,33 @@ export function createTransactionSigner(config: TransactionSignerConfig): Transa
                     const serializedTxs = prepared.map(p => p.serialized);
                     const wasWeb3js = prepared[0].wasWeb3js;
 
+                    type SignAllResult =
+                        | { signedTransaction: Uint8Array }[] // Wallet Standard format
+                        | { signedTransactions: Uint8Array[] }; // Legacy format
+
                     const result = (await signFeature.signAllTransactions({
                         account,
                         transactions: serializedTxs,
                         ...(cluster ? { chain: cluster.id } : {}),
-                    })) as { signedTransactions: Uint8Array[] };
+                    })) as SignAllResult;
+
+                    // Handle both Wallet Standard formats:
+                    // 1. Array of { signedTransaction: Uint8Array } (standard format)
+                    // 2. Legacy { signedTransactions: Uint8Array[] } format
+                    let signedBytesArray: Uint8Array[];
+
+                    if (Array.isArray(result)) {
+                        // Standard format: [{ signedTransaction: Uint8Array }, ...]
+                        signedBytesArray = result.map(item => item.signedTransaction);
+                    } else if ('signedTransactions' in result) {
+                        // Legacy format: { signedTransactions: Uint8Array[] }
+                        signedBytesArray = result.signedTransactions;
+                    } else {
+                        throw new Error('Unexpected signAllTransactions response format');
+                    }
 
                     return await Promise.all(
-                        result.signedTransactions.map((signedBytes: Uint8Array) =>
+                        signedBytesArray.map((signedBytes: Uint8Array) =>
                             convertSignedTransaction(signedBytes, wasWeb3js),
                         ),
                     );
@@ -273,7 +357,7 @@ export function createTransactionSigner(config: TransactionSignerConfig): Transa
                     })) as { signature?: string } | string;
                 }
 
-                const signature = typeof result === 'object' && result.signature ? result.signature : String(result);
+                const signature = extractSignatureString(result);
 
                 if (eventEmitter) {
                     eventEmitter.emit({
@@ -324,12 +408,12 @@ export function createTransactionSigner(config: TransactionSignerConfig): Transa
             async signMessage(message: Uint8Array): Promise<Uint8Array> {
                 try {
                     const signFeature = features['solana:signMessage'];
-                    const result = (await signFeature.signMessage({
+                    const result = await signFeature.signMessage({
                         account,
                         message,
                         ...(cluster ? { chain: cluster.id } : {}),
-                    })) as { signature: Uint8Array };
-                    return result.signature;
+                    });
+                    return extractSignatureBytes(result);
                 } catch (error) {
                     throw new TransactionError('SIGNING_FAILED', 'Failed to sign message', undefined, error as Error);
                 }

@@ -6,10 +6,21 @@ vi.mock('../lib/utils/secure-logger', () => ({
     createLogger: vi.fn(() => ({ error: vi.fn(), warn: vi.fn() })),
 }));
 
-// Mock error utilities
+// Mock error utilities - include WalletErrorType to avoid import errors
 vi.mock('../lib/errors', () => ({
     isConnectorError: vi.fn(() => false),
     getUserFriendlyMessage: vi.fn(error => error.message),
+    WalletErrorType: {
+        CONNECTION_FAILED: 'CONNECTION_FAILED',
+        TRANSACTION_FAILED: 'TRANSACTION_FAILED',
+        NETWORK_ERROR: 'NETWORK_ERROR',
+        WALLET_NOT_FOUND: 'WALLET_NOT_FOUND',
+        USER_REJECTED: 'USER_REJECTED',
+        INSUFFICIENT_FUNDS: 'INSUFFICIENT_FUNDS',
+        UNKNOWN_ERROR: 'UNKNOWN_ERROR',
+    },
+    isWalletError: vi.fn(() => false),
+    createWalletError: vi.fn(),
 }));
 
 describe('Error Boundary', () => {

@@ -8,6 +8,8 @@ import type { WalletInfo } from './wallets';
 import type { AccountInfo } from './accounts';
 import type { Wallet } from './wallets';
 import type { Address } from '@solana/addresses';
+import type { WalletConnectConfig } from './walletconnect';
+import type { WalletStatus, WalletConnectorMetadata } from './session';
 
 /**
  * CoinGecko API configuration for price fetching.
@@ -60,12 +62,68 @@ export interface CoinGeckoConfig {
  * Core connector state
  */
 export interface ConnectorState {
+    // ========================================================================
+    // vNext: Wallet Status State Machine
+    // ========================================================================
+
+    /**
+     * Wallet connection status using state machine pattern.
+     * This is the primary way to check wallet state in vNext.
+     *
+     * @example
+     * ```ts
+     * if (state.wallet.status === 'connected') {
+     *   console.log(state.wallet.session.selectedAccount.address);
+     * }
+     * ```
+     */
+    wallet: WalletStatus;
+
+    /**
+     * Available wallet connectors with metadata (serializable).
+     * Use ConnectorClient methods to actually connect.
+     */
+    connectors: WalletConnectorMetadata[];
+
+    // ========================================================================
+    // Legacy Fields (kept for backwards compatibility)
+    // These are derived from `wallet` status - will be removed in future version
+    // ========================================================================
+
+    /**
+     * @deprecated Use `state.connectors` instead. This includes legacy WalletInfo.
+     */
     wallets: WalletInfo[];
+
+    /**
+     * @deprecated Use `state.wallet.status === 'connected' && state.wallet.session` instead.
+     */
     selectedWallet: Wallet | null;
+
+    /**
+     * @deprecated Use `state.wallet.status === 'connected'` instead.
+     */
     connected: boolean;
+
+    /**
+     * @deprecated Use `state.wallet.status === 'connecting'` instead.
+     */
     connecting: boolean;
+
+    /**
+     * @deprecated Use `state.wallet.status === 'connected' && state.wallet.session.accounts` instead.
+     */
     accounts: AccountInfo[];
+
+    /**
+     * @deprecated Use `state.wallet.status === 'connected' && state.wallet.session.selectedAccount.address` instead.
+     */
     selectedAccount: Address | null;
+
+    // ========================================================================
+    // Cluster State (unchanged)
+    // ========================================================================
+
     cluster: SolanaCluster | null;
     clusters: SolanaCluster[];
 }
@@ -78,9 +136,40 @@ export type Listener = (s: ConnectorState) => void;
 /**
  * Connector configuration options
  */
+export interface WalletDisplayConfig {
+    /**
+     * Explicit allowlist of wallet display names to expose as connectors.
+     *
+     * - Matching is case-insensitive and uses exact name equality (after trimming).
+     * - When provided and non-empty, only wallets in this list are shown/available.
+     */
+    allowList?: string[];
+
+    /**
+     * Denylist of wallet display names to hide/remove.
+     *
+     * - Matching is case-insensitive and uses exact name equality (after trimming).
+     * - Deny wins over allow/featured when the same wallet appears in multiple lists.
+     */
+    denyList?: string[];
+
+    /**
+     * Wallets to prioritize to the top of the list (in the provided order).
+     *
+     * - Matching is case-insensitive and uses exact name equality (after trimming).
+     * - Does not filter wallets by itself; it only reorders remaining wallets.
+     */
+    featured?: string[];
+}
+
 export interface ConnectorConfig {
     autoConnect?: boolean;
     debug?: boolean;
+    /**
+     * Wallet list controls for Wallet Standard auto-discovery.
+     * This affects which detected wallets are exposed as connectors (and therefore selectable / autoConnect-able).
+     */
+    wallets?: WalletDisplayConfig;
     /** Storage configuration using enhanced storage adapters */
     storage?: {
         account: StorageAdapter<string | undefined>;
@@ -115,6 +204,19 @@ export interface ConnectorConfig {
      * Configure API key for higher rate limits and retry behavior for 429 responses.
      */
     coingecko?: CoinGeckoConfig;
+
+    /**
+     * WalletConnect configuration for connecting via QR code / deep link.
+     * When enabled, a "WalletConnect" wallet is registered in the Wallet Standard registry.
+     * @see https://docs.walletconnect.network/wallet-sdk/chain-support/solana
+     */
+    walletConnect?: WalletConnectConfig;
+
+    /**
+     * Additional wallets to include alongside Wallet Standard wallets.
+     * Use this to add remote/server-backed signers created via `createRemoteSignerWallet()`.
+     */
+    additionalWallets?: Wallet[];
 }
 
 /**

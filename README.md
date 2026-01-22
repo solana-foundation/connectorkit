@@ -42,24 +42,29 @@ function App() {
 ```
 
 ```typescript
-import { useConnector, useAccount } from '@solana/connector';
+import { useConnector } from '@solana/connector/react';
 
 function WalletButton() {
-  const { wallets, select, disconnect, connected } = useConnector();
-  const { formatted, copy } = useAccount();
+  const { connectors, connectWallet, disconnectWallet, isConnected, isConnecting, account } = useConnector();
 
-  if (!connected) {
-    return wallets.map(w => (
-      <button key={w.wallet.name} onClick={() => select(w.wallet.name)}>
-        Connect {w.wallet.name}
+  if (!isConnected) {
+    return connectors.map(connector => (
+      <button
+        key={connector.id}
+        onClick={() => connectWallet(connector.id)}
+        disabled={isConnecting || !connector.ready}
+      >
+        Connect {connector.name}
       </button>
     ));
   }
 
   return (
     <div>
-      <button onClick={copy}>{formatted}</button>
-      <button onClick={disconnect}>Disconnect</button>
+      <span>{account}</span>
+      <button onClick={disconnectWallet}>
+        Disconnect
+      </button>
     </div>
   );
 }

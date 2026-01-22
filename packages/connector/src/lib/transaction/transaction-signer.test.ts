@@ -9,6 +9,8 @@ import { createTransactionSigner, isTransactionSignerError, TransactionSignerErr
 import type { TransactionSignerConfig } from '../../types/transactions';
 import type { WalletStandardAccount, WalletStandardWallet } from '../adapters/wallet-standard-shim';
 import type { SolanaCluster } from '@wallet-ui/core';
+import type { SignatureBytes } from '@solana/keys';
+import { signatureBytesToBase58 } from '../kit/signer-utils';
 
 describe('Transaction Signer', () => {
     let mockWallet: WalletStandardWallet;
@@ -339,6 +341,36 @@ describe('Transaction Signer', () => {
             expect(mockWallet.features['solana:signAndSendTransaction'].signAndSendTransaction).toHaveBeenCalled();
         });
 
+        it('should return a base58 signature when wallet returns Wallet Standard output array', async () => {
+            // Wallet Standard Solana signAndSendTransaction returns an array of outputs:
+            //   [{ signature: Uint8Array }]
+            // Our signer should convert signature bytes to base58 string.
+            const signatureBytes = new Uint8Array(64).fill(7) as SignatureBytes;
+            const expectedSignature = signatureBytesToBase58(signatureBytes);
+
+            const walletWithWalletStandardResult = {
+                ...mockWallet,
+                features: {
+                    ...mockWallet.features,
+                    'solana:signAndSendTransaction': {
+                        signAndSendTransaction: vi.fn().mockResolvedValue([{ signature: signatureBytes }]),
+                    },
+                },
+            } as unknown as WalletStandardWallet;
+
+            const config: TransactionSignerConfig = {
+                wallet: walletWithWalletStandardResult,
+                account: mockAccount,
+            };
+
+            const signer = createTransactionSigner(config)!;
+            const signature = await signer.signAndSendTransaction(mockTransaction);
+
+            // Current bug: this comes back as "[object Object]" because the result is coerced to a string.
+            // This expectation intentionally reproduces the issue as a failing test prior to the fix.
+            expect(signature).toBe(expectedSignature);
+        });
+
         it('should throw error if send not supported', async () => {
             const walletWithoutSend = {
                 ...mockWallet,
@@ -429,6 +461,36 @@ describe('Transaction Signer', () => {
 
             expect(signature).toBeDefined();
             expect(signature).toBeInstanceOf(Uint8Array);
+            expect(updatedWallet.features['solana:signMessage'].signMessage).toHaveBeenCalled();
+        });
+
+        it('should sign a message when wallet returns Wallet Standard array output', async () => {
+            const updatedWallet = {
+                ...mockWallet,
+                features: {
+                    ...mockWallet.features,
+                    'solana:signMessage': {
+                        signMessage: vi.fn().mockResolvedValue([
+                            {
+                                signature: new Uint8Array([20, 21, 22]),
+                                signedMessage: new Uint8Array([1, 2, 3]),
+                            },
+                        ]),
+                    },
+                },
+            } as unknown as WalletStandardWallet;
+
+            const config: TransactionSignerConfig = {
+                wallet: updatedWallet,
+                account: mockAccount,
+            };
+
+            const signer = createTransactionSigner(config)!;
+            const message = new Uint8Array([1, 2, 3]);
+
+            const signature = await signer.signMessage!(message);
+
+            expect(signature).toEqual(new Uint8Array([20, 21, 22]));
             expect(updatedWallet.features['solana:signMessage'].signMessage).toHaveBeenCalled();
         });
 

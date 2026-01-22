@@ -1,12 +1,14 @@
 'use client';
 
-import { useState } from 'react';
-import { Connection, Transaction, SystemProgram, PublicKey, LAMPORTS_PER_SOL } from '@solana/web3.js';
+import { useCallback, useMemo } from 'react';
+import { Connection, Transaction, SystemProgram, PublicKey } from '@solana/web3.js';
 import { signature as createSignature, address } from '@solana/kit';
 import { useWalletAdapterCompat } from '@solana/connector/compat';
-import { useTransactionSigner, useConnector, useCluster, useConnectorClient } from '@solana/connector';
-import { TransactionForm } from './transaction-form';
-import { TransactionResult } from './transaction-result';
+import { useTransactionSigner, useCluster, useConnectorClient, useConnector } from '@solana/connector';
+import { PipelineHeaderButton, PipelineVisualization } from '@/components/pipeline';
+import { waitForSignatureConfirmation } from './rpc-utils';
+import { VisualPipeline } from '@/lib/visual-pipeline';
+import { useExampleCardHeaderActions } from '@/components/playground/example-card-actions';
 
 /**
  * Legacy SOL Transfer Component
@@ -17,103 +19,119 @@ import { TransactionResult } from './transaction-result';
  */
 export function LegacySolTransfer() {
     const { signer } = useTransactionSigner();
-    const { disconnect } = useConnector();
+    const { disconnectWallet } = useConnector();
     const { cluster } = useCluster();
     const client = useConnectorClient();
-    const [signature, setSignature] = useState<string | null>(null);
 
     // Create wallet adapter compatible interface
-    const walletAdapter = useWalletAdapterCompat(signer, disconnect);
+    const walletAdapter = useWalletAdapterCompat(signer, disconnectWallet);
 
-    async function handleTransfer(recipientAddress: string, amount: number) {
-        if (!signer || !client) {
-            throw new Error('Wallet not connected or client not available');
-        }
+    const visualPipeline = useMemo(
+        () =>
+            new VisualPipeline('legacy-self-transfer', [
+                { name: 'Build transaction', type: 'instruction' },
+                { name: 'Self transfer', type: 'transaction' },
+            ]),
+        [],
+    );
 
-        if (!walletAdapter.publicKey) {
-            throw new Error('Wallet address not available');
-        }
+    const getExplorerUrl = useCallback(
+        (signature: string) => {
+            const clusterSlug = cluster?.id?.replace('solana:', '');
+            if (!clusterSlug || clusterSlug === 'mainnet' || clusterSlug === 'mainnet-beta') {
+                return `https://explorer.solana.com/tx/${signature}`;
+            }
+            return `https://explorer.solana.com/tx/${signature}?cluster=${clusterSlug}`;
+        },
+        [cluster?.id],
+    );
+
+    const executeSelfTransfer = useCallback(async () => {
+        if (!signer || !client) return;
+        const walletPublicKey = walletAdapter.publicKey;
+        if (!walletPublicKey) return;
 
         // Get RPC URL from connector client
         const rpcUrl = client.getRpcUrl();
-        if (!rpcUrl) {
-            throw new Error('No RPC endpoint configured');
-        }
+        if (!rpcUrl) throw new Error('No RPC endpoint configured');
 
-        // Create connection to Solana network
         const connection = new Connection(rpcUrl, 'confirmed');
 
-        // Create recipient public key
-        const recipientPubkey = new PublicKey(recipientAddress);
-        const senderPubkey = new PublicKey(walletAdapter.publicKey);
+        let sig: string | null = null;
+        let typedSignature: ReturnType<typeof createSignature> | null = null;
 
-        // Get recent blockhash
-        const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
-
-        // Create transfer instruction using legacy SystemProgram API
-        const transferInstruction = SystemProgram.transfer({
-            fromPubkey: senderPubkey,
-            toPubkey: recipientPubkey,
-            lamports: amount * LAMPORTS_PER_SOL,
-        });
-
-        // Build transaction
-        const transaction = new Transaction({
-            feePayer: senderPubkey,
-            blockhash,
-            lastValidBlockHeight,
-        }).add(transferInstruction);
-
-        // Sign and send using wallet adapter compat layer
-        const sig = await walletAdapter.sendTransaction(transaction, connection);
-
-        setSignature(sig);
-
-        // Track transaction in debugger
-        if (client) {
-            client.trackTransaction({
-                signature: createSignature(sig),
-                status: 'pending' as const,
-                method: 'sendTransaction',
-                feePayer: address(walletAdapter.publicKey),
-            });
-        }
-
-        // Wait for confirmation
         try {
-            await connection.confirmTransaction({
-                signature: sig,
-                blockhash,
-                lastValidBlockHeight,
-            });
+            await visualPipeline.execute(async () => {
+                visualPipeline.setStepState('Build transaction', { type: 'building' });
+                visualPipeline.setStepState('Self transfer', { type: 'building' });
 
-            // Update status to confirmed
-            if (client) {
-                client.updateTransactionStatus(createSignature(sig), 'confirmed');
-            }
-        } catch (confirmError) {
-            // Update status to failed if confirmation fails
-            if (client) {
+                const senderPubkey = new PublicKey(walletPublicKey);
+
+                const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
+
+                // 1 lamport self-transfer (net effect: only pay fees)
+                const transferInstruction = SystemProgram.transfer({
+                    fromPubkey: senderPubkey,
+                    toPubkey: senderPubkey,
+                    lamports: 1,
+                });
+
+                const transaction = new Transaction({
+                    feePayer: senderPubkey,
+                    blockhash,
+                    lastValidBlockHeight,
+                }).add(transferInstruction);
+
+                visualPipeline.setStepState('Self transfer', { type: 'signing' });
+
+                sig = await walletAdapter.sendTransaction(transaction, connection);
+                typedSignature = createSignature(sig);
+
+                client.trackTransaction({
+                    signature: typedSignature,
+                    status: 'pending',
+                    method: 'sendTransaction',
+                    feePayer: address(walletPublicKey.toString()),
+                });
+
+                visualPipeline.setStepState('Build transaction', { type: 'confirmed', signature: sig, cost: 0 });
+                visualPipeline.setStepState('Self transfer', { type: 'sending' });
+
+                await waitForSignatureConfirmation({
+                    signature: sig,
+                    commitment: 'confirmed',
+                    getSignatureStatuses: async signature =>
+                        await connection.getSignatureStatuses([signature], { searchTransactionHistory: true }),
+                });
+
+                visualPipeline.setStepState('Self transfer', { type: 'confirmed', signature: sig, cost: 0.000005 });
+                client.updateTransactionStatus(typedSignature, 'confirmed');
+            });
+        } catch (error) {
+            if (typedSignature) {
                 client.updateTransactionStatus(
-                    createSignature(sig),
+                    typedSignature,
                     'failed',
-                    confirmError instanceof Error ? confirmError.message : 'Confirmation failed',
+                    error instanceof Error ? error.message : String(error),
                 );
             }
-            throw confirmError;
         }
-    }
+    }, [client, signer, visualPipeline, walletAdapter]);
+
+    const headerAction = useMemo(
+        () => (
+            <PipelineHeaderButton
+                visualPipeline={visualPipeline}
+                disabled={!walletAdapter.connected || !client}
+                onExecute={executeSelfTransfer}
+            />
+        ),
+        [client, executeSelfTransfer, visualPipeline, walletAdapter.connected],
+    );
+
+    useExampleCardHeaderActions(headerAction);
 
     return (
-        <div className="space-y-4">
-            <TransactionForm
-                title="Legacy SOL Transfer"
-                description="Using @solana/web3.js with wallet adapter compat layer"
-                onSubmit={handleTransfer}
-                disabled={!walletAdapter.connected}
-                defaultRecipient="DemoWa11et1111111111111111111111111111111111"
-            />
-            {signature && <TransactionResult signature={signature} cluster={cluster?.id || 'devnet'} />}
-        </div>
+        <PipelineVisualization visualPipeline={visualPipeline} strategy="sequential" getExplorerUrl={getExplorerUrl} />
     );
 }

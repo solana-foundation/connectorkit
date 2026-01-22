@@ -7,20 +7,24 @@ import {
     createSignableMessage,
     address,
 } from '@solana/connector/headless';
-import { useConnector, useConnectorClient } from '@solana/connector';
+import { useCluster, useConnectorClient, useConnector } from '@solana/connector/react';
 import { Connection } from '@solana/web3.js';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert } from '@/components/ui/alert';
 
 export function KitSignerDemo() {
-    const { selectedWallet, accounts, selectedAccount, cluster } = useConnector();
+    const { walletStatus, connectorId } = useConnector();
+    const session = walletStatus.status === 'connected' ? walletStatus.session : null;
+    const { cluster } = useCluster();
     const client = useConnectorClient();
 
-    const account = useMemo(() => {
-        if (!selectedAccount || !accounts.length) return null;
-        return accounts.find(acc => acc.address === selectedAccount)?.raw || null;
-    }, [selectedAccount, accounts]);
+    const wallet = useMemo(() => {
+        if (!client || !connectorId) return null;
+        return client.getConnector(connectorId);
+    }, [client, connectorId]);
+
+    const account = session?.selectedAccount.account ?? null;
 
     const [messageToSign, setMessageToSign] = useState('Hello from ConnectorKit!');
     const [signedMessage, setSignedMessage] = useState<string | null>(null);
@@ -28,23 +32,23 @@ export function KitSignerDemo() {
     const [error, setError] = useState<string | null>(null);
 
     const kitSigners = useMemo(() => {
-        if (!selectedWallet || !account || !cluster) return null;
+        if (!wallet || !account || !cluster) return null;
 
         const rpcUrl = client?.getRpcUrl();
         const connection = rpcUrl ? new Connection(rpcUrl) : null;
 
-        return createKitSignersFromWallet(selectedWallet, account, connection, undefined);
-    }, [selectedWallet, account, cluster, client]);
+        return createKitSignersFromWallet(wallet, account, connection, undefined);
+    }, [wallet, account, cluster, client]);
 
     const manualSigner = useMemo(() => {
-        if (!selectedWallet || !account) return null;
+        if (!wallet || !account) return null;
 
         // Validate features structure
-        if (!selectedWallet.features || typeof selectedWallet.features !== 'object') {
+        if (!wallet.features || typeof wallet.features !== 'object') {
             return null;
         }
 
-        const features = selectedWallet.features as Record<string, unknown>;
+        const features = wallet.features as Record<string, unknown>;
         const signMessageFeature = features['solana:signMessage'];
 
         // Validate signMessage feature exists and has the expected structure
@@ -91,7 +95,7 @@ export function KitSignerDemo() {
                 throw error instanceof Error ? error : new Error(String(error));
             }
         });
-    }, [selectedWallet, account]);
+    }, [wallet, account]);
 
     const handleSignMessage = async () => {
         if (!kitSigners?.messageSigner) {
@@ -181,7 +185,7 @@ export function KitSignerDemo() {
         }
     };
 
-    if (!selectedWallet || !account) {
+    if (!wallet || !account) {
         return (
             <Card>
                 <CardHeader>

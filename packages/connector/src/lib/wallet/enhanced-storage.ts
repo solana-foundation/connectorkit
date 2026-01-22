@@ -10,7 +10,10 @@ import type {
     EnhancedStorageAccountOptions,
     EnhancedStorageClusterOptions,
     EnhancedStorageWalletOptions,
+    EnhancedStorageWalletStateOptions,
+    PersistedWalletState,
 } from '../../types/storage';
+import { createConnectorId } from '../../types/session';
 import { createLogger } from '../utils/secure-logger';
 
 const logger = createLogger('EnhancedStorage');
@@ -192,6 +195,99 @@ export function createEnhancedStorageWallet(
         onError: options?.onError,
         useMemoryFallback: true,
     });
+}
+
+// ============================================================================
+//  vNext Wallet State Storage
+// ============================================================================
+
+/**
+ * Current version of the persisted wallet state format.
+ * Increment when making breaking changes to the state structure.
+ */
+export const WALLET_STATE_VERSION = 1;
+
+/**
+ * Create storage for vNext wallet state (connector ID + account + autoconnect).
+ * Handles migration from legacy wallet name storage automatically.
+ */
+export function createEnhancedStorageWalletState(
+    options?: EnhancedStorageWalletStateOptions,
+): EnhancedStorage<PersistedWalletState | null> {
+    const key = options?.key ?? `connector-kit:${STORAGE_VERSION}:wallet-state`;
+    const legacyKey = `connector-kit:${STORAGE_VERSION}:wallet`;
+
+    const storage = new EnhancedStorage<PersistedWalletState | null>(key, options?.initial ?? null, {
+        onError: options?.onError,
+        useMemoryFallback: true,
+    });
+
+    // Attempt migration from legacy storage on first access
+    if (typeof window !== 'undefined' && storage.isAvailable()) {
+        try {
+            const existingState = storage.get();
+            if (!existingState) {
+                // Check for legacy wallet name storage
+                const legacyValue = window.localStorage.getItem(legacyKey);
+                if (legacyValue) {
+                    const legacyWalletName = JSON.parse(legacyValue) as string;
+                    if (legacyWalletName && typeof legacyWalletName === 'string') {
+                        // Use custom migration handler if provided, otherwise create connector ID from name
+                        const connectorId = options?.migrateLegacy
+                            ? options.migrateLegacy(legacyWalletName)
+                            : createConnectorId(legacyWalletName);
+
+                        if (connectorId) {
+                            const migratedState: PersistedWalletState = {
+                                version: WALLET_STATE_VERSION,
+                                connectorId,
+                                autoConnect: true,
+                                lastConnected: new Date().toISOString(),
+                            };
+                            storage.set(migratedState);
+                            logger.info('Migrated legacy wallet storage', {
+                                from: legacyWalletName,
+                                to: connectorId,
+                            });
+
+                            // Optionally remove legacy key
+                            window.localStorage.removeItem(legacyKey);
+                        }
+                    }
+                }
+            }
+        } catch (error) {
+            logger.warn('Failed to migrate legacy wallet storage', { error });
+        }
+    }
+
+    return storage;
+}
+
+/**
+ * Helper to save wallet state after successful connection
+ */
+export function saveWalletState(
+    storage: StorageAdapter<PersistedWalletState | null>,
+    connectorId: string,
+    account?: string,
+    autoConnect = true,
+): void {
+    const state: PersistedWalletState = {
+        version: WALLET_STATE_VERSION,
+        connectorId,
+        lastAccount: account,
+        autoConnect,
+        lastConnected: new Date().toISOString(),
+    };
+    storage.set(state);
+}
+
+/**
+ * Helper to clear wallet state (on disconnect)
+ */
+export function clearWalletState(storage: StorageAdapter<PersistedWalletState | null>): void {
+    storage.set(null);
 }
 
 export class EnhancedStorageAdapter<T> implements StorageAdapter<T> {

@@ -1,6 +1,6 @@
 {
     "name": "@solana/connector",
-    "version": "0.1.8",
+    "version": "0.2.3",
     "description": "Headless wallet connector client and React provider built on Wallet Standard",
     "main": "./dist/index.js",
     "module": "./dist/index.mjs",
@@ -26,6 +26,16 @@
             "types": "./dist/compat.d.ts",
             "import": "./dist/compat.mjs",
             "require": "./dist/compat.js"
+        },
+        "./remote": {
+            "types": "./dist/remote.d.ts",
+            "import": "./dist/remote.mjs",
+            "require": "./dist/remote.js"
+        },
+        "./server": {
+            "types": "./dist/server.d.ts",
+            "import": "./dist/server.mjs",
+            "require": "./dist/server.js"
         }
     },
     "files": [
@@ -48,16 +58,35 @@
     },
     "peerDependencies": {
         "@solana/web3.js": "^1.0.0",
-        "react": ">=18.0.0"
+        "react": ">=18.0.0",
+        "@walletconnect/universal-provider": "^2.0.0",
+        "@solana/keychain": "^0.2.1",
+        "@solana/keychain-fireblocks": "^0.2.1",
+        "@solana/keychain-privy": "^0.2.1",
+        "@solana/keychain-turnkey": "^0.2.1",
+        "@solana/keychain-vault": "^0.2.1",
+        "@solana/keychain-aws-kms": "^0.2.1"
     },
     "peerDependenciesMeta": {
         "react": {
+            "optional": true
+        },
+        "@walletconnect/universal-provider": {
             "optional": true
         },
         "@solana/connector-debugger": {
             "optional": true
         },
         "@solana/web3.js": {
+            "optional": true
+        },
+        "@solana/keychain": {
+            "optional": true
+        },
+        "@solana/keychain-fireblocks": {
+            "optional": true
+        },
+        "@solana/keychain-privy": {
             "optional": true
         }
     },

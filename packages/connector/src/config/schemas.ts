@@ -48,6 +48,42 @@ export const coinGeckoConfigSchema = z
     .optional();
 
 // ============================================================================
+// WalletConnect Configuration
+// ============================================================================
+
+/**
+ * WalletConnect metadata schema
+ */
+export const walletConnectMetadataSchema = z.object({
+    name: z.string().min(1, 'WalletConnect app name is required'),
+    description: z.string(),
+    url: urlSchema,
+    icons: z.array(z.string()),
+});
+
+/**
+ * WalletConnect detailed object configuration schema
+ */
+export const walletConnectObjectConfigSchema = z.object({
+    enabled: z.boolean().optional(),
+    projectId: z.string().min(1, 'WalletConnect projectId is required'),
+    metadata: walletConnectMetadataSchema,
+    defaultChain: z.enum(['solana:mainnet', 'solana:devnet', 'solana:testnet']).optional(),
+    onDisplayUri: z.custom<(uri: string) => void>(val => typeof val === 'function').optional(),
+    onSessionEstablished: z.custom<() => void>(val => typeof val === 'function').optional(),
+    onSessionDisconnected: z.custom<() => void>(val => typeof val === 'function').optional(),
+    relayUrl: urlSchema.optional(),
+});
+
+/**
+ * WalletConnect configuration schema
+ * Accepts either:
+ * - `true` (boolean shorthand to enable with defaults)
+ * - Detailed object configuration with projectId and metadata
+ */
+export const walletConnectConfigSchema = z.union([z.literal(true), walletConnectObjectConfigSchema]).optional();
+
+// ============================================================================
 // Storage Configuration
 // ============================================================================
 
@@ -55,8 +91,8 @@ export const coinGeckoConfigSchema = z
  * Storage adapter interface schema (validates shape, not implementation)
  */
 export const storageAdapterSchema = z.looseObject({
-    get: z.custom<(...args: unknown[]) => unknown>(val => typeof val === 'function'),
-    set: z.custom<(...args: unknown[]) => unknown>(val => typeof val === 'function'),
+    get: z.custom<(...args: unknown[]) => unknown>((val: unknown) => typeof val === 'function'),
+    set: z.custom<(...args: unknown[]) => unknown>((val: unknown) => typeof val === 'function'),
 });
 
 export const storageConfigSchema = z
@@ -93,6 +129,41 @@ export const clusterConfigSchema = z
 // Default Config Options
 // ============================================================================
 
+/**
+ * Wallet Standard wallet schema (shallow validation - just check it's an object with required fields)
+ */
+export const walletSchema = z.custom<import('@wallet-standard/base').Wallet>(
+    (val: unknown) =>
+        typeof val === 'object' &&
+        val !== null &&
+        'name' in val &&
+        'version' in val &&
+        'features' in val &&
+        'chains' in val,
+    { message: 'Invalid Wallet Standard wallet object' },
+);
+
+/**
+ * Non-empty trimmed string schema for wallet names.
+ * Trims whitespace and rejects empty strings.
+ */
+const nonEmptyTrimmedStringSchema = z
+    .string()
+    .transform(s => s.trim())
+    .refine(s => s.length > 0, { message: 'Wallet name cannot be empty or whitespace-only' });
+
+/**
+ * Wallet list controls for Wallet Standard auto-discovery.
+ * Matches by wallet display name (case-insensitive, exact match after trimming).
+ */
+export const walletDisplayConfigSchema = z
+    .object({
+        allowList: z.array(nonEmptyTrimmedStringSchema).optional(),
+        denyList: z.array(nonEmptyTrimmedStringSchema).optional(),
+        featured: z.array(nonEmptyTrimmedStringSchema).optional(),
+    })
+    .optional();
+
 export const defaultConfigOptionsSchema = z.object({
     // Required
     appName: z.string().min(1, 'Application name is required'),
@@ -121,9 +192,16 @@ export const defaultConfigOptionsSchema = z.object({
     customClusters: z.array(solanaClusterSchema).optional(),
     programLabels: z.record(z.string(), z.string()).optional(),
     coingecko: coinGeckoConfigSchema,
+    walletConnect: walletConnectConfigSchema,
+
+    // Additional wallets (remote signers, etc.)
+    additionalWallets: z.array(walletSchema).optional(),
+
+    // Wallet display controls
+    wallets: walletDisplayConfigSchema,
 
     // Functions (can't validate implementation, just existence)
-    onError: z.custom<(...args: unknown[]) => unknown>(val => typeof val === 'function').optional(),
+    onError: z.custom<(...args: unknown[]) => unknown>((val: unknown) => typeof val === 'function').optional(),
 });
 
 // ============================================================================
@@ -134,11 +212,14 @@ export const connectorConfigSchema = z
     .strictObject({
         autoConnect: z.boolean().optional(),
         debug: z.boolean().optional(),
+        wallets: walletDisplayConfigSchema,
         storage: storageConfigSchema,
         cluster: clusterConfigSchema,
         imageProxy: z.string().optional(),
         programLabels: z.record(z.string(), z.string()).optional(),
         coingecko: coinGeckoConfigSchema,
+        walletConnect: walletConnectConfigSchema,
+        additionalWallets: z.array(walletSchema).optional(),
     })
     .optional();
 
@@ -149,6 +230,7 @@ export const connectorConfigSchema = z
 export type SolanaNetworkInput = z.input<typeof solanaNetworkSchema>;
 export type SolanaClusterIdInput = z.input<typeof solanaClusterIdSchema>;
 export type CoinGeckoConfigInput = z.input<typeof coinGeckoConfigSchema>;
+export type WalletConnectConfigInput = z.input<typeof walletConnectConfigSchema>;
 export type DefaultConfigOptionsInput = z.input<typeof defaultConfigOptionsSchema>;
 
 // ============================================================================
