@@ -1,4 +1,4 @@
-name: Publish Packages
+name: Publish SDKs
 
 on:
   push:
@@ -6,10 +6,15 @@ on:
       - 'v*'
   workflow_dispatch:
     inputs:
-      publish_packages:
-        description: 'Publish @solana/connector and @solana/connector-debugger packages to npm'
-        type: boolean
-        default: true
+      package:
+        description: 'Which package(s) to publish to npm'
+        type: choice
+        required: true
+        default: all
+        options:
+          - all
+          - connector
+          - devtools
 
 permissions:
   contents: read
@@ -17,7 +22,7 @@ permissions:
 
 jobs:
   publish-packages:
-    if: ${{ startsWith(github.ref, 'refs/tags/') || github.event.inputs.publish_packages == 'true' }}
+    if: ${{ startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     environment: npm-publish
 
@@ -34,7 +39,7 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v2
         with:
-          version: 9.12.3
+          version: 10.28.0
 
       - name: Update npm for trusted publishing
         run: npm install -g npm@latest
@@ -48,7 +53,7 @@ jobs:
             ${{ runner.os }}-pnpm-
 
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
 
       - name: Build all packages
         run: pnpm build
@@ -57,11 +62,13 @@ jobs:
         run: echo "Skipping tests for initial publish"
 
       - name: Publish @solana/connector
+        if: ${{ startsWith(github.ref, 'refs/tags/') || github.event.inputs.package == 'all' || github.event.inputs.package == 'connector' }}
         working-directory: packages/connector
         run: npm publish --access public
 
-      - name: Publish @solana/connector-debugger
-        working-directory: packages/debugger
+      - name: Publish @solana/devtools
+        if: ${{ startsWith(github.ref, 'refs/tags/') || github.event.inputs.package == 'all' || github.event.inputs.package == 'devtools' }}
+        working-directory: packages/devtools
         run: npm publish --access public
 
   create-release:
@@ -88,8 +95,8 @@ jobs:
             - Version: ${{ github.ref_name }}
             - Registry: npm
 
-            ### @solana/connector-debugger
-            - Package: `@solana/connector-debugger`
+            ### @solana/devtools
+            - Package: `@solana/devtools`
             - Version: ${{ github.ref_name }}
             - Registry: npm
 
@@ -97,7 +104,7 @@ jobs:
 
             ```bash
             npm install @solana/connector@${{ github.ref_name }}
-            npm install @solana/connector-debugger@${{ github.ref_name }}
+            npm install @solana/devtools@${{ github.ref_name }}
             ```
           draft: false
           prerelease: ${{ contains(github.ref_name, '-') }}
