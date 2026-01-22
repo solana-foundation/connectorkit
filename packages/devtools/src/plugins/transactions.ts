@@ -60,6 +60,85 @@ export function createTransactionsPlugin(_maxTransactions = 50): ConnectorDevtoo
         }
     }
 
+    function escapeHtml(text: string): string {
+        return text
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function toBigIntOrNull(value: unknown): bigint | null {
+        if (value === null || value === undefined) return null;
+        if (typeof value === 'bigint') return value;
+        if (typeof value === 'number') {
+            if (!Number.isFinite(value)) return null;
+            return BigInt(Math.trunc(value));
+        }
+        if (typeof value === 'string') {
+            if (value.trim() === '') return null;
+            try {
+                return BigInt(value);
+            } catch {
+                return null;
+            }
+        }
+        return null;
+    }
+
+    function formatIntegerLike(value: unknown): string {
+        const big = toBigIntOrNull(value);
+        if (big !== null) return big.toString();
+        if (typeof value === 'string') return value;
+        if (typeof value === 'number') return Number.isFinite(value) ? String(value) : 'N/A';
+        if (value === null) return 'null';
+        if (value === undefined) return 'N/A';
+        return safeJsonStringify(value, 0);
+    }
+
+    const LAMPORTS_PER_SOL = 1_000_000_000n;
+
+    function formatSolFromLamports(lamports: bigint): string {
+        const sign = lamports < 0n ? '-' : '';
+        const abs = lamports < 0n ? -lamports : lamports;
+        const whole = abs / LAMPORTS_PER_SOL;
+        const frac = abs % LAMPORTS_PER_SOL;
+
+        const fracStr = frac.toString().padStart(9, '0').replace(/0+$/, '');
+        return fracStr ? `${sign}${whole.toString()}.${fracStr}` : `${sign}${whole.toString()}`;
+    }
+
+    function formatBlockTime(blockTime: unknown): string {
+        const seconds = toBigIntOrNull(blockTime);
+        if (seconds === null) return 'N/A';
+        const ms = Number(seconds) * 1000;
+        if (!Number.isFinite(ms)) return seconds.toString();
+        return new Date(ms).toLocaleString('en-US', { hour12: false });
+    }
+
+    function getAccountPubkey(accountKey: unknown): string {
+        if (!accountKey) return '';
+        if (typeof accountKey === 'string') return accountKey;
+        if (typeof accountKey === 'object' && 'pubkey' in accountKey) return String((accountKey as any).pubkey);
+        return safeJsonStringify(accountKey, 0);
+    }
+
+    function renderKeyValueRows(rows: Array<{ key: string; value: string }>, className = 'cdt-kv'): string {
+        return `
+            <div class="${className}">
+                ${rows
+                    .map(
+                        row => `
+                            <div class="cdt-k">${escapeHtml(row.key)}</div>
+                            <div class="cdt-v">${escapeHtml(row.value)}</div>
+                        `,
+                    )
+                    .join('')}
+            </div>
+        `;
+    }
+
     function getRpcUrl(ctx: PluginContext): string | null {
         const cfg = ctx.getConfig();
         return cfg.rpcUrl ?? ctx.client.getRpcUrl() ?? null;
@@ -222,6 +301,7 @@ export function createTransactionsPlugin(_maxTransactions = 50): ConnectorDevtoo
             const maxTransactions = ctx.getConfig().maxTransactions;
 
             function renderContent() {
+                const clusterId = ctx.client.getCluster()?.id;
                 const cache = ctx.getCache?.();
                 const inflight = cache?.transactions.inflight ?? [];
                 const merged = mergeTransactions(ctx);
@@ -270,6 +350,251 @@ export function createTransactionsPlugin(_maxTransactions = 50): ConnectorDevtoo
                     }
                 }
 
+                function renderSentTransactionDetailsPanel(): string {
+                    if (!selectedTx) return '';
+
+                    const explorerUrl = getExplorerUrl(selectedTx.signature, selectedTx.cluster ?? clusterId);
+                    const rpcTx = selectedDetails?.tx as any;
+                    const rpcMeta = rpcTx && typeof rpcTx === 'object' ? (rpcTx as any).meta : undefined;
+                    const rpcTransaction = rpcTx && typeof rpcTx === 'object' ? (rpcTx as any).transaction : undefined;
+                    const rpcMessage = rpcTransaction && typeof rpcTransaction === 'object' ? (rpcTransaction as any).message : undefined;
+
+                    const rpcInstructions = Array.isArray(rpcMessage?.instructions) ? (rpcMessage.instructions as any[]) : [];
+                    const rpcAccountKeys = Array.isArray(rpcMessage?.accountKeys) ? (rpcMessage.accountKeys as any[]) : [];
+                    const rpcLogs = Array.isArray(rpcMeta?.logMessages) ? (rpcMeta.logMessages as string[]) : [];
+
+                    const feeLamports = toBigIntOrNull(rpcMeta?.fee);
+                    const computeUnitsConsumed = toBigIntOrNull(rpcMeta?.computeUnitsConsumed);
+
+                    const summaryRows: Array<{ key: string; value: string }> = [
+                        { key: 'signature', value: selectedTx.signature },
+                        { key: 'status', value: selectedTx.status },
+                        { key: 'cluster', value: selectedTx.cluster ?? 'N/A' },
+                        { key: 'method', value: selectedTx.method ?? 'N/A' },
+                        { key: 'slot', value: formatIntegerLike(rpcTx?.slot) },
+                        { key: 'block time', value: formatBlockTime(rpcTx?.blockTime) },
+                        { key: 'version', value: formatIntegerLike(rpcTx?.version) },
+                        ...(selectedTxDecoded?.summary.feePayer
+                            ? [{ key: 'fee payer (wire)', value: selectedTxDecoded.summary.feePayer }]
+                            : []),
+                        ...(feeLamports !== null
+                            ? [
+                                  {
+                                      key: 'fee',
+                                      value: `${feeLamports.toString()} lamports (${formatSolFromLamports(feeLamports)} SOL)`,
+                                  },
+                              ]
+                            : []),
+                        ...(computeUnitsConsumed !== null
+                            ? [{ key: 'compute units', value: computeUnitsConsumed.toString() }]
+                            : []),
+                        ...(selectedDetails?.status?.confirmations !== null &&
+                        selectedDetails?.status?.confirmations !== undefined
+                            ? [{ key: 'confirmations', value: String(selectedDetails.status.confirmations) }]
+                            : []),
+                        ...(selectedDetails?.status?.confirmationStatus
+                            ? [{ key: 'confirmation status', value: String(selectedDetails.status.confirmationStatus) }]
+                            : []),
+                    ];
+
+                    const instructionsHtml = rpcInstructions.length
+                        ? rpcInstructions
+                              .map((ix, idx) => {
+                                  const program = typeof ix.program === 'string' ? ix.program : '';
+                                  const programId = typeof ix.programId === 'string' ? ix.programId : '';
+                                  const parsedType = typeof ix.parsed?.type === 'string' ? ix.parsed.type : '';
+                                  const stackHeight =
+                                      ix.stackHeight !== null && ix.stackHeight !== undefined
+                                          ? String(ix.stackHeight)
+                                          : '';
+
+                                  const titlePieces = [
+                                      `#${idx}`,
+                                      program ? program : programId ? truncateMiddle(programId, 6, 6) : 'unknown',
+                                      parsedType ? `:${parsedType}` : '',
+                                  ].filter(Boolean);
+
+                                  const info = ix.parsed?.info;
+                                  const infoEntries =
+                                      info && typeof info === 'object' && !Array.isArray(info)
+                                          ? Object.entries(info as Record<string, unknown>)
+                                          : [];
+
+                                  const infoRows = infoEntries.map(([k, v]) => ({
+                                      key: k,
+                                      value:
+                                          typeof v === 'string'
+                                              ? v
+                                              : typeof v === 'number'
+                                                  ? String(v)
+                                                  : typeof v === 'bigint'
+                                                      ? v.toString()
+                                                      : safeJsonStringify(v, 0),
+                                  }));
+
+                                  const headerRows: Array<{ key: string; value: string }> = [
+                                      ...(programId ? [{ key: 'program id', value: programId }] : []),
+                                      ...(stackHeight ? [{ key: 'stack height', value: stackHeight }] : []),
+                                  ];
+
+                                  return `
+                                      <div class="cdt-card">
+                                          <div class="cdt-card-title">${escapeHtml(titlePieces.join(' '))}</div>
+                                          ${
+                                              headerRows.length
+                                                  ? renderKeyValueRows(headerRows, 'cdt-kv cdt-kv-compact')
+                                                  : ''
+                                          }
+                                          ${
+                                              infoRows.length
+                                                  ? renderKeyValueRows(infoRows, 'cdt-kv cdt-kv-compact')
+                                                  : `<div class="cdt-empty" style="padding: 8px 0;">No parsed info</div>`
+                                          }
+                                      </div>
+                                  `;
+                              })
+                              .join('')
+                        : `<div class="cdt-empty">No instructions.</div>`;
+
+                    const accountsHtml = rpcAccountKeys.length
+                        ? rpcAccountKeys
+                              .map((ak, idx) => {
+                                  const pubkey = getAccountPubkey(ak);
+                                  const signer = Boolean((ak as any)?.signer);
+                                  const writable = Boolean((ak as any)?.writable);
+                                  const source = (ak as any)?.source ? String((ak as any).source) : '';
+
+                                  const badges = [
+                                      signer ? `<span class="cdt-pill info">signer</span>` : '',
+                                      writable
+                                          ? `<span class="cdt-pill warn">writable</span>`
+                                          : `<span class="cdt-pill">readonly</span>`,
+                                      source ? `<span class="cdt-pill">${escapeHtml(source)}</span>` : '',
+                                  ].filter(Boolean);
+
+                                  return `
+                                      <div class="cdt-account-row">
+                                          <div class="cdt-account-idx">#${idx}</div>
+                                          <div class="cdt-account-key">${escapeHtml(pubkey)}</div>
+                                          <div class="cdt-account-badges">${badges.join(' ')}</div>
+                                      </div>
+                                  `;
+                              })
+                              .join('')
+                        : `<div class="cdt-empty">No accounts.</div>`;
+
+                    const balancesHtml = (() => {
+                        const pre = Array.isArray(rpcMeta?.preBalances) ? (rpcMeta.preBalances as unknown[]) : [];
+                        const post = Array.isArray(rpcMeta?.postBalances) ? (rpcMeta.postBalances as unknown[]) : [];
+                        const len = Math.max(pre.length, post.length, rpcAccountKeys.length);
+
+                        const rows: string[] = [];
+                        for (let i = 0; i < len; i++) {
+                            const preLamports = toBigIntOrNull(pre[i]);
+                            const postLamports = toBigIntOrNull(post[i]);
+                            if (preLamports === null || postLamports === null) continue;
+
+                            const delta = postLamports - preLamports;
+                            if (delta === 0n) continue;
+
+                            const pubkey = getAccountPubkey(rpcAccountKeys[i]);
+                            const deltaStr = `${delta.toString()} lamports (${formatSolFromLamports(delta)} SOL)`;
+                            const postStr = `${postLamports.toString()} lamports (${formatSolFromLamports(postLamports)} SOL)`;
+
+                            rows.push(`
+                                <div class="cdt-balance-row">
+                                    <div class="cdt-balance-key">${escapeHtml(pubkey)}</div>
+                                    <div class="cdt-balance-delta ${delta < 0n ? 'neg' : 'pos'}">${escapeHtml(deltaStr)}</div>
+                                    <div class="cdt-balance-post">${escapeHtml(postStr)}</div>
+                                </div>
+                            `);
+                        }
+
+                        if (rows.length === 0) return `<div class="cdt-empty">No non-zero SOL balance changes.</div>`;
+                        return `<div class="cdt-balance-list">${rows.join('')}</div>`;
+                    })();
+
+                    const logsHtml = rpcLogs.length
+                        ? `
+                            <div class="cdt-logs">
+                                ${rpcLogs
+                                    .map(
+                                        (line, i) => `
+                                            <div class="cdt-log-line">
+                                                <div class="cdt-log-num">${i + 1}</div>
+                                                <div class="cdt-log-text">${escapeHtml(line)}</div>
+                                            </div>
+                                        `,
+                                    )
+                                    .join('')}
+                            </div>
+                        `
+                        : `<div class="cdt-empty">No logs.</div>`;
+
+                    const rawJson = selectedDetails?.tx ? escapeHtml(safeJsonStringify(selectedDetails.tx, 2)) : 'null';
+
+                    return `
+                        <div class="cdt-details-header">
+                            <div class="cdt-details-title">Transaction</div>
+                            <div style="display:flex; gap:6px; flex-wrap: wrap; justify-content: flex-end;">
+                                ${selectedTx.wireTransactionBase64 ? `<button class="cdt-btn cdt-btn-secondary" id="copy-selected-bytes">Copy base64</button>` : ''}
+                            </div>
+                        </div>
+
+                        ${
+                            selectedDetails?.error
+                                ? `<div class="cdt-json" style="border-color: color-mix(in srgb, var(--cdt-error) 40%, var(--cdt-border)); color: var(--cdt-error);">${escapeHtml(selectedDetails.error)}</div>`
+                                : ''
+                        }
+
+                        ${selectedDetails?.isLoading ? `<div class="cdt-empty">Loading RPC details…</div>` : ''}
+
+                        <div class="cdt-card">
+                            <div class="cdt-card-title">Summary</div>
+                            ${renderKeyValueRows(summaryRows)}
+                        </div>
+
+                        <details class="cdt-details-section" open>
+                            <summary><span class="cdt-chevron">${ICONS.chevronDown}</span>Instructions (${rpcInstructions.length})</summary>
+                            <div class="cdt-details-section-content">
+                                ${instructionsHtml}
+                            </div>
+                        </details>
+
+                        <details class="cdt-details-section" open>
+                            <summary><span class="cdt-chevron">${ICONS.chevronDown}</span>Accounts (${rpcAccountKeys.length})</summary>
+                            <div class="cdt-details-section-content">
+                                ${accountsHtml}
+                            </div>
+                        </details>
+
+                        <details class="cdt-details-section" open>
+                            <summary><span class="cdt-chevron">${ICONS.chevronDown}</span>Balance changes (SOL)</summary>
+                            <div class="cdt-details-section-content">
+                                ${balancesHtml}
+                            </div>
+                        </details>
+
+                        <details class="cdt-details-section" open>
+                            <summary><span class="cdt-chevron">${ICONS.chevronDown}</span>Logs (${rpcLogs.length})</summary>
+                            <div class="cdt-details-section-content">
+                                ${logsHtml}
+                            </div>
+                        </details>
+
+                        <details class="cdt-details-section">
+                            <summary><span class="cdt-chevron">${ICONS.chevronDown}</span>Raw JSON</summary>
+                            <div class="cdt-details-section-content">
+                                <button class="cdt-copy-json-btn" data-copy-json>
+                                    <span class="cdt-copy-icon">${ICONS.copy}</span>
+                                    Copy JSON
+                                </button>
+                                <pre class="cdt-json">${rawJson}</pre>
+                            </div>
+                        </details>
+                    `;
+                }
+
                 el.innerHTML = `
                     <div class="cdt-transactions">
                         <style>
@@ -309,6 +634,7 @@ export function createTransactionsPlugin(_maxTransactions = 50): ConnectorDevtoo
                             .cdt-tx-stat-dot.failed { background: var(--cdt-error); }
 
                             @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+                            @keyframes cdt-spin { to { transform: rotate(360deg); } }
 
                             .cdt-tx-split {
                                 display: grid;
@@ -447,11 +773,231 @@ export function createTransactionsPlugin(_maxTransactions = 50): ConnectorDevtoo
                                 word-break: break-all;
                             }
 
+                            .cdt-card {
+                                margin-top: 10px;
+                                border: 1px solid var(--cdt-border);
+                                border-radius: 12px;
+                                background: var(--cdt-bg-panel);
+                                padding: 10px 12px;
+                            }
+
+                            .cdt-card-title {
+                                font-size: 12px;
+                                font-weight: 700;
+                                color: var(--cdt-text);
+                                margin-bottom: 8px;
+                            }
+
+                            .cdt-kv-compact {
+                                margin-top: 6px;
+                                grid-template-columns: 120px 1fr;
+                                font-size: 11px;
+                            }
+
+                            .cdt-details-section {
+                                margin-top: 10px;
+                                border: 1px solid var(--cdt-border);
+                                border-radius: 12px;
+                                background: var(--cdt-bg-panel);
+                                overflow: hidden;
+                            }
+
+                            .cdt-details-section summary {
+                                cursor: pointer;
+                                padding: 10px 12px;
+                                font-size: 12px;
+                                font-weight: 700;
+                                color: var(--cdt-text);
+                                list-style: none;
+                                background: var(--cdt-bg-panel);
+                                display: flex;
+                                align-items: center;
+                                gap: 6px;
+                            }
+
+                            .cdt-details-section summary::-webkit-details-marker {
+                                display: none;
+                            }
+
+                            .cdt-chevron {
+                                display: inline-flex;
+                                width: 14px;
+                                height: 14px;
+                                transition: transform 0.15s ease;
+                                transform: rotate(-90deg);
+                                flex-shrink: 0;
+                            }
+
+                            .cdt-chevron svg {
+                                width: 100%;
+                                height: 100%;
+                            }
+
+                            .cdt-details-section[open] .cdt-chevron {
+                                transform: rotate(0deg);
+                            }
+
+                            .cdt-details-section[open] summary {
+                                border-bottom: 1px solid var(--cdt-border);
+                            }
+
+                            .cdt-copy-json-btn {
+                                display: inline-flex;
+                                align-items: center;
+                                gap: 6px;
+                                margin-bottom: 10px;
+                                padding: 6px 12px;
+                                font-size: 11px;
+                                font-weight: 500;
+                                color: var(--cdt-text-muted);
+                                background: var(--cdt-bg);
+                                border: 1px solid var(--cdt-border);
+                                border-radius: 6px;
+                                cursor: pointer;
+                                transition: all 0.15s ease;
+                            }
+
+                            .cdt-copy-json-btn:hover {
+                                color: var(--cdt-text);
+                                border-color: var(--cdt-primary);
+                                background: color-mix(in srgb, var(--cdt-primary) 10%, var(--cdt-bg));
+                            }
+
+                            .cdt-copy-icon {
+                                display: inline-flex;
+                                width: 12px;
+                                height: 12px;
+                            }
+
+                            .cdt-copy-icon svg {
+                                width: 100%;
+                                height: 100%;
+                            }
+
+                            .cdt-details-section-content {
+                                padding: 10px 12px;
+                            }
+
+                            .cdt-account-row {
+                                display: grid;
+                                grid-template-columns: 44px 1fr auto;
+                                gap: 10px;
+                                padding: 8px 0;
+                                border-bottom: 1px solid var(--cdt-border);
+                                align-items: center;
+                            }
+
+                            .cdt-account-row:last-child {
+                                border-bottom: none;
+                            }
+
+                            .cdt-account-idx {
+                                font-size: 11px;
+                                color: var(--cdt-text-muted);
+                                font-family: ui-monospace, monospace;
+                            }
+
+                            .cdt-account-key {
+                                font-size: 12px;
+                                color: var(--cdt-text);
+                                font-family: ui-monospace, monospace;
+                                word-break: break-all;
+                            }
+
+                            .cdt-account-badges {
+                                display: flex;
+                                gap: 6px;
+                                flex-wrap: wrap;
+                                justify-content: flex-end;
+                            }
+
+                            .cdt-balance-list {
+                                display: flex;
+                                flex-direction: column;
+                                gap: 8px;
+                            }
+
+                            .cdt-balance-row {
+                                display: grid;
+                                grid-template-columns: 1fr;
+                                gap: 6px;
+                                padding: 10px;
+                                border: 1px solid var(--cdt-border);
+                                border-radius: 10px;
+                                background: var(--cdt-bg);
+                            }
+
+                            .cdt-balance-key {
+                                font-family: ui-monospace, monospace;
+                                font-size: 12px;
+                                color: var(--cdt-text);
+                                word-break: break-all;
+                            }
+
+                            .cdt-balance-delta {
+                                font-family: ui-monospace, monospace;
+                                font-size: 11px;
+                            }
+
+                            .cdt-balance-delta.pos { color: var(--cdt-success); }
+                            .cdt-balance-delta.neg { color: var(--cdt-error); }
+
+                            .cdt-balance-post {
+                                font-family: ui-monospace, monospace;
+                                font-size: 11px;
+                                color: var(--cdt-text-muted);
+                            }
+
+                            .cdt-logs {
+                                display: flex;
+                                flex-direction: column;
+                                gap: 6px;
+                            }
+
+                            .cdt-log-line {
+                                display: grid;
+                                grid-template-columns: 32px 1fr;
+                                gap: 10px;
+                                align-items: start;
+                            }
+
+                            .cdt-log-num {
+                                text-align: right;
+                                color: var(--cdt-text-muted);
+                                font-size: 11px;
+                                font-family: ui-monospace, monospace;
+                            }
+
+                            .cdt-log-text {
+                                font-family: ui-monospace, monospace;
+                                font-size: 11px;
+                                color: var(--cdt-text);
+                                white-space: pre-wrap;
+                                word-break: break-word;
+                            }
+
                             .cdt-empty {
                                 padding: 18px;
                                 color: var(--cdt-text-muted);
                                 font-size: 12px;
                             }
+
+                            .cdt-loading {
+                                display: flex;
+                                align-items: center;
+                                gap: 10px;
+                            }
+
+                            .cdt-spinner {
+                                width: 18px;
+                                height: 18px;
+                                animation: cdt-spin 0.8s linear infinite;
+                                color: var(--cdt-text-muted);
+                                flex: none;
+                            }
+
+                            .cdt-spinner-track { opacity: 0.25; }
+                            .cdt-spinner-head { opacity: 0.75; }
                         </style>
 
                         <div class="cdt-tx-toolbar">
@@ -532,11 +1078,11 @@ export function createTransactionsPlugin(_maxTransactions = 50): ConnectorDevtoo
                                                 </div>
                                                 ${tx.error ? `<div class="cdt-tx-meta" style="color: var(--cdt-error); font-family: ui-monospace, monospace;">${tx.error}</div>` : ''}
                                             </div>
-                                            <div class="cdt-tx-actions">
-                                                <button class="cdt-btn cdt-btn-ghost cdt-btn-icon" data-copy="${tx.signature}" title="Copy signature">
+                                            <div class="cdt-tx-actions" style="display:flex; gap:4px;">
+                                                <button class="cdt-btn cdt-btn-ghost cdt-btn-icon" data-copy-sig="${tx.signature}" title="Copy signature">
                                                     ${ICONS.copy}
                                                 </button>
-                                                <a class="cdt-btn cdt-btn-ghost cdt-btn-icon" href="${getExplorerUrl(tx.signature, tx.cluster)}" target="_blank" rel="noopener noreferrer" title="View on Explorer">
+                                                <a class="cdt-btn cdt-btn-ghost cdt-btn-icon" href="${getExplorerUrl(tx.signature, tx.cluster)}" target="_blank" rel="noopener noreferrer" title="View on Solana Explorer">
                                                     ${ICONS.external}
                                                 </a>
                                             </div>
@@ -556,15 +1102,9 @@ export function createTransactionsPlugin(_maxTransactions = 50): ConnectorDevtoo
                                     <div class="cdt-details-header">
                                         <div class="cdt-details-title">In-flight transaction</div>
                                         <div style="display:flex; gap:6px;">
-                                            ${selectedInflight.signature ? `<button class="cdt-btn cdt-btn-secondary" id="copy-inflight-sig">Copy sig</button>` : ''}
                                             ${
                                                 selectedInflight.transactionBase64
                                                     ? `<button class="cdt-btn cdt-btn-secondary" id="copy-inflight-bytes">Copy base64</button>`
-                                                    : ''
-                                            }
-                                            ${
-                                                selectedInflight.signature
-                                                    ? `<a class="cdt-btn cdt-btn-secondary" href="${getExplorerUrl(selectedInflight.signature, selectedTx?.cluster)}" target="_blank" rel="noopener noreferrer">Explorer</a>`
                                                     : ''
                                             }
                                         </div>
@@ -606,44 +1146,7 @@ export function createTransactionsPlugin(_maxTransactions = 50): ConnectorDevtoo
                                     }
                                 `
                                         : selectedTx
-                                            ? `
-                                    <div class="cdt-details-header">
-                                        <div class="cdt-details-title">Transaction</div>
-                                        <div style="display:flex; gap:6px;">
-                                            <button class="cdt-btn cdt-btn-secondary" id="copy-selected-sig">Copy sig</button>
-                                            ${selectedTx.wireTransactionBase64 ? `<button class="cdt-btn cdt-btn-secondary" id="copy-selected-bytes">Copy base64</button>` : ''}
-                                        </div>
-                                    </div>
-                                    <div class="cdt-kv">
-                                        <div class="cdt-k">signature</div><div class="cdt-v">${selectedTx.signature}</div>
-                                        <div class="cdt-k">status</div><div class="cdt-v">${selectedTx.status}</div>
-                                        <div class="cdt-k">cluster</div><div class="cdt-v">${selectedTx.cluster ?? 'N/A'}</div>
-                                        <div class="cdt-k">method</div><div class="cdt-v">${selectedTx.method ?? 'N/A'}</div>
-                                        ${selectedTx.size ? `<div class="cdt-k">size</div><div class="cdt-v">${selectedTx.size} bytes</div>` : ''}
-                                        ${selectedTxDecoded ? `<div class="cdt-k">fee payer</div><div class="cdt-v">${selectedTxDecoded.summary.feePayer ?? 'N/A'}</div>` : ''}
-                                    </div>
-
-                                    ${
-                                        selectedDetails?.error
-                                            ? `<div class="cdt-json" style="border-color: color-mix(in srgb, var(--cdt-error) 40%, var(--cdt-border)); color: var(--cdt-error);">${selectedDetails.error}</div>`
-                                            : ''
-                                    }
-
-                                    ${
-                                        selectedDetails?.isLoading
-                                            ? `<div class="cdt-empty">Loading RPC details…</div>`
-                                            : selectedDetails
-                                                ? `
-                                            <div class="cdt-kv">
-                                                <div class="cdt-k">slot</div><div class="cdt-v">${selectedDetails.status?.slot ?? 'N/A'}</div>
-                                                <div class="cdt-k">confirmations</div><div class="cdt-v">${selectedDetails.status?.confirmations ?? 'N/A'}</div>
-                                                <div class="cdt-k">rpc err</div><div class="cdt-v">${selectedDetails.status?.err ? safeJsonStringify(selectedDetails.status.err, 0) : 'null'}</div>
-                                            </div>
-                                            <div class="cdt-json">${safeJsonStringify(selectedDetails.tx, 2)}</div>
-                                        `
-                                                : `<div class="cdt-empty">Select a transaction to view details.</div>`
-                                    }
-                                `
+                                            ? renderSentTransactionDetailsPanel()
                                             : `<div class="cdt-empty">Select an inflight or sent transaction.</div>`
                                 }
                             </div>
@@ -688,18 +1191,13 @@ export function createTransactionsPlugin(_maxTransactions = 50): ConnectorDevtoo
                     });
                 });
 
-                el.querySelectorAll<HTMLElement>('[data-copy]').forEach(btn => {
-                    btn.addEventListener('click', e => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        const sig = btn.getAttribute('data-copy');
+                // Copy signature buttons in list rows
+                el.querySelectorAll<HTMLButtonElement>('[data-copy-sig]').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        e.stopPropagation(); // Prevent row selection
+                        const sig = btn.getAttribute('data-copy-sig');
                         if (sig) copyToClipboard(sig);
                     });
-                });
-
-                const copySelectedSigBtn = el.querySelector<HTMLButtonElement>('#copy-selected-sig');
-                copySelectedSigBtn?.addEventListener('click', () => {
-                    if (selectedTx) copyToClipboard(selectedTx.signature);
                 });
 
                 const copySelectedBytesBtn = el.querySelector<HTMLButtonElement>('#copy-selected-bytes');
@@ -712,9 +1210,15 @@ export function createTransactionsPlugin(_maxTransactions = 50): ConnectorDevtoo
                     if (selectedInflight?.transactionBase64) copyToClipboard(selectedInflight.transactionBase64);
                 });
 
-                const copyInflightSigBtn = el.querySelector<HTMLButtonElement>('#copy-inflight-sig');
-                copyInflightSigBtn?.addEventListener('click', () => {
-                    if (selectedInflight?.signature) copyToClipboard(selectedInflight.signature);
+                // Copy JSON button in Raw JSON section
+                const copyJsonBtn = el.querySelector<HTMLButtonElement>('[data-copy-json]');
+                copyJsonBtn?.addEventListener('click', () => {
+                    if (selectedSignature) {
+                        const details = detailsBySignature.get(selectedSignature);
+                        if (details?.tx) {
+                            copyToClipboard(safeJsonStringify(details.tx, 2));
+                        }
+                    }
                 });
             }
 
