@@ -1,7 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { AppProvider, getDefaultConfig, getDefaultMobileConfig } from '@solana/connector/react';
 import { createRemoteSignerWallet } from '@solana/connector/remote';
 
@@ -83,6 +83,39 @@ export function Providers({ children }: { children: ReactNode }) {
             }),
         [],
     );
+
+    // Mount devtools in development mode
+    useEffect(() => {
+        if (process.env.NODE_ENV !== 'development') return;
+
+        let devtools: { mount: (el: HTMLElement) => void; unmount: () => void } | undefined;
+        let container: HTMLDivElement | undefined;
+
+        // Dynamic import to avoid bundling in production
+        import('@solana/devtools').then(({ ConnectorDevtools }) => {
+            // Create container for devtools
+            container = document.createElement('div');
+            container.id = 'connector-devtools-container';
+            document.body.appendChild(container);
+
+            // Create and mount devtools (auto-detects window.__connectorClient)
+            devtools = new ConnectorDevtools({
+                config: {
+                    position: 'bottom-right',
+                    theme: 'dark',
+                    defaultOpen: false,
+                    rpcUrl: process.env.NEXT_PUBLIC_RPC_URL,
+                },
+            });
+            devtools.mount(container);
+        });
+
+        // Cleanup on unmount
+        return () => {
+            devtools?.unmount();
+            container?.remove();
+        };
+    }, []);
 
     return (
         <AppProvider connectorConfig={connectorConfig} mobile={mobile}>

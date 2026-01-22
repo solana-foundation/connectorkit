@@ -1,0 +1,60 @@
+{
+    "name": "@solana/devtools",
+    "version": "0.1.0",
+    "description": "Framework-agnostic devtools for @solana/connector",
+    "main": "./dist/index.js",
+    "module": "./dist/index.mjs",
+    "types": "./dist/index.d.ts",
+    "sideEffects": false,
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.mjs",
+            "require": "./dist/index.js"
+        }
+    },
+    "files": [
+        "dist/**"
+    ],
+    "scripts": {
+        "build": "tsup",
+        "dev": "tsup --watch",
+        "type-check": "tsc --noEmit",
+        "lint": "prettier --check src/",
+        "clean": "rm -rf dist"
+    },
+    "peerDependencies": {
+        "@solana/connector": ">=0.1.0"
+    },
+    "peerDependenciesMeta": {
+        "@solana/connector": {
+            "optional": true
+        }
+    },
+    "devDependencies": {
+        "tsup": "^8.5.0",
+        "typescript": "^5.9.3"
+    },
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/solana-foundation/connectorkit",
+        "directory": "packages/devtools"
+    },
+    "keywords": [
+        "solana",
+        "wallet",
+        "devtools",
+        "debugging",
+        "connector"
+    ],
+    "dependencies": {
+        "@solana-program/compute-budget": "^0.11.0",
+        "@solana-program/system": "^0.10.0",
+        "@solana-program/token": "^0.9.0",
+        "@solana-program/token-2022": "^0.6.1",
+        "@solana/kit": "^5.0.0",
+        "@solana/transaction-messages": "^5.0.0",
+        "@solana/transactions": "^5.0.0"
+    }
+}

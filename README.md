@@ -7,10 +7,10 @@ Production-ready Solana wallet infrastructure. A headless, framework-agnostic wa
 
 ## Packages
 
-| Package                                           | Description                                                          |
-| ------------------------------------------------- | -------------------------------------------------------------------- |
-| [@solana/connector](./packages/connector)         | Core wallet connector with React hooks and headless client           |
-| [@solana/connector-debugger](./packages/debugger) | Development debug panel with transaction analysis (experimental wip) |
+| Package                                   | Description                                                |
+| ----------------------------------------- | ---------------------------------------------------------- |
+| [@solana/connector](./packages/connector) | Core wallet connector with React hooks and headless client |
+| [@solana/devtools](./packages/devtools)   | Framework-agnostic devtools with transaction tracking      |
 
 ## Why ConnectorKit?
 
@@ -72,28 +72,72 @@ function WalletButton() {
 
 See the [connector package docs](./packages/connector/README.md) for full API reference.
 
-## Debug Panel (Development)
+## Devtools (Development)
+
+Framework-agnostic devtools that work with any web framework via the imperative DOM API.
 
 ```bash
-npm install @solana/connector-debugger
+npm install @solana/devtools
 ```
 
 ```typescript
-import { ConnectorDebugPanel } from '@solana/connector-debugger/react';
+import { ConnectorDevtools } from '@solana/devtools';
 
-// Add to your app (development only)
-{process.env.NODE_ENV === 'development' && <ConnectorDebugPanel />}
+// Create devtools (auto-detects window.__connectorClient from ConnectorProvider)
+const devtools = new ConnectorDevtools({
+    config: {
+        position: 'bottom-right',
+        theme: 'dark',
+    },
+});
+
+// Mount to DOM
+const container = document.createElement('div');
+document.body.appendChild(container);
+devtools.mount(container);
+
+// Later, to cleanup
+devtools.unmount();
 ```
 
-Features:
+### Next.js Integration
 
-- Live wallet state monitoring
-- Pre-flight transaction simulation
-- Transaction size analysis with optimization suggestions
-- Address Lookup Table recommendations
-- Real-time event stream
+```tsx
+'use client';
 
-See the [debugger package docs](./packages/debugger/README.md) for full documentation.
+import { useEffect } from 'react';
+
+export function DevtoolsLoader() {
+    useEffect(() => {
+        if (process.env.NODE_ENV !== 'development') return;
+
+        let devtools: any;
+        let container: HTMLDivElement;
+
+        import('@solana/devtools').then(({ ConnectorDevtools }) => {
+            container = document.createElement('div');
+            document.body.appendChild(container);
+            devtools = new ConnectorDevtools();
+            devtools.mount(container);
+        });
+
+        return () => {
+            devtools?.unmount();
+            container?.remove();
+        };
+    }, []);
+
+    return null;
+}
+```
+
+### Features
+
+- **Overview Tab** - Connection state, wallet info, cluster, health metrics
+- **Events Tab** - Real-time event stream with filtering and pause/resume
+- **Transactions Tab** - Transaction tracking with automatic status polling
+
+See the [devtools package docs](./packages/devtools/README.md) for full documentation.
 
 ## Examples
 
