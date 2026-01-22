@@ -34,6 +34,11 @@ export interface ConnectorDevtoolsConfig {
     maxTransactions: number;
     /** RPC URL for display (useful when using a proxy) */
     rpcUrl?: string;
+    /**
+     * Optional session/build id for scoping persisted devtools cache.
+     * If this value changes between page loads, the cached history is discarded.
+     */
+    persistSessionId?: string;
 }
 
 /**
@@ -44,6 +49,46 @@ export interface DevtoolsPersistedState {
     activeTab: string;
     position: DevtoolsPosition;
     panelHeight: number;
+}
+
+export type DevtoolsCacheClearScope = 'all' | 'events' | 'transactions';
+
+export interface DevtoolsStoredEvent {
+    id: number;
+    type: string;
+    timestamp: string;
+    data: Record<string, unknown>;
+}
+
+export interface DevtoolsTrackedTransaction {
+    signature: string;
+    timestamp: string;
+    status: 'pending' | 'confirmed' | 'failed';
+    method?: string;
+    cluster?: string;
+    error?: string;
+    slot?: number;
+    confirmations?: number | null;
+}
+
+export interface DevtoolsEventsCache {
+    nextId: number;
+    isPaused: boolean;
+    selectedType: string | null;
+    expandedEventId: number | null;
+    items: DevtoolsStoredEvent[];
+}
+
+export interface DevtoolsTransactionsCache {
+    items: DevtoolsTrackedTransaction[];
+}
+
+export interface DevtoolsCacheV1 {
+    v: 1;
+    sessionId: string | null;
+    updatedAt: number;
+    events: DevtoolsEventsCache;
+    transactions: DevtoolsTransactionsCache;
 }
 
 /**
@@ -58,6 +103,14 @@ export interface PluginContext {
     subscribe: (callback: () => void) => () => void;
     /** Get the current config */
     getConfig: () => ConnectorDevtoolsConfig;
+    /** Get current in-memory devtools cache (persisted across reloads) */
+    getCache?: () => DevtoolsCacheV1;
+    /** Subscribe to cache changes - returns unsubscribe function */
+    subscribeCache?: (callback: () => void) => () => void;
+    /** Update cache atomically (useful for persisting UI prefs) */
+    updateCache?: (updater: (cache: DevtoolsCacheV1) => DevtoolsCacheV1) => void;
+    /** Clear cached history (and persisted storage) */
+    clearCache?: (scope?: DevtoolsCacheClearScope) => void;
 }
 
 /**
@@ -109,4 +162,5 @@ export const DEFAULT_CONFIG: ConnectorDevtoolsConfig = {
 export const STORAGE_KEYS = {
     STATE: 'connector-devtools-state',
     SETTINGS: 'connector-devtools-settings',
+    CACHE: 'connector-devtools-cache',
 } as const;
