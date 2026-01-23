@@ -89,11 +89,14 @@ function clearAllStorage(): void {
 // Check RPC health by getting current slot
 async function checkRpcHealth(rpcUrl: string): Promise<RpcHealth> {
     const start = performance.now();
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
 
     try {
         const response = await fetch(rpcUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            signal: controller.signal,
             body: JSON.stringify({
                 jsonrpc: '2.0',
                 id: 1,
@@ -115,11 +118,19 @@ async function checkRpcHealth(rpcUrl: string): Promise<RpcHealth> {
         return { status, latency, slot };
     } catch (err) {
         const latency = Math.round(performance.now() - start);
+        const errorMessage =
+            err instanceof DOMException && err.name === 'AbortError'
+                ? 'Request timed out'
+                : err instanceof Error
+                  ? err.message
+                  : 'Failed to connect';
         return {
             status: 'error',
             latency,
-            error: err instanceof Error ? err.message : 'Failed to connect',
+            error: errorMessage,
         };
+    } finally {
+        clearTimeout(timeoutId);
     }
 }
 
@@ -127,7 +138,11 @@ export function createOverviewPlugin(): ConnectorDevtoolsPlugin {
     let unsubscribe: (() => void) | undefined;
     let unsubscribeContext: (() => void) | undefined;
     let rpcHealth: RpcHealth = { status: 'checking' };
+    let isRefreshingRpcHealth = false;
+    let rpcHealthRefreshMode: 'manual' | 'poll' | undefined;
+    let rpcHealthCheckedAt: number | undefined;
     let healthCheckInterval: ReturnType<typeof setInterval> | undefined;
+    let renderLatest: (() => void) | undefined;
 
     return {
         id: 'overview',
@@ -182,11 +197,20 @@ export function createOverviewPlugin(): ConnectorDevtoolsPlugin {
                     return 'cdt-text-error';
                 };
 
+                const lastCheckedLabel = rpcHealthCheckedAt ? new Date(rpcHealthCheckedAt).toLocaleTimeString() : '—';
+                const shouldSpinRefresh = isRefreshingRpcHealth && rpcHealthRefreshMode === 'manual';
+
                 el.innerHTML = `
                     <div class="cdt-overview">
                         <style>
                             .cdt-overview {
                                 height: 100%;
+                                display: flex;
+                                flex-direction: column;
+                            }
+
+                            .cdt-overview-main {
+                                flex: 1;
                                 overflow-y: auto;
                             }
 
@@ -259,6 +283,160 @@ export function createOverviewPlugin(): ConnectorDevtoolsPlugin {
                                 border-top: 1px solid var(--cdt-border);
                                 display: flex;
                                 gap: 8px;
+                            }
+
+                            .cdt-overview-footer {
+                                flex: none;
+                                border-top: 1px solid var(--cdt-border);
+                                background: var(--cdt-bg-panel);
+                            }
+
+                            .cdt-overview-rpcbar {
+                                display: flex;
+                                align-items: stretch;
+                                justify-content: space-between;
+                                gap: 0;
+                                padding: 0;
+                                min-height: 44px;
+                            }
+
+                            .cdt-overview-rpcbar-left {
+                                display: flex;
+                                align-items: center;
+                                gap: 12px;
+                                min-width: 0;
+                                padding: 10px 12px;
+                            }
+
+                            .cdt-overview-rpcbar-title {
+                                display: inline-flex;
+                                align-items: center;
+                                gap: 6px;
+                                font-size: 11px;
+                                font-weight: 600;
+                                text-transform: uppercase;
+                                letter-spacing: 0.05em;
+                                color: var(--cdt-text-muted);
+                                white-space: nowrap;
+                            }
+
+                            .cdt-overview-rpcbar-title svg {
+                                width: 14px;
+                                height: 14px;
+                            }
+
+                            .cdt-overview-rpcbar-metrics {
+                                display: flex;
+                                align-items: center;
+                                gap: 10px;
+                                min-width: 0;
+                                flex-wrap: wrap;
+                            }
+
+                            .cdt-overview-rpcbar-metric {
+                                display: inline-flex;
+                                align-items: baseline;
+                                gap: 6px;
+                                font-size: 12px;
+                            }
+
+                            .cdt-overview-rpcbar-divider {
+                                width: 1px;
+                                height: 16px;
+                                background: var(--cdt-border);
+                            }
+
+                            .cdt-overview-rpcbar-actions {
+                                display: flex;
+                                align-items: stretch;
+                            }
+
+                            #rpc-refresh-btn {
+                                display: flex;
+                                align-items: center;
+                                gap: 8px;
+                                padding: 0 12px;
+                                height: 100%;
+                                border-left: 1px solid var(--cdt-border);
+                                border-radius: 0;
+                                background: transparent;
+                                color: var(--cdt-text-muted);
+                                transition: background-color 0.15s ease, color 0.15s ease;
+                                margin-left: 0;
+                            }
+
+                            #rpc-refresh-btn:hover:not(:disabled) {
+                                background: var(--cdt-bg-hover);
+                                color: var(--cdt-text);
+                            }
+
+                            #rpc-refresh-btn:disabled {
+                                opacity: 0.6;
+                                cursor: not-allowed;
+                            }
+
+                            #rpc-refresh-btn .cdt-refresh-label {
+                                display: flex;
+                                align-items: center;
+                                gap: 6px;
+                                font-size: 11px;
+                                color: var(--cdt-text-dim);
+                                white-space: nowrap;
+                            }
+
+                            #rpc-refresh-btn .cdt-refresh-state-label {
+                                color: var(--cdt-text-muted);
+                            }
+
+                            #rpc-refresh-btn .cdt-refresh-state {
+                                font-weight: 500;
+                                color: var(--cdt-text);
+                            }
+
+                            #rpc-refresh-btn .cdt-refresh-state.cdt-text-error {
+                                color: var(--cdt-error);
+                            }
+
+                            #rpc-refresh-btn .cdt-refresh-separator {
+                                color: var(--cdt-text-dim);
+                                opacity: 0.5;
+                            }
+
+                            #rpc-refresh-btn .cdt-refresh-time {
+                                color: var(--cdt-text-dim);
+                            }
+
+                            #rpc-refresh-btn:hover:not(:disabled) .cdt-refresh-label {
+                                color: var(--cdt-text);
+                            }
+
+                            #rpc-refresh-btn:hover:not(:disabled) .cdt-refresh-time {
+                                color: var(--cdt-text-muted);
+                            }
+
+                            #rpc-refresh-btn svg {
+                                width: 14px;
+                                height: 14px;
+                                flex-shrink: 0;
+                            }
+
+                            #rpc-refresh-btn.cdt-is-loading svg {
+                                animation: cdt-spin 0.9s linear infinite;
+                                transform-origin: 50% 50%;
+                                transform-box: fill-box;
+                            }
+
+                            @keyframes cdt-spin {
+                                from {
+                                    transform: rotate(0deg);
+                                }
+                                to {
+                                    transform: rotate(360deg);
+                                }
+                            }
+
+                            .cdt-overview-footer-details {
+                                padding: 0 12px 12px;
                             }
 
                             .cdt-cluster-badge {
@@ -352,183 +530,210 @@ export function createOverviewPlugin(): ConnectorDevtoolsPlugin {
                             }
                         </style>
 
-                        <div class="cdt-overview-grid">
-                            <!-- Connection Card -->
-                            <div class="cdt-overview-card">
-                                <div class="cdt-overview-card-header">
-                                    <div class="cdt-overview-card-title">
-                                        ${ICONS.wallet}
-                                        Connection
+                        <div class="cdt-overview-main">
+                            <div class="cdt-overview-grid">
+                                <!-- Connection Card -->
+                                <div class="cdt-overview-card">
+                                    <div class="cdt-overview-card-header">
+                                        <div class="cdt-overview-card-title">
+                                            ${ICONS.wallet}
+                                            Connection
+                                        </div>
+                                        ${getStatusBadge(snapshot.connected, snapshot.connecting)}
                                     </div>
-                                    ${getStatusBadge(snapshot.connected, snapshot.connecting)}
+                                    <div class="cdt-overview-rows">
+                                        <div class="cdt-overview-row">
+                                            <span class="cdt-overview-label">Wallet</span>
+                                            <span class="cdt-overview-value">${snapshot.selectedWallet?.name ?? 'None'}</span>
+                                        </div>
+                                        <div class="cdt-overview-row">
+                                            <span class="cdt-overview-label">Account</span>
+                                            <span class="cdt-overview-value cdt-truncate" title="${snapshot.selectedAccount ?? ''}">${truncateAddress(snapshot.selectedAccount)}</span>
+                                        </div>
+                                        <div class="cdt-overview-row">
+                                            <span class="cdt-overview-label">Accounts</span>
+                                            <span class="cdt-overview-value">${snapshot.accounts.length}</span>
+                                        </div>
+                                        <div class="cdt-overview-row">
+                                            <span class="cdt-overview-label">Wallets Detected</span>
+                                            <span class="cdt-overview-value">${snapshot.wallets.length}</span>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="cdt-overview-rows">
-                                    <div class="cdt-overview-row">
-                                        <span class="cdt-overview-label">Wallet</span>
-                                        <span class="cdt-overview-value">${snapshot.selectedWallet?.name ?? 'None'}</span>
+
+                                <!-- Network Card -->
+                                <div class="cdt-overview-card">
+                                    <div class="cdt-overview-card-header">
+                                        <div class="cdt-overview-card-title">
+                                            ${ICONS.network}
+                                            Network
+                                        </div>
+                                        ${snapshot.cluster ? `<span class="cdt-cluster-badge ${getClusterStyleClass(snapshot.cluster.id)}">${snapshot.cluster.label}</span>` : '<span class="cdt-badge cdt-badge-muted">None</span>'}
                                     </div>
-                                    <div class="cdt-overview-row">
-                                        <span class="cdt-overview-label">Account</span>
-                                        <span class="cdt-overview-value cdt-truncate" title="${snapshot.selectedAccount ?? ''}">${truncateAddress(snapshot.selectedAccount)}</span>
+                                    <div class="cdt-overview-rows">
+                                        <div class="cdt-overview-row">
+                                            <span class="cdt-overview-label">Cluster ID</span>
+                                            <span class="cdt-overview-value">${snapshot.cluster?.id ?? 'N/A'}</span>
+                                        </div>
+                                        <div class="cdt-overview-row">
+                                            <span class="cdt-overview-label">RPC URL</span>
+                                            <span class="cdt-overview-value cdt-truncate" title="${rpcUrl ?? ''}">${formatRpcUrl(rpcUrl)}</span>
+                                        </div>
+                                        <div class="cdt-overview-row">
+                                            <span class="cdt-overview-label">Available Clusters</span>
+                                            <span class="cdt-overview-value">${snapshot.clusters.length}</span>
+                                        </div>
                                     </div>
-                                    <div class="cdt-overview-row">
-                                        <span class="cdt-overview-label">Accounts</span>
-                                        <span class="cdt-overview-value">${snapshot.accounts.length}</span>
+                                </div>
+
+                                <!-- Persistence Card -->
+                                <div class="cdt-overview-card">
+                                    <div class="cdt-overview-card-header">
+                                        <div class="cdt-overview-card-title">
+                                            ${ICONS.info}
+                                            On Reload
+                                        </div>
+                                        ${
+                                            persistence.willAutoConnect
+                                                ? '<span class="cdt-badge cdt-badge-success">Auto-connect</span>'
+                                                : '<span class="cdt-badge cdt-badge-muted">Fresh start</span>'
+                                        }
                                     </div>
-                                    <div class="cdt-overview-row">
-                                        <span class="cdt-overview-label">Wallets Detected</span>
-                                        <span class="cdt-overview-value">${snapshot.wallets.length}</span>
+                                    <div class="cdt-overview-rows">
+                                        <div class="cdt-overview-row">
+                                            <span class="cdt-overview-label">Auto-Connect</span>
+                                            <span class="cdt-overview-value">${clientConfig.autoConnect ? 'Enabled' : 'Disabled'}</span>
+                                        </div>
+                                        <div class="cdt-overview-row">
+                                            <span class="cdt-overview-label">Remembered Wallet</span>
+                                            <span class="cdt-overview-value">${persistence.storedWallet ?? 'None'}</span>
+                                        </div>
+                                        <div class="cdt-overview-row">
+                                            <span class="cdt-overview-label">Remembered Network</span>
+                                            <span class="cdt-overview-value">${persistence.storedCluster ?? 'Default'}</span>
+                                        </div>
+                                    </div>
+                                    <div class="cdt-persistence-hint">
+                                        ${
+                                            persistence.willAutoConnect
+                                                ? `Will reconnect to <strong>${persistence.storedWallet}</strong> on page reload.`
+                                                : persistence.hasStoredWallet
+                                                  ? `Wallet stored but auto-connect is disabled.`
+                                                  : `No stored wallet. User will see connect prompt.`
+                                        }
+                                    </div>
+                                </div>
+
+                                <!-- Metrics Card -->
+                                <div class="cdt-overview-card">
+                                    <div class="cdt-overview-card-header">
+                                        <div class="cdt-overview-card-title">
+                                            ${ICONS.events}
+                                            Metrics
+                                        </div>
+                                    </div>
+                                    <div class="cdt-metrics-grid">
+                                        <div class="cdt-metric-item">
+                                            <span class="cdt-metric-value">${metrics.stateUpdates}</span>
+                                            <span class="cdt-metric-label">State Updates</span>
+                                        </div>
+                                        <div class="cdt-metric-item">
+                                            <span class="cdt-metric-value">${metrics.optimizationRate.toFixed(0)}%</span>
+                                            <span class="cdt-metric-label">Optimization</span>
+                                        </div>
+                                        <div class="cdt-metric-item">
+                                            <span class="cdt-metric-value">${metrics.eventListenerCount}</span>
+                                            <span class="cdt-metric-label">Event Listeners</span>
+                                        </div>
+                                        <div class="cdt-metric-item">
+                                            <span class="cdt-metric-value">${metrics.avgUpdateTimeMs.toFixed(1)}ms</span>
+                                            <span class="cdt-metric-label">Avg Update</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- Network Card -->
-                            <div class="cdt-overview-card">
-                                <div class="cdt-overview-card-header">
-                                    <div class="cdt-overview-card-title">
-                                        ${ICONS.network}
-                                        Network
-                                    </div>
-                                    ${snapshot.cluster ? `<span class="cdt-cluster-badge ${getClusterStyleClass(snapshot.cluster.id)}">${snapshot.cluster.label}</span>` : '<span class="cdt-badge cdt-badge-muted">None</span>'}
-                                </div>
-                                <div class="cdt-overview-rows">
-                                    <div class="cdt-overview-row">
-                                        <span class="cdt-overview-label">Cluster ID</span>
-                                        <span class="cdt-overview-value">${snapshot.cluster?.id ?? 'N/A'}</span>
-                                    </div>
-                                    <div class="cdt-overview-row">
-                                        <span class="cdt-overview-label">RPC URL</span>
-                                        <span class="cdt-overview-value cdt-truncate" title="${rpcUrl ?? ''}">${formatRpcUrl(rpcUrl)}</span>
-                                    </div>
-                                    <div class="cdt-overview-row">
-                                        <span class="cdt-overview-label">Available Clusters</span>
-                                        <span class="cdt-overview-value">${snapshot.clusters.length}</span>
-                                    </div>
-                                </div>
+                            <!-- Actions -->
+                            <div class="cdt-overview-actions">
+                                <button class="cdt-btn cdt-btn-secondary" id="fresh-user-btn" title="Clear stored wallet/account/network and reload page">
+                                    ${ICONS.trash}
+                                    Simulate Fresh User
+                                </button>
                             </div>
+                        </div>
 
-                            <!-- RPC Health Card -->
-                            <div class="cdt-overview-card">
-                                <div class="cdt-overview-card-header">
-                                    <div class="cdt-overview-card-title">
+                        <!-- Pinned RPC Health -->
+                        <div class="cdt-overview-footer">
+                            <div class="cdt-overview-rpcbar">
+                                <div class="cdt-overview-rpcbar-left">
+                                    <div class="cdt-overview-rpcbar-title">
                                         ${ICONS.network}
                                         RPC Health
                                     </div>
                                     ${getRpcStatusBadge(rpcHealth)}
-                                </div>
-                                <div class="cdt-overview-rows">
-                                    <div class="cdt-overview-row">
-                                        <span class="cdt-overview-label">Latency</span>
-                                        <span class="cdt-overview-value ${getLatencyClass(rpcHealth.latency)}">${rpcHealth.latency !== undefined ? `${rpcHealth.latency}ms` : '...'}</span>
-                                    </div>
-                                    <div class="cdt-overview-row">
-                                        <span class="cdt-overview-label">Current Slot</span>
-                                        <span class="cdt-overview-value">${rpcHealth.slot !== undefined ? rpcHealth.slot.toLocaleString() : '...'}</span>
-                                    </div>
-                                    <div class="cdt-overview-row">
-                                        <span class="cdt-overview-label">State Issues</span>
-                                        <span class="cdt-overview-value ${health.errors.length > 0 ? 'cdt-text-error' : ''}">${health.errors.length > 0 ? health.errors.length : 'None'}</span>
+                                    <div class="cdt-overview-rpcbar-metrics">
+                                        <div class="cdt-overview-rpcbar-metric" title="Round-trip latency for getSlot">
+                                            <span class="cdt-overview-label">Latency</span>
+                                            <span class="cdt-overview-value ${getLatencyClass(rpcHealth.latency)}">${rpcHealth.latency !== undefined ? `${rpcHealth.latency}ms` : '...'}</span>
+                                        </div>
+                                        <div class="cdt-overview-rpcbar-divider"></div>
+                                        <div class="cdt-overview-rpcbar-metric">
+                                            <span class="cdt-overview-label">Slot</span>
+                                            <span class="cdt-overview-value">${rpcHealth.slot !== undefined ? rpcHealth.slot.toLocaleString() : '...'}</span>
+                                        </div>
                                     </div>
                                 </div>
-                                ${
-                                    rpcHealth.error
-                                        ? `
-                                    <div class="cdt-errors-list">
-                                        <div class="cdt-error-item">• ${rpcHealth.error}</div>
-                                    </div>
-                                `
-                                        : ''
-                                }
-                                ${
-                                    health.errors.length > 0
-                                        ? `
-                                    <div class="cdt-errors-list">
-                                        ${health.errors.map(err => `<div class="cdt-error-item">• ${err}</div>`).join('')}
-                                    </div>
-                                `
-                                        : ''
-                                }
+                                <div class="cdt-overview-rpcbar-actions">
+                                    <button
+                                        class="${shouldSpinRefresh ? 'cdt-is-loading' : ''}"
+                                        id="rpc-refresh-btn"
+                                        aria-label="Refresh RPC health"
+                                        title="Refresh RPC health"
+                                        ${isRefreshingRpcHealth ? 'disabled' : ''}
+                                    >
+                                        ${ICONS.refresh}
+                                        <span class="cdt-refresh-label">
+                                            <span class="cdt-refresh-state-label">State</span>
+                                            <span class="cdt-refresh-state ${health.errors.length > 0 ? 'cdt-text-error' : ''}">${health.errors.length > 0 ? `${health.errors.length} issues` : 'OK'}</span>
+                                            <span class="cdt-refresh-separator">•</span>
+                                            <span class="cdt-refresh-time">Last checked: ${lastCheckedLabel}</span>
+                                        </span>
+                                    </button>
+                                </div>
                             </div>
-
-                            <!-- Persistence Card -->
-                            <div class="cdt-overview-card">
-                                <div class="cdt-overview-card-header">
-                                    <div class="cdt-overview-card-title">
-                                        ${ICONS.info}
-                                        On Reload
-                                    </div>
+                            ${
+                                rpcHealth.error || health.errors.length > 0
+                                    ? `
+                                <div class="cdt-overview-footer-details">
                                     ${
-                                        persistence.willAutoConnect
-                                            ? '<span class="cdt-badge cdt-badge-success">Auto-connect</span>'
-                                            : '<span class="cdt-badge cdt-badge-muted">Fresh start</span>'
+                                        rpcHealth.error
+                                            ? `
+                                        <div class="cdt-errors-list">
+                                            <div class="cdt-error-item">• ${rpcHealth.error}</div>
+                                        </div>
+                                    `
+                                            : ''
+                                    }
+                                    ${
+                                        health.errors.length > 0
+                                            ? `
+                                        <div class="cdt-errors-list">
+                                            ${health.errors.map(err => `<div class="cdt-error-item">• ${err}</div>`).join('')}
+                                        </div>
+                                    `
+                                            : ''
                                     }
                                 </div>
-                                <div class="cdt-overview-rows">
-                                    <div class="cdt-overview-row">
-                                        <span class="cdt-overview-label">Auto-Connect</span>
-                                        <span class="cdt-overview-value">${clientConfig.autoConnect ? 'Enabled' : 'Disabled'}</span>
-                                    </div>
-                                    <div class="cdt-overview-row">
-                                        <span class="cdt-overview-label">Remembered Wallet</span>
-                                        <span class="cdt-overview-value">${persistence.storedWallet ?? 'None'}</span>
-                                    </div>
-                                    <div class="cdt-overview-row">
-                                        <span class="cdt-overview-label">Remembered Network</span>
-                                        <span class="cdt-overview-value">${persistence.storedCluster ?? 'Default'}</span>
-                                    </div>
-                                </div>
-                                <div class="cdt-persistence-hint">
-                                    ${
-                                        persistence.willAutoConnect
-                                            ? `Will reconnect to <strong>${persistence.storedWallet}</strong> on page reload.`
-                                            : persistence.hasStoredWallet
-                                              ? `Wallet stored but auto-connect is disabled.`
-                                              : `No stored wallet. User will see connect prompt.`
-                                    }
-                                </div>
-                            </div>
-
-                            <!-- Metrics Card -->
-                            <div class="cdt-overview-card">
-                                <div class="cdt-overview-card-header">
-                                    <div class="cdt-overview-card-title">
-                                        ${ICONS.events}
-                                        Metrics
-                                    </div>
-                                </div>
-                                <div class="cdt-metrics-grid">
-                                    <div class="cdt-metric-item">
-                                        <span class="cdt-metric-value">${metrics.stateUpdates}</span>
-                                        <span class="cdt-metric-label">State Updates</span>
-                                    </div>
-                                    <div class="cdt-metric-item">
-                                        <span class="cdt-metric-value">${metrics.optimizationRate.toFixed(0)}%</span>
-                                        <span class="cdt-metric-label">Optimization</span>
-                                    </div>
-                                    <div class="cdt-metric-item">
-                                        <span class="cdt-metric-value">${metrics.eventListenerCount}</span>
-                                        <span class="cdt-metric-label">Event Listeners</span>
-                                    </div>
-                                    <div class="cdt-metric-item">
-                                        <span class="cdt-metric-value">${metrics.avgUpdateTimeMs.toFixed(1)}ms</span>
-                                        <span class="cdt-metric-label">Avg Update</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Actions -->
-                        <div class="cdt-overview-actions">
-                            <button class="cdt-btn cdt-btn-secondary" id="fresh-user-btn" title="Clear stored wallet/account/network and reload page">
-                                ${ICONS.trash}
-                                Simulate Fresh User
-                            </button>
+                            `
+                                    : ''
+                            }
                         </div>
                     </div>
                 `;
 
                 // Attach action handlers
                 const freshUserBtn = el.querySelector('#fresh-user-btn');
+                const rpcRefreshBtn = el.querySelector('#rpc-refresh-btn');
 
                 freshUserBtn?.addEventListener('click', () => {
                     if (confirm('This will clear all stored data and reload the page. Continue?')) {
@@ -536,37 +741,60 @@ export function createOverviewPlugin(): ConnectorDevtoolsPlugin {
                         window.location.reload();
                     }
                 });
+
+                rpcRefreshBtn?.addEventListener('click', () => void refreshRpcHealth('manual'));
             }
 
             // Check RPC health
-            async function refreshRpcHealth() {
-                const config = ctx.getConfig();
-                const rpcUrlToCheck = config.rpcUrl ?? client.getRpcUrl();
+            async function refreshRpcHealth(mode: 'manual' | 'poll') {
+                if (isRefreshingRpcHealth) return;
 
-                if (!rpcUrlToCheck) {
-                    rpcHealth = { status: 'error', error: 'No RPC URL configured' };
-                    renderContent();
-                    return;
+                isRefreshingRpcHealth = true;
+                rpcHealthRefreshMode = mode;
+                try {
+                    rpcHealth = { ...rpcHealth, status: 'checking', error: undefined };
+                    renderLatest?.();
+
+                    const config = ctx.getConfig();
+                    const rpcUrlToCheck = config.rpcUrl ?? client.getRpcUrl();
+
+                    if (!rpcUrlToCheck) {
+                        rpcHealth = { status: 'error', error: 'No RPC URL configured' };
+                        return;
+                    }
+
+                    rpcHealth = await checkRpcHealth(rpcUrlToCheck);
+                    rpcHealthCheckedAt = Date.now();
+                } catch (err) {
+                    rpcHealth = {
+                        status: 'error',
+                        error: err instanceof Error ? err.message : 'Failed to check RPC health',
+                    };
+                } finally {
+                    isRefreshingRpcHealth = false;
+                    rpcHealthRefreshMode = undefined;
+                    renderLatest?.();
                 }
-
-                rpcHealth = await checkRpcHealth(rpcUrlToCheck);
-                renderContent();
             }
 
+            // Always render into the latest DOM container (the panel recreates plugins on reopen)
+            renderLatest = renderContent;
+
             // Initial render
-            renderContent();
+            renderLatest?.();
 
             // Initial RPC health check
-            refreshRpcHealth();
+            void refreshRpcHealth('poll');
 
             // Periodic RPC health check (every 30s)
-            healthCheckInterval = setInterval(refreshRpcHealth, 30000);
+            if (healthCheckInterval) clearInterval(healthCheckInterval);
+            healthCheckInterval = setInterval(() => void refreshRpcHealth('poll'), 30000);
 
             // Subscribe to state changes
-            unsubscribe = client.subscribe(() => renderContent());
+            unsubscribe = client.subscribe(() => renderLatest?.());
 
             // Subscribe to context changes
-            unsubscribeContext = ctx.subscribe(() => renderContent());
+            unsubscribeContext = ctx.subscribe(() => renderLatest?.());
         },
 
         destroy() {
@@ -576,6 +804,7 @@ export function createOverviewPlugin(): ConnectorDevtoolsPlugin {
                 clearInterval(healthCheckInterval);
                 healthCheckInterval = undefined;
             }
+            renderLatest = undefined;
             unsubscribe = undefined;
             unsubscribeContext = undefined;
         },

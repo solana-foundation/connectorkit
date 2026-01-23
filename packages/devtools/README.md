@@ -7,9 +7,10 @@ Framework-agnostic devtools for `@solana/connector`. Works with any web framewor
 - **Framework-agnostic**: Pure DOM-based UI using Web Components
 - **Auto-detection**: Automatically finds `window.__connectorClient` when available
 - **TanStack-style API**: Simple `mount(el)` / `unmount()` lifecycle
-- **Plugin system**: Built-in Overview, Events, and Transactions tabs
+- **Plugin system**: Built-in Overview, Events, Transactions, and IDL tabs
 - **In-flight transactions**: Captures `transaction:preparing` before a signature exists and progresses through signing → sent
 - **Transaction inspection**: Decodes wire bytes (fee payer, size, compute budget) and fetches RPC details (status/confirmations + `getTransaction` JSON/logs)
+- **IDL interaction**: Fetch Program Metadata IDLs (seed: `idl`) and execute modern Anchor instructions from the devtools panel
 - **Persistent settings + cache**: Remembers panel state and persists a devtools cache (clearable from the UI)
 
 ## Installation
@@ -91,6 +92,22 @@ export function DevtoolsLoader() {
     return null;
 }
 ```
+
+### IDL Tab (Interact with program instructions)
+
+The **IDL** tab lets you fetch a program’s IDL from **Program Metadata** or **Anchor IDL** and execute instructions using the currently connected wallet.
+
+- **Fetch from chain**: Enter a program id, select **Program Metadata** or **Anchor IDL**, and click **Fetch** (requires an RPC URL via `config.rpcUrl` or the connector cluster).
+- **Local override**: Use **Paste JSON** / **Upload JSON** to load an IDL from your codebase during development.
+- **Execute**: Select an instruction, fill accounts/args, then click **Execute**.
+- **Auto-prefill (Explorer-like)**:
+    - Known program accounts (System/Token/Associated Token, etc.) are filled when detected by name.
+    - Wallet-controlled accounts (authority/owner/payer/signer patterns) are filled with the connected wallet.
+    - PDA accounts are computed when seeds are available and filled automatically (locked by default; toggle **PDAs: Locked/Editable**).
+    - Use **Reset** to clear inputs and re-apply prefills.
+- **Safety**: On mainnet, you’ll be prompted before sending a real transaction.
+
+Note: v1 supports **modern Anchor IDLs**.
 
 ## Configuration
 

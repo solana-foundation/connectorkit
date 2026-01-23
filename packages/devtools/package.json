@@ -49,12 +49,17 @@
         "connector"
     ],
     "dependencies": {
+        "@coral-xyz/anchor": "^0.32.1",
         "@solana-program/compute-budget": "^0.11.0",
+        "@solana-program/program-metadata": "^0.4.1",
         "@solana-program/system": "^0.10.0",
         "@solana-program/token": "^0.9.0",
         "@solana-program/token-2022": "^0.6.1",
+        "@solana/codecs": "^5.0.0",
         "@solana/kit": "^5.0.0",
         "@solana/transaction-messages": "^5.0.0",
-        "@solana/transactions": "^5.0.0"
+        "@solana/transactions": "^5.0.0",
+        "@solana/web3.js": "^1.98.4",
+        "bn.js": "^5.2.2"
     }
 }

@@ -33,3 +33,4 @@ export type {
 export { createOverviewPlugin } from './plugins/overview';
 export { createEventsPlugin } from './plugins/events';
 export { createTransactionsPlugin } from './plugins/transactions';
+export { createIdlPlugin } from './plugins/idl';
