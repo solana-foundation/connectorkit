@@ -371,7 +371,7 @@ export function createIdlPlugin(): ConnectorDevtoolsPlugin {
     return {
         id: 'idl',
         name: 'IDL',
-        icon: ICONS.code ?? ICONS.overview,
+        icon: ICONS.idl,
 
         render(el: HTMLElement, ctx: PluginContext) {
             function renderContent() {

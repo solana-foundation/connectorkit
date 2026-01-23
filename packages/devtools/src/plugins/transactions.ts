@@ -501,8 +501,8 @@ export function createTransactionsPlugin(_maxTransactions = 50): ConnectorDevtoo
                                 ${inflightDisplay.length ? `<span class="cdt-pill warn">${inflightDisplay.length} inflight</span>` : ''}
                             </div>
                             <div style="display:flex; gap:6px;">
-                                <button class="cdt-btn cdt-btn-secondary" id="refresh-selected" ${selectedSignature ? '' : 'disabled'}>
-                                    Refresh
+                                <button class="cdt-btn cdt-btn-ghost cdt-btn-icon" id="refresh-selected" ${selectedSignature ? '' : 'disabled'} title="Refresh selected transaction">
+                                    ${ICONS.refresh}
                                 </button>
                                 <button class="cdt-btn cdt-btn-ghost cdt-btn-icon" id="clear-tx" title="Clear history">
                                     ${ICONS.trash}
