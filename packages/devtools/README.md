@@ -101,10 +101,10 @@ The **IDL** tab lets you fetch a program’s IDL from **Program Metadata** or **
 - **Local override**: Use **Paste JSON** / **Upload JSON** to load an IDL from your codebase during development.
 - **Execute**: Select an instruction, fill accounts/args, then click **Execute**.
 - **Auto-prefill (Explorer-like)**:
-  - Known program accounts (System/Token/Associated Token, etc.) are filled when detected by name.
-  - Wallet-controlled accounts (authority/owner/payer/signer patterns) are filled with the connected wallet.
-  - PDA accounts are computed when seeds are available and filled automatically (locked by default; toggle **PDAs: Locked/Editable**).
-  - Use **Reset** to clear inputs and re-apply prefills.
+    - Known program accounts (System/Token/Associated Token, etc.) are filled when detected by name.
+    - Wallet-controlled accounts (authority/owner/payer/signer patterns) are filled with the connected wallet.
+    - PDA accounts are computed when seeds are available and filled automatically (locked by default; toggle **PDAs: Locked/Editable**).
+    - Use **Reset** to clear inputs and re-apply prefills.
 - **Safety**: On mainnet, you’ll be prompted before sending a real transaction.
 
 Note: v1 supports **modern Anchor IDLs**.

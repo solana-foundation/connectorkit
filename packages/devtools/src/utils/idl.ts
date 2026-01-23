@@ -53,4 +53,3 @@ export async function fetchProgramMetadataIdl({
         throw new Error(`IDL JSON parse failed: ${msg}`);
     }
 }
-
