@@ -15,6 +15,7 @@ import { decodeWireTransactionBase64 } from '../utils/tx-decode';
 import { copyToClipboard, escapeHtml, getExplorerUrl, truncateMiddle } from '../utils/dom';
 import { createTransactionDetailsState, fetchTransactionDetails, mergeTransactions } from './transactions/details';
 import { formatRelativeTime, safeJsonStringify } from './transactions/format';
+import { renderTransactionFlowPanel } from './transactions/render-flow';
 import { renderSentTransactionDetailsPanel } from './transactions/render-sent-details';
 
 export function createTransactionsPlugin(_maxTransactions = 50): ConnectorDevtoolsPlugin {
@@ -24,6 +25,7 @@ export function createTransactionsPlugin(_maxTransactions = 50): ConnectorDevtoo
     let selectedSignature: string | null = null;
     let selectedInflightId: string | null = null;
     const detailsState = createTransactionDetailsState();
+    let detailsTab: 'details' | 'flow' = 'details';
 
     function stopPolling() {
         if (pollInterval !== undefined) window.clearInterval(pollInterval);
@@ -87,6 +89,79 @@ export function createTransactionsPlugin(_maxTransactions = 50): ConnectorDevtoo
                         selectedTxDecoded = null;
                     }
                 }
+
+                const isFlowAvailable = Boolean(selectedTx);
+                if (!isFlowAvailable && detailsTab === 'flow') detailsTab = 'details';
+
+                const detailsHtml = (() => {
+                    if (selectedInflight) {
+                        if (detailsTab === 'flow')
+                            return `<div class="cdt-empty">Flow view is available for sent transactions after RPC details are fetched.</div>`;
+
+                        return `
+                            <div class="cdt-details-header">
+                                <div class="cdt-details-title">In-flight transaction</div>
+                                <div style="display:flex; gap:6px;">
+                                    ${
+                                        selectedInflight.transactionBase64
+                                            ? `<button class="cdt-btn cdt-btn-secondary" id="copy-inflight-bytes">Copy base64</button>`
+                                            : ''
+                                    }
+                                </div>
+                            </div>
+                            <div class="cdt-kv">
+                                <div class="cdt-k">stage</div><div class="cdt-v">${selectedInflight.stage}</div>
+                                ${selectedInflight.signature ? `<div class="cdt-k">signature</div><div class="cdt-v">${selectedInflight.signature}</div>` : ''}
+                                <div class="cdt-k">timestamp</div><div class="cdt-v">${selectedInflight.timestamp}</div>
+                                <div class="cdt-k">size</div><div class="cdt-v">${selectedInflight.size} bytes</div>
+                                ${
+                                    selectedInflightDecoded
+                                        ? `
+                                <div class="cdt-k">version</div><div class="cdt-v">${String(selectedInflightDecoded.summary.version)}</div>
+                                <div class="cdt-k">fee payer</div><div class="cdt-v">${selectedInflightDecoded.summary.feePayer ?? 'N/A'}</div>
+                                <div class="cdt-k">required signers</div><div class="cdt-v">${selectedInflightDecoded.summary.requiredSigners}</div>
+                                <div class="cdt-k">instructions</div><div class="cdt-v">${selectedInflightDecoded.summary.instructionCount}</div>
+                                <div class="cdt-k">CU limit</div><div class="cdt-v">${selectedInflightDecoded.summary.computeUnitLimit ?? 'N/A'}</div>
+                                <div class="cdt-k">CU price</div><div class="cdt-v">${selectedInflightDecoded.summary.computeUnitPriceMicroLamports ? `${selectedInflightDecoded.summary.computeUnitPriceMicroLamports.toString()} µ-lamports/CU` : 'N/A'}</div>
+                                `
+                                        : `
+                                <div class="cdt-k">decode</div><div class="cdt-v">Failed to decode bytes</div>
+                                `
+                                }
+                            </div>
+                            ${
+                                selectedInflightDecoded
+                                    ? `
+                                <div class="cdt-json">${safeJsonStringify(
+                                    selectedInflightDecoded.compiledMessage.instructions.map(ix => ({
+                                        dataHexPreview: ix.data ? bytesToHexPreview(ix.data, 32) : '',
+                                        program:
+                                            selectedInflightDecoded!.compiledMessage.staticAccounts[
+                                                ix.programAddressIndex
+                                            ],
+                                        programAddressIndex: ix.programAddressIndex,
+                                        accounts: ix.accountIndices?.length ?? 0,
+                                    })),
+                                    2,
+                                )}</div>
+                            `
+                                    : ''
+                            }
+                        `;
+                    }
+
+                    if (selectedTx) {
+                        return detailsTab === 'details'
+                            ? renderSentTransactionDetailsPanel({
+                                  selectedTx,
+                                  selectedTxDecoded,
+                                  selectedDetails,
+                              })
+                            : renderTransactionFlowPanel({ selectedTx, selectedDetails });
+                    }
+
+                    return `<div class="cdt-empty">Select an inflight or sent transaction.</div>`;
+                })();
 
                 el.innerHTML = `
                     <div class="cdt-transactions">
@@ -152,6 +227,20 @@ export function createTransactionsPlugin(_maxTransactions = 50): ConnectorDevtoo
 
                             .cdt-tx-details {
                                 min-width: 0;
+                                min-height: 0;
+                                display: flex;
+                                flex-direction: column;
+                                overflow: hidden;
+                            }
+
+                            .cdt-tx-details-top {
+                                flex: none;
+                                padding: 12px 12px 0;
+                            }
+
+                            .cdt-tx-details-body {
+                                flex: 1;
+                                min-height: 0;
                                 overflow: auto;
                                 padding: 12px;
                             }
@@ -227,6 +316,7 @@ export function createTransactionsPlugin(_maxTransactions = 50): ConnectorDevtoo
                             .cdt-pill.warn { color: var(--cdt-warning); border-color: color-mix(in srgb, var(--cdt-warning) 40%, var(--cdt-border)); }
                             .cdt-pill.info { color: var(--cdt-info); border-color: color-mix(in srgb, var(--cdt-info) 40%, var(--cdt-border)); }
                             .cdt-pill.success { color: var(--cdt-success); border-color: color-mix(in srgb, var(--cdt-success) 40%, var(--cdt-border)); }
+                            .cdt-pill.error { color: var(--cdt-error); border-color: color-mix(in srgb, var(--cdt-error) 40%, var(--cdt-border)); }
 
                             .cdt-details-header {
                                 display: flex;
@@ -240,6 +330,223 @@ export function createTransactionsPlugin(_maxTransactions = 50): ConnectorDevtoo
                                 font-size: 13px;
                                 font-weight: 700;
                                 color: var(--cdt-text);
+                            }
+
+                            .cdt-details-subtabs {
+                                display: inline-flex;
+                                gap: 2px;
+                                padding: 2px;
+                                border: 1px solid var(--cdt-border);
+                                border-radius: 10px;
+                                background: var(--cdt-bg-panel);
+                                margin-bottom: 10px;
+                            }
+
+                            .cdt-details-subtab {
+                                padding: 6px 10px;
+                                border-radius: 8px;
+                                font-size: 12px;
+                                font-weight: 600;
+                                color: var(--cdt-text-muted);
+                                transition: background-color 0.15s ease, color 0.15s ease;
+                            }
+
+                            .cdt-details-subtab:hover:not(:disabled) {
+                                background: var(--cdt-bg-hover);
+                                color: var(--cdt-text);
+                            }
+
+                            .cdt-details-subtab.cdt-active {
+                                background: var(--cdt-bg-active);
+                                color: var(--cdt-text);
+                            }
+
+                            .cdt-flow-wrap {
+                                flex: 1;
+                                min-height: 0;
+                                border: 1px solid var(--cdt-border);
+                                border-radius: 14px;
+                                background-color: color-mix(in srgb, var(--cdt-bg-panel) 92%, white 1%);
+                                background-image:
+                                    radial-gradient(
+                                        circle at 1px 1px,
+                                        color-mix(in srgb, var(--cdt-border) 35%, transparent) 1px,
+                                        transparent 0
+                                    ),
+                                    radial-gradient(
+                                        circle at 1px 1px,
+                                        color-mix(in srgb, var(--cdt-border) 18%, transparent) 1px,
+                                        transparent 0
+                                    );
+                                background-size: 18px 18px, 90px 90px;
+                                overflow: hidden;
+                            }
+
+                            .cdt-flow-svg {
+                                display: block;
+                                width: 100%;
+                                height: 100%;
+                            }
+
+                            .cdt-flow-panel {
+                                height: 100%;
+                                min-height: 0;
+                                display: flex;
+                                flex-direction: column;
+                                gap: 10px;
+                            }
+
+                            .cdt-flow-legend {
+                                display: flex;
+                                flex-wrap: wrap;
+                                gap: 10px;
+                                align-items: center;
+                                font-size: 11px;
+                                color: var(--cdt-text-muted);
+                            }
+
+                            .cdt-flow-legend-item {
+                                display: inline-flex;
+                                align-items: center;
+                                gap: 6px;
+                            }
+
+                            .cdt-flow-dot {
+                                width: 8px;
+                                height: 8px;
+                                border-radius: 999px;
+                            }
+
+                            .cdt-flow-line {
+                                width: 18px;
+                                height: 2px;
+                                border-radius: 999px;
+                                opacity: 0.8;
+                            }
+
+                            .cdt-flow-legend-note {
+                                margin-left: auto;
+                                color: var(--cdt-text-dim);
+                            }
+
+                            .cdt-flow-node-card {
+                                position: relative;
+                                width: 100%;
+                                height: 100%;
+                                border: 1px solid var(--cdt-border);
+                                border-radius: 14px;
+                                background: var(--cdt-bg-panel);
+                                overflow: hidden;
+                                box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
+                            }
+
+                            .cdt-flow-node-card:hover {
+                                border-color: color-mix(in srgb, var(--cdt-accent) 55%, var(--cdt-border));
+                                box-shadow: 0 14px 34px rgba(0, 0, 0, 0.28);
+                            }
+
+                            .cdt-flow-node-header {
+                                display: flex;
+                                align-items: center;
+                                gap: 10px;
+                                padding: 10px 12px;
+                                border-bottom: 1px solid var(--cdt-border);
+                                background: color-mix(in srgb, var(--cdt-bg-panel) 82%, var(--cdt-bg) 18%);
+                            }
+
+                            .cdt-flow-node-title {
+                                flex: 1;
+                                min-width: 0;
+                                font-size: 13px;
+                                font-weight: 750;
+                                color: var(--cdt-text);
+                                overflow: hidden;
+                                text-overflow: ellipsis;
+                                white-space: nowrap;
+                            }
+
+                            .cdt-flow-node-chip {
+                                display: inline-flex;
+                                align-items: center;
+                                justify-content: center;
+                                gap: 6px;
+                                padding: 2px 10px 2px 8px;
+                                border-radius: 999px;
+                                font-size: 11px;
+                                font-weight: 650;
+                                letter-spacing: 0.02em;
+                                border: 1px solid var(--cdt-border);
+                                background: var(--cdt-bg-hover);
+                                color: var(--cdt-text-muted);
+                                flex: none;
+                            }
+
+                            .cdt-flow-node-chip-icon {
+                                display: inline-flex;
+                                width: 14px;
+                                height: 14px;
+                                align-items: center;
+                                justify-content: center;
+                                color: currentColor;
+                                opacity: 0.95;
+                            }
+
+                            .cdt-flow-node-chip-icon svg {
+                                width: 12px;
+                                height: 12px;
+                            }
+
+                            .cdt-flow-node-chip[data-tone="accent"] {
+                                background: color-mix(in srgb, var(--cdt-accent) 15%, transparent);
+                                border-color: color-mix(in srgb, var(--cdt-accent) 35%, var(--cdt-border));
+                                color: color-mix(in srgb, var(--cdt-accent) 80%, white 20%);
+                            }
+
+                            .cdt-flow-node-chip[data-tone="success"] {
+                                background: color-mix(in srgb, var(--cdt-success) 15%, transparent);
+                                border-color: color-mix(in srgb, var(--cdt-success) 35%, var(--cdt-border));
+                                color: var(--cdt-success);
+                            }
+
+                            .cdt-flow-node-chip[data-tone="info"] {
+                                background: color-mix(in srgb, var(--cdt-info) 15%, transparent);
+                                border-color: color-mix(in srgb, var(--cdt-info) 35%, var(--cdt-border));
+                                color: var(--cdt-info);
+                            }
+
+                            .cdt-flow-node-chip[data-tone="warning"] {
+                                background: color-mix(in srgb, var(--cdt-warning) 15%, transparent);
+                                border-color: color-mix(in srgb, var(--cdt-warning) 35%, var(--cdt-border));
+                                color: var(--cdt-warning);
+                            }
+
+                            .cdt-flow-node-body {
+                                padding: 10px 12px 12px;
+                                display: flex;
+                                flex-direction: column;
+                                gap: 4px;
+                            }
+
+                            .cdt-flow-node-body-primary {
+                                font-size: 12px;
+                                font-weight: 650;
+                                color: var(--cdt-text);
+                                line-height: 1.25;
+                                overflow: hidden;
+                                display: -webkit-box;
+                                -webkit-box-orient: vertical;
+                                -webkit-line-clamp: 3;
+                            }
+
+                            .cdt-flow-node-body-secondary {
+                                font-size: 11px;
+                                color: var(--cdt-text-muted);
+                                line-height: 1.25;
+                                overflow: hidden;
+                                display: -webkit-box;
+                                -webkit-box-orient: vertical;
+                                -webkit-line-clamp: 2;
+                                text-overflow: ellipsis;
                             }
 
                             .cdt-kv {
@@ -594,66 +901,29 @@ export function createTransactionsPlugin(_maxTransactions = 50): ConnectorDevtoo
                             </div>
 
                             <div class="cdt-tx-details">
-                                ${
-                                    selectedInflight
-                                        ? `
-                                    <div class="cdt-details-header">
-                                        <div class="cdt-details-title">In-flight transaction</div>
-                                        <div style="display:flex; gap:6px;">
-                                            ${
-                                                selectedInflight.transactionBase64
-                                                    ? `<button class="cdt-btn cdt-btn-secondary" id="copy-inflight-bytes">Copy base64</button>`
-                                                    : ''
-                                            }
-                                        </div>
+                                <div class="cdt-tx-details-top">
+                                    <div class="cdt-details-subtabs">
+                                        <button
+                                            class="cdt-details-subtab ${detailsTab === 'details' ? 'cdt-active' : ''}"
+                                            data-details-tab="details"
+                                            ${selectedInflight || selectedTx ? '' : 'disabled'}
+                                        >
+                                            Details
+                                        </button>
+                                        <button
+                                            class="cdt-details-subtab ${detailsTab === 'flow' ? 'cdt-active' : ''}"
+                                            data-details-tab="flow"
+                                            ${isFlowAvailable ? '' : 'disabled'}
+                                            title="${isFlowAvailable ? 'Transaction flow graph' : 'Select a sent transaction to view flow'}"
+                                        >
+                                            Flow
+                                        </button>
                                     </div>
-                                    <div class="cdt-kv">
-                                        <div class="cdt-k">stage</div><div class="cdt-v">${selectedInflight.stage}</div>
-                                        ${selectedInflight.signature ? `<div class="cdt-k">signature</div><div class="cdt-v">${selectedInflight.signature}</div>` : ''}
-                                        <div class="cdt-k">timestamp</div><div class="cdt-v">${selectedInflight.timestamp}</div>
-                                        <div class="cdt-k">size</div><div class="cdt-v">${selectedInflight.size} bytes</div>
-                                        ${
-                                            selectedInflightDecoded
-                                                ? `
-                                        <div class="cdt-k">version</div><div class="cdt-v">${String(selectedInflightDecoded.summary.version)}</div>
-                                        <div class="cdt-k">fee payer</div><div class="cdt-v">${selectedInflightDecoded.summary.feePayer ?? 'N/A'}</div>
-                                        <div class="cdt-k">required signers</div><div class="cdt-v">${selectedInflightDecoded.summary.requiredSigners}</div>
-                                        <div class="cdt-k">instructions</div><div class="cdt-v">${selectedInflightDecoded.summary.instructionCount}</div>
-                                        <div class="cdt-k">CU limit</div><div class="cdt-v">${selectedInflightDecoded.summary.computeUnitLimit ?? 'N/A'}</div>
-                                        <div class="cdt-k">CU price</div><div class="cdt-v">${selectedInflightDecoded.summary.computeUnitPriceMicroLamports ? `${selectedInflightDecoded.summary.computeUnitPriceMicroLamports.toString()} µ-lamports/CU` : 'N/A'}</div>
-                                        `
-                                                : `
-                                        <div class="cdt-k">decode</div><div class="cdt-v">Failed to decode bytes</div>
-                                        `
-                                        }
-                                    </div>
-                                    ${
-                                        selectedInflightDecoded
-                                            ? `
-                                        <div class="cdt-json">${safeJsonStringify(
-                                            selectedInflightDecoded.compiledMessage.instructions.map(ix => ({
-                                                dataHexPreview: ix.data ? bytesToHexPreview(ix.data, 32) : '',
-                                                program:
-                                                    selectedInflightDecoded!.compiledMessage.staticAccounts[
-                                                        ix.programAddressIndex
-                                                    ],
-                                                programAddressIndex: ix.programAddressIndex,
-                                                accounts: ix.accountIndices?.length ?? 0,
-                                            })),
-                                            2,
-                                        )}</div>
-                                    `
-                                            : ''
-                                    }
-                                `
-                                        : selectedTx
-                                          ? renderSentTransactionDetailsPanel({
-                                                selectedTx,
-                                                selectedTxDecoded,
-                                                selectedDetails,
-                                            })
-                                          : `<div class="cdt-empty">Select an inflight or sent transaction.</div>`
-                                }
+                                </div>
+
+                                <div class="cdt-tx-details-body">
+                                    ${detailsHtml}
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -664,6 +934,7 @@ export function createTransactionsPlugin(_maxTransactions = 50): ConnectorDevtoo
                 clearBtn?.addEventListener('click', () => {
                     selectedSignature = null;
                     selectedInflightId = null;
+                    detailsTab = 'details';
                     detailsState.detailsRequestId += 1;
                     detailsState.detailsBySignature.clear();
                     ctx.clearCache?.('transactions');
@@ -693,6 +964,16 @@ export function createTransactionsPlugin(_maxTransactions = 50): ConnectorDevtoo
                         if (!id) return;
                         selectedInflightId = id;
                         selectedSignature = null;
+                        detailsTab = 'details';
+                        renderContent();
+                    });
+                });
+
+                el.querySelectorAll<HTMLButtonElement>('[data-details-tab]').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const tab = btn.getAttribute('data-details-tab');
+                        if (tab !== 'details' && tab !== 'flow') return;
+                        detailsTab = tab;
                         renderContent();
                     });
                 });
