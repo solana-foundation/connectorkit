@@ -35,6 +35,7 @@ import { createDevtoolsElement } from './components/devtools-element';
 import { createOverviewPlugin } from './plugins/overview';
 import { createEventsPlugin } from './plugins/events';
 import { createTransactionsPlugin } from './plugins/transactions';
+import { createIdlPlugin } from './plugins/idl';
 
 declare global {
     interface Window {
@@ -89,6 +90,7 @@ export class ConnectorDevtools {
             createOverviewPlugin(),
             createEventsPlugin(this.#config.maxEvents),
             createTransactionsPlugin(this.#config.maxTransactions),
+            createIdlPlugin(),
             ...(init.plugins ?? []),
         ];
     }
