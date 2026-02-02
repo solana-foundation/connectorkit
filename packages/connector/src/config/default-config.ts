@@ -398,14 +398,31 @@ export function getDefaultMobileConfig(options: {
     appUrl?: string;
     network?: 'mainnet' | 'mainnet-beta' | 'devnet' | 'testnet';
 }) {
-    const baseUrl =
-        options.appUrl || (typeof window !== 'undefined' ? window.location.origin : 'https://localhost:3000');
+    // NOTE: Mobile Wallet Adapter expects `appIdentity.icon` to be a *relative path* (or omitted).
+    // It resolves this relative path against `appIdentity.uri`.
+    // @see https://docs.solanamobile.com/mobile-wallet-adapter/web-installation
+    function getAppOrigin(appUrl?: string): string {
+        if (appUrl) {
+            try {
+                return new URL(appUrl).origin;
+            } catch {
+                // If appUrl is already an origin-like string, use it as-is.
+                return appUrl;
+            }
+        }
+        if (typeof window !== 'undefined') return window.location.origin;
+        return 'https://localhost:3000';
+    }
+
+    const origin = getAppOrigin(options.appUrl);
 
     return {
         appIdentity: {
             name: options.appName,
-            uri: baseUrl,
-            icon: `${baseUrl}/favicon.ico`,
+            uri: origin,
+            // Use a relative icon path so wallets resolve it against `uri`.
+            // This avoids invalid URLs like: `${uri}/${uri}/favicon.ico` on mobile.
+            icon: '/favicon.ico',
         },
         cluster: options.network || 'mainnet-beta',
     };
