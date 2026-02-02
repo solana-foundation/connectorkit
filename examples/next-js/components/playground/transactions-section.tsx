@@ -3,6 +3,9 @@
 import {
     LegacySolTransfer,
     ModernSolTransfer,
+    ModernWalletTransfer,
+    TitanSwap,
+    titanSwapCode,
     KitSignerDemo,
     ChainUtilitiesDemo,
     ConnectionAbstractionDemo,
@@ -256,6 +259,148 @@ export function ModernSolTransfer() {
     );
 }`,
         render: () => <ModernSolTransfer />,
+    },
+    {
+        id: 'modern-wallet-transfer',
+        name: 'Modern Wallet Transfer',
+        description: 'Transfer 1 lamport to another wallet using @solana/kit with a kit-compatible signer.',
+        fileName: 'components/transactions/modern-wallet-transfer.tsx',
+        code: `'use client';
+
+import { useCallback, useMemo } from 'react';
+import {
+    createSolanaRpc,
+    pipe,
+    createTransactionMessage,
+    setTransactionMessageFeePayerSigner,
+    setTransactionMessageLifetimeUsingBlockhash,
+    appendTransactionMessageInstructions,
+    sendAndConfirmTransactionFactory,
+    signTransactionMessageWithSigners,
+    createSolanaRpcSubscriptions,
+    lamports,
+    assertIsTransactionWithBlockhashLifetime,
+    signature as createSignature,
+    address,
+    type TransactionSigner,
+} from '@solana/kit';
+import { getTransferSolInstruction } from '@solana-program/system';
+import { useKitTransactionSigner, useCluster, useConnectorClient } from '@solana/connector';
+import { PipelineHeaderButton, PipelineVisualization } from '@/components/pipeline';
+import { VisualPipeline } from '@/lib/visual-pipeline';
+import { useExampleCardHeaderActions } from '@/components/playground/example-card-actions';
+import {
+    getBase58SignatureFromSignedTransaction,
+    getBase64EncodedWireTransaction,
+    getWebSocketUrlForRpcUrl,
+    isRpcProxyUrl,
+    waitForSignatureConfirmation,
+} from './rpc-utils';
+
+// Destination wallet address
+const DESTINATION_ADDRESS = address('A7Xmq3qqt4uvw3GELHw9HHNFbwZzHDJNtmk6fe2p5b5s');
+
+export function ModernWalletTransfer() {
+    const { signer, ready } = useKitTransactionSigner();
+    const { cluster } = useCluster();
+    const client = useConnectorClient();
+
+    const visualPipeline = useMemo(
+        () =>
+            new VisualPipeline('modern-wallet-transfer', [
+                { name: 'Build instruction', type: 'instruction' },
+                { name: 'Transfer SOL', type: 'transaction' },
+            ]),
+        [],
+    );
+
+    const getExplorerUrl = useCallback(
+        (sig: string) => {
+            const clusterSlug = cluster?.id?.replace('solana:', '');
+            if (!clusterSlug || clusterSlug === 'mainnet' || clusterSlug === 'mainnet-beta') {
+                return 'https://explorer.solana.com/tx/' + sig;
+            }
+            return 'https://explorer.solana.com/tx/' + sig + '?cluster=' + clusterSlug;
+        },
+        [cluster?.id],
+    );
+
+    const executeWalletTransfer = useCallback(async () => {
+        if (!signer || !client) return;
+
+        const rpcUrl = client.getRpcUrl();
+        if (!rpcUrl) throw new Error('No RPC endpoint configured');
+        const rpc = createSolanaRpc(rpcUrl);
+
+        let signatureBase58: string | null = null;
+
+        await visualPipeline.execute(async () => {
+            visualPipeline.setStepState('Build instruction', { type: 'building' });
+            visualPipeline.setStepState('Transfer SOL', { type: 'building' });
+
+            const { value: latestBlockhash } = await rpc.getLatestBlockhash().send();
+            
+            // Transfer to another wallet instead of self
+            const transferInstruction = getTransferSolInstruction({
+                source: signer as TransactionSigner,
+                destination: DESTINATION_ADDRESS,
+                amount: lamports(1n),
+            });
+
+            const transactionMessage = pipe(
+                createTransactionMessage({ version: 0 }),
+                tx => setTransactionMessageFeePayerSigner(signer, tx),
+                tx => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
+                tx => appendTransactionMessageInstructions([transferInstruction], tx),
+            );
+
+            visualPipeline.setStepState('Transfer SOL', { type: 'signing' });
+
+            const signedTransaction = await signTransactionMessageWithSigners(transactionMessage);
+            signatureBase58 = getBase58SignatureFromSignedTransaction(signedTransaction);
+
+            visualPipeline.setStepState('Build instruction', { type: 'confirmed', signature: signatureBase58, cost: 0 });
+            visualPipeline.setStepState('Transfer SOL', { type: 'sending' });
+
+            assertIsTransactionWithBlockhashLifetime(signedTransaction);
+
+            if (isRpcProxyUrl(rpcUrl)) {
+                const encodedTransaction = getBase64EncodedWireTransaction(signedTransaction);
+                await rpc.sendTransaction(encodedTransaction, { encoding: 'base64' }).send();
+                await waitForSignatureConfirmation({
+                    signature: signatureBase58,
+                    commitment: 'confirmed',
+                    getSignatureStatuses: async sig =>
+                        await rpc.getSignatureStatuses([createSignature(sig)]).send(),
+                });
+            } else {
+                const rpcSubscriptions = createSolanaRpcSubscriptions(getWebSocketUrlForRpcUrl(rpcUrl));
+                await sendAndConfirmTransactionFactory({ rpc, rpcSubscriptions })(signedTransaction, {
+                    commitment: 'confirmed',
+                });
+            }
+
+            visualPipeline.setStepState('Transfer SOL', { type: 'confirmed', signature: signatureBase58, cost: 0.000005 });
+        });
+    }, [client, signer, visualPipeline]);
+
+    useExampleCardHeaderActions(
+        <PipelineHeaderButton visualPipeline={visualPipeline} disabled={!ready || !client} onExecute={executeWalletTransfer} />,
+    );
+
+    return (
+        <PipelineVisualization visualPipeline={visualPipeline} strategy="sequential" getExplorerUrl={getExplorerUrl} />
+    );
+}`,
+        render: () => <ModernWalletTransfer />,
+    },
+    {
+        id: 'titan-swap',
+        name: 'Titan Swap (SOL → USDC)',
+        description: 'Swap 0.01 SOL for USDC using Titan InstructionPlans and track the transaction(s) in Connector Devtools.',
+        fileName: 'components/transactions/titan-swap.tsx',
+        code: titanSwapCode,
+        render: () => <TitanSwap />,
     },
     {
         id: 'kit-signer',
