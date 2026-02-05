@@ -7,17 +7,16 @@
  * - Transaction details (wire decode + RPC fetch)
  */
 
-import type {
-    ConnectorDevtoolsPlugin,
-    PluginContext,
-    DevtoolsInflightTransaction,
-    DevtoolsTrackedTransaction,
-} from '../types';
+import type { ConnectorDevtoolsPlugin, PluginContext } from '../types';
 import { ICONS } from '../components/icons';
 
 import { bytesToHexPreview, formatByteSize } from '../utils/tx-bytes';
 import { decodeWireTransactionBase64 } from '../utils/tx-decode';
-import { fetchSignatureStatus, fetchTransactionJsonParsed, type SignatureStatusSummary } from '../utils/rpc';
+import { copyToClipboard, escapeHtml, getExplorerUrl, truncateMiddle } from '../utils/dom';
+import { createTransactionDetailsState, fetchTransactionDetails, mergeTransactions } from './transactions/details';
+import { formatRelativeTime, safeJsonStringify } from './transactions/format';
+import { renderTransactionFlowPanel } from './transactions/render-flow';
+import { renderSentTransactionDetailsPanel } from './transactions/render-sent-details';
 
 export function createTransactionsPlugin(_maxTransactions = 50): ConnectorDevtoolsPlugin {
     let unsubscribeCache: (() => void) | undefined;
@@ -25,266 +24,12 @@ export function createTransactionsPlugin(_maxTransactions = 50): ConnectorDevtoo
 
     let selectedSignature: string | null = null;
     let selectedInflightId: string | null = null;
-    let detailsRequestId = 0;
-
-    const detailsBySignature = new Map<
-        string,
-        {
-            isLoading: boolean;
-            status: SignatureStatusSummary | null;
-            tx: unknown | null;
-            error?: string;
-        }
-    >();
+    const detailsState = createTransactionDetailsState();
+    let detailsTab: 'details' | 'flow' = 'details';
 
     function stopPolling() {
         if (pollInterval !== undefined) window.clearInterval(pollInterval);
         pollInterval = undefined;
-    }
-
-    function unwrapRpcValue<T>(resp: any): T | null {
-        if (!resp) return null;
-        if (typeof resp === 'object' && 'value' in resp) return (resp as any).value as T;
-        return resp as T;
-    }
-
-    function safeJsonStringify(value: unknown, space = 2): string {
-        try {
-            return JSON.stringify(value, (_key, v) => (typeof v === 'bigint' ? v.toString() : v), space);
-        } catch (err) {
-            return err instanceof Error ? err.message : String(err);
-        }
-    }
-
-    function escapeHtml(text: string): string {
-        return text
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#39;');
-    }
-
-    function toBigIntOrNull(value: unknown): bigint | null {
-        if (value === null || value === undefined) return null;
-        if (typeof value === 'bigint') return value;
-        if (typeof value === 'number') {
-            if (!Number.isFinite(value)) return null;
-            return BigInt(Math.trunc(value));
-        }
-        if (typeof value === 'string') {
-            if (value.trim() === '') return null;
-            try {
-                return BigInt(value);
-            } catch {
-                return null;
-            }
-        }
-        return null;
-    }
-
-    function formatIntegerLike(value: unknown): string {
-        const big = toBigIntOrNull(value);
-        if (big !== null) return big.toString();
-        if (typeof value === 'string') return value;
-        if (typeof value === 'number') return Number.isFinite(value) ? String(value) : 'N/A';
-        if (value === null) return 'null';
-        if (value === undefined) return 'N/A';
-        return safeJsonStringify(value, 0);
-    }
-
-    const LAMPORTS_PER_SOL = 1_000_000_000n;
-
-    function formatSolFromLamports(lamports: bigint): string {
-        const sign = lamports < 0n ? '-' : '';
-        const abs = lamports < 0n ? -lamports : lamports;
-        const whole = abs / LAMPORTS_PER_SOL;
-        const frac = abs % LAMPORTS_PER_SOL;
-
-        const fracStr = frac.toString().padStart(9, '0').replace(/0+$/, '');
-        return fracStr ? `${sign}${whole.toString()}.${fracStr}` : `${sign}${whole.toString()}`;
-    }
-
-    function formatBlockTime(blockTime: unknown): string {
-        const seconds = toBigIntOrNull(blockTime);
-        if (seconds === null) return 'N/A';
-        const ms = Number(seconds) * 1000;
-        if (!Number.isFinite(ms)) return seconds.toString();
-        return new Date(ms).toLocaleString('en-US', { hour12: false });
-    }
-
-    function getAccountPubkey(accountKey: unknown): string {
-        if (!accountKey) return '';
-        if (typeof accountKey === 'string') return accountKey;
-        if (typeof accountKey === 'object' && 'pubkey' in accountKey) return String((accountKey as any).pubkey);
-        return safeJsonStringify(accountKey, 0);
-    }
-
-    function renderKeyValueRows(rows: Array<{ key: string; value: string }>, className = 'cdt-kv'): string {
-        return `
-            <div class="${className}">
-                ${rows
-                    .map(
-                        row => `
-                            <div class="cdt-k">${escapeHtml(row.key)}</div>
-                            <div class="cdt-v">${escapeHtml(row.value)}</div>
-                        `,
-                    )
-                    .join('')}
-            </div>
-        `;
-    }
-
-    function getRpcUrl(ctx: PluginContext): string | null {
-        const cfg = ctx.getConfig();
-        return cfg.rpcUrl ?? ctx.client.getRpcUrl() ?? null;
-    }
-
-    function truncateMiddle(value: string, head = 8, tail = 8): string {
-        if (value.length <= head + tail + 3) return value;
-        return `${value.slice(0, head)}...${value.slice(-tail)}`;
-    }
-
-    function formatRelativeTime(timestamp: string): string {
-        const now = Date.now();
-        const then = new Date(timestamp).getTime();
-        const diff = now - then;
-
-        if (diff < 1000) return 'just now';
-        if (diff < 60000) return `${Math.floor(diff / 1000)}s ago`;
-        if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
-        return new Date(timestamp).toLocaleTimeString('en-US', {
-            hour12: false,
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-        });
-    }
-
-    async function copyToClipboard(text: string) {
-        try {
-            await navigator.clipboard.writeText(text);
-        } catch {
-            const textarea = document.createElement('textarea');
-            textarea.value = text;
-            document.body.appendChild(textarea);
-            textarea.select();
-            document.execCommand('copy');
-            document.body.removeChild(textarea);
-        }
-    }
-
-    function getExplorerUrl(signature: string, cluster?: string) {
-        const baseUrl = 'https://explorer.solana.com';
-        let clusterParam = '';
-        if (cluster?.includes('devnet')) clusterParam = '?cluster=devnet';
-        else if (cluster?.includes('testnet')) clusterParam = '?cluster=testnet';
-        else if (cluster?.includes('custom')) clusterParam = '?cluster=custom';
-        return `${baseUrl}/tx/${signature}${clusterParam}`;
-    }
-
-    function mergeTransactions(ctx: PluginContext): DevtoolsTrackedTransaction[] {
-        const cacheTxs = ctx.getCache?.().transactions.items ?? [];
-        const debugTxs = ctx.client.getDebugState().transactions ?? [];
-
-        const bySig = new Map<string, DevtoolsTrackedTransaction>();
-
-        // Base: persisted cache
-        cacheTxs.forEach(tx => bySig.set(tx.signature, { ...tx }));
-
-        // Overlay: connector debug state (has method/cluster/error, etc.)
-        debugTxs.forEach(tx => {
-            const signature = String(tx.signature);
-            const existing = bySig.get(signature);
-            bySig.set(signature, {
-                ...(existing ?? { signature, timestamp: tx.timestamp, status: tx.status }),
-                cluster: tx.cluster,
-                error: tx.error,
-                feePayer: tx.feePayer ? String(tx.feePayer) : existing?.feePayer,
-                method: tx.method,
-                size: (tx.metadata as any)?.size ?? existing?.size,
-                status: tx.status,
-                timestamp: tx.timestamp,
-            });
-        });
-
-        const list = Array.from(bySig.values());
-        list.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-        return list;
-    }
-
-    async function fetchDetails(signature: string, ctx: PluginContext, render: () => void) {
-        const rpcUrl = getRpcUrl(ctx);
-        if (!rpcUrl) {
-            detailsBySignature.set(signature, {
-                error: 'No RPC URL available (set devtools config.rpcUrl or ensure connector has an RPC URL).',
-                isLoading: false,
-                status: null,
-                tx: null,
-            });
-            render();
-            return;
-        }
-
-        const requestId = ++detailsRequestId;
-        const prev = detailsBySignature.get(signature);
-        detailsBySignature.set(signature, { ...(prev ?? { status: null, tx: null }), isLoading: true });
-        render();
-
-        try {
-            const [status, txResp] = await Promise.all([
-                fetchSignatureStatus(rpcUrl, signature),
-                fetchTransactionJsonParsed(rpcUrl, signature),
-            ]);
-
-            if (requestId !== detailsRequestId) return;
-
-            const tx = unwrapRpcValue<unknown>(txResp);
-            detailsBySignature.set(signature, { isLoading: false, status, tx });
-
-            // Best-effort: update connector + persisted cache when we can determine final status.
-            if (status) {
-                const nextStatus: DevtoolsTrackedTransaction['status'] = status.err
-                    ? 'failed'
-                    : status.confirmationStatus === 'confirmed' || status.confirmationStatus === 'finalized'
-                      ? 'confirmed'
-                      : 'pending';
-
-                if (nextStatus !== 'pending') {
-                    ctx.client.updateTransactionStatus(
-                        signature,
-                        nextStatus,
-                        status.err ? safeJsonStringify(status.err, 0) : undefined,
-                    );
-                }
-
-                ctx.updateCache?.(cache => {
-                    const idx = cache.transactions.items.findIndex(t => t.signature === signature);
-                    if (idx === -1) return cache;
-                    const nextItems = cache.transactions.items.map((t, i) =>
-                        i === idx
-                            ? {
-                                  ...t,
-                                  confirmations: status.confirmations ?? null,
-                                  slot: status.slot ?? undefined,
-                                  status: nextStatus,
-                              }
-                            : t,
-                    );
-                    return { ...cache, transactions: { ...cache.transactions, items: nextItems } };
-                });
-            }
-        } catch (err) {
-            if (requestId !== detailsRequestId) return;
-            detailsBySignature.set(signature, {
-                error: err instanceof Error ? err.message : 'Failed to fetch transaction details',
-                isLoading: false,
-                status: null,
-                tx: null,
-            });
-        } finally {
-            render();
-        }
     }
 
     return {
@@ -314,7 +59,9 @@ export function createTransactionsPlugin(_maxTransactions = 50): ConnectorDevtoo
                 const confirmedCount = transactions.filter(t => t.status === 'confirmed').length;
                 const failedCount = transactions.filter(t => t.status === 'failed').length;
 
-                const selectedDetails = selectedSignature ? detailsBySignature.get(selectedSignature) : undefined;
+                const selectedDetails = selectedSignature
+                    ? detailsState.detailsBySignature.get(selectedSignature)
+                    : undefined;
 
                 const selectedInflight = selectedInflightId
                     ? (inflight.find(ix => ix.id === selectedInflightId) ?? null)
@@ -343,257 +90,78 @@ export function createTransactionsPlugin(_maxTransactions = 50): ConnectorDevtoo
                     }
                 }
 
-                function renderSentTransactionDetailsPanel(): string {
-                    if (!selectedTx) return '';
+                const isFlowAvailable = Boolean(selectedTx);
+                if (!isFlowAvailable && detailsTab === 'flow') detailsTab = 'details';
 
-                    const explorerUrl = getExplorerUrl(selectedTx.signature, selectedTx.cluster ?? clusterId);
-                    const rpcTx = selectedDetails?.tx as any;
-                    const rpcMeta = rpcTx && typeof rpcTx === 'object' ? (rpcTx as any).meta : undefined;
-                    const rpcTransaction = rpcTx && typeof rpcTx === 'object' ? (rpcTx as any).transaction : undefined;
-                    const rpcMessage =
-                        rpcTransaction && typeof rpcTransaction === 'object'
-                            ? (rpcTransaction as any).message
-                            : undefined;
+                const detailsHtml = (() => {
+                    if (selectedInflight) {
+                        if (detailsTab === 'flow')
+                            return `<div class="cdt-empty">Flow view is available for sent transactions after RPC details are fetched.</div>`;
 
-                    const rpcInstructions = Array.isArray(rpcMessage?.instructions)
-                        ? (rpcMessage.instructions as any[])
-                        : [];
-                    const rpcAccountKeys = Array.isArray(rpcMessage?.accountKeys)
-                        ? (rpcMessage.accountKeys as any[])
-                        : [];
-                    const rpcLogs = Array.isArray(rpcMeta?.logMessages) ? (rpcMeta.logMessages as string[]) : [];
-
-                    const feeLamports = toBigIntOrNull(rpcMeta?.fee);
-                    const computeUnitsConsumed = toBigIntOrNull(rpcMeta?.computeUnitsConsumed);
-
-                    const summaryRows: Array<{ key: string; value: string }> = [
-                        { key: 'signature', value: selectedTx.signature },
-                        { key: 'status', value: selectedTx.status },
-                        { key: 'cluster', value: selectedTx.cluster ?? 'N/A' },
-                        { key: 'method', value: selectedTx.method ?? 'N/A' },
-                        { key: 'slot', value: formatIntegerLike(rpcTx?.slot) },
-                        { key: 'block time', value: formatBlockTime(rpcTx?.blockTime) },
-                        { key: 'version', value: formatIntegerLike(rpcTx?.version) },
-                        ...(selectedTxDecoded?.summary.feePayer
-                            ? [{ key: 'fee payer (wire)', value: selectedTxDecoded.summary.feePayer }]
-                            : []),
-                        ...(feeLamports !== null
-                            ? [
-                                  {
-                                      key: 'fee',
-                                      value: `${feeLamports.toString()} lamports (${formatSolFromLamports(feeLamports)} SOL)`,
-                                  },
-                              ]
-                            : []),
-                        ...(computeUnitsConsumed !== null
-                            ? [{ key: 'compute units', value: computeUnitsConsumed.toString() }]
-                            : []),
-                        ...(selectedDetails?.status?.confirmations !== null &&
-                        selectedDetails?.status?.confirmations !== undefined
-                            ? [{ key: 'confirmations', value: String(selectedDetails.status.confirmations) }]
-                            : []),
-                        ...(selectedDetails?.status?.confirmationStatus
-                            ? [{ key: 'confirmation status', value: String(selectedDetails.status.confirmationStatus) }]
-                            : []),
-                    ];
-
-                    const instructionsHtml = rpcInstructions.length
-                        ? rpcInstructions
-                              .map((ix, idx) => {
-                                  const program = typeof ix.program === 'string' ? ix.program : '';
-                                  const programId = typeof ix.programId === 'string' ? ix.programId : '';
-                                  const parsedType = typeof ix.parsed?.type === 'string' ? ix.parsed.type : '';
-                                  const stackHeight =
-                                      ix.stackHeight !== null && ix.stackHeight !== undefined
-                                          ? String(ix.stackHeight)
-                                          : '';
-
-                                  const titlePieces = [
-                                      `#${idx}`,
-                                      program ? program : programId ? truncateMiddle(programId, 6, 6) : 'unknown',
-                                      parsedType ? `:${parsedType}` : '',
-                                  ].filter(Boolean);
-
-                                  const info = ix.parsed?.info;
-                                  const infoEntries =
-                                      info && typeof info === 'object' && !Array.isArray(info)
-                                          ? Object.entries(info as Record<string, unknown>)
-                                          : [];
-
-                                  const infoRows = infoEntries.map(([k, v]) => ({
-                                      key: k,
-                                      value:
-                                          typeof v === 'string'
-                                              ? v
-                                              : typeof v === 'number'
-                                                ? String(v)
-                                                : typeof v === 'bigint'
-                                                  ? v.toString()
-                                                  : safeJsonStringify(v, 0),
-                                  }));
-
-                                  const headerRows: Array<{ key: string; value: string }> = [
-                                      ...(programId ? [{ key: 'program id', value: programId }] : []),
-                                      ...(stackHeight ? [{ key: 'stack height', value: stackHeight }] : []),
-                                  ];
-
-                                  return `
-                                      <div class="cdt-card">
-                                          <div class="cdt-card-title">${escapeHtml(titlePieces.join(' '))}</div>
-                                          ${
-                                              headerRows.length
-                                                  ? renderKeyValueRows(headerRows, 'cdt-kv cdt-kv-compact')
-                                                  : ''
-                                          }
-                                          ${
-                                              infoRows.length
-                                                  ? renderKeyValueRows(infoRows, 'cdt-kv cdt-kv-compact')
-                                                  : `<div class="cdt-empty" style="padding: 8px 0;">No parsed info</div>`
-                                          }
-                                      </div>
-                                  `;
-                              })
-                              .join('')
-                        : `<div class="cdt-empty">No instructions.</div>`;
-
-                    const accountsHtml = rpcAccountKeys.length
-                        ? rpcAccountKeys
-                              .map((ak, idx) => {
-                                  const pubkey = getAccountPubkey(ak);
-                                  const signer = Boolean((ak as any)?.signer);
-                                  const writable = Boolean((ak as any)?.writable);
-                                  const source = (ak as any)?.source ? String((ak as any).source) : '';
-
-                                  const badges = [
-                                      signer ? `<span class="cdt-pill info">signer</span>` : '',
-                                      writable
-                                          ? `<span class="cdt-pill warn">writable</span>`
-                                          : `<span class="cdt-pill">readonly</span>`,
-                                      source ? `<span class="cdt-pill">${escapeHtml(source)}</span>` : '',
-                                  ].filter(Boolean);
-
-                                  return `
-                                      <div class="cdt-account-row">
-                                          <div class="cdt-account-idx">#${idx}</div>
-                                          <div class="cdt-account-key">${escapeHtml(pubkey)}</div>
-                                          <div class="cdt-account-badges">${badges.join(' ')}</div>
-                                      </div>
-                                  `;
-                              })
-                              .join('')
-                        : `<div class="cdt-empty">No accounts.</div>`;
-
-                    const balancesHtml = (() => {
-                        const pre = Array.isArray(rpcMeta?.preBalances) ? (rpcMeta.preBalances as unknown[]) : [];
-                        const post = Array.isArray(rpcMeta?.postBalances) ? (rpcMeta.postBalances as unknown[]) : [];
-                        const len = Math.max(pre.length, post.length, rpcAccountKeys.length);
-
-                        const rows: string[] = [];
-                        for (let i = 0; i < len; i++) {
-                            const preLamports = toBigIntOrNull(pre[i]);
-                            const postLamports = toBigIntOrNull(post[i]);
-                            if (preLamports === null || postLamports === null) continue;
-
-                            const delta = postLamports - preLamports;
-                            if (delta === 0n) continue;
-
-                            const pubkey = getAccountPubkey(rpcAccountKeys[i]);
-                            const deltaStr = `${delta.toString()} lamports (${formatSolFromLamports(delta)} SOL)`;
-                            const postStr = `${postLamports.toString()} lamports (${formatSolFromLamports(postLamports)} SOL)`;
-
-                            rows.push(`
-                                <div class="cdt-balance-row">
-                                    <div class="cdt-balance-key">${escapeHtml(pubkey)}</div>
-                                    <div class="cdt-balance-delta ${delta < 0n ? 'neg' : 'pos'}">${escapeHtml(deltaStr)}</div>
-                                    <div class="cdt-balance-post">${escapeHtml(postStr)}</div>
+                        return `
+                            <div class="cdt-details-header">
+                                <div class="cdt-details-title">In-flight transaction</div>
+                                <div style="display:flex; gap:6px;">
+                                    ${
+                                        selectedInflight.transactionBase64
+                                            ? `<button class="cdt-btn cdt-btn-secondary" id="copy-inflight-bytes">Copy base64</button>`
+                                            : ''
+                                    }
                                 </div>
-                            `);
-                        }
-
-                        if (rows.length === 0) return `<div class="cdt-empty">No non-zero SOL balance changes.</div>`;
-                        return `<div class="cdt-balance-list">${rows.join('')}</div>`;
-                    })();
-
-                    const logsHtml = rpcLogs.length
-                        ? `
-                            <div class="cdt-logs">
-                                ${rpcLogs
-                                    .map(
-                                        (line, i) => `
-                                            <div class="cdt-log-line">
-                                                <div class="cdt-log-num">${i + 1}</div>
-                                                <div class="cdt-log-text">${escapeHtml(line)}</div>
-                                            </div>
-                                        `,
-                                    )
-                                    .join('')}
                             </div>
-                        `
-                        : `<div class="cdt-empty">No logs.</div>`;
-
-                    const rawJson = selectedDetails?.tx ? escapeHtml(safeJsonStringify(selectedDetails.tx, 2)) : 'null';
-
-                    return `
-                        <div class="cdt-details-header">
-                            <div class="cdt-details-title">Transaction</div>
-                            <div style="display:flex; gap:6px; flex-wrap: wrap; justify-content: flex-end;">
-                                ${selectedTx.wireTransactionBase64 ? `<button class="cdt-btn cdt-btn-secondary" id="copy-selected-bytes">Copy base64</button>` : ''}
+                            <div class="cdt-kv">
+                                <div class="cdt-k">stage</div><div class="cdt-v">${selectedInflight.stage}</div>
+                                ${selectedInflight.signature ? `<div class="cdt-k">signature</div><div class="cdt-v">${selectedInflight.signature}</div>` : ''}
+                                <div class="cdt-k">timestamp</div><div class="cdt-v">${selectedInflight.timestamp}</div>
+                                <div class="cdt-k">size</div><div class="cdt-v">${selectedInflight.size} bytes</div>
+                                ${
+                                    selectedInflightDecoded
+                                        ? `
+                                <div class="cdt-k">version</div><div class="cdt-v">${String(selectedInflightDecoded.summary.version)}</div>
+                                <div class="cdt-k">fee payer</div><div class="cdt-v">${selectedInflightDecoded.summary.feePayer ?? 'N/A'}</div>
+                                <div class="cdt-k">required signers</div><div class="cdt-v">${selectedInflightDecoded.summary.requiredSigners}</div>
+                                <div class="cdt-k">instructions</div><div class="cdt-v">${selectedInflightDecoded.summary.instructionCount}</div>
+                                <div class="cdt-k">CU limit</div><div class="cdt-v">${selectedInflightDecoded.summary.computeUnitLimit ?? 'N/A'}</div>
+                                <div class="cdt-k">CU price</div><div class="cdt-v">${selectedInflightDecoded.summary.computeUnitPriceMicroLamports ? `${selectedInflightDecoded.summary.computeUnitPriceMicroLamports.toString()} µ-lamports/CU` : 'N/A'}</div>
+                                `
+                                        : `
+                                <div class="cdt-k">decode</div><div class="cdt-v">Failed to decode bytes</div>
+                                `
+                                }
                             </div>
-                        </div>
+                            ${
+                                selectedInflightDecoded
+                                    ? `
+                                <div class="cdt-json">${safeJsonStringify(
+                                    selectedInflightDecoded.compiledMessage.instructions.map(ix => ({
+                                        dataHexPreview: ix.data ? bytesToHexPreview(ix.data, 32) : '',
+                                        program:
+                                            selectedInflightDecoded!.compiledMessage.staticAccounts[
+                                                ix.programAddressIndex
+                                            ],
+                                        programAddressIndex: ix.programAddressIndex,
+                                        accounts: ix.accountIndices?.length ?? 0,
+                                    })),
+                                    2,
+                                )}</div>
+                            `
+                                    : ''
+                            }
+                        `;
+                    }
 
-                        ${
-                            selectedDetails?.error
-                                ? `<div class="cdt-json" style="border-color: color-mix(in srgb, var(--cdt-error) 40%, var(--cdt-border)); color: var(--cdt-error);">${escapeHtml(selectedDetails.error)}</div>`
-                                : ''
-                        }
+                    if (selectedTx) {
+                        return detailsTab === 'details'
+                            ? renderSentTransactionDetailsPanel({
+                                  selectedTx,
+                                  selectedTxDecoded,
+                                  selectedDetails,
+                              })
+                            : renderTransactionFlowPanel({ selectedTx, selectedDetails });
+                    }
 
-                        ${selectedDetails?.isLoading ? `<div class="cdt-empty">Loading RPC details…</div>` : ''}
-
-                        <div class="cdt-card">
-                            <div class="cdt-card-title">Summary</div>
-                            ${renderKeyValueRows(summaryRows)}
-                        </div>
-
-                        <details class="cdt-details-section" open>
-                            <summary><span class="cdt-chevron">${ICONS.chevronDown}</span>Instructions (${rpcInstructions.length})</summary>
-                            <div class="cdt-details-section-content">
-                                ${instructionsHtml}
-                            </div>
-                        </details>
-
-                        <details class="cdt-details-section" open>
-                            <summary><span class="cdt-chevron">${ICONS.chevronDown}</span>Accounts (${rpcAccountKeys.length})</summary>
-                            <div class="cdt-details-section-content">
-                                ${accountsHtml}
-                            </div>
-                        </details>
-
-                        <details class="cdt-details-section" open>
-                            <summary><span class="cdt-chevron">${ICONS.chevronDown}</span>Balance changes (SOL)</summary>
-                            <div class="cdt-details-section-content">
-                                ${balancesHtml}
-                            </div>
-                        </details>
-
-                        <details class="cdt-details-section" open>
-                            <summary><span class="cdt-chevron">${ICONS.chevronDown}</span>Logs (${rpcLogs.length})</summary>
-                            <div class="cdt-details-section-content">
-                                ${logsHtml}
-                            </div>
-                        </details>
-
-                        <details class="cdt-details-section">
-                            <summary><span class="cdt-chevron">${ICONS.chevronDown}</span>Raw JSON</summary>
-                            <div class="cdt-details-section-content">
-                                <button class="cdt-copy-json-btn" data-copy-json>
-                                    <span class="cdt-copy-icon">${ICONS.copy}</span>
-                                    Copy JSON
-                                </button>
-                                <pre class="cdt-json">${rawJson}</pre>
-                            </div>
-                        </details>
-                    `;
-                }
+                    return `<div class="cdt-empty">Select an inflight or sent transaction.</div>`;
+                })();
 
                 el.innerHTML = `
                     <div class="cdt-transactions">
@@ -659,6 +227,20 @@ export function createTransactionsPlugin(_maxTransactions = 50): ConnectorDevtoo
 
                             .cdt-tx-details {
                                 min-width: 0;
+                                min-height: 0;
+                                display: flex;
+                                flex-direction: column;
+                                overflow: hidden;
+                            }
+
+                            .cdt-tx-details-top {
+                                flex: none;
+                                padding: 12px 12px 0;
+                            }
+
+                            .cdt-tx-details-body {
+                                flex: 1;
+                                min-height: 0;
                                 overflow: auto;
                                 padding: 12px;
                             }
@@ -734,6 +316,7 @@ export function createTransactionsPlugin(_maxTransactions = 50): ConnectorDevtoo
                             .cdt-pill.warn { color: var(--cdt-warning); border-color: color-mix(in srgb, var(--cdt-warning) 40%, var(--cdt-border)); }
                             .cdt-pill.info { color: var(--cdt-info); border-color: color-mix(in srgb, var(--cdt-info) 40%, var(--cdt-border)); }
                             .cdt-pill.success { color: var(--cdt-success); border-color: color-mix(in srgb, var(--cdt-success) 40%, var(--cdt-border)); }
+                            .cdt-pill.error { color: var(--cdt-error); border-color: color-mix(in srgb, var(--cdt-error) 40%, var(--cdt-border)); }
 
                             .cdt-details-header {
                                 display: flex;
@@ -747,6 +330,223 @@ export function createTransactionsPlugin(_maxTransactions = 50): ConnectorDevtoo
                                 font-size: 13px;
                                 font-weight: 700;
                                 color: var(--cdt-text);
+                            }
+
+                            .cdt-details-subtabs {
+                                display: inline-flex;
+                                gap: 2px;
+                                padding: 2px;
+                                border: 1px solid var(--cdt-border);
+                                border-radius: 10px;
+                                background: var(--cdt-bg-panel);
+                                margin-bottom: 10px;
+                            }
+
+                            .cdt-details-subtab {
+                                padding: 6px 10px;
+                                border-radius: 8px;
+                                font-size: 12px;
+                                font-weight: 600;
+                                color: var(--cdt-text-muted);
+                                transition: background-color 0.15s ease, color 0.15s ease;
+                            }
+
+                            .cdt-details-subtab:hover:not(:disabled) {
+                                background: var(--cdt-bg-hover);
+                                color: var(--cdt-text);
+                            }
+
+                            .cdt-details-subtab.cdt-active {
+                                background: var(--cdt-bg-active);
+                                color: var(--cdt-text);
+                            }
+
+                            .cdt-flow-wrap {
+                                flex: 1;
+                                min-height: 0;
+                                border: 1px solid var(--cdt-border);
+                                border-radius: 14px;
+                                background-color: color-mix(in srgb, var(--cdt-bg-panel) 92%, white 1%);
+                                background-image:
+                                    radial-gradient(
+                                        circle at 1px 1px,
+                                        color-mix(in srgb, var(--cdt-border) 35%, transparent) 1px,
+                                        transparent 0
+                                    ),
+                                    radial-gradient(
+                                        circle at 1px 1px,
+                                        color-mix(in srgb, var(--cdt-border) 18%, transparent) 1px,
+                                        transparent 0
+                                    );
+                                background-size: 18px 18px, 90px 90px;
+                                overflow: hidden;
+                            }
+
+                            .cdt-flow-svg {
+                                display: block;
+                                width: 100%;
+                                height: 100%;
+                            }
+
+                            .cdt-flow-panel {
+                                height: 100%;
+                                min-height: 0;
+                                display: flex;
+                                flex-direction: column;
+                                gap: 10px;
+                            }
+
+                            .cdt-flow-legend {
+                                display: flex;
+                                flex-wrap: wrap;
+                                gap: 10px;
+                                align-items: center;
+                                font-size: 11px;
+                                color: var(--cdt-text-muted);
+                            }
+
+                            .cdt-flow-legend-item {
+                                display: inline-flex;
+                                align-items: center;
+                                gap: 6px;
+                            }
+
+                            .cdt-flow-dot {
+                                width: 8px;
+                                height: 8px;
+                                border-radius: 999px;
+                            }
+
+                            .cdt-flow-line {
+                                width: 18px;
+                                height: 2px;
+                                border-radius: 999px;
+                                opacity: 0.8;
+                            }
+
+                            .cdt-flow-legend-note {
+                                margin-left: auto;
+                                color: var(--cdt-text-dim);
+                            }
+
+                            .cdt-flow-node-card {
+                                position: relative;
+                                width: 100%;
+                                height: 100%;
+                                border: 1px solid var(--cdt-border);
+                                border-radius: 14px;
+                                background: var(--cdt-bg-panel);
+                                overflow: hidden;
+                                box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
+                            }
+
+                            .cdt-flow-node-card:hover {
+                                border-color: color-mix(in srgb, var(--cdt-accent) 55%, var(--cdt-border));
+                                box-shadow: 0 14px 34px rgba(0, 0, 0, 0.28);
+                            }
+
+                            .cdt-flow-node-header {
+                                display: flex;
+                                align-items: center;
+                                gap: 10px;
+                                padding: 10px 12px;
+                                border-bottom: 1px solid var(--cdt-border);
+                                background: color-mix(in srgb, var(--cdt-bg-panel) 82%, var(--cdt-bg) 18%);
+                            }
+
+                            .cdt-flow-node-title {
+                                flex: 1;
+                                min-width: 0;
+                                font-size: 13px;
+                                font-weight: 750;
+                                color: var(--cdt-text);
+                                overflow: hidden;
+                                text-overflow: ellipsis;
+                                white-space: nowrap;
+                            }
+
+                            .cdt-flow-node-chip {
+                                display: inline-flex;
+                                align-items: center;
+                                justify-content: center;
+                                gap: 6px;
+                                padding: 2px 10px 2px 8px;
+                                border-radius: 999px;
+                                font-size: 11px;
+                                font-weight: 650;
+                                letter-spacing: 0.02em;
+                                border: 1px solid var(--cdt-border);
+                                background: var(--cdt-bg-hover);
+                                color: var(--cdt-text-muted);
+                                flex: none;
+                            }
+
+                            .cdt-flow-node-chip-icon {
+                                display: inline-flex;
+                                width: 14px;
+                                height: 14px;
+                                align-items: center;
+                                justify-content: center;
+                                color: currentColor;
+                                opacity: 0.95;
+                            }
+
+                            .cdt-flow-node-chip-icon svg {
+                                width: 12px;
+                                height: 12px;
+                            }
+
+                            .cdt-flow-node-chip[data-tone="accent"] {
+                                background: color-mix(in srgb, var(--cdt-accent) 15%, transparent);
+                                border-color: color-mix(in srgb, var(--cdt-accent) 35%, var(--cdt-border));
+                                color: color-mix(in srgb, var(--cdt-accent) 80%, white 20%);
+                            }
+
+                            .cdt-flow-node-chip[data-tone="success"] {
+                                background: color-mix(in srgb, var(--cdt-success) 15%, transparent);
+                                border-color: color-mix(in srgb, var(--cdt-success) 35%, var(--cdt-border));
+                                color: var(--cdt-success);
+                            }
+
+                            .cdt-flow-node-chip[data-tone="info"] {
+                                background: color-mix(in srgb, var(--cdt-info) 15%, transparent);
+                                border-color: color-mix(in srgb, var(--cdt-info) 35%, var(--cdt-border));
+                                color: var(--cdt-info);
+                            }
+
+                            .cdt-flow-node-chip[data-tone="warning"] {
+                                background: color-mix(in srgb, var(--cdt-warning) 15%, transparent);
+                                border-color: color-mix(in srgb, var(--cdt-warning) 35%, var(--cdt-border));
+                                color: var(--cdt-warning);
+                            }
+
+                            .cdt-flow-node-body {
+                                padding: 10px 12px 12px;
+                                display: flex;
+                                flex-direction: column;
+                                gap: 4px;
+                            }
+
+                            .cdt-flow-node-body-primary {
+                                font-size: 12px;
+                                font-weight: 650;
+                                color: var(--cdt-text);
+                                line-height: 1.25;
+                                overflow: hidden;
+                                display: -webkit-box;
+                                -webkit-box-orient: vertical;
+                                -webkit-line-clamp: 3;
+                            }
+
+                            .cdt-flow-node-body-secondary {
+                                font-size: 11px;
+                                color: var(--cdt-text-muted);
+                                line-height: 1.25;
+                                overflow: hidden;
+                                display: -webkit-box;
+                                -webkit-box-orient: vertical;
+                                -webkit-line-clamp: 2;
+                                text-overflow: ellipsis;
                             }
 
                             .cdt-kv {
@@ -1008,8 +808,8 @@ export function createTransactionsPlugin(_maxTransactions = 50): ConnectorDevtoo
                                 ${inflightDisplay.length ? `<span class="cdt-pill warn">${inflightDisplay.length} inflight</span>` : ''}
                             </div>
                             <div style="display:flex; gap:6px;">
-                                <button class="cdt-btn cdt-btn-secondary" id="refresh-selected" ${selectedSignature ? '' : 'disabled'}>
-                                    Refresh
+                                <button class="cdt-btn cdt-btn-ghost cdt-btn-icon" id="refresh-selected" ${selectedSignature ? '' : 'disabled'} title="Refresh selected transaction">
+                                    ${ICONS.refresh}
                                 </button>
                                 <button class="cdt-btn cdt-btn-ghost cdt-btn-icon" id="clear-tx" title="Clear history">
                                     ${ICONS.trash}
@@ -1101,62 +901,29 @@ export function createTransactionsPlugin(_maxTransactions = 50): ConnectorDevtoo
                             </div>
 
                             <div class="cdt-tx-details">
-                                ${
-                                    selectedInflight
-                                        ? `
-                                    <div class="cdt-details-header">
-                                        <div class="cdt-details-title">In-flight transaction</div>
-                                        <div style="display:flex; gap:6px;">
-                                            ${
-                                                selectedInflight.transactionBase64
-                                                    ? `<button class="cdt-btn cdt-btn-secondary" id="copy-inflight-bytes">Copy base64</button>`
-                                                    : ''
-                                            }
-                                        </div>
+                                <div class="cdt-tx-details-top">
+                                    <div class="cdt-details-subtabs">
+                                        <button
+                                            class="cdt-details-subtab ${detailsTab === 'details' ? 'cdt-active' : ''}"
+                                            data-details-tab="details"
+                                            ${selectedInflight || selectedTx ? '' : 'disabled'}
+                                        >
+                                            Details
+                                        </button>
+                                        <button
+                                            class="cdt-details-subtab ${detailsTab === 'flow' ? 'cdt-active' : ''}"
+                                            data-details-tab="flow"
+                                            ${isFlowAvailable ? '' : 'disabled'}
+                                            title="${isFlowAvailable ? 'Transaction flow graph' : 'Select a sent transaction to view flow'}"
+                                        >
+                                            Flow
+                                        </button>
                                     </div>
-                                    <div class="cdt-kv">
-                                        <div class="cdt-k">stage</div><div class="cdt-v">${selectedInflight.stage}</div>
-                                        ${selectedInflight.signature ? `<div class="cdt-k">signature</div><div class="cdt-v">${selectedInflight.signature}</div>` : ''}
-                                        <div class="cdt-k">timestamp</div><div class="cdt-v">${selectedInflight.timestamp}</div>
-                                        <div class="cdt-k">size</div><div class="cdt-v">${selectedInflight.size} bytes</div>
-                                        ${
-                                            selectedInflightDecoded
-                                                ? `
-                                        <div class="cdt-k">version</div><div class="cdt-v">${String(selectedInflightDecoded.summary.version)}</div>
-                                        <div class="cdt-k">fee payer</div><div class="cdt-v">${selectedInflightDecoded.summary.feePayer ?? 'N/A'}</div>
-                                        <div class="cdt-k">required signers</div><div class="cdt-v">${selectedInflightDecoded.summary.requiredSigners}</div>
-                                        <div class="cdt-k">instructions</div><div class="cdt-v">${selectedInflightDecoded.summary.instructionCount}</div>
-                                        <div class="cdt-k">CU limit</div><div class="cdt-v">${selectedInflightDecoded.summary.computeUnitLimit ?? 'N/A'}</div>
-                                        <div class="cdt-k">CU price</div><div class="cdt-v">${selectedInflightDecoded.summary.computeUnitPriceMicroLamports ? `${selectedInflightDecoded.summary.computeUnitPriceMicroLamports.toString()} µ-lamports/CU` : 'N/A'}</div>
-                                        `
-                                                : `
-                                        <div class="cdt-k">decode</div><div class="cdt-v">Failed to decode bytes</div>
-                                        `
-                                        }
-                                    </div>
-                                    ${
-                                        selectedInflightDecoded
-                                            ? `
-                                        <div class="cdt-json">${safeJsonStringify(
-                                            selectedInflightDecoded.compiledMessage.instructions.map(ix => ({
-                                                dataHexPreview: ix.data ? bytesToHexPreview(ix.data, 32) : '',
-                                                program:
-                                                    selectedInflightDecoded!.compiledMessage.staticAccounts[
-                                                        ix.programAddressIndex
-                                                    ],
-                                                programAddressIndex: ix.programAddressIndex,
-                                                accounts: ix.accountIndices?.length ?? 0,
-                                            })),
-                                            2,
-                                        )}</div>
-                                    `
-                                            : ''
-                                    }
-                                `
-                                        : selectedTx
-                                          ? renderSentTransactionDetailsPanel()
-                                          : `<div class="cdt-empty">Select an inflight or sent transaction.</div>`
-                                }
+                                </div>
+
+                                <div class="cdt-tx-details-body">
+                                    ${detailsHtml}
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1167,7 +934,9 @@ export function createTransactionsPlugin(_maxTransactions = 50): ConnectorDevtoo
                 clearBtn?.addEventListener('click', () => {
                     selectedSignature = null;
                     selectedInflightId = null;
-                    detailsBySignature.clear();
+                    detailsTab = 'details';
+                    detailsState.detailsRequestId += 1;
+                    detailsState.detailsBySignature.clear();
                     ctx.clearCache?.('transactions');
                     ctx.client.clearTransactionHistory();
                     renderContent();
@@ -1175,7 +944,7 @@ export function createTransactionsPlugin(_maxTransactions = 50): ConnectorDevtoo
 
                 const refreshBtn = el.querySelector<HTMLButtonElement>('#refresh-selected');
                 refreshBtn?.addEventListener('click', () => {
-                    if (selectedSignature) fetchDetails(selectedSignature, ctx, renderContent);
+                    if (selectedSignature) fetchTransactionDetails(selectedSignature, ctx, detailsState, renderContent);
                 });
 
                 el.querySelectorAll<HTMLElement>('.cdt-tx-item[data-kind="tx"]').forEach(item => {
@@ -1184,7 +953,7 @@ export function createTransactionsPlugin(_maxTransactions = 50): ConnectorDevtoo
                         if (!sig) return;
                         selectedSignature = sig;
                         selectedInflightId = null;
-                        fetchDetails(sig, ctx, renderContent);
+                        fetchTransactionDetails(sig, ctx, detailsState, renderContent);
                         renderContent();
                     });
                 });
@@ -1195,6 +964,16 @@ export function createTransactionsPlugin(_maxTransactions = 50): ConnectorDevtoo
                         if (!id) return;
                         selectedInflightId = id;
                         selectedSignature = null;
+                        detailsTab = 'details';
+                        renderContent();
+                    });
+                });
+
+                el.querySelectorAll<HTMLButtonElement>('[data-details-tab]').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const tab = btn.getAttribute('data-details-tab');
+                        if (tab !== 'details' && tab !== 'flow') return;
+                        detailsTab = tab;
                         renderContent();
                     });
                 });
@@ -1222,7 +1001,7 @@ export function createTransactionsPlugin(_maxTransactions = 50): ConnectorDevtoo
                 const copyJsonBtn = el.querySelector<HTMLButtonElement>('[data-copy-json]');
                 copyJsonBtn?.addEventListener('click', () => {
                     if (selectedSignature) {
-                        const details = detailsBySignature.get(selectedSignature);
+                        const details = detailsState.detailsBySignature.get(selectedSignature);
                         if (details?.tx) {
                             copyToClipboard(safeJsonStringify(details.tx, 2));
                         }
@@ -1244,7 +1023,7 @@ export function createTransactionsPlugin(_maxTransactions = 50): ConnectorDevtoo
                 if (!selectedSignature) return;
                 const tx = mergeTransactions(ctx).find(t => t.signature === selectedSignature);
                 if (!tx || tx.status !== 'pending') return;
-                fetchDetails(selectedSignature, ctx, renderContent);
+                fetchTransactionDetails(selectedSignature, ctx, detailsState, renderContent);
             }, 5000);
         },
 
