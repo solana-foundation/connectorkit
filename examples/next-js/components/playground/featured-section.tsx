@@ -110,7 +110,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Wallet, ExternalLink } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
-export function WalletModal({ open, onOpenChange, walletConnectUri, onClearWalletConnectUri }) {
+export function WalletModal({ open, onOpenChange, walletConnectUri, onClearWalletConnectUri }: { open: boolean; onOpenChange: (open: boolean) => void; walletConnectUri?: string | null; onClearWalletConnectUri?: () => void }) {
     const { walletStatus, isConnecting, connectorId, connectors, connectWallet, disconnectWallet } = useConnector();
     const status = walletStatus.status;
     const [connectingConnectorId, setConnectingConnectorId] = useState<WalletConnectorId | null>(null);
@@ -215,7 +215,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Wallet, Copy, Globe, Check, RefreshCw, Coins, History, ExternalLink, LogOut } from 'lucide-react';
 import { useState } from 'react';
 
-export function WalletDropdownContent({ selectedAccount, walletIcon, walletName }) {
+export function WalletDropdownContent({ selectedAccount, walletIcon, walletName }: { selectedAccount: string; walletIcon?: string; walletName: string }) {
     const [copied, setCopied] = useState(false);
     const shortAddress = \`\${selectedAccount.slice(0, 4)}...\${selectedAccount.slice(-4)}\`;
 
@@ -319,7 +319,7 @@ import { WalletDropdownContentBaseUI } from './wallet-dropdown-content-baseui';
 import { Wallet, ChevronDown } from 'lucide-react';
 
 // Custom Avatar component for Base UI
-function Avatar({ src, alt, fallback, className }) {
+function Avatar({ src, alt, fallback, className }: { src?: string; alt?: string; fallback?: React.ReactNode; className?: string }) {
     const [hasError, setHasError] = useState(false);
     return (
         <div className={\`relative flex shrink-0 overflow-hidden rounded-full \${className}\`}>
@@ -332,7 +332,7 @@ function Avatar({ src, alt, fallback, className }) {
     );
 }
 
-export function ConnectButtonBaseUI({ className }) {
+export function ConnectButtonBaseUI({ className }: { className?: string }) {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const { isConnected, isConnecting, account, connector } = useConnector();
 
@@ -363,7 +363,7 @@ export function ConnectButtonBaseUI({ className }) {
                 </Menu.Trigger>
                 <Menu.Portal>
                     <Menu.Positioner sideOffset={8} align="end">
-                        <Menu.Popup className="rounded-[20px] bg-background p-0 shadow-lg outline outline-1 outline-gray-200">
+                        <Menu.Popup className="rounded-[20px] bg-background p-0 shadow-lg outline-1 outline-gray-200">
                             <WalletDropdownContentBaseUI
                                 selectedAccount={String(account)}
                                 walletIcon={walletIcon}
@@ -394,7 +394,7 @@ import { Collapsible } from '@base-ui/react/collapsible';
 import { Wallet, ExternalLink, ChevronDown, X } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
-export function WalletModalBaseUI({ open, onOpenChange }) {
+export function WalletModalBaseUI({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
     const { walletStatus, isConnecting, connectorId, connectors, connectWallet, disconnectWallet } = useConnector();
     const status = walletStatus.status;
     const [connectingConnectorId, setConnectingConnectorId] = useState<WalletConnectorId | null>(null);
@@ -490,7 +490,7 @@ import { BalanceElement, ClusterElement, TokenListElement, TransactionHistoryEle
 import { Wallet, Copy, Globe, ChevronDown, Check, RefreshCw, Coins, History, LogOut } from 'lucide-react';
 import { useState } from 'react';
 
-export function WalletDropdownContentBaseUI({ selectedAccount, walletIcon, walletName }) {
+export function WalletDropdownContentBaseUI({ selectedAccount, walletIcon, walletName }: { selectedAccount: string; walletIcon?: string; walletName: string }) {
     const [copied, setCopied] = useState(false);
     const [isTokensOpen, setIsTokensOpen] = useState(false);
     const [isTransactionsOpen, setIsTransactionsOpen] = useState(false);
