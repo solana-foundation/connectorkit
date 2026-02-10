@@ -96,7 +96,7 @@
         "@solana/addresses": "^5.0.0",
         "@solana/codecs": "^5.0.0",
         "@solana/keys": "^5.0.0",
-        "@solana/kit": "^5.0.0",
+        "@solana/kit": "^6.0.0",
         "@solana/signers": "^5.0.0",
         "@solana/transaction-messages": "^5.0.0",
         "@solana/transactions": "^5.0.0",
