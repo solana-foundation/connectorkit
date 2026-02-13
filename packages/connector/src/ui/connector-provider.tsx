@@ -152,9 +152,8 @@ function ConnectorProviderInternal({
         let cancelled = false;
         (async () => {
             try {
-                const mod = (await import(
-                    '@solana-mobile/wallet-standard-mobile'
-                )) as typeof import('@solana-mobile/wallet-standard-mobile');
+                const mod =
+                    (await import('@solana-mobile/wallet-standard-mobile')) as typeof import('@solana-mobile/wallet-standard-mobile');
                 if (cancelled) return;
                 const {
                     registerMwa,
