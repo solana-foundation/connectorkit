@@ -363,7 +363,7 @@ export function ConnectButtonBaseUI({ className }: { className?: string }) {
                 </Menu.Trigger>
                 <Menu.Portal>
                     <Menu.Positioner sideOffset={8} align="end">
-                        <Menu.Popup className="rounded-[20px] bg-background p-0 shadow-lg outline-1 outline-gray-200">
+                        <Menu.Popup className="rounded-[20px] bg-background p-0 shadow-lg outline outline-1 outline-gray-200">
                             <WalletDropdownContentBaseUI
                                 selectedAccount={String(account)}
                                 walletIcon={walletIcon}
