@@ -113,9 +113,9 @@ function ConnectorProviderInternal({
 
                 const extendedConfig = config as ExtendedConnectorConfig;
                 if (extendedConfig?.errorBoundary?.onError) {
+                    const constructorDigest = `constructor-${new Date().toISOString()}`;
                     extendedConfig.errorBoundary.onError(err, {
-                        componentStack: 'client-initialization',
-                        digest: `constructor-${new Date().toISOString()}`,
+                        componentStack: `client-initialization (${constructorDigest})`,
                     });
                 }
 

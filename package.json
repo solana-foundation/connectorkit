@@ -27,14 +27,14 @@
         "@solana/prettier-config-solana": "0.0.5",
         "@types/d3-path": "^3.1.1",
         "@types/js-cookie": "^3.0.6",
-        "@types/node": "^24.10.13",
-        "@typescript-eslint/eslint-plugin": "^8.55.0",
-        "@typescript-eslint/parser": "^8.55.0",
-        "eslint": "^9.39.2",
+        "@types/node": "^24.10.15",
+        "@typescript-eslint/eslint-plugin": "^8.56.1",
+        "@typescript-eslint/parser": "^8.56.1",
+        "eslint": "^9.39.3",
         "prettier": "^3.8.1",
         "react": "^19.2.4",
         "react-dom": "^19.2.4",
-        "turbo": "^2.8.7"
+        "turbo": "^2.8.12"
     },
     "engines": {
         "node": ">=20.18.0"
