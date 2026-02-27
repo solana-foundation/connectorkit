@@ -10,6 +10,7 @@ on:
 permissions:
   contents: read
   pull-requests: write
+  issues: write
   actions: read
 
 jobs:
@@ -92,7 +93,8 @@ jobs:
           find coverage-artifacts/ -name "*.json" -o -name "*.lcov" -o -name "*.xml" 2>/dev/null || echo "No coverage artifacts found"
 
       - name: Post coverage comment on PR
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        continue-on-error: true
         uses: actions/github-script@v7
         with:
           script: |
