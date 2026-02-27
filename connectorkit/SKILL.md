@@ -193,6 +193,136 @@ const { cluster, clusters, setCluster, isMainnet, isDevnet } = useCluster();
 await setCluster('devnet');
 ```
 
+### Wallet Filtering & Ordering
+
+Improve UX for users with lots of installed wallets by filtering and/or featuring wallets at the config level:
+
+```ts
+import { getDefaultConfig } from '@solana/connector/headless';
+
+const config = getDefaultConfig({
+    appName: 'My App',
+    wallets: {
+        allowList: ['Phantom', 'Solflare', 'Backpack'],
+        denyList: ['MetaMask'],
+        featured: ['Phantom', 'Solflare'],
+    },
+});
+```
+
+### WalletConnect (QR / Deep Link)
+
+- Install the WalletConnect peer dependency: `npm i @walletconnect/universal-provider`
+- Set `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=...`
+- Enable in config: `walletConnect: true`
+
+When a pairing URI is available, render a QR/deep link UI (e.g. a dialog). The provider exposes `walletConnectUri` and `clearWalletConnectUri`.
+
+```tsx
+'use client';
+
+import { useConnector } from '@solana/connector/react';
+
+export function WalletConnectQrModal() {
+    const { walletConnectUri, clearWalletConnectUri } = useConnector();
+    if (!walletConnectUri) return null;
+
+    return (
+        <div>
+            <div>WalletConnect URI: {walletConnectUri}</div>
+            <button onClick={clearWalletConnectUri}>Close</button>
+        </div>
+    );
+}
+```
+
+For a full QR example, see `packages/connector/README.md` (WalletConnect section).
+
+### Remote Signer (Server-backed Signing)
+
+Remote signing is a two-part setup:
+
+1) **Browser**: create a Wallet Standard wallet that delegates signing to your API.
+
+```ts
+import { createRemoteSignerWallet } from '@solana/connector/remote';
+import { getDefaultConfig } from '@solana/connector/headless';
+
+const remoteWallet = createRemoteSignerWallet({
+    endpoint: '/api/connector-signer',
+    name: 'Treasury',
+    // getAuthHeaders: () => ({ Authorization: `Bearer ${token}` }),
+});
+
+const config = getDefaultConfig({
+    appName: 'My App',
+    additionalWallets: [remoteWallet],
+});
+```
+
+2) **Server**: implement the Next.js route handler to actually sign.
+
+```ts
+// app/api/connector-signer/route.ts
+import { createRemoteSignerRouteHandlers } from '@solana/connector/server';
+
+const { GET, POST } = createRemoteSignerRouteHandlers({
+    provider: { type: 'custom', signer: myRemoteSigner }, // implements RemoteSigner (see references/remote-signer.md)
+    authorize: async request => true,
+    policy: {
+        validateTransaction: async bytes => true,
+        validateMessage: async bytes => true,
+    },
+    rpc: { endpoint: process.env.RPC_URL },
+    chains: ['solana:mainnet'],
+    name: 'Treasury',
+});
+
+export { GET, POST };
+```
+
+Details (provider configs + protocol types + security) live in `references/remote-signer.md`.
+
+### Devtools (Development Only)
+
+ConnectorKit also ships devtools (`@solana/devtools`) that can be dynamically mounted in development.
+
+```tsx
+'use client';
+
+import { useEffect } from 'react';
+
+export function DevtoolsLoader() {
+    useEffect(() => {
+        if (process.env.NODE_ENV !== 'development') return;
+
+        let devtools: { mount: (el: HTMLElement) => void; unmount: () => void } | undefined;
+        let container: HTMLDivElement | undefined;
+
+        import('@solana/devtools').then(({ ConnectorDevtools }) => {
+            container = document.createElement('div');
+            document.body.appendChild(container);
+            devtools = new ConnectorDevtools({ config: { position: 'bottom-right', theme: 'dark' } });
+            devtools.mount(container);
+        });
+
+        return () => {
+            devtools?.unmount();
+            container?.remove();
+        };
+    }, []);
+
+    return null;
+}
+```
+
+## Security & Production Checklist
+
+- **RPC API keys**: don’t expose paid RPC URLs as `NEXT_PUBLIC_*`; use a Next.js RPC proxy route and point your cluster URL at the proxy (see `packages/connector/README.md`).
+- **Token logo privacy**: set `imageProxy` if you render token images to avoid leaking user IPs to arbitrary token metadata hosts (see `packages/connector/README.md`).
+- **CoinGecko rate limits**: if you use token prices heavily, configure `coingecko.apiKey`.
+- **Remote signer**: always implement `authorize` + `policy.validateTransaction`, use HTTPS, and rate limit the signer endpoint.
+
 ### Headless (Non-React)
 
 ```ts
@@ -253,5 +383,7 @@ Type guards: `isDisconnected()`, `isConnecting()`, `isConnected()`, `isStatusErr
 ## Reference Files
 
 - **[Hooks & Elements API](references/api.md)** — All hooks with return types, all elements with props
+- **[Connector Package README](../packages/connector/README.md)** — WalletConnect QR, RPC proxy pattern, `imageProxy`, CoinGecko config, headless examples
+- **[Next.js Example Providers](../examples/next-js/app/providers.tsx)** — End-to-end Next.js provider wiring (clusters, WalletConnect, remote signer, devtools)
 - **[Remote & Server Signing](references/remote-signer.md)** — Remote wallet adapter, server route handlers, Fireblocks/Privy/custom provider setup
 - **[Migration Guide](references/migration.md)** — Compat bridge details, wallet-adapter to connector migration steps
