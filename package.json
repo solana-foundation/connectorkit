@@ -23,18 +23,18 @@
         "release": "turbo build && changeset publish"
     },
     "devDependencies": {
-        "@changesets/cli": "^2.29.7",
+        "@changesets/cli": "^2.29.8",
         "@solana/prettier-config-solana": "0.0.5",
         "@types/d3-path": "^3.1.1",
         "@types/js-cookie": "^3.0.6",
-        "@types/node": "^24.8.1",
-        "@typescript-eslint/eslint-plugin": "^8.46.1",
-        "@typescript-eslint/parser": "^8.46.1",
-        "eslint": "^9.38.0",
-        "prettier": "^3.6.2",
-        "react": "^19.2.1",
-        "react-dom": "^19.2.1",
-        "turbo": "^2.7.3"
+        "@types/node": "^24.10.15",
+        "@typescript-eslint/eslint-plugin": "^8.56.1",
+        "@typescript-eslint/parser": "^8.56.1",
+        "eslint": "^9.39.3",
+        "prettier": "^3.8.1",
+        "react": "^19.2.4",
+        "react-dom": "^19.2.4",
+        "turbo": "^2.8.12"
     },
     "engines": {
         "node": ">=18.0.0"

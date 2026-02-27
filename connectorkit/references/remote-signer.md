@@ -20,23 +20,24 @@ ConnectorKit supports remote signing where the private key lives on a server (cu
 ## Browser-Side Remote Wallet
 
 ```ts
-import { createRemoteSignerWallet } from '@solana/connector/remote'
+import { createRemoteSignerWallet } from '@solana/connector/remote';
 
 const remoteWallet = createRemoteSignerWallet({
-  endpoint: '/api/signer',               // API route URL
-  name: 'Treasury Wallet',               // Display name in wallet list
-  icon: 'https://...',                    // Optional icon URL
-  chains: ['solana:mainnet'],             // Optional chain filter
-  getAuthHeaders: () => ({                // Optional auth
-    'Authorization': `Bearer ${token}`,
-  }),
-})
+    endpoint: '/api/signer', // API route URL
+    name: 'Treasury Wallet', // Display name in wallet list
+    icon: 'https://...', // Optional icon URL
+    chains: ['solana:mainnet'], // Optional chain filter
+    getAuthHeaders: () => ({
+        // Optional auth
+        Authorization: `Bearer ${token}`,
+    }),
+});
 
 // Add to connector config
 const config = getDefaultConfig({
-  appName: 'My App',
-  additionalWallets: [remoteWallet],
-})
+    appName: 'My App',
+    additionalWallets: [remoteWallet],
+});
 ```
 
 The remote wallet appears in `useWalletConnectors()` like any other wallet. Users connect to it the same way.
@@ -45,29 +46,31 @@ The remote wallet appears in `useWalletConnectors()` like any other wallet. User
 
 ```ts
 // app/api/signer/route.ts (Next.js App Router)
-import { createRemoteSignerRouteHandlers } from '@solana/connector/server'
+import { createRemoteSignerRouteHandlers } from '@solana/connector/server';
 
 const { GET, POST } = createRemoteSignerRouteHandlers({
-  provider: { /* Fireblocks, Privy, or custom */ },
-  authorize: async (request) => {
-    // Validate the request (check JWT, session, etc.)
-    return true
-  },
-  policy: {
-    validateTransaction: async (bytes, request) => {
-      // Inspect transaction before signing
-      return true
+    provider: {
+        /* Fireblocks, Privy, or custom */
     },
-    validateMessage: async (bytes, request) => true,
-  },
-  rpc: {
-    endpoint: process.env.RPC_URL,  // Required for signAndSend
-  },
-  chains: ['solana:mainnet'],
-  name: 'Treasury Wallet',
-})
+    authorize: async request => {
+        // Validate the request (check JWT, session, etc.)
+        return true;
+    },
+    policy: {
+        validateTransaction: async (bytes, request) => {
+            // Inspect transaction before signing
+            return true;
+        },
+        validateMessage: async (bytes, request) => true,
+    },
+    rpc: {
+        endpoint: process.env.RPC_URL, // Required for signAndSend
+    },
+    chains: ['solana:mainnet'],
+    name: 'Treasury Wallet',
+});
 
-export { GET, POST }
+export { GET, POST };
 ```
 
 `GET` returns wallet metadata (address, capabilities). `POST` handles sign operations.
@@ -123,20 +126,24 @@ provider: {
 The remote signer uses a JSON protocol over HTTP.
 
 **Request operations:**
+
 - `signTransaction` — `{ operation, transaction: base64 }`
 - `signAllTransactions` — `{ operation, transactions: base64[] }`
 - `signMessage` — `{ operation, message: base64 }`
 - `signAndSendTransaction` — `{ operation, transaction: base64, options? }`
 
 **Success responses:**
+
 - `{ signedTransaction: base64 }`
 - `{ signedTransactions: base64[] }`
 - `{ signature: base64 }`
 
 **Error response:**
+
 - `{ error: RemoteSignerErrorCode, message: string }`
 
 **Utilities** (from `@solana/connector/remote`):
+
 - `encodeBase64(data): string`
 - `decodeBase64(encoded): Uint8Array`
 - `isErrorResponse(response): boolean`

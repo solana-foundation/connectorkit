@@ -46,22 +46,22 @@ function LegacyComponent() {
 ### Factory function (non-React)
 
 ```ts
-import { createWalletAdapterCompat } from '@solana/connector/compat'
+import { createWalletAdapterCompat } from '@solana/connector/compat';
 
 const compat = createWalletAdapterCompat(signer, {
-  disconnect: () => client.disconnectWallet(),
-  transformTransaction: (tx) => tx,    // optional transform
-  onError: (error, operation) => {},   // optional error handler
-})
+    disconnect: () => client.disconnectWallet(),
+    transformTransaction: tx => tx, // optional transform
+    onError: (error, operation) => {}, // optional error handler
+});
 ```
 
 ### Type guard
 
 ```ts
-import { isWalletAdapterCompatible } from '@solana/connector/compat'
+import { isWalletAdapterCompatible } from '@solana/connector/compat';
 
 if (isWalletAdapterCompatible(obj)) {
-  obj.signTransaction(tx)
+    obj.signTransaction(tx);
 }
 ```
 
@@ -119,17 +119,17 @@ if (isWalletAdapterCompatible(obj)) {
 
 ## API Mapping
 
-| wallet-adapter | ConnectorKit |
-|---|---|
-| `useWallet()` | `useWallet()` + `useTransactionSigner()` |
-| `useConnection()` | `useSolanaClient()` |
-| `wallet.publicKey` | `useWallet().account` |
-| `wallet.connected` | `useWallet().status === 'connected'` |
-| `wallet.signTransaction` | `useTransactionSigner().signer.signTransaction` |
+| wallet-adapter           | ConnectorKit                                           |
+| ------------------------ | ------------------------------------------------------ |
+| `useWallet()`            | `useWallet()` + `useTransactionSigner()`               |
+| `useConnection()`        | `useSolanaClient()`                                    |
+| `wallet.publicKey`       | `useWallet().account`                                  |
+| `wallet.connected`       | `useWallet().status === 'connected'`                   |
+| `wallet.signTransaction` | `useTransactionSigner().signer.signTransaction`        |
 | `wallet.sendTransaction` | `useTransactionSigner().signer.signAndSendTransaction` |
-| `wallet.signMessage` | `useTransactionSigner().signer.signMessage` |
-| `wallet.select(name)` | `useConnectWallet().connect(connectorId)` |
-| `wallet.disconnect()` | `useDisconnectWallet().disconnect()` |
-| `WalletMultiButton` | `WalletListElement` + `AccountElement` |
-| `WalletModalProvider` | `AppProvider` (built-in) |
-| `ConnectionProvider` | `AppProvider` with `getDefaultConfig({ network })` |
+| `wallet.signMessage`     | `useTransactionSigner().signer.signMessage`            |
+| `wallet.select(name)`    | `useConnectWallet().connect(connectorId)`              |
+| `wallet.disconnect()`    | `useDisconnectWallet().disconnect()`                   |
+| `WalletMultiButton`      | `WalletListElement` + `AccountElement`                 |
+| `WalletModalProvider`    | `AppProvider` (built-in)                               |
+| `ConnectionProvider`     | `AppProvider` with `getDefaultConfig({ network })`     |

@@ -187,9 +187,8 @@ describe('headless entrypoint', () => {
         });
 
         it('should export polyfill utilities without React', async () => {
-            const { installPolyfills, isPolyfillInstalled, isCryptoAvailable, getPolyfillStatus } = await import(
-                './headless'
-            );
+            const { installPolyfills, isPolyfillInstalled, isCryptoAvailable, getPolyfillStatus } =
+                await import('./headless');
 
             expect(installPolyfills).toBeDefined();
             expect(isPolyfillInstalled).toBeDefined();

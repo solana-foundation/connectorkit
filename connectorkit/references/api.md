@@ -17,27 +17,27 @@ Primary wallet status hook.
 
 ```ts
 const {
-  status,          // 'disconnected' | 'connecting' | 'connected' | 'error'
-  isConnected,     // boolean
-  isConnecting,    // boolean
-  isError,         // boolean
-  error,           // Error | null
-  connectorId,     // WalletConnectorId | null
-  account,         // Address | null (selected account)
-  accounts,        // SessionAccount[]
-  session,         // WalletSession | null
-} = useWallet()
+    status, // 'disconnected' | 'connecting' | 'connected' | 'error'
+    isConnected, // boolean
+    isConnecting, // boolean
+    isError, // boolean
+    error, // Error | null
+    connectorId, // WalletConnectorId | null
+    account, // Address | null (selected account)
+    accounts, // SessionAccount[]
+    session, // WalletSession | null
+} = useWallet();
 ```
 
 ### useConnectWallet()
 
 ```ts
 const {
-  connect,       // (connectorId: WalletConnectorId, options?: ConnectOptions) => Promise<void>
-  isConnecting,  // boolean
-  error,         // Error | null
-  resetError,    // () => void
-} = useConnectWallet()
+    connect, // (connectorId: WalletConnectorId, options?: ConnectOptions) => Promise<void>
+    isConnecting, // boolean
+    error, // Error | null
+    resetError, // () => void
+} = useConnectWallet();
 
 // ConnectOptions:
 // { silent?: boolean, allowInteractiveFallback?: boolean, preferredAccount?: Address }
@@ -46,7 +46,7 @@ const {
 ### useDisconnectWallet()
 
 ```ts
-const { disconnect, isDisconnecting } = useDisconnectWallet()
+const { disconnect, isDisconnecting } = useDisconnectWallet();
 ```
 
 ### useWalletConnectors()
@@ -54,7 +54,7 @@ const { disconnect, isDisconnecting } = useDisconnectWallet()
 Returns available wallets for connection.
 
 ```ts
-const connectors: WalletConnectorMetadata[] = useWalletConnectors()
+const connectors: WalletConnectorMetadata[] = useWalletConnectors();
 // Each: { id, name, icon, ready, chains, features }
 ```
 
@@ -62,20 +62,20 @@ const connectors: WalletConnectorMetadata[] = useWalletConnectors()
 
 ```ts
 const {
-  name,          // string | null
-  icon,          // string | null
-  installed,     // boolean
-  connectable,   // boolean
-  connected,     // boolean
-  connecting,    // boolean
-  wallets,       // WalletDisplayInfo[]
-} = useWalletInfo()
+    name, // string | null
+    icon, // string | null
+    installed, // boolean
+    connectable, // boolean
+    connected, // boolean
+    connecting, // boolean
+    wallets, // WalletDisplayInfo[]
+} = useWalletInfo();
 ```
 
 ### useAccount()
 
 ```ts
-const { account, address, label, isLoading, error } = useAccount()
+const { account, address, label, isLoading, error } = useAccount();
 ```
 
 ## Data Hooks
@@ -84,28 +84,28 @@ const { account, address, label, isLoading, error } = useAccount()
 
 ```ts
 const {
-  solBalance,     // number
-  lamports,       // bigint
-  formattedSol,   // string
-  tokens,         // TokenBalance[]
-  isLoading,      // boolean
-  isError,        // boolean
-  error,          // Error | null
-  refetch,        // () => Promise<void>
-} = useBalance()
+    solBalance, // number
+    lamports, // bigint
+    formattedSol, // string
+    tokens, // TokenBalance[]
+    isLoading, // boolean
+    isError, // boolean
+    error, // Error | null
+    refetch, // () => Promise<void>
+} = useBalance();
 ```
 
 ### useTransactions(options?)
 
 ```ts
-const { transactions, isLoading, isError, error, refetch } = useTransactions()
+const { transactions, isLoading, isError, error, refetch } = useTransactions();
 // Each tx: { signature, timestamp, status, method, metadata }
 ```
 
 ### useTokens(options?)
 
 ```ts
-const { tokens, isLoading, isError, error } = useTokens()
+const { tokens, isLoading, isError, error } = useTokens();
 // Each: { mint, symbol, decimals, balance, price, ... }
 ```
 
@@ -113,15 +113,15 @@ const { tokens, isLoading, isError, error } = useTokens()
 
 ```ts
 const {
-  cluster,       // SolanaCluster | null
-  clusters,      // SolanaCluster[]
-  setCluster,    // (id: SolanaClusterId) => Promise<void>
-  isMainnet,     // boolean
-  isDevnet,      // boolean
-  isTestnet,     // boolean
-  isLocal,       // boolean
-  explorerUrl,   // string
-} = useCluster()
+    cluster, // SolanaCluster | null
+    clusters, // SolanaCluster[]
+    setCluster, // (id: SolanaClusterId) => Promise<void>
+    isMainnet, // boolean
+    isDevnet, // boolean
+    isTestnet, // boolean
+    isLocal, // boolean
+    explorerUrl, // string
+} = useCluster();
 ```
 
 ## Transaction Hooks
@@ -147,7 +147,7 @@ signer.getCapabilities()  // { canSign, canSend, canSignMessage, supportsBatchSi
 `@solana/kit` / `@solana/signers` compatible signer.
 
 ```ts
-const { signer, ready } = useKitTransactionSigner()
+const { signer, ready } = useKitTransactionSigner();
 // signer is TransactionModifyingSigner — compatible with @solana/kit pipelines
 ```
 
@@ -166,7 +166,7 @@ const prepared = await prepare(transactionMessage, options?)
 Get a `@solana/kit` SolanaClient instance.
 
 ```ts
-const { client, ready, clusterType } = useSolanaClient()
+const { client, ready, clusterType } = useSolanaClient();
 // client.rpc — RPC methods
 // client.rpcSubscriptions — subscription methods
 ```
@@ -178,7 +178,7 @@ const { client, ready, clusterType } = useSolanaClient()
 Access full provider snapshot.
 
 ```ts
-const snapshot: ConnectorSnapshot = useConnector()
+const snapshot: ConnectorSnapshot = useConnector();
 ```
 
 ### useConnectorClient()
@@ -186,17 +186,17 @@ const snapshot: ConnectorSnapshot = useConnector()
 Get raw ConnectorClient instance.
 
 ```ts
-const client: ConnectorClient | null = useConnectorClient()
+const client: ConnectorClient | null = useConnectorClient();
 ```
 
 ### Query Cache Helpers
 
 ```ts
-getBalanceQueryKey(rpcUrl, address)
-getTransactionsQueryKey(options)
-getWalletAssetsQueryKey(rpcUrl, address)
-invalidateSharedQuery(key)
-clearSharedQueryCache()
+getBalanceQueryKey(rpcUrl, address);
+getTransactionsQueryKey(options);
+getWalletAssetsQueryKey(rpcUrl, address);
+invalidateSharedQuery(key);
+clearSharedQueryCache();
 ```
 
 ## Element Components
