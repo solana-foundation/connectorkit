@@ -1,7 +1,7 @@
 /**
  * IDL Plugin
  *
- * Goal: Provide an Explorer-like "Interact with IDL" experience inside @solana/devtools,
+ * Goal: Provide an Explorer-like "Interact with IDL" experience inside @solana/connector-debugger,
  * but using the currently-connected @solana/connector wallet session.
  *
  * Notes:

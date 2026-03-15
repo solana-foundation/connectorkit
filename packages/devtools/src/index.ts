@@ -1,11 +1,11 @@
 /**
- * @solana/devtools
+ * @solana/connector-debugger
  *
  * Framework-agnostic devtools for @solana/connector
  *
  * Usage:
  * ```typescript
- * import { ConnectorDevtools } from '@solana/devtools';
+ * import { ConnectorDevtools } from '@solana/connector-debugger';
  *
  * const devtools = new ConnectorDevtools();
  * devtools.mount(document.body);

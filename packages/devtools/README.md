@@ -1,4 +1,4 @@
-# @solana/devtools
+# @solana/connector-debugger
 
 Framework-agnostic devtools for `@solana/connector`. Works with any web framework via the imperative DOM API.
 
@@ -16,7 +16,7 @@ Framework-agnostic devtools for `@solana/connector`. Works with any web framewor
 ## Installation
 
 ```bash
-npm install @solana/devtools
+npm install @solana/connector-debugger
 ```
 
 ## Usage
@@ -26,7 +26,7 @@ npm install @solana/devtools
 When using `@solana/connector/react` with `ConnectorProvider`, the client is automatically exposed on `window.__connectorClient`:
 
 ```typescript
-import { ConnectorDevtools } from '@solana/devtools';
+import { ConnectorDevtools } from '@solana/connector-debugger';
 
 // Create devtools instance (auto-detects client from window.__connectorClient)
 const devtools = new ConnectorDevtools();
@@ -45,7 +45,7 @@ devtools.unmount();
 If you're using the headless API or want explicit control:
 
 ```typescript
-import { ConnectorDevtools } from '@solana/devtools';
+import { ConnectorDevtools } from '@solana/connector-debugger';
 import { ConnectorClient } from '@solana/connector/headless';
 
 const client = new ConnectorClient({ debug: true });
@@ -75,7 +75,7 @@ export function DevtoolsLoader() {
 
         let devtools: any;
 
-        import('@solana/devtools').then(({ ConnectorDevtools }) => {
+        import('@solana/connector-debugger').then(({ ConnectorDevtools }) => {
             devtools = new ConnectorDevtools();
             const container = document.createElement('div');
             container.id = 'connector-devtools';

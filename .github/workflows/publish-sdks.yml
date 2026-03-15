@@ -14,7 +14,7 @@ on:
         options:
           - all
           - connector
-          - devtools
+          - connector-debugger
 
 permissions:
   contents: read
@@ -66,8 +66,8 @@ jobs:
         working-directory: packages/connector
         run: npm publish --access public
 
-      - name: Publish @solana/devtools
-        if: ${{ startsWith(github.ref, 'refs/tags/') || github.event.inputs.package == 'all' || github.event.inputs.package == 'devtools' }}
+      - name: Publish @solana/connector-debugger
+        if: ${{ startsWith(github.ref, 'refs/tags/') || github.event.inputs.package == 'all' || github.event.inputs.package == 'connector-debugger' }}
         working-directory: packages/devtools
         run: npm publish --access public
 
@@ -95,8 +95,8 @@ jobs:
             - Version: ${{ github.ref_name }}
             - Registry: npm
 
-            ### @solana/devtools
-            - Package: `@solana/devtools`
+            ### @solana/connector-debugger
+            - Package: `@solana/connector-debugger`
             - Version: ${{ github.ref_name }}
             - Registry: npm
 
@@ -104,7 +104,7 @@ jobs:
 
             ```bash
             npm install @solana/connector@${{ github.ref_name }}
-            npm install @solana/devtools@${{ github.ref_name }}
+            npm install @solana/connector-debugger@${{ github.ref_name }}
             ```
           draft: false
           prerelease: ${{ contains(github.ref_name, '-') }}

@@ -1,5 +1,5 @@
 /**
- * IDL utilities for @solana/devtools
+ * IDL utilities for @solana/connector-debugger
  *
  * Chain-first IDL fetch mirrors Solana Explorer's Program Metadata IDL flow:
  * - Fetch metadata via seeds (authority:null, seed:"idl")
