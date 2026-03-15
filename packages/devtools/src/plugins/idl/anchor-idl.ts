@@ -7,7 +7,7 @@ export function isModernAnchorIdl(idl: unknown): idl is AnchorIdlLike {
     if (typeof maybe.address !== 'string') return false;
     const hasMetadata = Boolean(
         isRecord(maybe.metadata) &&
-            (typeof maybe.metadata?.version === 'string' || typeof maybe.metadata?.spec === 'string'),
+        (typeof maybe.metadata?.version === 'string' || typeof maybe.metadata?.spec === 'string'),
     );
     if (!hasMetadata) return false;
     return Array.isArray(maybe.instructions);

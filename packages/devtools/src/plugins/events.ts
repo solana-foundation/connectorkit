@@ -10,6 +10,7 @@
 
 import type { ConnectorDevtoolsPlugin, PluginContext } from '../types';
 import { ICONS } from '../components/icons';
+import { renderCdtDropdown } from '../components/dropdown';
 
 interface StoredEvent {
     id: number;
@@ -105,16 +106,6 @@ export function createEventsPlugin(maxEvents = 100): ConnectorDevtoolsPlugin {
                                 display: flex;
                                 align-items: center;
                                 gap: 8px;
-                            }
-
-                            .cdt-events-filter {
-                                padding: 4px 8px;
-                                font-size: 11px;
-                                border-radius: 4px;
-                                background: var(--cdt-bg-hover);
-                                border: 1px solid var(--cdt-border);
-                                color: var(--cdt-text);
-                                cursor: pointer;
                             }
 
                             .cdt-events-count {
@@ -254,10 +245,16 @@ export function createEventsPlugin(maxEvents = 100): ConnectorDevtoolsPlugin {
                                 <button class="cdt-btn cdt-btn-ghost cdt-btn-icon" id="clear-events" title="Clear events">
                                     ${ICONS.trash}
                                 </button>
-                                <select class="cdt-events-filter" id="event-filter">
-                                    <option value="">All events</option>
-                                    ${eventTypes.map(type => `<option value="${type}" ${selectedType === type ? 'selected' : ''}>${type}</option>`).join('')}
-                                </select>
+                                ${renderCdtDropdown({
+                                    id: 'event-filter',
+                                    ariaLabel: 'Event filter',
+                                    value: selectedType ?? '',
+                                    options: [
+                                        { value: '', label: 'All events' },
+                                        ...eventTypes.map(type => ({ value: type, label: type })),
+                                    ],
+                                    triggerClassName: 'cdt-select cdt-select-compact',
+                                })}
                             </div>
                             <div class="cdt-events-toolbar-right">
                                 ${isPaused ? '<div class="cdt-paused-indicator">⏸ Paused</div>' : ''}
@@ -307,7 +304,7 @@ export function createEventsPlugin(maxEvents = 100): ConnectorDevtoolsPlugin {
                 // Attach event handlers
                 const togglePauseBtn = el.querySelector('#toggle-pause');
                 const clearBtn = el.querySelector('#clear-events');
-                const filterSelect = el.querySelector('#event-filter') as HTMLSelectElement | null;
+                const filterDropdown = el.querySelector<HTMLElement>('#event-filter');
                 const eventItems = el.querySelectorAll('.cdt-event-item');
 
                 togglePauseBtn?.addEventListener('click', () => {
@@ -321,8 +318,9 @@ export function createEventsPlugin(maxEvents = 100): ConnectorDevtoolsPlugin {
                     renderContent();
                 });
 
-                filterSelect?.addEventListener('change', () => {
-                    selectedType = filterSelect.value || null;
+                filterDropdown?.addEventListener('cdt-dropdown-change', e => {
+                    const detail = (e as CustomEvent<{ id: string; value: string }>).detail;
+                    selectedType = detail.value || null;
                     renderContent();
                 });
 

@@ -52,8 +52,10 @@ export interface WalletAssetsData {
 /**
  * Options for useWalletAssets hook
  */
-export interface UseWalletAssetsOptions<TSelected = WalletAssetsData>
-    extends Omit<SharedQueryOptions<WalletAssetsData, TSelected>, 'select'> {
+export interface UseWalletAssetsOptions<TSelected = WalletAssetsData> extends Omit<
+    SharedQueryOptions<WalletAssetsData, TSelected>,
+    'select'
+> {
     /** Override the Solana client from provider */
     client?: SolanaClient | null;
     /** Transform/select a subset of data (reduces rerenders) */

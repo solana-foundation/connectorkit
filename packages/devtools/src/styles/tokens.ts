@@ -105,6 +105,156 @@ export const BASE_STYLES = `
         font-size: inherit;
     }
 
+    .cdt-select {
+        -webkit-appearance: none;
+        appearance: none;
+        padding: 6px 30px 6px 10px;
+        border-radius: 8px;
+        border: 1px solid var(--cdt-border);
+        background-color: var(--cdt-bg);
+        color: var(--cdt-text);
+        font-size: 12px;
+        font-family: ui-monospace, monospace;
+        line-height: 1.2;
+        cursor: pointer;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M6 9l6 6 6-6' stroke='%23888888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 10px center;
+        background-size: 14px 14px;
+    }
+
+    .cdt-select:hover:not(:disabled) {
+        background-color: var(--cdt-bg-hover);
+        border-color: var(--cdt-border-hover);
+    }
+
+    .cdt-select:focus {
+        outline: none;
+        border-color: var(--cdt-accent);
+        box-shadow: 0 0 0 2px color-mix(in srgb, var(--cdt-accent) 25%, transparent);
+    }
+
+    .cdt-select:disabled {
+        cursor: not-allowed;
+        opacity: 0.5;
+    }
+
+    .cdt-select option {
+        background: var(--cdt-bg);
+        color: var(--cdt-text);
+    }
+
+    .cdt-select-compact {
+        font-size: 11px;
+        background-position: right 8px center;
+        background-size: 13px 13px;
+    }
+
+    .cdt-dropdown {
+        position: relative;
+        display: inline-block;
+    }
+
+    .cdt-dropdown-trigger {
+        text-align: left;
+        display: inline-flex;
+        align-items: center;
+        min-width: 120px;
+    }
+
+    .cdt-dropdown-trigger-text {
+        display: block;
+        max-width: 240px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .cdt-dropdown-menu {
+        position: absolute;
+        top: calc(100% + 6px);
+        left: 0;
+        z-index: 50;
+        min-width: 100%;
+        max-width: 320px;
+        padding: 4px;
+        border-radius: 10px;
+        border: 1px solid var(--cdt-border);
+        background: var(--cdt-bg-panel);
+        box-shadow: 0 14px 34px rgba(0, 0, 0, 0.32);
+        max-height: 260px;
+        overflow: auto;
+        overscroll-behavior: contain;
+        opacity: 0;
+        transform: translateY(-4px);
+        visibility: hidden;
+        pointer-events: none;
+        transition: opacity 0.12s ease, transform 0.12s ease, visibility 0s linear 0.12s;
+    }
+
+    .cdt-dropdown[data-open="true"] .cdt-dropdown-menu {
+        opacity: 1;
+        transform: translateY(0);
+        visibility: visible;
+        pointer-events: auto;
+        transition: opacity 0.12s ease, transform 0.12s ease, visibility 0s;
+    }
+
+    .cdt-dropdown-item {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 7px 8px;
+        border-radius: 8px;
+        font-size: 12px;
+        color: var(--cdt-text);
+        background: transparent;
+        border: none;
+    }
+
+    .cdt-dropdown-item:hover:not(:disabled) {
+        background: var(--cdt-bg-hover);
+    }
+
+    .cdt-dropdown-item:focus {
+        outline: none;
+        background: var(--cdt-bg-hover);
+        box-shadow: 0 0 0 2px color-mix(in srgb, var(--cdt-accent) 25%, transparent);
+    }
+
+    .cdt-dropdown-item[data-selected="true"] {
+        background: var(--cdt-bg-active);
+    }
+
+    .cdt-dropdown-item-label {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        min-width: 0;
+    }
+
+    .cdt-dropdown-check {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 14px;
+        height: 14px;
+        flex: none;
+        color: var(--cdt-accent);
+        opacity: 0;
+    }
+
+    .cdt-dropdown-check svg {
+        width: 14px;
+        height: 14px;
+    }
+
+    .cdt-dropdown-item[data-selected="true"] .cdt-dropdown-check {
+        opacity: 1;
+    }
+
     /* Scrollbar styling */
     ::-webkit-scrollbar {
         width: 8px;

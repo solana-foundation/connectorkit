@@ -42,6 +42,10 @@ export function mergeTransactions(ctx: PluginContext): DevtoolsTrackedTransactio
             feePayer: tx.feePayer ? String(tx.feePayer) : existing?.feePayer,
             method: tx.method,
             size: (tx.metadata as any)?.size ?? existing?.size,
+            wireTransactionBase64:
+                (tx.metadata as any)?.wireTransactionBase64 ??
+                (tx.metadata as any)?.transactionBase64 ??
+                existing?.wireTransactionBase64,
             status: tx.status,
             timestamp: tx.timestamp,
         });

@@ -6,7 +6,7 @@ import type {
     ConnectorDebugState,
     Listener,
 } from '../../types/connector';
-import type { TransactionActivity } from '../../types/transactions';
+import type { SolanaTransaction, TransactionActivity } from '../../types/transactions';
 import type { ConnectorEvent, ConnectorEventListener } from '../../types/events';
 import type { SolanaClusterId, SolanaCluster } from '@wallet-ui/core';
 import type { WalletInfo } from '../../types/wallets';
@@ -26,6 +26,7 @@ import { AUTO_CONNECT_DELAY_MS, DEFAULT_MAX_TRACKED_TRANSACTIONS } from '../cons
 import { createLogger } from '../utils/secure-logger';
 import { tryCatchSync } from './try-catch';
 import type { WalletConnectRegistration } from '../wallet/walletconnect';
+import { prepareTransactionForWallet } from '../../utils/transaction-format';
 
 const logger = createLogger('ConnectorClient');
 
@@ -317,6 +318,23 @@ export class ConnectorClient {
 
     trackTransaction(activity: Omit<TransactionActivity, 'timestamp' | 'cluster'>): void {
         this.transactionTracker.trackTransaction(activity);
+    }
+
+    /**
+     * Emit a pre-send transaction preview event for devtools.
+     *
+     * This does not sign or send the transaction. It exists so apps that do not
+     * use the connector transaction signer can still surface wire bytes in the
+     * debugger (e.g. to simulate before sending).
+     */
+    previewTransaction(transaction: SolanaTransaction): void {
+        const { serialized } = prepareTransactionForWallet(transaction);
+        this.eventEmitter.emit({
+            type: 'transaction:preparing',
+            transaction: serialized,
+            size: serialized.length,
+            timestamp: new Date().toISOString(),
+        });
     }
 
     updateTransactionStatus(signature: string, status: TransactionActivity['status'], error?: string): void {

@@ -104,6 +104,7 @@ export function ModernSolTransfer() {
 
                 const signedTransaction = await signTransactionMessageWithSigners(transactionMessage);
                 signatureBase58 = getBase58SignatureFromSignedTransaction(signedTransaction);
+                const wireTransactionBase64 = getBase64EncodedWireTransaction(signedTransaction);
 
                 // Track transaction in debugger
                 client.trackTransaction({
@@ -111,6 +112,7 @@ export function ModernSolTransfer() {
                     status: 'pending',
                     method: 'sendTransaction',
                     feePayer: signer.address,
+                    metadata: { wireTransactionBase64 },
                 });
 
                 visualPipeline.setStepState('Build instruction', {

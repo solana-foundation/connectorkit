@@ -3,7 +3,7 @@
 import { useCallback, useMemo } from 'react';
 import { TransactionBuilder, diagnoseError } from '@pipeit/core';
 import { getTitanSwapPlan, titanInstructionToKit } from '@pipeit/actions/titan';
-import { createSolanaRpc, signature as createSignature } from '@solana/kit';
+import { createSolanaRpc, getBase64Encoder, signature as createSignature } from '@solana/kit';
 import { useKitTransactionSigner, useCluster, useConnectorClient } from '@solana/connector';
 import { PipelineHeaderButton, PipelineVisualization } from '@/components/pipeline';
 import { VisualPipeline } from '@/lib/visual-pipeline';
@@ -94,7 +94,8 @@ export function TitanSwap() {
                     computeUnits,
                     priorityFee: 'none',
                     autoRetry: false,
-                    lookupTableAddresses: swapResult.lookupTableAddresses.length > 0 ? swapResult.lookupTableAddresses : undefined,
+                    lookupTableAddresses:
+                        swapResult.lookupTableAddresses.length > 0 ? swapResult.lookupTableAddresses : undefined,
                 })
                     .setFeePayerSigner(signer)
                     .addInstructions(instructions)
@@ -104,7 +105,13 @@ export function TitanSwap() {
 
                 visualPipeline.setStepState('Swap transaction', { type: 'sending' });
 
-                const sentSignature = await rpc.sendTransaction(exportedTransaction.data, { encoding: 'base64' }).send();
+                // Pre-send devtools preview: emit wire bytes so the debugger can simulate before sending.
+                const previewBytes = new Uint8Array(getBase64Encoder().encode(exportedTransaction.data));
+                client.previewTransaction(previewBytes);
+
+                const sentSignature = await rpc
+                    .sendTransaction(exportedTransaction.data, { encoding: 'base64' })
+                    .send();
                 signatureBase58 = String(sentSignature);
                 typedSignature = createSignature(signatureBase58);
 
@@ -113,10 +120,15 @@ export function TitanSwap() {
                     status: 'pending',
                     method: 'sendTransaction',
                     feePayer: signer.address,
+                    metadata: { wireTransactionBase64: exportedTransaction.data },
                 });
 
                 // We can show the signature immediately; confirmation happens next.
-                visualPipeline.setStepState('Build swap plan', { type: 'confirmed', signature: signatureBase58, cost: 0 });
+                visualPipeline.setStepState('Build swap plan', {
+                    type: 'confirmed',
+                    signature: signatureBase58,
+                    cost: 0,
+                });
 
                 await waitForSignatureConfirmation({
                     signature: signatureBase58,
@@ -124,7 +136,11 @@ export function TitanSwap() {
                     getSignatureStatuses: async sig => await rpc.getSignatureStatuses([createSignature(sig)]).send(),
                 });
 
-                visualPipeline.setStepState('Swap transaction', { type: 'confirmed', signature: signatureBase58, cost: 0 });
+                visualPipeline.setStepState('Swap transaction', {
+                    type: 'confirmed',
+                    signature: signatureBase58,
+                    cost: 0,
+                });
                 client.updateTransactionStatus(typedSignature, 'confirmed');
             });
         } catch (error) {
@@ -138,14 +154,20 @@ export function TitanSwap() {
 
     const headerAction = useMemo(
         () => (
-            <PipelineHeaderButton visualPipeline={visualPipeline} disabled={!ready || !client} onExecute={executeSwap} />
+            <PipelineHeaderButton
+                visualPipeline={visualPipeline}
+                disabled={!ready || !client}
+                onExecute={executeSwap}
+            />
         ),
         [client, executeSwap, ready, visualPipeline],
     );
 
     useExampleCardHeaderActions(headerAction);
 
-    return <PipelineVisualization visualPipeline={visualPipeline} strategy="sequential" getExplorerUrl={getExplorerUrl} />;
+    return (
+        <PipelineVisualization visualPipeline={visualPipeline} strategy="sequential" getExplorerUrl={getExplorerUrl} />
+    );
 }
 
 export const titanSwapCode = `import { getTitanSwapPlan, TITAN_DEMO_BASE_URLS } from '@pipeit/actions/titan'

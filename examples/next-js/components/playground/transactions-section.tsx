@@ -397,7 +397,8 @@ export function ModernWalletTransfer() {
     {
         id: 'titan-swap',
         name: 'Titan Swap (SOL → USDC)',
-        description: 'Swap 0.01 SOL for USDC using Titan InstructionPlans and track the transaction(s) in Connector Devtools.',
+        description:
+            'Swap 0.01 SOL for USDC using Titan InstructionPlans and track the transaction(s) in Connector Devtools.',
         fileName: 'components/transactions/titan-swap.tsx',
         code: titanSwapCode,
         render: () => <TitanSwap />,

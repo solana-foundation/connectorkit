@@ -12,6 +12,7 @@
 
 import type { ConnectorDevtoolsPlugin, PluginContext } from '../types';
 import { ICONS } from '../components/icons';
+import { renderCdtDropdown } from '../components/dropdown';
 import { escapeAttr, escapeHtml, getExplorerUrl, getRpcUrl } from '../utils/dom';
 import { fetchProgramMetadataIdl } from '../utils/idl';
 import { PublicKey } from '@solana/web3.js';
@@ -50,7 +51,7 @@ export function createIdlPlugin(): ConnectorDevtoolsPlugin {
     let executeRequestId = 0;
 
     let state: IdlPluginState = {
-        source: 'program-metadata',
+        source: 'anchor-idl',
         programIdInput: '',
         pasteJson: '',
         isFetchingIdl: false,
@@ -754,12 +755,18 @@ export function createIdlPlugin(): ConnectorDevtoolsPlugin {
                             </div>
                             <div class="cdt-idl-toolbar-right">
                                 <input class="cdt-input" id="cdt-program-id" placeholder="Program id (base58)" value="${escapeAttr(state.programIdInput)}" />
-                                <select class="cdt-events-filter" id="cdt-idl-source">
-                                    <option value="program-metadata" ${state.source === 'program-metadata' ? 'selected' : ''}>Program Metadata</option>
-                                    <option value="anchor-idl" ${state.source === 'anchor-idl' ? 'selected' : ''}>Anchor IDL</option>
-                                    <option value="paste" ${state.source === 'paste' ? 'selected' : ''}>Paste JSON</option>
-                                    <option value="file" ${state.source === 'file' ? 'selected' : ''}>Upload JSON</option>
-                                </select>
+                                ${renderCdtDropdown({
+                                    id: 'cdt-idl-source',
+                                    ariaLabel: 'IDL source',
+                                    value: state.source,
+                                    options: [
+                                        { value: 'anchor-idl', label: 'Anchor IDL' },
+                                        { value: 'program-metadata', label: 'Program Metadata' },
+                                        { value: 'paste', label: 'Paste JSON' },
+                                        { value: 'file', label: 'Upload JSON' },
+                                    ],
+                                    triggerClassName: 'cdt-select cdt-select-compact',
+                                })}
                                 ${sourceControls}
                             </div>
                         </div>
@@ -829,9 +836,10 @@ export function createIdlPlugin(): ConnectorDevtoolsPlugin {
                     state.programIdInput = programIdInput.value;
                 });
 
-                const sourceSelect = el.querySelector<HTMLSelectElement>('#cdt-idl-source');
-                sourceSelect?.addEventListener('change', () => {
-                    const next = (sourceSelect.value as IdlSource) ?? 'program-metadata';
+                const sourceDropdown = el.querySelector<HTMLElement>('#cdt-idl-source');
+                sourceDropdown?.addEventListener('cdt-dropdown-change', e => {
+                    const detail = (e as CustomEvent<{ id: string; value: string }>).detail;
+                    const next = (detail.value as IdlSource) ?? 'program-metadata';
                     setState({ source: next, fetchError: null });
                 });
 

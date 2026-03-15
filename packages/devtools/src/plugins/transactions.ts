@@ -17,6 +17,9 @@ import { createTransactionDetailsState, fetchTransactionDetails, mergeTransactio
 import { formatRelativeTime, safeJsonStringify } from './transactions/format';
 import { renderTransactionFlowPanel } from './transactions/render-flow';
 import { renderSentTransactionDetailsPanel } from './transactions/render-sent-details';
+import { renderTransactionSimulationPanel } from './transactions/render-simulation';
+import { runTransactionSimulation } from './transactions/simulation/engine';
+import { createTransactionSimulationState, type SimulationCommitment } from './transactions/simulation/state';
 
 export function createTransactionsPlugin(_maxTransactions = 50): ConnectorDevtoolsPlugin {
     let unsubscribeCache: (() => void) | undefined;
@@ -25,7 +28,10 @@ export function createTransactionsPlugin(_maxTransactions = 50): ConnectorDevtoo
     let selectedSignature: string | null = null;
     let selectedInflightId: string | null = null;
     const detailsState = createTransactionDetailsState();
-    let detailsTab: 'details' | 'flow' = 'details';
+    const simulationState = createTransactionSimulationState();
+    let detailsTab: 'details' | 'flow' | 'simulate' = 'details';
+    let simulateCommitment: SimulationCommitment = 'confirmed';
+    let simulateIncludeSnapshots = true;
 
     function stopPolling() {
         if (pollInterval !== undefined) window.clearInterval(pollInterval);
@@ -54,6 +60,12 @@ export function createTransactionsPlugin(_maxTransactions = 50): ConnectorDevtoo
                     const status = statusBySignature.get(ix.signature);
                     return !status || status === 'pending';
                 });
+
+                // Pre-send workflow: if the user is on the Simulate sub-tab and nothing is selected yet,
+                // auto-select the latest inflight transaction (typically the one just prepared).
+                if (detailsTab === 'simulate' && !selectedSignature && !selectedInflightId && inflightDisplay.length) {
+                    selectedInflightId = inflightDisplay[inflightDisplay.length - 1].id;
+                }
 
                 const pendingCount = transactions.filter(t => t.status === 'pending').length;
                 const confirmedCount = transactions.filter(t => t.status === 'confirmed').length;
@@ -91,12 +103,125 @@ export function createTransactionsPlugin(_maxTransactions = 50): ConnectorDevtoo
                 }
 
                 const isFlowAvailable = Boolean(selectedTx);
+                const isSimAvailable = Boolean(selectedInflight || selectedTx);
                 if (!isFlowAvailable && detailsTab === 'flow') detailsTab = 'details';
+                if (!isSimAvailable && detailsTab === 'simulate') detailsTab = 'details';
+
+                const simulationKey = selectedTx
+                    ? `sig:${selectedTx.signature}`
+                    : selectedInflight?.signature
+                      ? `sig:${selectedInflight.signature}`
+                      : selectedInflight
+                        ? `inflight:${selectedInflight.id}`
+                        : null;
+
+                const canSimulate = (() => {
+                    const rpcUrl = ctx.getConfig().rpcUrl ?? ctx.client.getRpcUrl();
+                    if (!rpcUrl) {
+                        return {
+                            ok: false,
+                            reason: 'No RPC URL available (set devtools config.rpcUrl or ensure connector has an RPC URL).',
+                        };
+                    }
+                    if (selectedInflight) {
+                        if (selectedInflight.transactionBase64)
+                            return { ok: true, reason: undefined as string | undefined };
+                        if (selectedInflight.signature) return { ok: true, reason: undefined as string | undefined };
+                        return { ok: false, reason: 'No wire bytes captured for this in-flight transaction.' };
+                    }
+                    if (selectedTx) return { ok: true, reason: undefined as string | undefined };
+                    return { ok: false, reason: 'Select a transaction to simulate.' };
+                })();
+
+                const selectionWireBase64 =
+                    selectedInflight?.transactionBase64 || selectedTx?.wireTransactionBase64 || null;
+
+                const selectionSignature = selectedTx?.signature ?? selectedInflight?.signature ?? null;
+
+                const shouldAutoSimulate =
+                    detailsTab === 'simulate' &&
+                    canSimulate.ok &&
+                    Boolean(simulationKey) &&
+                    Boolean(selectionWireBase64) &&
+                    !simulationState.entriesByKey.get(simulationKey!)?.isLoading &&
+                    (() => {
+                        const entry = simulationState.entriesByKey.get(simulationKey!);
+                        if (!entry?.result) return true;
+                        if (entry.lastCommitment !== simulateCommitment) return true;
+                        if (entry.lastIncludeSnapshots !== simulateIncludeSnapshots) return true;
+                        if (entry.lastWireTransactionBase64 !== selectionWireBase64) return true;
+                        return false;
+                    })();
+
+                if (shouldAutoSimulate) {
+                    const requestId = ++simulationState.requestId;
+                    const prev = simulationState.entriesByKey.get(simulationKey!) ?? { isLoading: false, result: null };
+
+                    simulationState.entriesByKey.set(simulationKey!, {
+                        ...prev,
+                        error: undefined,
+                        isLoading: true,
+                        lastCommitment: simulateCommitment,
+                        lastIncludeSnapshots: simulateIncludeSnapshots,
+                        lastWireTransactionBase64: selectionWireBase64 ?? prev.lastWireTransactionBase64,
+                        requestId,
+                        result: prev.result,
+                    });
+
+                    void (async () => {
+                        try {
+                            const result = await runTransactionSimulation({
+                                key: simulationKey!,
+                                ctx,
+                                commitment: simulateCommitment,
+                                includeSnapshots: simulateIncludeSnapshots,
+                                signature: selectionSignature,
+                                wireTransactionBase64: selectionWireBase64,
+                            });
+
+                            const current = simulationState.entriesByKey.get(simulationKey!);
+                            if (current?.requestId !== requestId) return;
+
+                            simulationState.entriesByKey.set(simulationKey!, {
+                                ...current,
+                                error: undefined,
+                                isLoading: false,
+                                lastCommitment: simulateCommitment,
+                                lastIncludeSnapshots: simulateIncludeSnapshots,
+                                lastWireTransactionBase64: result.wireTransactionBase64,
+                                result,
+                            });
+                        } catch (err) {
+                            const current = simulationState.entriesByKey.get(simulationKey!);
+                            if (current?.requestId !== requestId) return;
+
+                            simulationState.entriesByKey.set(simulationKey!, {
+                                ...current,
+                                error: err instanceof Error ? err.message : 'Failed to simulate transaction',
+                                isLoading: false,
+                                result: current?.result ?? null,
+                            });
+                        } finally {
+                            renderContent();
+                        }
+                    })();
+                }
+
+                const simulationEntry = simulationKey ? simulationState.entriesByKey.get(simulationKey) : undefined;
 
                 const detailsHtml = (() => {
                     if (selectedInflight) {
                         if (detailsTab === 'flow')
                             return `<div class="cdt-empty">Flow view is available for sent transactions after RPC details are fetched.</div>`;
+                        if (detailsTab === 'simulate') {
+                            return renderTransactionSimulationPanel({
+                                commitment: simulateCommitment,
+                                includeSnapshots: simulateIncludeSnapshots,
+                                canSimulate: canSimulate.ok,
+                                missingReason: canSimulate.reason,
+                                simulationEntry,
+                            });
+                        }
 
                         return `
                             <div class="cdt-details-header">
@@ -151,6 +276,16 @@ export function createTransactionsPlugin(_maxTransactions = 50): ConnectorDevtoo
                     }
 
                     if (selectedTx) {
+                        if (detailsTab === 'simulate') {
+                            return renderTransactionSimulationPanel({
+                                commitment: simulateCommitment,
+                                includeSnapshots: simulateIncludeSnapshots,
+                                canSimulate: canSimulate.ok,
+                                missingReason: canSimulate.reason,
+                                simulationEntry,
+                            });
+                        }
+
                         return detailsTab === 'details'
                             ? renderSentTransactionDetailsPanel({
                                   selectedTx,
@@ -235,7 +370,7 @@ export function createTransactionsPlugin(_maxTransactions = 50): ConnectorDevtoo
 
                             .cdt-tx-details-top {
                                 flex: none;
-                                padding: 12px 12px 0;
+                                padding: 5px 0;
                             }
 
                             .cdt-tx-details-body {
@@ -254,6 +389,11 @@ export function createTransactionsPlugin(_maxTransactions = 50): ConnectorDevtoo
                                 padding: 10px 12px;
                                 border-bottom: 1px solid var(--cdt-border);
                                 background: var(--cdt-bg-panel);
+                            }
+
+                            /* Add a top divider for sections after a list (e.g. History). */
+                            .cdt-tx-list + .cdt-tx-section-title {
+                                border-top: 1px solid var(--cdt-border);
                             }
 
                             .cdt-tx-list { }
@@ -333,32 +473,40 @@ export function createTransactionsPlugin(_maxTransactions = 50): ConnectorDevtoo
                             }
 
                             .cdt-details-subtabs {
-                                display: inline-flex;
-                                gap: 2px;
-                                padding: 2px;
-                                border: 1px solid var(--cdt-border);
-                                border-radius: 10px;
-                                background: var(--cdt-bg-panel);
-                                margin-bottom: 10px;
+                                display: flex;
+                                gap: 14px;
+                                padding: 0 5px 0 5px;
+                                border-bottom: 1px solid var(--cdt-border);
+                                margin-bottom: 0;
                             }
 
                             .cdt-details-subtab {
-                                padding: 6px 10px;
-                                border-radius: 8px;
+                                padding: 8px 2px;
+                                border-radius: 0;
                                 font-size: 12px;
                                 font-weight: 600;
                                 color: var(--cdt-text-muted);
-                                transition: background-color 0.15s ease, color 0.15s ease;
+                                background: transparent;
+                                border-bottom: 2px solid transparent;
+                                transition:
+                                    color 0.15s ease,
+                                    border-color 0.15s ease,
+                                    opacity 0.15s ease;
                             }
 
                             .cdt-details-subtab:hover:not(:disabled) {
-                                background: var(--cdt-bg-hover);
                                 color: var(--cdt-text);
+                                border-color: color-mix(in srgb, var(--cdt-text) 28%, transparent);
                             }
 
                             .cdt-details-subtab.cdt-active {
-                                background: var(--cdt-bg-active);
                                 color: var(--cdt-text);
+                                /* --cdt-text is effectively white in dark mode, dark in light mode */
+                                border-color: var(--cdt-text);
+                            }
+
+                            .cdt-details-subtab:disabled {
+                                opacity: 0.45;
                             }
 
                             .cdt-flow-wrap {
@@ -918,6 +1066,14 @@ export function createTransactionsPlugin(_maxTransactions = 50): ConnectorDevtoo
                                         >
                                             Flow
                                         </button>
+                                        <button
+                                            class="cdt-details-subtab ${detailsTab === 'simulate' ? 'cdt-active' : ''}"
+                                            data-details-tab="simulate"
+                                            ${selectedInflight || selectedTx ? '' : 'disabled'}
+                                            title="${selectedInflight || selectedTx ? 'Simulate transaction (best-effort) and show diffs/warnings' : 'Select a transaction to simulate'}"
+                                        >
+                                            Simulate
+                                        </button>
                                     </div>
                                 </div>
 
@@ -937,6 +1093,8 @@ export function createTransactionsPlugin(_maxTransactions = 50): ConnectorDevtoo
                     detailsTab = 'details';
                     detailsState.detailsRequestId += 1;
                     detailsState.detailsBySignature.clear();
+                    simulationState.requestId += 1;
+                    simulationState.entriesByKey.clear();
                     ctx.clearCache?.('transactions');
                     ctx.client.clearTransactionHistory();
                     renderContent();
@@ -972,10 +1130,87 @@ export function createTransactionsPlugin(_maxTransactions = 50): ConnectorDevtoo
                 el.querySelectorAll<HTMLButtonElement>('[data-details-tab]').forEach(btn => {
                     btn.addEventListener('click', () => {
                         const tab = btn.getAttribute('data-details-tab');
-                        if (tab !== 'details' && tab !== 'flow') return;
+                        if (tab !== 'details' && tab !== 'flow' && tab !== 'simulate') return;
                         detailsTab = tab;
                         renderContent();
                     });
+                });
+
+                const simulateCommitmentDropdown = el.querySelector<HTMLElement>('#cdt-sim-commitment');
+                simulateCommitmentDropdown?.addEventListener('cdt-dropdown-change', e => {
+                    const detail = (e as CustomEvent<{ id: string; value: string }>).detail;
+                    const next = detail.value;
+                    if (next === 'processed' || next === 'confirmed' || next === 'finalized') {
+                        simulateCommitment = next;
+                        renderContent();
+                    }
+                });
+
+                const simulateSnapshotsToggle = el.querySelector<HTMLInputElement>('#cdt-sim-snapshots');
+                simulateSnapshotsToggle?.addEventListener('change', () => {
+                    simulateIncludeSnapshots = Boolean(simulateSnapshotsToggle.checked);
+                    renderContent();
+                });
+
+                const simulateRunBtn = el.querySelector<HTMLButtonElement>('#cdt-sim-run');
+                simulateRunBtn?.addEventListener('click', () => {
+                    if (!simulationKey) return;
+                    const requestId = ++simulationState.requestId;
+                    const prev = simulationState.entriesByKey.get(simulationKey) ?? { isLoading: false, result: null };
+
+                    simulationState.entriesByKey.set(simulationKey, {
+                        ...prev,
+                        error: undefined,
+                        isLoading: true,
+                        lastCommitment: simulateCommitment,
+                        lastIncludeSnapshots: simulateIncludeSnapshots,
+                        lastWireTransactionBase64:
+                            selectedInflight?.transactionBase64 ??
+                            selectedTx?.wireTransactionBase64 ??
+                            prev.lastWireTransactionBase64,
+                        requestId,
+                        result: prev.result,
+                    });
+                    renderContent();
+
+                    void (async () => {
+                        try {
+                            const result = await runTransactionSimulation({
+                                key: simulationKey,
+                                ctx,
+                                commitment: simulateCommitment,
+                                includeSnapshots: simulateIncludeSnapshots,
+                                signature: selectedTx?.signature ?? selectedInflight?.signature ?? null,
+                                wireTransactionBase64:
+                                    selectedInflight?.transactionBase64 ?? selectedTx?.wireTransactionBase64 ?? null,
+                            });
+
+                            const current = simulationState.entriesByKey.get(simulationKey);
+                            if (current?.requestId !== requestId) return;
+
+                            simulationState.entriesByKey.set(simulationKey, {
+                                ...current,
+                                error: undefined,
+                                isLoading: false,
+                                lastCommitment: simulateCommitment,
+                                lastIncludeSnapshots: simulateIncludeSnapshots,
+                                lastWireTransactionBase64: result.wireTransactionBase64,
+                                result,
+                            });
+                        } catch (err) {
+                            const current = simulationState.entriesByKey.get(simulationKey);
+                            if (current?.requestId !== requestId) return;
+
+                            simulationState.entriesByKey.set(simulationKey, {
+                                ...current,
+                                error: err instanceof Error ? err.message : 'Failed to simulate transaction',
+                                isLoading: false,
+                                result: current?.result ?? null,
+                            });
+                        } finally {
+                            renderContent();
+                        }
+                    })();
                 });
 
                 // Copy signature buttons in list rows

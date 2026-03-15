@@ -61,7 +61,8 @@ function buildAccountNodes(rpcAccountKeys: unknown[]): FlowAccountNode[] {
 function getInstructionProgramId(ix: any, accountPubkeys: string[]): string {
     if (typeof ix?.programId === 'string') return ix.programId;
     const programIdIndex = ix?.programIdIndex;
-    if (typeof programIdIndex === 'number' && Number.isFinite(programIdIndex)) return accountPubkeys[programIdIndex] ?? '';
+    if (typeof programIdIndex === 'number' && Number.isFinite(programIdIndex))
+        return accountPubkeys[programIdIndex] ?? '';
     return '';
 }
 
@@ -96,8 +97,7 @@ function buildInstructionNodes(rpcInstructions: unknown[], accountPubkeys: strin
     return rpcInstructions.map((ix, index) => {
         const programId = getInstructionProgramId(ix, accountPubkeys);
         const programName = typeof (ix as any)?.program === 'string' ? String((ix as any).program) : undefined;
-        const parsedType =
-            typeof (ix as any)?.parsed?.type === 'string' ? String((ix as any).parsed.type) : undefined;
+        const parsedType = typeof (ix as any)?.parsed?.type === 'string' ? String((ix as any).parsed.type) : undefined;
         const accountPubkeysForIx = getInstructionAccountPubkeys(ix, accountPubkeys, knownPubkeys);
 
         const info = (ix as any)?.parsed?.info;
@@ -130,7 +130,8 @@ function buildInstructionNodes(rpcInstructions: unknown[], accountPubkeys: strin
         }
 
         if ((programName === 'spl-token' || programName === 'token') && isTransfer && infoObj) {
-            const tokenAmount = infoObj.tokenAmount && typeof infoObj.tokenAmount === 'object' ? infoObj.tokenAmount : null;
+            const tokenAmount =
+                infoObj.tokenAmount && typeof infoObj.tokenAmount === 'object' ? infoObj.tokenAmount : null;
             const uiAmountString =
                 tokenAmount && typeof (tokenAmount as any).uiAmountString === 'string'
                     ? String((tokenAmount as any).uiAmountString)
@@ -349,10 +350,7 @@ function renderAccountInstructionProgramGraph(params: {
                 ...(a.writable ? ['writable'] : ['readonly']),
             ].join('\n');
 
-            const flags = [
-                ...(a.signer ? ['signer'] : []),
-                a.writable ? 'writable' : 'readonly',
-            ].join(' • ');
+            const flags = [...(a.signer ? ['signer'] : []), a.writable ? 'writable' : 'readonly'].join(' • ');
 
             const tone = a.signer ? 'info' : a.writable ? 'warning' : 'default';
 
@@ -391,7 +389,9 @@ function renderAccountInstructionProgramGraph(params: {
             const headerTitle = `${programLabel}${typeSuffix}`;
 
             const isTransfer = Boolean(ix.parsedType && ix.parsedType.toLowerCase().includes('transfer'));
-            const chip = isTransfer ? { label: 'Transfer', tone: 'success' as const } : { label: 'Instruction', tone: 'accent' as const };
+            const chip = isTransfer
+                ? { label: 'Transfer', tone: 'success' as const }
+                : { label: 'Instruction', tone: 'accent' as const };
 
             const bodyPrimary = ix.summary ? ix.summary : `Ix #${ix.index}`;
             const bodySecondary = ix.summary
@@ -577,4 +577,3 @@ export function renderTransactionFlowPanel({ selectedTx, selectedDetails }: Rend
         </div>
     `;
 }
-

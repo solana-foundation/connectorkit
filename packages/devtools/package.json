@@ -1,6 +1,6 @@
 {
-    "name": "@solana/devtools",
-    "version": "0.1.0",
+    "name": "@solana/connector-debugger",
+    "version": "0.2.0",
     "description": "Framework-agnostic devtools for @solana/connector",
     "main": "./dist/index.js",
     "module": "./dist/index.mjs",

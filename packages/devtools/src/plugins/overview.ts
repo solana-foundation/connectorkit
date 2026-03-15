@@ -73,19 +73,6 @@ function getPersistenceInfo(autoConnect: boolean): PersistenceInfo {
     }
 }
 
-// Clear all connector storage
-function clearAllStorage(): void {
-    if (typeof window === 'undefined') return;
-
-    try {
-        localStorage.removeItem(STORAGE_KEYS.account);
-        localStorage.removeItem(STORAGE_KEYS.wallet);
-        localStorage.removeItem(STORAGE_KEYS.cluster);
-    } catch {
-        // Ignore errors
-    }
-}
-
 // Check RPC health by getting current slot
 async function checkRpcHealth(rpcUrl: string): Promise<RpcHealth> {
     const start = performance.now();
@@ -653,13 +640,6 @@ export function createOverviewPlugin(): ConnectorDevtoolsPlugin {
                                 </div>
                             </div>
 
-                            <!-- Actions -->
-                            <div class="cdt-overview-actions">
-                                <button class="cdt-btn cdt-btn-secondary" id="fresh-user-btn" title="Clear stored wallet/account/network and reload page">
-                                    ${ICONS.trash}
-                                    Simulate Fresh User
-                                </button>
-                            </div>
                         </div>
 
                         <!-- Pinned RPC Health -->
@@ -732,15 +712,7 @@ export function createOverviewPlugin(): ConnectorDevtoolsPlugin {
                 `;
 
                 // Attach action handlers
-                const freshUserBtn = el.querySelector('#fresh-user-btn');
                 const rpcRefreshBtn = el.querySelector('#rpc-refresh-btn');
-
-                freshUserBtn?.addEventListener('click', () => {
-                    if (confirm('This will clear all stored data and reload the page. Continue?')) {
-                        clearAllStorage();
-                        window.location.reload();
-                    }
-                });
 
                 rpcRefreshBtn?.addEventListener('click', () => void refreshRpcHealth('manual'));
             }
