@@ -92,7 +92,7 @@ export function Providers({ children }: { children: ReactNode }) {
         let container: HTMLDivElement | undefined;
 
         // Dynamic import to avoid bundling in production
-        import('@solana/devtools').then(({ ConnectorDevtools }) => {
+        import('@solana/connector-debugger').then(({ ConnectorDevtools }) => {
             // Create container for devtools
             container = document.createElement('div');
             container.id = 'connector-devtools-container';

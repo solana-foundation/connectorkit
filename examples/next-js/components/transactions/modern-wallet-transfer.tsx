@@ -14,6 +14,7 @@ import {
     lamports,
     assertIsTransactionWithBlockhashLifetime,
     signature as createSignature,
+    address,
     type TransactionSigner,
 } from '@solana/kit';
 import { getTransferSolInstruction } from '@solana-program/system';
@@ -29,23 +30,26 @@ import {
 import { VisualPipeline } from '@/lib/visual-pipeline';
 import { useExampleCardHeaderActions } from '@/components/playground/example-card-actions';
 
+// Destination wallet address
+const DESTINATION_ADDRESS = address('A7Xmq3qqt4uvw3GELHw9HHNFbwZzHDJNtmk6fe2p5b5s');
+
 /**
- * Modern SOL Transfer Component
+ * Modern Wallet Transfer Component
  *
- * Demonstrates using @solana/kit (web3.js 2.0) with modular packages.
+ * Demonstrates using @solana/kit (web3.js 2.0) to transfer SOL to another wallet.
  * This shows the modern, type-safe approach to Solana development using
  * connector-kit's kit-compatible TransactionSigner.
  */
-export function ModernSolTransfer() {
+export function ModernWalletTransfer() {
     const { signer, ready } = useKitTransactionSigner();
     const { cluster } = useCluster();
     const client = useConnectorClient();
 
     const visualPipeline = useMemo(
         () =>
-            new VisualPipeline('modern-self-transfer', [
+            new VisualPipeline('modern-wallet-transfer', [
                 { name: 'Build instruction', type: 'instruction' },
-                { name: 'Self transfer', type: 'transaction' },
+                { name: 'Transfer SOL', type: 'transaction' },
             ]),
         [],
     );
@@ -61,7 +65,7 @@ export function ModernSolTransfer() {
         [cluster?.id],
     );
 
-    const executeSelfTransfer = useCallback(async () => {
+    const executeWalletTransfer = useCallback(async () => {
         if (!signer || !client) return;
 
         // Get RPC URL from connector client
@@ -76,19 +80,18 @@ export function ModernSolTransfer() {
         try {
             await visualPipeline.execute(async () => {
                 visualPipeline.setStepState('Build instruction', { type: 'building' });
-                visualPipeline.setStepState('Self transfer', { type: 'building' });
+                visualPipeline.setStepState('Transfer SOL', { type: 'building' });
 
                 // Get recent blockhash using web3.js 2.0 RPC
                 const { value: latestBlockhash } = await rpc.getLatestBlockhash().send();
 
-                // 1 lamport self-transfer (net effect: only pay fees)
+                // 1 lamport transfer to another wallet
                 const amountInLamports = lamports(1n);
 
-                // Create transfer instruction using @solana/kit's modern API
-                // Cast to TransactionSigner for compatibility with instruction builders
+                // Create transfer instruction to destination wallet
                 const transferInstruction = getTransferSolInstruction({
                     source: signer as TransactionSigner,
-                    destination: signer.address,
+                    destination: DESTINATION_ADDRESS,
                     amount: amountInLamports,
                 });
 
@@ -100,7 +103,7 @@ export function ModernSolTransfer() {
                     tx => appendTransactionMessageInstructions([transferInstruction], tx),
                 );
 
-                visualPipeline.setStepState('Self transfer', { type: 'signing' });
+                visualPipeline.setStepState('Transfer SOL', { type: 'signing' });
 
                 const signedTransaction = await signTransactionMessageWithSigners(transactionMessage);
                 signatureBase58 = getBase58SignatureFromSignedTransaction(signedTransaction);
@@ -120,7 +123,7 @@ export function ModernSolTransfer() {
                     signature: signatureBase58,
                     cost: 0,
                 });
-                visualPipeline.setStepState('Self transfer', { type: 'sending' });
+                visualPipeline.setStepState('Transfer SOL', { type: 'sending' });
 
                 // Assert transaction has blockhash lifetime (we set it above with setTransactionMessageLifetimeUsingBlockhash)
                 assertIsTransactionWithBlockhashLifetime(signedTransaction);
@@ -142,7 +145,7 @@ export function ModernSolTransfer() {
                     });
                 }
 
-                visualPipeline.setStepState('Self transfer', {
+                visualPipeline.setStepState('Transfer SOL', {
                     type: 'confirmed',
                     signature: signatureBase58,
                     cost: 0.000005,
@@ -165,10 +168,10 @@ export function ModernSolTransfer() {
             <PipelineHeaderButton
                 visualPipeline={visualPipeline}
                 disabled={!ready || !client}
-                onExecute={executeSelfTransfer}
+                onExecute={executeWalletTransfer}
             />
         ),
-        [client, executeSelfTransfer, ready, visualPipeline],
+        [client, executeWalletTransfer, ready, visualPipeline],
     );
 
     useExampleCardHeaderActions(headerAction);

@@ -285,7 +285,7 @@ Details (provider configs + protocol types + security) live in `references/remot
 
 ### Devtools (Development Only)
 
-ConnectorKit also ships devtools (`@solana/devtools`) that can be dynamically mounted in development.
+ConnectorKit also ships devtools (`@solana/connector-debugger`) that can be dynamically mounted in development.
 
 ```tsx
 'use client';
@@ -299,7 +299,7 @@ export function DevtoolsLoader() {
         let devtools: { mount: (el: HTMLElement) => void; unmount: () => void } | undefined;
         let container: HTMLDivElement | undefined;
 
-        import('@solana/devtools').then(({ ConnectorDevtools }) => {
+        import('@solana/connector-debugger').then(({ ConnectorDevtools }) => {
             container = document.createElement('div');
             document.body.appendChild(container);
             devtools = new ConnectorDevtools({ config: { position: 'bottom-right', theme: 'dark' } });

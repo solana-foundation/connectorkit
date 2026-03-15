@@ -104,6 +104,7 @@ export function createDevtoolsElement(options: DevtoolsElementOptions): Devtools
 ${BASE_STYLES}
 :host {
   ${generateThemeCss(theme)}
+  color-scheme: ${theme};
 }
 
 @keyframes cdtToolbarEnter {
@@ -352,6 +353,61 @@ ${BASE_STYLES}
 .cdt-close-btn:active { transform: scale(0.92); }
 .cdt-close-btn svg { width: 16px; height: 16px; }
 
+/* Tooltip */
+.cdt-tooltip-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.cdt-tooltip-wrap[data-visible="false"] {
+  display: none;
+}
+
+.cdt-tooltip {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 10px);
+  width: 260px;
+  padding: 10px 10px 9px;
+  border-radius: 12px;
+  border: 1px solid var(--cdt-border);
+  background: var(--cdt-bg-panel);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.28);
+  color: var(--cdt-text);
+  font-size: 11px;
+  line-height: 1.35;
+  opacity: 0;
+  transform: translateY(4px);
+  pointer-events: none;
+  transition: opacity 0.12s ease, transform 0.12s ease;
+  z-index: 2;
+}
+
+.cdt-tooltip-title {
+  font-weight: 750;
+  margin-bottom: 4px;
+}
+
+.cdt-tooltip-body {
+  color: var(--cdt-text-muted);
+}
+
+.cdt-tooltip-wrap:hover .cdt-tooltip,
+.cdt-tooltip-wrap:focus-within .cdt-tooltip {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.cdt-fresh-user-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.cdt-fresh-user-btn:hover:not(:disabled) {
+  border-color: var(--cdt-warning);
+  color: var(--cdt-warning);
+}
+
 /* Content */
 .cdt-content {
   flex: 1;
@@ -378,7 +434,7 @@ ${BASE_STYLES}
             <div class="cdt-header-left">
               <div class="cdt-logo">
                 ${ICONS.solana}
-                <span>Devtools</span>
+                <span>Debugger</span>
               </div>
               <div class="cdt-tabs">
                 ${/* Plugin icon/name are developer-configured, not user input. icon must be trusted static SVG. */ ''}
@@ -400,6 +456,17 @@ ${BASE_STYLES}
               }>
                 Disconnect
               </button>
+              <div class="cdt-tooltip-wrap" id="fresh-user-wrap" data-visible="true">
+                <button class="cdt-header-btn cdt-fresh-user-btn" id="fresh-user-btn" aria-label="Simulate Fresh User">
+                  ${ICONS.trash}
+                </button>
+                <div class="cdt-tooltip" role="tooltip">
+                  <div class="cdt-tooltip-title">Simulate fresh user</div>
+                  <div class="cdt-tooltip-body">
+                    Clears stored wallet/account/network and reloads the page. This is different from Disconnect, which only ends the current session.
+                  </div>
+                </div>
+              </div>
               <button class="cdt-close-btn" aria-label="Close Devtools">
                 ${ICONS.close}
               </button>
@@ -416,9 +483,21 @@ ${BASE_STYLES}
     const resizeHandle = shadow.querySelector<HTMLElement>('.cdt-resize-handle');
     const closeBtn = shadow.querySelector<HTMLButtonElement>('.cdt-close-btn');
     const disconnectBtn = shadow.querySelector<HTMLButtonElement>('#disconnect-btn');
+    const freshUserWrapEl = shadow.querySelector<HTMLElement>('#fresh-user-wrap');
+    const freshUserBtn = shadow.querySelector<HTMLButtonElement>('#fresh-user-btn');
     const pluginContentEl = shadow.getElementById('plugin-content');
 
-    if (!stylesEl || !triggerBtn || !panelEl || !resizeHandle || !closeBtn || !disconnectBtn || !pluginContentEl) {
+    if (
+        !stylesEl ||
+        !triggerBtn ||
+        !panelEl ||
+        !resizeHandle ||
+        !closeBtn ||
+        !disconnectBtn ||
+        !freshUserWrapEl ||
+        !freshUserBtn ||
+        !pluginContentEl
+    ) {
         return container;
     }
 
@@ -429,12 +508,19 @@ ${BASE_STYLES}
     const resize = resizeHandle;
     const close = closeBtn;
     const disconnect = disconnectBtn;
+    const freshUserWrap = freshUserWrapEl;
+    const freshUser = freshUserBtn;
     const pluginContent = pluginContentEl;
 
     function updateStyles() {
         styles.textContent = createStyles();
         // keep panel height in sync without rebuilding the whole DOM
         panel.style.setProperty('--cdt-panel-height', `${panelHeight}px`);
+    }
+
+    function updateFreshUserVisibility() {
+        // Persist across all tabs (like Disconnect).
+        freshUserWrap.dataset.visible = 'true';
     }
 
     function setPanelState(next: PanelAnimState) {
@@ -535,6 +621,35 @@ ${BASE_STYLES}
         { signal: abortController.signal },
     );
 
+    freshUser.addEventListener(
+        'click',
+        () => {
+            if (!window.confirm('This will clear stored wallet/account/network and reload the page. Continue?')) return;
+
+            try {
+                context.client.resetStorage();
+            } catch {
+                // best-effort
+            }
+
+            try {
+                // Keep in sync with default-config storage keys and the Overview plugin persistence hints.
+                localStorage.removeItem('connector-kit:v1:account');
+                localStorage.removeItem('connector-kit:v1:wallet');
+                localStorage.removeItem('connector-kit:v1:cluster');
+                // Legacy keys (pre-v1)
+                localStorage.removeItem('connector-kit:account');
+                localStorage.removeItem('connector-kit:wallet');
+                localStorage.removeItem('connector-kit:cluster');
+            } catch {
+                // ignore
+            }
+
+            window.location.reload();
+        },
+        { signal: abortController.signal },
+    );
+
     // Tab clicks
     shadow.querySelectorAll<HTMLButtonElement>('.cdt-tab').forEach(tab => {
         tab.addEventListener(
@@ -546,12 +661,176 @@ ${BASE_STYLES}
                     onStateChange({ activeTab });
                     shadow.querySelectorAll('.cdt-tab').forEach(t => t.classList.remove('cdt-active'));
                     tab.classList.add('cdt-active');
+                    updateFreshUserVisibility();
                     renderActivePlugin();
                 }
             },
             { signal: abortController.signal },
         );
     });
+
+    function setDropdownOpen(dropdown: HTMLElement, isOpen: boolean) {
+        dropdown.dataset.open = isOpen ? 'true' : 'false';
+        const trigger = dropdown.querySelector<HTMLElement>('[data-cdt-dropdown-trigger]');
+        if (trigger) trigger.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    }
+
+    function closeAllDropdowns(except?: HTMLElement) {
+        shadow.querySelectorAll<HTMLElement>('.cdt-dropdown[data-open="true"]').forEach(dropdown => {
+            if (except && dropdown === except) return;
+            setDropdownOpen(dropdown, false);
+        });
+    }
+
+    function selectDropdownValue(dropdown: HTMLElement, value: string, label?: string) {
+        dropdown.dataset.value = value;
+        const textEl = dropdown.querySelector<HTMLElement>('.cdt-dropdown-trigger-text');
+        if (textEl && label !== undefined) textEl.textContent = label;
+
+        dropdown.querySelectorAll<HTMLElement>('[data-cdt-dropdown-option]').forEach(option => {
+            const optionValue = option.getAttribute('data-value') ?? '';
+            const isSelected = optionValue === value;
+            option.dataset.selected = isSelected ? 'true' : 'false';
+            option.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+        });
+    }
+
+    // Custom dropdown behavior (single implementation for all plugins).
+    shadow.addEventListener(
+        'pointerdown',
+        e => {
+            const target = e.target as HTMLElement | null;
+            if (!target) return;
+            const withinDropdown = target.closest?.('.cdt-dropdown');
+            if (withinDropdown) return;
+            closeAllDropdowns();
+        },
+        { signal: abortController.signal },
+    );
+
+    shadow.addEventListener(
+        'click',
+        e => {
+            const target = e.target as HTMLElement | null;
+            if (!target) return;
+
+            const option = target.closest<HTMLElement>('[data-cdt-dropdown-option]');
+            if (option) {
+                const dropdown = option.closest<HTMLElement>('.cdt-dropdown');
+                if (!dropdown) return;
+
+                const value = option.getAttribute('data-value') ?? '';
+                const current = dropdown.dataset.value ?? '';
+                const label = option.querySelector<HTMLElement>('.cdt-dropdown-item-label')?.textContent ?? value;
+
+                setDropdownOpen(dropdown, false);
+
+                if (value !== current) {
+                    selectDropdownValue(dropdown, value, label);
+                    dropdown.dispatchEvent(
+                        new CustomEvent('cdt-dropdown-change', {
+                            detail: { id: dropdown.id, value },
+                            bubbles: true,
+                        }),
+                    );
+                }
+
+                e.preventDefault();
+                e.stopPropagation();
+                return;
+            }
+
+            const trigger = target.closest<HTMLButtonElement>('[data-cdt-dropdown-trigger]');
+            if (trigger) {
+                const dropdown = trigger.closest<HTMLElement>('.cdt-dropdown');
+                if (!dropdown) return;
+
+                const isOpenNow = dropdown.dataset.open === 'true';
+                if (isOpenNow) setDropdownOpen(dropdown, false);
+                else {
+                    closeAllDropdowns(dropdown);
+                    setDropdownOpen(dropdown, true);
+                }
+
+                e.preventDefault();
+                e.stopPropagation();
+            }
+        },
+        { signal: abortController.signal },
+    );
+
+    shadow.addEventListener(
+        'keydown',
+        e => {
+            const keyboardEvent = e as KeyboardEvent;
+            const target = e.target as HTMLElement | null;
+            if (!target) return;
+
+            const dropdown = target.closest<HTMLElement>('.cdt-dropdown');
+            if (!dropdown) return;
+
+            const isOpen = dropdown.dataset.open === 'true';
+            const trigger = dropdown.querySelector<HTMLButtonElement>('[data-cdt-dropdown-trigger]');
+            const items = Array.from(dropdown.querySelectorAll<HTMLButtonElement>('[data-cdt-dropdown-option]'));
+            const currentItem = target.closest<HTMLButtonElement>('[data-cdt-dropdown-option]');
+
+            if (keyboardEvent.key === 'Escape') {
+                setDropdownOpen(dropdown, false);
+                trigger?.focus();
+                keyboardEvent.preventDefault();
+                keyboardEvent.stopPropagation();
+                return;
+            }
+
+            if (
+                !isOpen &&
+                (keyboardEvent.key === 'Enter' ||
+                    keyboardEvent.key === ' ' ||
+                    keyboardEvent.key === 'ArrowDown' ||
+                    keyboardEvent.key === 'ArrowUp')
+            ) {
+                closeAllDropdowns(dropdown);
+                setDropdownOpen(dropdown, true);
+
+                const selected = dropdown.querySelector<HTMLButtonElement>(
+                    '[data-cdt-dropdown-option][data-selected="true"]',
+                );
+                const fallback = keyboardEvent.key === 'ArrowUp' ? items[items.length - 1] : items[0];
+                (selected ?? fallback)?.focus();
+
+                keyboardEvent.preventDefault();
+                keyboardEvent.stopPropagation();
+                return;
+            }
+
+            if (!isOpen) return;
+
+            if ((keyboardEvent.key === 'Enter' || keyboardEvent.key === ' ') && currentItem) {
+                currentItem.click();
+                keyboardEvent.preventDefault();
+                keyboardEvent.stopPropagation();
+                return;
+            }
+
+            if (keyboardEvent.key === 'Tab') {
+                setDropdownOpen(dropdown, false);
+                return;
+            }
+
+            if (keyboardEvent.key !== 'ArrowDown' && keyboardEvent.key !== 'ArrowUp') return;
+
+            const idx = currentItem ? items.indexOf(currentItem) : -1;
+            if (!items.length) return;
+            const nextIdx =
+                keyboardEvent.key === 'ArrowDown'
+                    ? (idx + 1 + items.length) % items.length
+                    : (idx - 1 + items.length) % items.length;
+            items[nextIdx]?.focus();
+            keyboardEvent.preventDefault();
+            keyboardEvent.stopPropagation();
+        },
+        { signal: abortController.signal },
+    );
 
     // Resize handle
     resizeHandle.addEventListener(
@@ -603,6 +882,7 @@ ${BASE_STYLES}
     const unsubscribeContext = context.subscribe(() => {
         updateStyles();
         updateTriggerVisibility();
+        updateFreshUserVisibility();
         if (isOpen) renderActivePlugin();
     });
 
@@ -622,6 +902,7 @@ ${BASE_STYLES}
     // Initial paint
     updateStyles();
     updateTriggerVisibility();
+    updateFreshUserVisibility();
     if (isOpen) {
         animatePanelOpen();
         renderActivePlugin();

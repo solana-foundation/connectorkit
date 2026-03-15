@@ -10,7 +10,7 @@ Production-ready Solana wallet infrastructure. A headless, framework-agnostic wa
 | Package                                   | Description                                                |
 | ----------------------------------------- | ---------------------------------------------------------- |
 | [@solana/connector](./packages/connector) | Core wallet connector with React hooks and headless client |
-| [@solana/devtools](./packages/devtools)   | Framework-agnostic devtools with transaction tracking      |
+| [@solana/connector-debugger](./packages/devtools) | Framework-agnostic devtools with transaction tracking      |
 
 ## Why ConnectorKit?
 
@@ -77,11 +77,11 @@ See the [connector package docs](./packages/connector/README.md) for full API re
 Framework-agnostic devtools that work with any web framework via the imperative DOM API.
 
 ```bash
-npm install @solana/devtools
+npm install @solana/connector-debugger
 ```
 
 ```typescript
-import { ConnectorDevtools } from '@solana/devtools';
+import { ConnectorDevtools } from '@solana/connector-debugger';
 
 // Create devtools (auto-detects window.__connectorClient from ConnectorProvider)
 const devtools = new ConnectorDevtools({
@@ -114,7 +114,7 @@ export function DevtoolsLoader() {
         let devtools: any;
         let container: HTMLDivElement;
 
-        import('@solana/devtools').then(({ ConnectorDevtools }) => {
+        import('@solana/connector-debugger').then(({ ConnectorDevtools }) => {
             container = document.createElement('div');
             document.body.appendChild(container);
             devtools = new ConnectorDevtools();

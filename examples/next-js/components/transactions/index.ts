@@ -1,6 +1,8 @@
 export { TransactionDemo } from './transaction-demo';
 export { LegacySolTransfer } from './legacy-sol-transfer';
 export { ModernSolTransfer } from './modern-sol-transfer';
+export { ModernWalletTransfer } from './modern-wallet-transfer';
+export { TitanSwap, titanSwapCode } from './titan-swap';
 export { TransactionForm } from './transaction-form';
 export { TransactionResult } from './transaction-result';
 export { KitSignerDemo } from './kit-signer-demo';

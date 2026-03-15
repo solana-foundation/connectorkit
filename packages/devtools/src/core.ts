@@ -35,6 +35,7 @@ import { createDevtoolsElement } from './components/devtools-element';
 import { createOverviewPlugin } from './plugins/overview';
 import { createEventsPlugin } from './plugins/events';
 import { createTransactionsPlugin } from './plugins/transactions';
+import { createIdlPlugin } from './plugins/idl';
 
 declare global {
     interface Window {
@@ -89,6 +90,7 @@ export class ConnectorDevtools {
             createOverviewPlugin(),
             createEventsPlugin(this.#config.maxEvents),
             createTransactionsPlugin(this.#config.maxTransactions),
+            createIdlPlugin(),
             ...(init.plugins ?? []),
         ];
     }
@@ -352,10 +354,38 @@ export class ConnectorDevtools {
                     const signatureStr = String(event.signature);
                     this.#updateCache(cache => {
                         const existingIdx = cache.transactions.items.findIndex(tx => tx.signature === signatureStr);
+
+                        // Best-effort correlation for pre-send previews:
+                        // If an inflight entry exists without a signature (e.g. emitted via `transaction:preparing`),
+                        // attach this tracked signature to the latest such inflight entry so simulation can use
+                        // captured wire bytes even when the app does not emit `transaction:sent`.
+                        const inflight = cache.transactions.inflight.slice();
+                        let matchedInflight: DevtoolsInflightTransaction | undefined;
+                        if (event.status === 'pending') {
+                            const idx = findLatestInflightIndex(inflight);
+                            if (idx !== -1 && !inflight[idx].signature) {
+                                const inflightTs = new Date(inflight[idx].timestamp).getTime();
+                                const trackedTs = new Date(event.timestamp).getTime();
+                                const isRecent =
+                                    Number.isFinite(inflightTs) &&
+                                    Number.isFinite(trackedTs) &&
+                                    Math.abs(trackedTs - inflightTs) < 60_000;
+
+                                if (isRecent) {
+                                    inflight[idx] = { ...inflight[idx], stage: 'sent', signature: signatureStr };
+                                    matchedInflight = inflight[idx];
+                                }
+                            }
+                        }
+
                         const nextItem = {
                             signature: signatureStr,
                             timestamp: event.timestamp,
                             status: event.status,
+                            ...(matchedInflight?.size ? { size: matchedInflight.size } : {}),
+                            ...(matchedInflight?.transactionBase64
+                                ? { wireTransactionBase64: matchedInflight.transactionBase64 }
+                                : {}),
                         };
                         const nextItems =
                             existingIdx === -1
@@ -363,8 +393,6 @@ export class ConnectorDevtools {
                                 : cache.transactions.items.map((tx, i) =>
                                       i === existingIdx ? { ...tx, ...nextItem } : tx,
                                   );
-
-                        const inflight = cache.transactions.inflight.slice();
 
                         // Fallback for apps that manually call `client.trackTransaction(...)` (common in Kit flows).
                         // If we don't already have an inflight entry for this signature, create one so the UI can
