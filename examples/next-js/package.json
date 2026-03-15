@@ -22,7 +22,7 @@
         "@solana/connector": "workspace:*",
         "@solana/devtools": "workspace:*",
         "@solana/keychain": "^0.2.1",
-        "@solana/kit": "^5.0.0",
+        "@solana/kit": "^6.0.0",
         "@solana/web3.js": "^1.98.4",
         "@pipeit/core": "^0.2.5",
         "@pipeit/actions": "^0.1.1",

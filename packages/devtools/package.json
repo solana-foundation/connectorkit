@@ -56,7 +56,7 @@
         "@solana-program/token": "^0.9.0",
         "@solana-program/token-2022": "^0.6.1",
         "@solana/codecs": "^5.0.0",
-        "@solana/kit": "^5.0.0",
+        "@solana/kit": "^6.0.0",
         "@solana/transaction-messages": "^5.0.0",
         "@solana/transactions": "^5.0.0",
         "@solana/web3.js": "^1.98.4",

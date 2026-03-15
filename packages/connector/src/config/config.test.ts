@@ -243,7 +243,8 @@ describe('Configuration System', () => {
                 appUrl: 'https://test.com',
             });
 
-            expect(config.appIdentity.icon).toContain('favicon.ico');
+            // MWA expects a relative icon path (resolved against appIdentity.uri)
+            expect(config.appIdentity.icon).toBe('/favicon.ico');
         });
     });
 
