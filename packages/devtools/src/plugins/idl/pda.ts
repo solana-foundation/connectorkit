@@ -58,7 +58,7 @@ function convertArgToSeedBytes(value: string, type: unknown): Uint8Array | null 
     if (size !== undefined) {
         try {
             const trimmed = value.trim();
-            const bigintValue = trimmed.startsWith('0x') ? BigInt(trimmed) : BigInt(trimmed);
+            const bigintValue = BigInt(trimmed);
             return bigintToLeBytes(bigintValue, size);
         } catch {
             return null;

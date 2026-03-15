@@ -79,9 +79,6 @@ function renderWritableAccountsTable(accounts: SimulationWritableAccount[], incl
                             .filter(Boolean)
                             .join(' ');
 
-                        const lamportsDelta = includeSnapshots
-                            ? (a.pre.lamports ?? 0n) - (a.post.lamports ?? 0n)
-                            : null;
                         const delta = includeSnapshots ? (a.post.lamports ?? 0n) - (a.pre.lamports ?? 0n) : null;
 
                         const deltaLabel = includeSnapshots && delta !== null ? formatLamportsDelta(delta) : 'N/A';

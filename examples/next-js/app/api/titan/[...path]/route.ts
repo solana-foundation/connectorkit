@@ -55,7 +55,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         if (!response.ok) {
             const errorText = await response.text().catch(() => 'Unknown error');
             console.error(`Titan API error (${response.status}) at ${titanPath}:`, errorText);
-            return new NextResponse(errorText, {
+            return new NextResponse('Titan API request failed', {
                 status: response.status,
                 headers: { 'Content-Type': 'text/plain' },
             });
@@ -71,7 +71,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         });
     } catch (error) {
         console.error('Titan API proxy error:', error);
-        return new NextResponse(error instanceof Error ? error.message : 'Failed to proxy Titan request', {
+        return new NextResponse('Titan API request failed', {
             status: 500,
             headers: { 'Content-Type': 'text/plain' },
         });
