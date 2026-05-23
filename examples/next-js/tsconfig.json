@@ -11,6 +11,7 @@
         "moduleResolution": "bundler",
         "resolveJsonModule": true,
         "isolatedModules": true,
+        "ignoreDeprecations": "6.0",
         "jsx": "react-jsx",
         "incremental": true,
         "plugins": [

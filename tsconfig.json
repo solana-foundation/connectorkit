@@ -12,11 +12,11 @@
         "moduleResolution": "bundler",
         "resolveJsonModule": true,
         "isolatedModules": true,
+        "ignoreDeprecations": "6.0",
         "jsx": "preserve",
         "incremental": true,
-        "baseUrl": ".",
         "paths": {
-            "@solana/*": ["packages/*/src"]
+            "@solana/*": ["./packages/*/src"]
         }
     },
     "include": ["**/*.ts", "**/*.tsx"],

@@ -203,7 +203,7 @@ export function getDefaultConfig(options: DefaultConfigOptions): ExtendedConnect
     } = options;
 
     const defaultClusters: SolanaCluster[] = clusters ?? [
-        createSolanaMainnet(),
+        createSolanaMainnet('https://api.mainnet-beta.solana.com'),
         createSolanaDevnet(),
         createSolanaTestnet(),
         ...(network === 'localnet' ? [createSolanaLocalnet()] : []),

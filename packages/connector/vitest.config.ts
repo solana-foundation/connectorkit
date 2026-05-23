@@ -39,11 +39,7 @@ export default defineConfig({
 
         // Pool options - use threads for better stability
         pool: 'threads',
-        poolOptions: {
-            threads: {
-                singleThread: true,
-            },
-        },
+        fileParallelism: false,
 
         // Environment options
         environmentOptions: {
