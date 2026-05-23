@@ -2,11 +2,9 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ConnectorClient } from './connector-client';
 import type { ConnectorConfig } from '../../types/connector';
 import type { ConnectorState } from '../../types/connector';
-import type { Listener } from '../../types/connector';
 import type { SolanaCluster } from '@wallet-ui/core';
 
 // Mock all dependencies
-vi.mock('./state-manager');
 vi.mock('./event-emitter');
 vi.mock('../wallet/detector');
 vi.mock('../wallet/connection-manager');
@@ -27,7 +25,6 @@ describe('ConnectorClient', () => {
         vi.clearAllMocks();
 
         // Import mocks
-        const { StateManager } = await import('./state-manager');
         const { EventEmitter } = await import('./event-emitter');
         const { WalletDetector } = await import('../wallet/detector');
         const { ConnectionManager } = await import('../wallet/connection-manager');
@@ -37,7 +34,6 @@ describe('ConnectorClient', () => {
         const { TransactionTracker } = await import('../transaction/transaction-tracker');
         const { DebugMetrics } = await import('../core/debug-metrics');
 
-        // Setup StateManager mock with proper state management
         const mockState: ConnectorState = {
             wallets: [],
             connected: false,
@@ -48,102 +44,74 @@ describe('ConnectorClient', () => {
             cluster: null,
             clusters: [],
         };
-        let stateListeners: Listener[] = [];
+        vi.mocked(EventEmitter).mockImplementation(function () {
+            return {
+                emit: vi.fn(),
+                on: vi.fn(() => vi.fn()),
+                off: vi.fn(),
+                offAll: vi.fn(),
+                getListenerCount: vi.fn(() => 0),
+            } as unknown as InstanceType<typeof EventEmitter>;
+        });
 
-        vi.mocked(StateManager).mockImplementation(
-            () =>
-                ({
-                    getSnapshot: vi.fn(() => mockState),
-                    updateState: vi.fn(updates => {
-                        Object.assign(mockState, updates);
-                        stateListeners.forEach(l => l(mockState));
-                    }),
-                    subscribe: vi.fn(listener => {
-                        stateListeners.push(listener);
-                        return () => {
-                            stateListeners = stateListeners.filter(l => l !== listener);
-                        };
-                    }),
-                    clear: vi.fn(),
-                }) as unknown as InstanceType<typeof StateManager>,
-        );
+        vi.mocked(WalletDetector).mockImplementation(function () {
+            return {
+                initialize: vi.fn(),
+                destroy: vi.fn(),
+                getDetectedWallets: vi.fn(() => []),
+            } as unknown as InstanceType<typeof WalletDetector>;
+        });
 
-        vi.mocked(EventEmitter).mockImplementation(
-            () =>
-                ({
-                    emit: vi.fn(),
-                    on: vi.fn(() => vi.fn()),
-                    off: vi.fn(),
-                    offAll: vi.fn(),
-                    getListenerCount: vi.fn(() => 0),
-                }) as unknown as InstanceType<typeof EventEmitter>,
-        );
+        vi.mocked(ConnectionManager).mockImplementation(function () {
+            return {
+                connect: vi.fn(async () => {
+                    mockState.connected = true;
+                    mockState.connecting = false;
+                }),
+                disconnect: vi.fn(async () => {
+                    mockState.connected = false;
+                    mockState.selectedWallet = null;
+                }),
+                selectAccount: vi.fn(),
+            } as unknown as InstanceType<typeof ConnectionManager>;
+        });
 
-        vi.mocked(WalletDetector).mockImplementation(
-            () =>
-                ({
-                    initialize: vi.fn(),
-                    destroy: vi.fn(),
-                    getDetectedWallets: vi.fn(() => []),
-                }) as unknown as InstanceType<typeof WalletDetector>,
-        );
+        vi.mocked(AutoConnector).mockImplementation(function () {
+            return {
+                initialize: vi.fn(),
+                destroy: vi.fn(),
+            } as unknown as InstanceType<typeof AutoConnector>;
+        });
 
-        vi.mocked(ConnectionManager).mockImplementation(
-            () =>
-                ({
-                    connect: vi.fn(async () => {
-                        mockState.connected = true;
-                        mockState.connecting = false;
-                    }),
-                    disconnect: vi.fn(async () => {
-                        mockState.connected = false;
-                        mockState.selectedWallet = null;
-                    }),
-                    selectAccount: vi.fn(),
-                }) as unknown as InstanceType<typeof ConnectionManager>,
-        );
+        vi.mocked(ClusterManager).mockImplementation(function () {
+            return {
+                setCluster: vi.fn(),
+                getCurrentCluster: vi.fn(() => null),
+            } as unknown as InstanceType<typeof ClusterManager>;
+        });
 
-        vi.mocked(AutoConnector).mockImplementation(
-            () =>
-                ({
-                    initialize: vi.fn(),
-                    destroy: vi.fn(),
-                }) as unknown as InstanceType<typeof AutoConnector>,
-        );
+        vi.mocked(HealthMonitor).mockImplementation(function () {
+            return {
+                getHealth: vi.fn(() => ({ initialized: true })),
+            } as unknown as InstanceType<typeof HealthMonitor>;
+        });
 
-        vi.mocked(ClusterManager).mockImplementation(
-            () =>
-                ({
-                    setCluster: vi.fn(),
-                    getCurrentCluster: vi.fn(() => null),
-                }) as unknown as InstanceType<typeof ClusterManager>,
-        );
+        vi.mocked(TransactionTracker).mockImplementation(function () {
+            return {
+                trackTransaction: vi.fn(),
+                getTransactions: vi.fn(() => []),
+                clearHistory: vi.fn(),
+                getTotalCount: vi.fn(() => 0),
+            } as unknown as InstanceType<typeof TransactionTracker>;
+        });
 
-        vi.mocked(HealthMonitor).mockImplementation(
-            () =>
-                ({
-                    getHealth: vi.fn(() => ({ initialized: true })),
-                }) as unknown as InstanceType<typeof HealthMonitor>,
-        );
-
-        vi.mocked(TransactionTracker).mockImplementation(
-            () =>
-                ({
-                    trackTransaction: vi.fn(),
-                    getTransactions: vi.fn(() => []),
-                    clearHistory: vi.fn(),
-                    getTotalCount: vi.fn(() => 0),
-                }) as unknown as InstanceType<typeof TransactionTracker>,
-        );
-
-        vi.mocked(DebugMetrics).mockImplementation(
-            () =>
-                ({
-                    getMetrics: vi.fn(() => ({})),
-                    reset: vi.fn(),
-                    updateListenerCounts: vi.fn(),
-                }) as unknown as InstanceType<typeof DebugMetrics>,
-        );
+        vi.mocked(DebugMetrics).mockImplementation(function () {
+            return {
+                getMetrics: vi.fn(() => ({})),
+                reset: vi.fn(),
+                updateListenerCounts: vi.fn(),
+            } as unknown as InstanceType<typeof DebugMetrics>;
+        });
 
         config = {
             cluster: {

@@ -164,11 +164,15 @@ function errorResponse(code: RemoteSignerErrorCode, message: string, status = 40
     return jsonResponse(body, status);
 }
 
+function getEnv(name: string): string | undefined {
+    return (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.[name];
+}
+
 /**
  * Default authorization: check Authorization header against CONNECTOR_SIGNER_TOKEN env var
  */
 function defaultAuthorize(request: Request): boolean {
-    const token = process.env.CONNECTOR_SIGNER_TOKEN;
+    const token = getEnv('CONNECTOR_SIGNER_TOKEN');
     if (!token) {
         // No token configured = reject all (safe default)
         console.warn('[connector/server] CONNECTOR_SIGNER_TOKEN not set - rejecting all requests');

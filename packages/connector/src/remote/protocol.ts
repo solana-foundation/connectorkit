@@ -211,12 +211,22 @@ export interface RemoteWalletConfig {
 // Base64 Helpers (for protocol encoding)
 // ============================================================================
 
+type BufferLike = {
+    from(input: Uint8Array): { toString(encoding: 'base64'): string };
+    from(input: string, encoding: 'base64'): Uint8Array;
+};
+
+function getBuffer(): BufferLike | undefined {
+    return (globalThis as { Buffer?: BufferLike }).Buffer;
+}
+
 /**
  * Encode Uint8Array to base64 string
  */
 export function encodeBase64(bytes: Uint8Array): string {
-    if (typeof Buffer !== 'undefined') {
-        return Buffer.from(bytes).toString('base64');
+    const buffer = getBuffer();
+    if (buffer) {
+        return buffer.from(bytes).toString('base64');
     }
     // Browser fallback
     const binary = Array.from(bytes)
@@ -229,8 +239,9 @@ export function encodeBase64(bytes: Uint8Array): string {
  * Decode base64 string to Uint8Array
  */
 export function decodeBase64(base64: string): Uint8Array {
-    if (typeof Buffer !== 'undefined') {
-        return new Uint8Array(Buffer.from(base64, 'base64'));
+    const buffer = getBuffer();
+    if (buffer) {
+        return new Uint8Array(buffer.from(base64, 'base64'));
     }
     // Browser fallback
     const binary = atob(base64);
