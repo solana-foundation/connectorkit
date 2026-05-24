@@ -84,6 +84,20 @@ export const walletConnectObjectConfigSchema = z.object({
 export const walletConnectConfigSchema = z.union([z.literal(true), walletConnectObjectConfigSchema]).optional();
 
 // ============================================================================
+// Native Localhost Configuration
+// ============================================================================
+
+export const nativeLocalhostObjectConfigSchema = z.strictObject({
+    enabled: z.boolean().optional(),
+    host: z.string().min(1, 'Native localhost host cannot be empty').optional(),
+    port: z.number().int().min(1).max(65535).optional(),
+    protocolVersion: z.literal('1').optional(),
+    timeoutMs: z.number().int().nonnegative().optional(),
+});
+
+export const nativeLocalhostConfigSchema = z.union([z.boolean(), nativeLocalhostObjectConfigSchema]).optional();
+
+// ============================================================================
 // Storage Configuration
 // ============================================================================
 
@@ -193,6 +207,7 @@ export const defaultConfigOptionsSchema = z.object({
     programLabels: z.record(z.string(), z.string()).optional(),
     coingecko: coinGeckoConfigSchema,
     walletConnect: walletConnectConfigSchema,
+    nativeLocalhost: nativeLocalhostConfigSchema,
 
     // Additional wallets (remote signers, etc.)
     additionalWallets: z.array(walletSchema).optional(),
@@ -219,6 +234,7 @@ export const connectorConfigSchema = z
         programLabels: z.record(z.string(), z.string()).optional(),
         coingecko: coinGeckoConfigSchema,
         walletConnect: walletConnectConfigSchema,
+        nativeLocalhost: nativeLocalhostConfigSchema,
         additionalWallets: z.array(walletSchema).optional(),
     })
     .optional();
@@ -231,6 +247,7 @@ export type SolanaNetworkInput = z.input<typeof solanaNetworkSchema>;
 export type SolanaClusterIdInput = z.input<typeof solanaClusterIdSchema>;
 export type CoinGeckoConfigInput = z.input<typeof coinGeckoConfigSchema>;
 export type WalletConnectConfigInput = z.input<typeof walletConnectConfigSchema>;
+export type NativeLocalhostConfigInput = z.input<typeof nativeLocalhostConfigSchema>;
 export type DefaultConfigOptionsInput = z.input<typeof defaultConfigOptionsSchema>;
 
 // ============================================================================

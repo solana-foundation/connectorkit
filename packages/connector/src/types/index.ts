@@ -65,6 +65,13 @@ export type {
     WalletConnectSignAndSendTransactionResult,
 } from './walletconnect';
 
+// Native localhost wallet types
+export type {
+    NativeLocalhostConfig,
+    NativeLocalhostResolvedConfig,
+    NativeLocalhostConfigInput,
+} from './native-localhost';
+
 // Mobile Wallet Adapter types
 export type { MobileWalletAdapterConfig, RegisterMwaConfig } from './mobile';
 

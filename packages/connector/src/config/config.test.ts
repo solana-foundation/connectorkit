@@ -206,6 +206,52 @@ describe('Configuration System', () => {
             if (!result.success) return;
             expect(result.data.wallets).toBeDefined();
         });
+
+        it('should pass through native localhost config when provided', () => {
+            const config = getDefaultConfig({
+                ...baseOptions,
+                nativeLocalhost: {
+                    enabled: true,
+                    port: 51885,
+                    timeoutMs: 100,
+                },
+            });
+
+            expect(config.nativeLocalhost).toEqual({
+                enabled: true,
+                port: 51885,
+                timeoutMs: 100,
+            });
+        });
+
+        it('should validate native localhost config options', () => {
+            const result = validateConfigOptions({
+                appName: 'Test App',
+                nativeLocalhost: {
+                    enabled: true,
+                    host: '127.0.0.1',
+                    port: 51884,
+                    protocolVersion: '1',
+                    timeoutMs: 250,
+                },
+            });
+
+            expect(result.success).toBe(true);
+            if (!result.success) return;
+            expect(result.data.nativeLocalhost).toBeDefined();
+        });
+
+        it('should reject invalid native localhost ports', () => {
+            const result = validateConfigOptions({
+                appName: 'Test App',
+                nativeLocalhost: {
+                    enabled: true,
+                    port: 70000,
+                },
+            });
+
+            expect(result.success).toBe(false);
+        });
     });
 
     describe('getDefaultMobileConfig', () => {

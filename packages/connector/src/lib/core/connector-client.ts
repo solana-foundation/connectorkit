@@ -10,6 +10,7 @@ import type { SolanaTransaction, TransactionActivity } from '../../types/transac
 import type { ConnectorEvent, ConnectorEventListener } from '../../types/events';
 import type { SolanaClusterId, SolanaCluster } from '@wallet-ui/core';
 import type { WalletInfo } from '../../types/wallets';
+import type { Wallet } from '../../types/wallets';
 import type { WalletConnectorId, ConnectOptions } from '../../types/session';
 import { INITIAL_WALLET_STATUS } from '../../types/session';
 import { StateManager } from './state-manager';
@@ -27,6 +28,7 @@ import { createLogger } from '../utils/secure-logger';
 import { tryCatchSync } from './try-catch';
 import type { WalletConnectRegistration } from '../wallet/walletconnect';
 import { prepareTransactionForWallet } from '../../utils/transaction-format';
+import { discoverNativeLocalhostWallet, resolveNativeLocalhostConfig } from '../adapters/native-localhost-wallet';
 
 const logger = createLogger('ConnectorClient');
 
@@ -43,6 +45,8 @@ export class ConnectorClient {
     private initialized = false;
     private config: ConnectorConfig;
     private walletConnectRegistration: WalletConnectRegistration | null = null;
+    private nativeLocalhostWallet: Wallet | null = null;
+    private destroyed = false;
 
     constructor(config: ConnectorConfig = {}) {
         this.config = config;
@@ -127,6 +131,15 @@ export class ConnectorClient {
 
             this.walletDetector.initialize();
 
+            const nativeLocalhostConfig = resolveNativeLocalhostConfig(this.config.nativeLocalhost);
+            if (nativeLocalhostConfig.enabled) {
+                this.initializeNativeLocalhost().catch(err => {
+                    if (this.config.debug) {
+                        logger.error('Native localhost wallet initialization failed', { error: err });
+                    }
+                });
+            }
+
             // Register WalletConnect wallet if enabled
             if (this.config.walletConnect?.enabled) {
                 this.initializeWalletConnect().catch(err => {
@@ -152,6 +165,20 @@ export class ConnectorClient {
         if (error && this.config.debug) {
             logger.error('Connector initialization failed', { error });
         }
+    }
+
+    /**
+     * Initialize Native localhost wallet discovery.
+     *
+     * This stays per ConnectorClient instance by using additional wallets instead
+     * of registering into the global Wallet Standard registry.
+     */
+    private async initializeNativeLocalhost(): Promise<void> {
+        const wallet = await discoverNativeLocalhostWallet(this.config.nativeLocalhost);
+        if (!wallet || this.destroyed) return;
+
+        this.nativeLocalhostWallet = wallet;
+        this.walletDetector.setAdditionalWallets([...(this.config.additionalWallets ?? []), wallet]);
     }
 
     /**
@@ -375,6 +402,8 @@ export class ConnectorClient {
     }
 
     destroy(): void {
+        this.destroyed = true;
+
         // Unregister WalletConnect wallet if it was registered
         if (this.walletConnectRegistration) {
             try {
@@ -387,6 +416,7 @@ export class ConnectorClient {
             }
         }
 
+        this.nativeLocalhostWallet = null;
         this.connectionManager.disconnect().catch(() => {});
         this.walletDetector.destroy();
         this.eventEmitter.offAll();

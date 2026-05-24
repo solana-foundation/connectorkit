@@ -32,13 +32,19 @@ describe('headless entrypoint', () => {
         });
 
         it('should export configuration functions without React', async () => {
-            const { getDefaultConfig, getDefaultMobileConfig, validateConfigOptions, parseConfigOptions } =
-                await import('./headless');
+            const {
+                getDefaultConfig,
+                getDefaultMobileConfig,
+                validateConfigOptions,
+                parseConfigOptions,
+                nativeLocalhostConfigSchema,
+            } = await import('./headless');
 
             expect(getDefaultConfig).toBeDefined();
             expect(getDefaultMobileConfig).toBeDefined();
             expect(validateConfigOptions).toBeDefined();
             expect(parseConfigOptions).toBeDefined();
+            expect(nativeLocalhostConfigSchema).toBeDefined();
         });
 
         it('should export session types and utilities without React', async () => {

@@ -10,11 +10,14 @@ export {
     solanaClusterIdSchema,
     solanaClusterSchema,
     coinGeckoConfigSchema,
+    nativeLocalhostConfigSchema,
     defaultConfigOptionsSchema,
 } from './schemas';
 export type {
     SolanaNetworkInput,
     SolanaClusterIdInput,
     CoinGeckoConfigInput,
+    NativeLocalhostConfigInput,
     DefaultConfigOptionsInput,
 } from './schemas';
+export type { NativeLocalhostConfig, NativeLocalhostResolvedConfig } from '../types/native-localhost';

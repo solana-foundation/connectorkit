@@ -3,6 +3,20 @@ import { ConnectorClient } from './connector-client';
 import type { ConnectorConfig } from '../../types/connector';
 import type { ConnectorState } from '../../types/connector';
 import type { SolanaCluster } from '@wallet-ui/core';
+import type { Wallet } from '../../types/wallets';
+
+const nativeAdapterMocks = vi.hoisted(() => ({
+    discoverNativeLocalhostWallet: vi.fn(),
+    resolveNativeLocalhostConfig: vi.fn(),
+}));
+
+const detectorMocks = vi.hoisted(() => ({
+    initialize: vi.fn(),
+    destroy: vi.fn(),
+    setAdditionalWallets: vi.fn(),
+    setWalletDisplayConfig: vi.fn(),
+    getDetectedWallets: vi.fn(() => []),
+}));
 
 // Mock all dependencies
 vi.mock('./event-emitter');
@@ -13,6 +27,7 @@ vi.mock('../cluster/cluster-manager');
 vi.mock('../health/health-monitor');
 vi.mock('../transaction/transaction-tracker');
 vi.mock('../core/debug-metrics');
+vi.mock('../adapters/native-localhost-wallet', () => nativeAdapterMocks);
 vi.mock('../utils/secure-logger', () => ({
     createLogger: vi.fn(() => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() })),
 }));
@@ -23,6 +38,14 @@ describe('ConnectorClient', () => {
 
     beforeEach(async () => {
         vi.clearAllMocks();
+        nativeAdapterMocks.resolveNativeLocalhostConfig.mockImplementation(input => ({
+            enabled: input === true || (typeof input === 'object' && input?.enabled === true),
+            host: '127.0.0.1',
+            port: 51884,
+            protocolVersion: '1',
+            timeoutMs: 250,
+        }));
+        nativeAdapterMocks.discoverNativeLocalhostWallet.mockResolvedValue(null);
 
         // Import mocks
         const { EventEmitter } = await import('./event-emitter');
@@ -56,9 +79,11 @@ describe('ConnectorClient', () => {
 
         vi.mocked(WalletDetector).mockImplementation(function () {
             return {
-                initialize: vi.fn(),
-                destroy: vi.fn(),
-                getDetectedWallets: vi.fn(() => []),
+                initialize: detectorMocks.initialize,
+                destroy: detectorMocks.destroy,
+                setAdditionalWallets: detectorMocks.setAdditionalWallets,
+                setWalletDisplayConfig: detectorMocks.setWalletDisplayConfig,
+                getDetectedWallets: detectorMocks.getDetectedWallets,
             } as unknown as InstanceType<typeof WalletDetector>;
         });
 
@@ -140,6 +165,49 @@ describe('ConnectorClient', () => {
             expect(state.connected).toBe(false);
             expect(state.wallets).toEqual([]);
             expect(state.selectedWallet).toBeNull();
+        });
+
+        it('disabled native localhost config does not initialize discovery', () => {
+            expect(nativeAdapterMocks.discoverNativeLocalhostWallet).not.toHaveBeenCalled();
+        });
+
+        it('enabled native localhost config adds discovered wallet to additional wallets', async () => {
+            const nativeWallet = {
+                version: '1.0.0',
+                name: 'Native',
+                icon: 'data:image/png;base64,aGVsbG8=',
+                chains: ['solana:mainnet'],
+                accounts: [],
+                features: {
+                    'standard:connect': { version: '1.0.0', connect: vi.fn() },
+                },
+            } as unknown as Wallet;
+            nativeAdapterMocks.discoverNativeLocalhostWallet.mockResolvedValueOnce(nativeWallet);
+
+            new ConnectorClient({
+                ...config,
+                nativeLocalhost: true,
+            });
+
+            await vi.waitFor(() => {
+                expect(detectorMocks.setAdditionalWallets).toHaveBeenCalledWith([nativeWallet]);
+            });
+        });
+
+        it('failed native localhost discovery does not throw during client init', async () => {
+            nativeAdapterMocks.discoverNativeLocalhostWallet.mockResolvedValueOnce(null);
+
+            expect(
+                () =>
+                    new ConnectorClient({
+                        ...config,
+                        nativeLocalhost: true,
+                    }),
+            ).not.toThrow();
+
+            await vi.waitFor(() => {
+                expect(nativeAdapterMocks.discoverNativeLocalhostWallet).toHaveBeenCalledWith(true);
+            });
         });
     });
 

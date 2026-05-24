@@ -955,6 +955,31 @@ Once enabled, "WalletConnect" appears as a connector (id: `walletconnect`) in yo
 
 See the [WalletConnect Solana documentation](https://docs.walletconnect.network/wallet-sdk/chain-support/solana) for more details.
 
+### Native Localhost Wallet
+
+ConnectorKit can optionally discover a locally running Native desktop wallet app over loopback without requiring a browser extension. This is disabled by default to avoid silent localhost fingerprinting.
+
+Enable it explicitly:
+
+```typescript
+import { getDefaultConfig } from '@solana/connector/headless';
+
+const config = getDefaultConfig({
+    appName: 'My App',
+    nativeLocalhost: {
+        enabled: true,
+        host: '127.0.0.1',
+        port: 51884,
+    },
+});
+```
+
+You can also use `nativeLocalhost: true` to enable the defaults. Object config must include `enabled: true`; for example, `nativeLocalhost: { port: 51885 }` remains disabled.
+
+When enabled, ConnectorKit probes `GET http://127.0.0.1:51884/v1/discover`. Discovery is availability-only metadata: it never requests or exposes accounts and is only used for display and capability hints. The Native app must authorize `/v1/connect` and all signing requests before returning accounts, signatures, or signed transactions.
+
+ConnectorKit includes `window.location.origin` in connect and signing request metadata, but the Native server must verify the browser HTTP `Origin` header server-side. Localhost is only a transport, not a trust boundary. ConnectorKit does not send cookies, credentials, or static bearer tokens to the Native wallet.
+
 ---
 
 ## Security Considerations

@@ -1,5 +1,6 @@
 import type { ConnectorConfig, CoinGeckoConfig, WalletDisplayConfig } from '../types/connector';
 import type { WalletConnectConfig } from '../types/walletconnect';
+import type { NativeLocalhostConfigInput } from '../types/native-localhost';
 import type { SolanaCluster, SolanaClusterId } from '@wallet-ui/core';
 import type { Wallet } from '../types/wallets';
 import { createSolanaMainnet, createSolanaDevnet, createSolanaTestnet, createSolanaLocalnet } from '@wallet-ui/core';
@@ -101,6 +102,12 @@ export interface DefaultConfigOptions {
     walletConnect?: boolean | SimplifiedWalletConnectConfig;
 
     /**
+     * Opt-in discovery for a locally running Native desktop wallet.
+     * Disabled by default. Use `true` or `{ enabled: true }` to probe localhost.
+     */
+    nativeLocalhost?: NativeLocalhostConfigInput;
+
+    /**
      * Additional wallets to include alongside Wallet Standard wallets.
      * Use this to add remote/server-backed signers created via `createRemoteSignerWallet()`.
      */
@@ -198,6 +205,7 @@ export function getDefaultConfig(options: DefaultConfigOptions): ExtendedConnect
         programLabels,
         coingecko,
         walletConnect,
+        nativeLocalhost,
         additionalWallets,
         wallets,
     } = options;
@@ -307,6 +315,7 @@ export function getDefaultConfig(options: DefaultConfigOptions): ExtendedConnect
         programLabels,
         coingecko,
         walletConnect: walletConnectConfig,
+        nativeLocalhost,
         additionalWallets,
     };
 

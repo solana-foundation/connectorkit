@@ -72,6 +72,7 @@ export function Providers({ children }: { children: ReactNode }) {
             // Metadata is auto-generated from appName/appUrl
             // Callbacks are auto-wired by AppProvider
             walletConnect: true,
+            nativeLocalhost: true,
         });
     }, []);
 

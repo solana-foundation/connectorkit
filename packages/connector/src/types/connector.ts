@@ -9,6 +9,7 @@ import type { AccountInfo } from './accounts';
 import type { Wallet } from './wallets';
 import type { Address } from '@solana/addresses';
 import type { WalletConnectConfig } from './walletconnect';
+import type { NativeLocalhostConfigInput } from './native-localhost';
 import type { WalletStatus, WalletConnectorMetadata } from './session';
 
 /**
@@ -211,6 +212,12 @@ export interface ConnectorConfig {
      * @see https://docs.walletconnect.network/wallet-sdk/chain-support/solana
      */
     walletConnect?: WalletConnectConfig;
+
+    /**
+     * Opt-in discovery for a locally running Native desktop wallet.
+     * Disabled by default to avoid silent localhost fingerprinting.
+     */
+    nativeLocalhost?: NativeLocalhostConfigInput;
 
     /**
      * Additional wallets to include alongside Wallet Standard wallets.

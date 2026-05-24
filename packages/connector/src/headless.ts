@@ -14,10 +14,16 @@ export { ConnectorClient } from './lib/core/connector-client';
 // Configuration
 // ============================================================================
 export { getDefaultConfig, getDefaultMobileConfig } from './config';
-export type { DefaultConfigOptions, ExtendedConnectorConfig } from './config';
+export type {
+    DefaultConfigOptions,
+    ExtendedConnectorConfig,
+    NativeLocalhostConfig,
+    NativeLocalhostConfigInput,
+    NativeLocalhostResolvedConfig,
+} from './config';
 
 // Configuration validation
-export { validateConfigOptions, parseConfigOptions } from './config';
+export { validateConfigOptions, parseConfigOptions, nativeLocalhostConfigSchema } from './config';
 
 // ============================================================================
 // Essential Types (via barrel)
