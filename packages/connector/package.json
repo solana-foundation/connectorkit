@@ -100,9 +100,6 @@
         }
     },
     "dependencies": {
-        "@noble/ciphers": "1.3.0",
-        "@noble/curves": "1.9.7",
-        "@noble/hashes": "1.8.0",
         "@solana-mobile/wallet-standard-mobile": "^0.5.2",
         "@solana/addresses": "^6.9.0",
         "@solana/codecs": "^6.9.0",
@@ -115,6 +112,9 @@
         "@wallet-standard/app": "^1.1.0",
         "@wallet-standard/base": "^1.1.0",
         "@wallet-standard/features": "^1.1.0",
+        "@wallet-association/core": "file:/Users/stevensarmi/Code/wallet-association-protocol/packages/core",
+        "@wallet-association/transport-localhost": "file:/Users/stevensarmi/Code/wallet-association-protocol/packages/transport-localhost",
+        "@wallet-association/wallet-standard": "file:/Users/stevensarmi/Code/wallet-association-protocol/packages/wallet-standard",
         "@wallet-ui/core": "^4.1.0",
         "zod": "^4.4.3"
     },

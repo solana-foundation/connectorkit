@@ -328,7 +328,7 @@ describe('native association wallet adapter', () => {
             discovery: DISCOVERY,
             origin: window.location.origin,
         });
-        const key = `${config.storageKey}:${encodeURIComponent(window.location.origin)}:${config.host}:${config.port}:Native`;
+        const key = `${config.storageKey}:${encodeURIComponent(window.location.origin)}:localhost:${config.host}:${config.port}:Native`;
         window.localStorage.setItem(
             key,
             JSON.stringify({

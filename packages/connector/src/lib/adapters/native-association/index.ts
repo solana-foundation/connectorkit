@@ -4,10 +4,10 @@ import type {
     NativeAssociationConfigInput,
     NativeAssociationResolvedConfig,
 } from '../../../types/native-association';
+import { discoverLocalhostWallet } from '@wallet-association/transport-localhost';
 import { createLocalhostAssociationTransport } from './localhost-transport';
 import type { NativeAssociationTransport } from './localhost-transport';
 import type { AssociationDiscoverResponse } from './protocol';
-import { isCompatibleDiscovery } from './protocol';
 import { createNativeAssociationWallet } from './wallet';
 import type { NativeAssociationWalletDeps } from './wallet';
 
@@ -52,19 +52,11 @@ export async function discoverNativeAssociationWallet(
     }
 
     const transport = deps.transport ?? createLocalhostAssociationTransport(config);
-    const controller = typeof AbortController !== 'undefined' ? new AbortController() : undefined;
-    const timeout = controller
-        ? setTimeout(() => {
-              controller.abort();
-          }, config.timeoutMs)
-        : undefined;
-
     try {
-        const discovery = await transport.get<AssociationDiscoverResponse>('/v2/discover', {
-            signal: controller?.signal,
+        const discovery = await discoverLocalhostWallet(config, {
+            transport,
         });
-
-        if (!isCompatibleDiscovery(discovery)) {
+        if (!discovery) {
             return null;
         }
 
@@ -74,10 +66,6 @@ export async function discoverNativeAssociationWallet(
         });
     } catch {
         return null;
-    } finally {
-        if (timeout) {
-            clearTimeout(timeout);
-        }
     }
 }
 
