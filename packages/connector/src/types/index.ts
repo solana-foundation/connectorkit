@@ -65,7 +65,14 @@ export type {
     WalletConnectSignAndSendTransactionResult,
 } from './walletconnect';
 
-// Native localhost wallet types
+// Native association wallet types
+export type {
+    NativeAssociationConfig,
+    NativeAssociationResolvedConfig,
+    NativeAssociationConfigInput,
+} from './native-association';
+
+// Backward-compatible Native localhost config aliases
 export type {
     NativeLocalhostConfig,
     NativeLocalhostResolvedConfig,

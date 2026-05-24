@@ -224,21 +224,39 @@ describe('Configuration System', () => {
             });
         });
 
-        it('should validate native localhost config options', () => {
+        it('should pass through native association config when provided', () => {
+            const config = getDefaultConfig({
+                ...baseOptions,
+                nativeAssociation: {
+                    enabled: true,
+                    port: 51885,
+                    timeoutMs: 100,
+                },
+            });
+
+            expect(config.nativeAssociation).toEqual({
+                enabled: true,
+                port: 51885,
+                timeoutMs: 100,
+            });
+        });
+
+        it('should validate native association config options', () => {
             const result = validateConfigOptions({
                 appName: 'Test App',
-                nativeLocalhost: {
+                nativeAssociation: {
                     enabled: true,
                     host: '127.0.0.1',
                     port: 51884,
-                    protocolVersion: '1',
+                    protocolVersion: '2',
                     timeoutMs: 250,
+                    storageKey: 'solana.connector.nativeAssociation',
                 },
             });
 
             expect(result.success).toBe(true);
             if (!result.success) return;
-            expect(result.data.nativeLocalhost).toBeDefined();
+            expect(result.data.nativeAssociation).toBeDefined();
         });
 
         it('should reject invalid native localhost ports', () => {

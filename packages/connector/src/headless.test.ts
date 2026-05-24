@@ -37,6 +37,7 @@ describe('headless entrypoint', () => {
                 getDefaultMobileConfig,
                 validateConfigOptions,
                 parseConfigOptions,
+                nativeAssociationConfigSchema,
                 nativeLocalhostConfigSchema,
             } = await import('./headless');
 
@@ -44,6 +45,7 @@ describe('headless entrypoint', () => {
             expect(getDefaultMobileConfig).toBeDefined();
             expect(validateConfigOptions).toBeDefined();
             expect(parseConfigOptions).toBeDefined();
+            expect(nativeAssociationConfigSchema).toBeDefined();
             expect(nativeLocalhostConfigSchema).toBeDefined();
         });
 

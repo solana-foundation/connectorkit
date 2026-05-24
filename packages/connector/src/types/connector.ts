@@ -9,7 +9,7 @@ import type { AccountInfo } from './accounts';
 import type { Wallet } from './wallets';
 import type { Address } from '@solana/addresses';
 import type { WalletConnectConfig } from './walletconnect';
-import type { NativeLocalhostConfigInput } from './native-localhost';
+import type { NativeAssociationConfigInput } from './native-association';
 import type { WalletStatus, WalletConnectorMetadata } from './session';
 
 /**
@@ -214,10 +214,16 @@ export interface ConnectorConfig {
     walletConnect?: WalletConnectConfig;
 
     /**
-     * Opt-in discovery for a locally running Native desktop wallet.
+     * Opt-in Native Wallet Association discovery over localhost.
      * Disabled by default to avoid silent localhost fingerprinting.
      */
-    nativeLocalhost?: NativeLocalhostConfigInput;
+    nativeAssociation?: NativeAssociationConfigInput;
+
+    /**
+     * Backward-compatible alias for Native Wallet Association discovery.
+     * Disabled by default to avoid silent localhost fingerprinting.
+     */
+    nativeLocalhost?: NativeAssociationConfigInput;
 
     /**
      * Additional wallets to include alongside Wallet Standard wallets.

@@ -6,8 +6,8 @@ import type { SolanaCluster } from '@wallet-ui/core';
 import type { Wallet } from '../../types/wallets';
 
 const nativeAdapterMocks = vi.hoisted(() => ({
-    discoverNativeLocalhostWallet: vi.fn(),
-    resolveNativeLocalhostConfig: vi.fn(),
+    discoverNativeAssociationWallet: vi.fn(),
+    resolveNativeAssociationConfig: vi.fn(),
 }));
 
 const detectorMocks = vi.hoisted(() => ({
@@ -27,7 +27,7 @@ vi.mock('../cluster/cluster-manager');
 vi.mock('../health/health-monitor');
 vi.mock('../transaction/transaction-tracker');
 vi.mock('../core/debug-metrics');
-vi.mock('../adapters/native-localhost-wallet', () => nativeAdapterMocks);
+vi.mock('../adapters/native-association', () => nativeAdapterMocks);
 vi.mock('../utils/secure-logger', () => ({
     createLogger: vi.fn(() => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() })),
 }));
@@ -38,14 +38,15 @@ describe('ConnectorClient', () => {
 
     beforeEach(async () => {
         vi.clearAllMocks();
-        nativeAdapterMocks.resolveNativeLocalhostConfig.mockImplementation(input => ({
+        nativeAdapterMocks.resolveNativeAssociationConfig.mockImplementation(input => ({
             enabled: input === true || (typeof input === 'object' && input?.enabled === true),
             host: '127.0.0.1',
             port: 51884,
-            protocolVersion: '1',
+            protocolVersion: '2',
             timeoutMs: 250,
+            storageKey: 'solana.connector.nativeAssociation',
         }));
-        nativeAdapterMocks.discoverNativeLocalhostWallet.mockResolvedValue(null);
+        nativeAdapterMocks.discoverNativeAssociationWallet.mockResolvedValue(null);
 
         // Import mocks
         const { EventEmitter } = await import('./event-emitter');
@@ -167,11 +168,11 @@ describe('ConnectorClient', () => {
             expect(state.selectedWallet).toBeNull();
         });
 
-        it('disabled native localhost config does not initialize discovery', () => {
-            expect(nativeAdapterMocks.discoverNativeLocalhostWallet).not.toHaveBeenCalled();
+        it('disabled native association config does not initialize discovery', () => {
+            expect(nativeAdapterMocks.discoverNativeAssociationWallet).not.toHaveBeenCalled();
         });
 
-        it('enabled native localhost config adds discovered wallet to additional wallets', async () => {
+        it('enabled native association config adds discovered wallet to additional wallets', async () => {
             const nativeWallet = {
                 version: '1.0.0',
                 name: 'Native',
@@ -182,7 +183,7 @@ describe('ConnectorClient', () => {
                     'standard:connect': { version: '1.0.0', connect: vi.fn() },
                 },
             } as unknown as Wallet;
-            nativeAdapterMocks.discoverNativeLocalhostWallet.mockResolvedValueOnce(nativeWallet);
+            nativeAdapterMocks.discoverNativeAssociationWallet.mockResolvedValueOnce(nativeWallet);
 
             new ConnectorClient({
                 ...config,
@@ -194,8 +195,31 @@ describe('ConnectorClient', () => {
             });
         });
 
-        it('failed native localhost discovery does not throw during client init', async () => {
-            nativeAdapterMocks.discoverNativeLocalhostWallet.mockResolvedValueOnce(null);
+        it('enabled nativeAssociation config initializes v2 discovery', async () => {
+            const nativeWallet = {
+                version: '1.0.0',
+                name: 'Native',
+                icon: 'data:image/png;base64,aGVsbG8=',
+                chains: ['solana:mainnet'],
+                accounts: [],
+                features: {
+                    'standard:connect': { version: '1.0.0', connect: vi.fn() },
+                },
+            } as unknown as Wallet;
+            nativeAdapterMocks.discoverNativeAssociationWallet.mockResolvedValueOnce(nativeWallet);
+
+            new ConnectorClient({
+                ...config,
+                nativeAssociation: true,
+            });
+
+            await vi.waitFor(() => {
+                expect(nativeAdapterMocks.discoverNativeAssociationWallet).toHaveBeenCalledWith(true);
+            });
+        });
+
+        it('failed native association discovery does not throw during client init', async () => {
+            nativeAdapterMocks.discoverNativeAssociationWallet.mockResolvedValueOnce(null);
 
             expect(
                 () =>
@@ -206,7 +230,7 @@ describe('ConnectorClient', () => {
             ).not.toThrow();
 
             await vi.waitFor(() => {
-                expect(nativeAdapterMocks.discoverNativeLocalhostWallet).toHaveBeenCalledWith(true);
+                expect(nativeAdapterMocks.discoverNativeAssociationWallet).toHaveBeenCalledWith(true);
             });
         });
     });

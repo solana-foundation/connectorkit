@@ -17,13 +17,21 @@ export { getDefaultConfig, getDefaultMobileConfig } from './config';
 export type {
     DefaultConfigOptions,
     ExtendedConnectorConfig,
+    NativeAssociationConfig,
+    NativeAssociationConfigInput,
+    NativeAssociationResolvedConfig,
     NativeLocalhostConfig,
     NativeLocalhostConfigInput,
     NativeLocalhostResolvedConfig,
 } from './config';
 
 // Configuration validation
-export { validateConfigOptions, parseConfigOptions, nativeLocalhostConfigSchema } from './config';
+export {
+    validateConfigOptions,
+    parseConfigOptions,
+    nativeAssociationConfigSchema,
+    nativeLocalhostConfigSchema,
+} from './config';
 
 // ============================================================================
 // Essential Types (via barrel)

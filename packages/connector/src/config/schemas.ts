@@ -84,18 +84,22 @@ export const walletConnectObjectConfigSchema = z.object({
 export const walletConnectConfigSchema = z.union([z.literal(true), walletConnectObjectConfigSchema]).optional();
 
 // ============================================================================
-// Native Localhost Configuration
+// Native Association Configuration
 // ============================================================================
 
-export const nativeLocalhostObjectConfigSchema = z.strictObject({
+export const nativeAssociationObjectConfigSchema = z.strictObject({
     enabled: z.boolean().optional(),
-    host: z.string().min(1, 'Native localhost host cannot be empty').optional(),
+    host: z.string().min(1, 'Native association host cannot be empty').optional(),
     port: z.number().int().min(1).max(65535).optional(),
-    protocolVersion: z.literal('1').optional(),
+    protocolVersion: z.literal('2').optional(),
     timeoutMs: z.number().int().nonnegative().optional(),
+    storageKey: z.string().min(1, 'Native association storage key cannot be empty').optional(),
 });
 
-export const nativeLocalhostConfigSchema = z.union([z.boolean(), nativeLocalhostObjectConfigSchema]).optional();
+export const nativeAssociationConfigSchema = z.union([z.boolean(), nativeAssociationObjectConfigSchema]).optional();
+
+export const nativeLocalhostObjectConfigSchema = nativeAssociationObjectConfigSchema;
+export const nativeLocalhostConfigSchema = nativeAssociationConfigSchema;
 
 // ============================================================================
 // Storage Configuration
@@ -207,6 +211,7 @@ export const defaultConfigOptionsSchema = z.object({
     programLabels: z.record(z.string(), z.string()).optional(),
     coingecko: coinGeckoConfigSchema,
     walletConnect: walletConnectConfigSchema,
+    nativeAssociation: nativeAssociationConfigSchema,
     nativeLocalhost: nativeLocalhostConfigSchema,
 
     // Additional wallets (remote signers, etc.)
@@ -234,6 +239,7 @@ export const connectorConfigSchema = z
         programLabels: z.record(z.string(), z.string()).optional(),
         coingecko: coinGeckoConfigSchema,
         walletConnect: walletConnectConfigSchema,
+        nativeAssociation: nativeAssociationConfigSchema,
         nativeLocalhost: nativeLocalhostConfigSchema,
         additionalWallets: z.array(walletSchema).optional(),
     })
@@ -247,6 +253,7 @@ export type SolanaNetworkInput = z.input<typeof solanaNetworkSchema>;
 export type SolanaClusterIdInput = z.input<typeof solanaClusterIdSchema>;
 export type CoinGeckoConfigInput = z.input<typeof coinGeckoConfigSchema>;
 export type WalletConnectConfigInput = z.input<typeof walletConnectConfigSchema>;
+export type NativeAssociationConfigInput = z.input<typeof nativeAssociationConfigSchema>;
 export type NativeLocalhostConfigInput = z.input<typeof nativeLocalhostConfigSchema>;
 export type DefaultConfigOptionsInput = z.input<typeof defaultConfigOptionsSchema>;
 

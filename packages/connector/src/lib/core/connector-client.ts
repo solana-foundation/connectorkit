@@ -28,7 +28,7 @@ import { createLogger } from '../utils/secure-logger';
 import { tryCatchSync } from './try-catch';
 import type { WalletConnectRegistration } from '../wallet/walletconnect';
 import { prepareTransactionForWallet } from '../../utils/transaction-format';
-import { discoverNativeLocalhostWallet, resolveNativeLocalhostConfig } from '../adapters/native-localhost-wallet';
+import { discoverNativeAssociationWallet, resolveNativeAssociationConfig } from '../adapters/native-association';
 
 const logger = createLogger('ConnectorClient');
 
@@ -45,7 +45,7 @@ export class ConnectorClient {
     private initialized = false;
     private config: ConnectorConfig;
     private walletConnectRegistration: WalletConnectRegistration | null = null;
-    private nativeLocalhostWallet: Wallet | null = null;
+    private nativeAssociationWallet: Wallet | null = null;
     private destroyed = false;
 
     constructor(config: ConnectorConfig = {}) {
@@ -131,11 +131,12 @@ export class ConnectorClient {
 
             this.walletDetector.initialize();
 
-            const nativeLocalhostConfig = resolveNativeLocalhostConfig(this.config.nativeLocalhost);
-            if (nativeLocalhostConfig.enabled) {
-                this.initializeNativeLocalhost().catch(err => {
+            const nativeAssociationInput = this.config.nativeAssociation ?? this.config.nativeLocalhost;
+            const nativeAssociationConfig = resolveNativeAssociationConfig(nativeAssociationInput);
+            if (nativeAssociationConfig.enabled) {
+                this.initializeNativeAssociation().catch(err => {
                     if (this.config.debug) {
-                        logger.error('Native localhost wallet initialization failed', { error: err });
+                        logger.error('Native association wallet initialization failed', { error: err });
                     }
                 });
             }
@@ -168,16 +169,18 @@ export class ConnectorClient {
     }
 
     /**
-     * Initialize Native localhost wallet discovery.
+     * Initialize Native association wallet discovery.
      *
      * This stays per ConnectorClient instance by using additional wallets instead
      * of registering into the global Wallet Standard registry.
      */
-    private async initializeNativeLocalhost(): Promise<void> {
-        const wallet = await discoverNativeLocalhostWallet(this.config.nativeLocalhost);
+    private async initializeNativeAssociation(): Promise<void> {
+        const wallet = await discoverNativeAssociationWallet(
+            this.config.nativeAssociation ?? this.config.nativeLocalhost,
+        );
         if (!wallet || this.destroyed) return;
 
-        this.nativeLocalhostWallet = wallet;
+        this.nativeAssociationWallet = wallet;
         this.walletDetector.setAdditionalWallets([...(this.config.additionalWallets ?? []), wallet]);
     }
 
@@ -416,7 +419,7 @@ export class ConnectorClient {
             }
         }
 
-        this.nativeLocalhostWallet = null;
+        this.nativeAssociationWallet = null;
         this.connectionManager.disconnect().catch(() => {});
         this.walletDetector.destroy();
         this.eventEmitter.offAll();

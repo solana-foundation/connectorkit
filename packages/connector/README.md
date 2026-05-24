@@ -955,7 +955,7 @@ Once enabled, "WalletConnect" appears as a connector (id: `walletconnect`) in yo
 
 See the [WalletConnect Solana documentation](https://docs.walletconnect.network/wallet-sdk/chain-support/solana) for more details.
 
-### Native Localhost Wallet
+### Native Wallet Association
 
 ConnectorKit can optionally discover a locally running Native desktop wallet app over loopback without requiring a browser extension. This is disabled by default to avoid silent localhost fingerprinting.
 
@@ -966,7 +966,7 @@ import { getDefaultConfig } from '@solana/connector/headless';
 
 const config = getDefaultConfig({
     appName: 'My App',
-    nativeLocalhost: {
+    nativeAssociation: {
         enabled: true,
         host: '127.0.0.1',
         port: 51884,
@@ -974,11 +974,13 @@ const config = getDefaultConfig({
 });
 ```
 
-You can also use `nativeLocalhost: true` to enable the defaults. Object config must include `enabled: true`; for example, `nativeLocalhost: { port: 51885 }` remains disabled.
+You can also use `nativeAssociation: true` or the backward-compatible `nativeLocalhost: true` to enable the defaults. Object config must include `enabled: true`; for example, `nativeAssociation: { port: 51885 }` remains disabled.
 
-When enabled, ConnectorKit probes `GET http://127.0.0.1:51884/v1/discover`. Discovery is availability-only metadata: it never requests or exposes accounts and is only used for display and capability hints. The Native app must authorize `/v1/connect` and all signing requests before returning accounts, signatures, or signed transactions.
+When enabled, ConnectorKit probes `GET http://127.0.0.1:51884/v2/discover`. Discovery is availability-only metadata: it never requests or exposes accounts and is only used for display and capability hints. The old v1 bridge endpoints are no longer used.
 
-ConnectorKit includes `window.location.origin` in connect and signing request metadata, but the Native server must verify the browser HTTP `Origin` header server-side. Localhost is only a transport, not a trust boundary. ConnectorKit does not send cookies, credentials, or static bearer tokens to the Native wallet.
+Connect creates or resumes a Native Wallet Association session through `/v2/handshake` and encrypted `/v2/associate` envelopes. Signing requests go through encrypted `/v2/rpc` envelopes. The Native app must authorize associations and signing according to its own policy.
+
+ConnectorKit includes `window.location.origin` in handshake metadata, but the Native server must verify the browser HTTP `Origin` header server-side. Localhost is only a transport, not a trust boundary. ConnectorKit does not send cookies, credentials, or static bearer tokens to the Native wallet.
 
 ---
 
