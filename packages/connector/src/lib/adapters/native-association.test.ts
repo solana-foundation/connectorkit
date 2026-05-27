@@ -1,9 +1,19 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { WalletAccount } from '@wallet-standard/base';
+import type { Wallet, WalletAccount } from '@wallet-standard/base';
+
+const relayMocks = vi.hoisted(() => ({
+    createRelayDappTransport: vi.fn(),
+}));
+
+vi.mock('@wallet-association/transport-relay', () => ({
+    createRelayDappTransport: relayMocks.createRelayDappTransport,
+}));
+
 import {
     createAssociationCrypto,
     createNativeAssociationStorage,
     createNativeAssociationWallet,
+    createNativeRelayAssociationWallet,
     discoverNativeAssociationWallet,
     NativeAssociationWalletError,
     resolveNativeAssociationConfig,
@@ -176,6 +186,7 @@ describe('native association wallet adapter', () => {
 
     afterEach(() => {
         vi.useRealTimers();
+        relayMocks.createRelayDappTransport.mockReset();
         vi.unstubAllGlobals();
         window.localStorage.clear();
     });
@@ -214,6 +225,24 @@ describe('native association wallet adapter', () => {
             'http://127.0.0.1:51885/v2/discover',
             expect.objectContaining({ method: 'GET' }),
         );
+    });
+
+    it('resolved config can enable Native relay without localhost discovery', () => {
+        const onDisplayUri = vi.fn();
+        const config = resolveNativeAssociationConfig({
+            relay: {
+                enabled: true,
+                relayHttpUrl: 'http://127.0.0.1:51885',
+                onDisplayUri,
+            },
+        });
+
+        expect(config.enabled).toBe(false);
+        expect(config.relay).toMatchObject({
+            enabled: true,
+            relayHttpUrl: 'http://127.0.0.1:51885',
+            onDisplayUri,
+        });
     });
 
     it('failed discovery returns null and does not throw', async () => {
@@ -319,6 +348,42 @@ describe('native association wallet adapter', () => {
         expect(result.accounts[0].chains).toEqual(['solana:mainnet']);
         expect(result.accounts[0].features).toEqual(['solana:signMessage', 'solana:signTransaction']);
         expect(storage.set).toHaveBeenCalledWith(expect.objectContaining({ sessionId: 'session-created' }));
+    });
+
+    it('Native relay wallet displays wap URI and connects after wallet joins relay', async () => {
+        const onDisplayUri = vi.fn();
+        const onSessionEstablished = vi.fn();
+        const storage = createMemoryStorage();
+        const relayTransport = createRelayTransport();
+        relayMocks.createRelayDappTransport.mockResolvedValueOnce(relayTransport);
+        const wallet = createNativeRelayAssociationWallet(
+            resolveNativeAssociationConfig({
+                relay: {
+                    enabled: true,
+                    relayHttpUrl: 'http://127.0.0.1:51885',
+                    onDisplayUri,
+                    onSessionEstablished,
+                },
+            }),
+            {
+                storage,
+                crypto: createTestCrypto(),
+            },
+        );
+
+        const result = await connect(wallet);
+
+        expect(relayMocks.createRelayDappTransport).toHaveBeenCalledWith({
+            relayHttpUrl: 'http://127.0.0.1:51885',
+            origin: window.location.origin,
+        });
+        expect(onDisplayUri).toHaveBeenCalledWith('wap://associate?relay=local');
+        expect(relayTransport.waitForWallet).toHaveBeenCalled();
+        expect(relayTransport.request).toHaveBeenCalledWith('discover');
+        expect(result.accounts).toHaveLength(1);
+        expect(wallet.accounts).toHaveLength(1);
+        expect(storage.set).toHaveBeenCalledWith(expect.objectContaining({ sessionId: 'session-created' }));
+        expect(onSessionEstablished).toHaveBeenCalled();
     });
 
     it('expired stored session is cleared', () => {
@@ -472,11 +537,62 @@ describe('native association wallet adapter', () => {
     });
 });
 
-async function connect(wallet: ReturnType<typeof createNativeAssociationWallet>) {
+async function connect(wallet: Wallet) {
     const connectFeature = wallet.features['standard:connect'] as {
         connect(): Promise<{ accounts: readonly WalletAccount[] }>;
     };
     return connectFeature.connect();
+}
+
+function createRelayTransport() {
+    let handshakeCount = 0;
+    return {
+        type: 'relay',
+        connectionUri: 'wap://associate?relay=local',
+        roomId: 'room-1',
+        waitForWallet: vi.fn(async () => {}),
+        request: vi.fn(async (operation: string, body?: unknown) => {
+            if (operation === 'discover') {
+                return { ...DISCOVERY, transports: [{ type: 'relay' }] };
+            }
+            if (operation === 'handshake') {
+                handshakeCount += 1;
+                return {
+                    protocolVersion: '2',
+                    handshakeId: `relay-handshake-${handshakeCount}`,
+                    walletPublicKeyBase64: base64(new Uint8Array(32).fill(9)),
+                    expiresAt: '2026-01-01T00:05:00.000Z',
+                };
+            }
+            if (operation === 'associate') {
+                const envelope = body as AssociationEnvelope;
+                return {
+                    protocolVersion: '2',
+                    keyId: envelope.keyId,
+                    sealedBoxBase64: encodeJson({
+                        sessionId: 'session-created',
+                        sessionTokenBase64: base64(new Uint8Array(32).fill(7)),
+                        expiresAt: '2026-01-02T00:00:00.000Z',
+                        accounts: [
+                            {
+                                address: 'Account111111111111111111111111111111111',
+                                publicKey: bytes(),
+                                chains: ['solana:mainnet'],
+                                features: ['solana:signMessage', 'solana:signTransaction'],
+                                label: 'Main',
+                            },
+                        ],
+                        chains: ['solana:mainnet'],
+                        features: ['solana:signMessage', 'solana:signTransaction'],
+                        signingPolicy: 'prompt',
+                    }),
+                };
+            }
+            throw new Error(`unexpected relay operation ${operation}`);
+        }),
+        close: vi.fn(),
+        onEvent: vi.fn(() => () => {}),
+    };
 }
 
 async function signMessage(

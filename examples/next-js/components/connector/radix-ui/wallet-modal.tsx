@@ -55,10 +55,15 @@ export function WalletModal({ open, onOpenChange, walletConnectUri, onClearWalle
     }, [status, connectorId]);
 
     const walletConnectConnector = connectors.find(c => c.name === 'WalletConnect') ?? null;
-    const isWalletConnectFlow =
+    const nativeRelayConnector = connectors.find(c => c.name === 'Native Relay') ?? null;
+    const isNativeRelayUri = walletConnectUri?.startsWith('wap://') === true;
+    const isPairingUriFlow =
         (!!walletConnectConnector &&
             (connectingConnectorId === walletConnectConnector.id ||
                 (status === 'connecting' && connectorId === walletConnectConnector.id))) ||
+        (!!nativeRelayConnector &&
+            (connectingConnectorId === nativeRelayConnector.id ||
+                (status === 'connecting' && connectorId === nativeRelayConnector.id))) ||
         !!walletConnectUri;
 
     function cancelConnection() {
@@ -79,15 +84,15 @@ export function WalletModal({ open, onOpenChange, walletConnectUri, onClearWalle
     const handleSelectWallet = async (connector: WalletConnectorMetadata) => {
         setConnectingConnectorId(connector.id);
         try {
-            if (connector.name === 'WalletConnect') {
+            if (connector.name === 'WalletConnect' || connector.name === 'Native Relay') {
                 // Ensure stale URIs don't flash
                 onClearWalletConnectUri?.();
             }
             await connectWallet(connector.id);
             localStorage.setItem('recentlyConnectedConnectorId', connector.id);
             setRecentlyConnectedConnectorId(connector.id);
-            // Don't close modal for WalletConnect - wait for connection
-            if (connector.name !== 'WalletConnect') {
+            // Don't close modal for URI-based flows until connection completes.
+            if (connector.name !== 'WalletConnect' && connector.name !== 'Native Relay') {
                 onOpenChange(false);
             }
         } catch (error) {
@@ -112,7 +117,7 @@ export function WalletModal({ open, onOpenChange, walletConnectUri, onClearWalle
         }
     };
 
-    const handleBackFromWalletConnect = () => {
+    const handleBackFromPairingUri = () => {
         cancelConnection();
     };
 
@@ -143,17 +148,19 @@ export function WalletModal({ open, onOpenChange, walletConnectUri, onClearWalle
         <Dialog open={open} onOpenChange={handleOpenChange}>
             <DialogContent className="sm:max-w-md [&>button]:hidden rounded-[24px]">
                 <DialogHeader className="flex flex-row items-center justify-between">
-                    {isWalletConnectFlow ? (
+                    {isPairingUriFlow ? (
                         <Button
                             type="button"
                             variant="outline"
                             className="rounded-[16px] size-8 shrink-0 p-2 cursor-pointer"
-                            onClick={handleBackFromWalletConnect}
+                            onClick={handleBackFromPairingUri}
                         >
                             <ChevronLeft className="size-4" />
                         </Button>
                     ) : null}
-                    <DialogTitle>{isWalletConnectFlow ? 'WalletConnect' : 'Connect your wallet'}</DialogTitle>
+                    <DialogTitle>
+                        {isPairingUriFlow ? (isNativeRelayUri ? 'Native Relay' : 'WalletConnect') : 'Connect your wallet'}
+                    </DialogTitle>
                     <DialogPrimitive.Close asChild>
                         <Button variant="outline" className="rounded-[16px] size-8 p-2 shrink-0 cursor-pointer">
                             <IconXmark className="size-3" />
@@ -161,21 +168,34 @@ export function WalletModal({ open, onOpenChange, walletConnectUri, onClearWalle
                     </DialogPrimitive.Close>
                 </DialogHeader>
 
-                {/* WalletConnect QR Code Display */}
-                {isWalletConnectFlow ? (
+                {/* Pairing URI display */}
+                {isPairingUriFlow ? (
                     <div className="space-y-4 py-2">
-                        <p className="text-center text-sm text-muted-foreground">Scan with your mobile wallet</p>
-
-                        {/* QR Code */}
-                        <div className="flex justify-center">
-                            <CustomQRCode
-                                value={walletConnectUri ?? ''}
-                                size={280}
-                                ecl="M"
-                                loading={!walletConnectUri}
-                                scanning={!!walletConnectUri}
-                            />
-                        </div>
+                        {isNativeRelayUri ? (
+                            <>
+                                <p className="text-center text-sm text-muted-foreground">
+                                    Paste this WAP URI into Native Wallet Settings to pair over relay.
+                                </p>
+                                <div className="rounded-[16px] border bg-muted/40 p-3">
+                                    <code className="block max-h-32 overflow-auto break-all text-xs">
+                                        {walletConnectUri ?? 'Creating relay room...'}
+                                    </code>
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                <p className="text-center text-sm text-muted-foreground">Scan with your mobile wallet</p>
+                                <div className="flex justify-center">
+                                    <CustomQRCode
+                                        value={walletConnectUri ?? ''}
+                                        size={280}
+                                        ecl="M"
+                                        loading={!walletConnectUri}
+                                        scanning={!!walletConnectUri}
+                                    />
+                                </div>
+                            </>
+                        )}
 
                         {/* Copy URI button */}
                         <Button
@@ -192,14 +212,16 @@ export function WalletModal({ open, onOpenChange, walletConnectUri, onClearWalle
                             ) : (
                                 <>
                                     <Copy className="w-4 h-4 mr-2" />
-                                    Copy link instead
+                                    {isNativeRelayUri ? 'Copy URI' : 'Copy link instead'}
                                 </>
                             )}
                         </Button>
 
-                        <p className="text-xs text-center text-muted-foreground">
-                            Works with Phantom, Trust Wallet, Exodus, and other WalletConnect-compatible wallets
-                        </p>
+                        {!isNativeRelayUri && (
+                            <p className="text-xs text-center text-muted-foreground">
+                                Works with Phantom, Trust Wallet, Exodus, and other WalletConnect-compatible wallets
+                            </p>
+                        )}
                     </div>
                 ) : (
                     <div className="space-y-4">

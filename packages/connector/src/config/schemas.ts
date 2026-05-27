@@ -94,6 +94,16 @@ export const nativeAssociationObjectConfigSchema = z.strictObject({
     protocolVersion: z.literal('2').optional(),
     timeoutMs: z.number().int().nonnegative().optional(),
     storageKey: z.string().min(1, 'Native association storage key cannot be empty').optional(),
+    relay: z
+        .strictObject({
+            enabled: z.boolean().optional(),
+            relayHttpUrl: urlSchema.optional(),
+            onDisplayUri: z.custom<(uri: string) => void>(val => typeof val === 'function').optional(),
+            onSessionEstablished: z.custom<() => void>(val => typeof val === 'function').optional(),
+            onSessionDisconnected: z.custom<() => void>(val => typeof val === 'function').optional(),
+            storageKey: z.string().min(1, 'Native relay association storage key cannot be empty').optional(),
+        })
+        .optional(),
 });
 
 export const nativeAssociationConfigSchema = z.union([z.boolean(), nativeAssociationObjectConfigSchema]).optional();

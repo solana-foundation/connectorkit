@@ -114,6 +114,7 @@
         "@wallet-standard/features": "^1.1.0",
         "@wallet-association/core": "file:/Users/stevensarmi/Code/wallet-association-protocol/packages/core",
         "@wallet-association/transport-localhost": "file:/Users/stevensarmi/Code/wallet-association-protocol/packages/transport-localhost",
+        "@wallet-association/transport-relay": "file:/Users/stevensarmi/Code/wallet-association-protocol/packages/transport-relay",
         "@wallet-association/wallet-standard": "file:/Users/stevensarmi/Code/wallet-association-protocol/packages/wallet-standard",
         "@wallet-ui/core": "^4.1.0",
         "zod": "^4.4.3"

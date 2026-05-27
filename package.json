@@ -1,43 +1,43 @@
 {
-    "name": "connector-kit",
-    "version": "0.0.2",
-    "private": true,
-    "description": "A connector kit for solana applications",
-    "workspaces": [
-        "packages/*",
-        "apps/*",
-        "examples/*",
-        "tools/*"
-    ],
-    "scripts": {
-        "build": "turbo build",
-        "dev": "turbo dev",
-        "lint": "turbo lint",
-        "test": "turbo test",
-        "type-check": "turbo type-check",
-        "clean": "turbo clean",
-        "format": "prettier --write .",
-        "format:check": "prettier --check .",
-        "changeset": "changeset",
-        "version-packages": "changeset version",
-        "release": "turbo build && changeset publish"
-    },
-    "devDependencies": {
-        "@changesets/cli": "^2.31.0",
-        "@solana/prettier-config-solana": "0.0.6",
-        "@types/d3-path": "^3.1.1",
-        "@types/js-cookie": "^3.0.6",
-        "@types/node": "^25.9.1",
-        "@typescript-eslint/eslint-plugin": "^8.59.4",
-        "@typescript-eslint/parser": "^8.59.4",
-        "eslint": "^10.4.0",
-        "prettier": "^3.8.3",
-        "react": "^19.2.6",
-        "react-dom": "^19.2.6",
-        "turbo": "^2.9.14"
-    },
-    "engines": {
-        "node": ">=20.18.0"
-    },
-    "packageManager": "pnpm@11.2.2"
+  "name": "connector-kit",
+  "version": "0.0.2",
+  "private": true,
+  "description": "A connector kit for solana applications",
+  "workspaces": [
+    "packages/*",
+    "apps/*",
+    "examples/*",
+    "tools/*"
+  ],
+  "scripts": {
+    "build": "turbo build",
+    "dev": "turbo dev",
+    "lint": "turbo lint",
+    "test": "turbo test",
+    "type-check": "turbo type-check",
+    "clean": "turbo clean",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "changeset": "changeset",
+    "version-packages": "changeset version",
+    "release": "turbo build && changeset publish"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.31.0",
+    "@solana/prettier-config-solana": "0.0.6",
+    "@types/d3-path": "^3.1.1",
+    "@types/js-cookie": "^3.0.6",
+    "@types/node": "^25.9.1",
+    "@typescript-eslint/eslint-plugin": "^8.59.4",
+    "@typescript-eslint/parser": "^8.59.4",
+    "eslint": "^10.4.0",
+    "prettier": "^3.8.3",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
+    "turbo": "^2.9.14"
+  },
+  "engines": {
+    "node": ">=20.18.0"
+  },
+  "packageManager": "pnpm@11.2.2"
 }

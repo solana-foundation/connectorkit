@@ -6,9 +6,9 @@ import type {
 } from '../../../types/native-association';
 import { discoverLocalhostWallet } from '@wallet-association/transport-localhost';
 import { createLocalhostAssociationTransport } from './localhost-transport';
-import type { NativeAssociationTransport } from './localhost-transport';
+import type { AssociationTransport, NativeAssociationTransport } from './localhost-transport';
 import type { AssociationDiscoverResponse } from './protocol';
-import { createNativeAssociationWallet } from './wallet';
+import { createNativeAssociationWallet, createNativeRelayAssociationWallet } from './wallet';
 import type { NativeAssociationWalletDeps } from './wallet';
 
 export const DEFAULT_NATIVE_ASSOCIATION_CONFIG: NativeAssociationResolvedConfig = {
@@ -18,10 +18,15 @@ export const DEFAULT_NATIVE_ASSOCIATION_CONFIG: NativeAssociationResolvedConfig 
     protocolVersion: '2',
     timeoutMs: 250,
     storageKey: 'solana.connector.nativeAssociation',
+    relay: {
+        enabled: false,
+        relayHttpUrl: 'http://127.0.0.1:51885',
+        storageKey: 'solana.connector.nativeAssociation',
+    },
 };
 
 export interface DiscoverNativeAssociationWalletDeps extends Partial<NativeAssociationWalletDeps> {
-    transport?: NativeAssociationTransport;
+    transport?: AssociationTransport;
 }
 
 export function resolveNativeAssociationConfig(input?: NativeAssociationConfigInput): NativeAssociationResolvedConfig {
@@ -39,6 +44,14 @@ export function resolveNativeAssociationConfig(input?: NativeAssociationConfigIn
         enabled: input.enabled === true,
         protocolVersion: input.protocolVersion ?? DEFAULT_NATIVE_ASSOCIATION_CONFIG.protocolVersion,
         storageKey: input.storageKey ?? DEFAULT_NATIVE_ASSOCIATION_CONFIG.storageKey,
+        relay: {
+            ...DEFAULT_NATIVE_ASSOCIATION_CONFIG.relay,
+            ...input.relay,
+            enabled: input.relay?.enabled === true,
+            relayHttpUrl: input.relay?.relayHttpUrl ?? DEFAULT_NATIVE_ASSOCIATION_CONFIG.relay.relayHttpUrl,
+            storageKey:
+                input.relay?.storageKey ?? input.storageKey ?? DEFAULT_NATIVE_ASSOCIATION_CONFIG.relay.storageKey,
+        },
     };
 }
 
@@ -70,6 +83,7 @@ export async function discoverNativeAssociationWallet(
 }
 
 export { createNativeAssociationWallet };
+export { createNativeRelayAssociationWallet };
 export type { NativeAssociationWalletDeps };
 export type {
     AssociationDiscoverResponse,

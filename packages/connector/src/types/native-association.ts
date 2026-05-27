@@ -17,6 +17,23 @@ export interface NativeAssociationConfig {
     timeoutMs?: number;
     /** localStorage key namespace for persisted native association sessions. */
     storageKey?: string;
+    /** Relay rendezvous pairing for Native desktop paste-URI flows. */
+    relay?: NativeAssociationRelayConfig;
+}
+
+export interface NativeAssociationRelayConfig {
+    /** Explicitly enable Native relay pairing. */
+    enabled?: boolean;
+    /** Reference relay HTTP URL used to create WAP relay rooms. */
+    relayHttpUrl?: string;
+    /** Called with the wap://associate URI after room creation. */
+    onDisplayUri?: (uri: string) => void;
+    /** Called when the relay connection completes. */
+    onSessionEstablished?: () => void;
+    /** Called when the relay wallet disconnects or the pairing is cancelled. */
+    onSessionDisconnected?: () => void;
+    /** localStorage key namespace for persisted native relay sessions. */
+    storageKey?: string;
 }
 
 export interface NativeAssociationResolvedConfig {
@@ -25,6 +42,16 @@ export interface NativeAssociationResolvedConfig {
     port: number;
     protocolVersion: '2';
     timeoutMs: number;
+    storageKey: string;
+    relay: NativeAssociationResolvedRelayConfig;
+}
+
+export interface NativeAssociationResolvedRelayConfig {
+    enabled: boolean;
+    relayHttpUrl: string;
+    onDisplayUri?: (uri: string) => void;
+    onSessionEstablished?: () => void;
+    onSessionDisconnected?: () => void;
     storageKey: string;
 }
 

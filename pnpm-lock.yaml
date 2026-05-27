@@ -237,6 +237,9 @@ importers:
       '@wallet-association/transport-localhost':
         specifier: file:/Users/stevensarmi/Code/wallet-association-protocol/packages/transport-localhost
         version: file:../wallet-association-protocol/packages/transport-localhost
+      '@wallet-association/transport-relay':
+        specifier: file:/Users/stevensarmi/Code/wallet-association-protocol/packages/transport-relay
+        version: file:../wallet-association-protocol/packages/transport-relay
       '@wallet-association/wallet-standard':
         specifier: file:/Users/stevensarmi/Code/wallet-association-protocol/packages/wallet-standard
         version: file:../wallet-association-protocol/packages/wallet-standard(typescript@6.0.3)
@@ -3369,6 +3372,9 @@ packages:
 
   '@wallet-association/transport-localhost@file:../wallet-association-protocol/packages/transport-localhost':
     resolution: {directory: ../wallet-association-protocol/packages/transport-localhost, type: directory}
+
+  '@wallet-association/transport-relay@file:../wallet-association-protocol/packages/transport-relay':
+    resolution: {directory: ../wallet-association-protocol/packages/transport-relay, type: directory}
 
   '@wallet-association/wallet-standard@file:../wallet-association-protocol/packages/wallet-standard':
     resolution: {directory: ../wallet-association-protocol/packages/wallet-standard, type: directory}
@@ -10100,6 +10106,10 @@ snapshots:
       '@noble/hashes': 1.8.0
 
   '@wallet-association/transport-localhost@file:../wallet-association-protocol/packages/transport-localhost':
+    dependencies:
+      '@wallet-association/core': file:../wallet-association-protocol/packages/core
+
+  '@wallet-association/transport-relay@file:../wallet-association-protocol/packages/transport-relay':
     dependencies:
       '@wallet-association/core': file:../wallet-association-protocol/packages/core
 

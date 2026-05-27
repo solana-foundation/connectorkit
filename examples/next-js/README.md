@@ -9,11 +9,13 @@ Production-ready Solana wallet connection components built with shadcn/ui and Ne
 pnpm install
 
 # Run the example
-cd examples/react
+cd examples/next-js
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) to see the components in action.
+Open [http://localhost:3100](http://localhost:3100) to see the components in action.
+
+The dev port starts at `3100` so it does not collide with Native's local backend on `127.0.0.1:3000`. If `3100` is already busy, the script automatically tries the next free port. Override it with `CONNECTORKIT_NEXT_PORT=3101 pnpm dev` if needed.
 
 ## 📦 What's Included
 

@@ -6,6 +6,7 @@ import type { SolanaCluster } from '@wallet-ui/core';
 import type { Wallet } from '../../types/wallets';
 
 const nativeAdapterMocks = vi.hoisted(() => ({
+    createNativeRelayAssociationWallet: vi.fn(),
     discoverNativeAssociationWallet: vi.fn(),
     resolveNativeAssociationConfig: vi.fn(),
 }));
@@ -45,6 +46,11 @@ describe('ConnectorClient', () => {
             protocolVersion: '2',
             timeoutMs: 250,
             storageKey: 'solana.connector.nativeAssociation',
+            relay: {
+                enabled: typeof input === 'object' && input?.relay?.enabled === true,
+                relayHttpUrl: 'http://127.0.0.1:51885',
+                storageKey: 'solana.connector.nativeAssociation',
+            },
         }));
         nativeAdapterMocks.discoverNativeAssociationWallet.mockResolvedValue(null);
 
@@ -215,6 +221,36 @@ describe('ConnectorClient', () => {
 
             await vi.waitFor(() => {
                 expect(nativeAdapterMocks.discoverNativeAssociationWallet).toHaveBeenCalledWith(true);
+            });
+        });
+
+        it('enabled native relay config adds relay wallet without localhost discovery', async () => {
+            const relayWallet = {
+                version: '1.0.0',
+                name: 'Native Relay',
+                icon: 'data:image/png;base64,aGVsbG8=',
+                chains: ['solana:mainnet'],
+                accounts: [],
+                features: {
+                    'standard:connect': { version: '1.0.0', connect: vi.fn() },
+                },
+            } as unknown as Wallet;
+            nativeAdapterMocks.createNativeRelayAssociationWallet.mockReturnValueOnce(relayWallet);
+
+            new ConnectorClient({
+                ...config,
+                nativeAssociation: {
+                    relay: {
+                        enabled: true,
+                        relayHttpUrl: 'http://127.0.0.1:51885',
+                    },
+                },
+            });
+
+            await vi.waitFor(() => {
+                expect(nativeAdapterMocks.discoverNativeAssociationWallet).not.toHaveBeenCalled();
+                expect(nativeAdapterMocks.createNativeRelayAssociationWallet).toHaveBeenCalled();
+                expect(detectorMocks.setAdditionalWallets).toHaveBeenCalledWith([relayWallet]);
             });
         });
 

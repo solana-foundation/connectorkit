@@ -28,7 +28,11 @@ import { createLogger } from '../utils/secure-logger';
 import { tryCatchSync } from './try-catch';
 import type { WalletConnectRegistration } from '../wallet/walletconnect';
 import { prepareTransactionForWallet } from '../../utils/transaction-format';
-import { discoverNativeAssociationWallet, resolveNativeAssociationConfig } from '../adapters/native-association';
+import {
+    createNativeRelayAssociationWallet,
+    discoverNativeAssociationWallet,
+    resolveNativeAssociationConfig,
+} from '../adapters/native-association';
 
 const logger = createLogger('ConnectorClient');
 
@@ -45,7 +49,7 @@ export class ConnectorClient {
     private initialized = false;
     private config: ConnectorConfig;
     private walletConnectRegistration: WalletConnectRegistration | null = null;
-    private nativeAssociationWallet: Wallet | null = null;
+    private nativeAssociationWallets: Wallet[] = [];
     private destroyed = false;
 
     constructor(config: ConnectorConfig = {}) {
@@ -133,7 +137,7 @@ export class ConnectorClient {
 
             const nativeAssociationInput = this.config.nativeAssociation ?? this.config.nativeLocalhost;
             const nativeAssociationConfig = resolveNativeAssociationConfig(nativeAssociationInput);
-            if (nativeAssociationConfig.enabled) {
+            if (nativeAssociationConfig.enabled || nativeAssociationConfig.relay.enabled) {
                 this.initializeNativeAssociation().catch(err => {
                     if (this.config.debug) {
                         logger.error('Native association wallet initialization failed', { error: err });
@@ -175,13 +179,23 @@ export class ConnectorClient {
      * of registering into the global Wallet Standard registry.
      */
     private async initializeNativeAssociation(): Promise<void> {
-        const wallet = await discoverNativeAssociationWallet(
-            this.config.nativeAssociation ?? this.config.nativeLocalhost,
-        );
-        if (!wallet || this.destroyed) return;
+        const input = this.config.nativeAssociation ?? this.config.nativeLocalhost;
+        const config = resolveNativeAssociationConfig(input);
+        const wallets: Wallet[] = [];
 
-        this.nativeAssociationWallet = wallet;
-        this.walletDetector.setAdditionalWallets([...(this.config.additionalWallets ?? []), wallet]);
+        if (config.enabled) {
+            const wallet = await discoverNativeAssociationWallet(input);
+            if (wallet) wallets.push(wallet);
+        }
+
+        if (config.relay.enabled) {
+            wallets.push(createNativeRelayAssociationWallet(config));
+        }
+
+        if (this.destroyed || wallets.length === 0) return;
+
+        this.nativeAssociationWallets = wallets;
+        this.walletDetector.setAdditionalWallets([...(this.config.additionalWallets ?? []), ...wallets]);
     }
 
     /**
@@ -419,7 +433,7 @@ export class ConnectorClient {
             }
         }
 
-        this.nativeAssociationWallet = null;
+        this.nativeAssociationWallets = [];
         this.connectionManager.disconnect().catch(() => {});
         this.walletDetector.destroy();
         this.eventEmitter.offAll();

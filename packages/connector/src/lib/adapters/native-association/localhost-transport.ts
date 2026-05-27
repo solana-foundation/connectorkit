@@ -1,4 +1,4 @@
-import { WalletAssociationError } from '@wallet-association/core';
+import { WalletAssociationError, type AssociationClientTransport } from '@wallet-association/core';
 import {
     createLocalhostTransport,
     type AssociationTransport,
@@ -12,11 +12,12 @@ export class NativeAssociationWalletError extends WalletAssociationError {
     }
 }
 
-export type NativeAssociationTransport = AssociationTransport;
+export type NativeAssociationTransport = AssociationTransport | AssociationClientTransport;
+export type { AssociationTransport };
 
 export function createLocalhostAssociationTransport(
     config: NativeAssociationResolvedConfig,
-): NativeAssociationTransport {
+): AssociationTransport {
     const transport = createLocalhostTransport(config);
 
     return {

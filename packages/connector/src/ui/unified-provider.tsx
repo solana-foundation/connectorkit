@@ -32,21 +32,24 @@ function AppProviderInner({ children, connectorConfig, mobile, providers = [] }:
 
     // Auto-wire WalletConnect callbacks if WalletConnect is enabled
     const enhancedConfig = useMemo(() => {
-        if (!connectorConfig?.walletConnect?.enabled) {
-            return connectorConfig;
+        let nextConfig = connectorConfig;
+
+        if (nextConfig?.walletConnect?.enabled) {
+            const wcConfig = nextConfig.walletConnect;
+            nextConfig = {
+                ...nextConfig,
+                walletConnect: {
+                    ...wcConfig,
+                    // Auto-wire callbacks - use provided ones or fall back to context-based ones
+                    onDisplayUri: wcConfig.onDisplayUri ?? setUri,
+                    onSessionEstablished: wcConfig.onSessionEstablished ?? clearUri,
+                    onSessionDisconnected: wcConfig.onSessionDisconnected ?? clearUri,
+                },
+            };
         }
 
-        const wcConfig = connectorConfig.walletConnect;
-        return {
-            ...connectorConfig,
-            walletConnect: {
-                ...wcConfig,
-                // Auto-wire callbacks - use provided ones or fall back to context-based ones
-                onDisplayUri: wcConfig.onDisplayUri ?? setUri,
-                onSessionEstablished: wcConfig.onSessionEstablished ?? clearUri,
-                onSessionDisconnected: wcConfig.onSessionDisconnected ?? clearUri,
-            },
-        };
+        nextConfig = withNativeRelayUriCallbacks(nextConfig, setUri, clearUri);
+        return nextConfig;
     }, [connectorConfig, setUri, clearUri]);
 
     // Start with connector provider as the base
@@ -95,10 +98,10 @@ function AppProviderInner({ children, connectorConfig, mobile, providers = [] }:
  */
 export function AppProvider(props: AppProviderProps) {
     const hasWalletConnect = props.connectorConfig?.walletConnect?.enabled;
+    const hasNativeRelay = nativeRelayEnabled(props.connectorConfig);
 
-    // Only wrap with WalletConnectProvider if WalletConnect is enabled
-    // This avoids unnecessary context overhead when not using WalletConnect
-    if (hasWalletConnect) {
+    // WalletConnectProvider carries generic pairing URI state for WalletConnect and Native relay.
+    if (hasWalletConnect || hasNativeRelay) {
         return (
             <WalletConnectProvider>
                 <AppProviderInner {...props} />
@@ -107,6 +110,34 @@ export function AppProvider(props: AppProviderProps) {
     }
 
     return <AppProviderInner {...props} />;
+}
+
+function nativeRelayEnabled(config: ConnectorConfig | undefined): boolean {
+    const nativeConfig = config?.nativeAssociation ?? config?.nativeLocalhost;
+    return typeof nativeConfig === 'object' && nativeConfig?.relay?.enabled === true;
+}
+
+function withNativeRelayUriCallbacks(
+    config: ConnectorConfig | undefined,
+    setUri: (uri: string | null) => void,
+    clearUri: () => void,
+): ConnectorConfig | undefined {
+    const nativeKey = config?.nativeAssociation ? 'nativeAssociation' : config?.nativeLocalhost ? 'nativeLocalhost' : null;
+    if (!config || !nativeKey) return config;
+    const nativeConfig = config[nativeKey];
+    if (typeof nativeConfig !== 'object' || nativeConfig.relay?.enabled !== true) return config;
+    return {
+        ...config,
+        [nativeKey]: {
+            ...nativeConfig,
+            relay: {
+                ...nativeConfig.relay,
+                onDisplayUri: nativeConfig.relay.onDisplayUri ?? setUri,
+                onSessionEstablished: nativeConfig.relay.onSessionEstablished ?? clearUri,
+                onSessionDisconnected: nativeConfig.relay.onSessionDisconnected ?? clearUri,
+            },
+        },
+    };
 }
 
 /** @deprecated Use `AppProvider` instead */

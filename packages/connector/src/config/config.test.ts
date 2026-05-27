@@ -259,6 +259,23 @@ describe('Configuration System', () => {
             expect(result.data.nativeAssociation).toBeDefined();
         });
 
+        it('should validate native relay association config options', () => {
+            const result = validateConfigOptions({
+                appName: 'Test App',
+                nativeAssociation: {
+                    relay: {
+                        enabled: true,
+                        relayHttpUrl: 'http://127.0.0.1:51885',
+                        storageKey: 'solana.connector.nativeAssociation',
+                    },
+                },
+            });
+
+            expect(result.success).toBe(true);
+            if (!result.success) return;
+            expect(result.data.nativeAssociation).toBeDefined();
+        });
+
         it('should reject invalid native localhost ports', () => {
             const result = validateConfigOptions({
                 appName: 'Test App',

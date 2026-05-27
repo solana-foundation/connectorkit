@@ -123,10 +123,15 @@ export function WalletModal({ open, onOpenChange, walletConnectUri, onClearWalle
     }, [status, connectorId]);
 
     const walletConnectConnector = connectors.find(c => c.name === 'WalletConnect') ?? null;
-    const isWalletConnectFlow =
+    const nativeRelayConnector = connectors.find(c => c.name === 'Native Relay') ?? null;
+    const isNativeRelayUri = walletConnectUri?.startsWith('wap://') === true;
+    const isPairingUriFlow =
         (!!walletConnectConnector &&
             (connectingConnectorId === walletConnectConnector.id ||
                 (status === 'connecting' && connectorId === walletConnectConnector.id))) ||
+        (!!nativeRelayConnector &&
+            (connectingConnectorId === nativeRelayConnector.id ||
+                (status === 'connecting' && connectorId === nativeRelayConnector.id))) ||
         !!walletConnectUri;
 
     function cancelConnection() {
@@ -145,14 +150,14 @@ export function WalletModal({ open, onOpenChange, walletConnectUri, onClearWalle
         clearError();
         setConnectingConnectorId(connector.id);
         try {
-            if (connector.name === 'WalletConnect') {
+            if (connector.name === 'WalletConnect' || connector.name === 'Native Relay') {
                 onClearWalletConnectUri?.();
             }
             await connectWallet(connector.id);
             localStorage.setItem('recentlyConnectedConnectorId', connector.id);
             setRecentlyConnectedConnectorId(connector.id);
-            // Don't close modal for WalletConnect - wait for connection
-            if (connector.name !== 'WalletConnect') {
+            // Don't close modal for URI-based flows until connection completes.
+            if (connector.name !== 'WalletConnect' && connector.name !== 'Native Relay') {
                 onOpenChange(false);
             }
         } catch (error) {
@@ -188,7 +193,7 @@ export function WalletModal({ open, onOpenChange, walletConnectUri, onClearWalle
         }
     };
 
-    const handleBackFromWalletConnect = () => {
+    const handleBackFromPairingUri = () => {
         cancelConnection();
     };
 
@@ -240,58 +245,55 @@ export function WalletModal({ open, onOpenChange, walletConnectUri, onClearWalle
             <DialogContent showCloseButton={false} className="max-w-md rounded-[24px] p-6">
                 {/* Header */}
                 <div className="flex items-center justify-between mb-4">
-                    {isWalletConnectFlow ? (
+                    {isPairingUriFlow ? (
                         <button
-                            onClick={handleBackFromWalletConnect}
+                            onClick={handleBackFromPairingUri}
                             className="rounded-[16px] h-8 w-8 p-2 border border-input bg-background shadow-xs hover:bg-accent hover:text-accent-foreground inline-flex items-center justify-center cursor-pointer"
                         >
                             <ChevronLeft className="h-4 w-4" />
                         </button>
                     ) : null}
                     <DialogTitle className="text-lg font-semibold">
-                        {isWalletConnectFlow ? 'WalletConnect' : 'Connect your wallet'}
+                        {isPairingUriFlow ? (isNativeRelayUri ? 'Native Relay' : 'WalletConnect') : 'Connect your wallet'}
                     </DialogTitle>
                     <DialogClose className="rounded-[16px] h-8 w-8 p-2 border border-input bg-background shadow-xs hover:bg-accent hover:text-accent-foreground inline-flex items-center justify-center cursor-pointer">
                         <X className="h-3 w-3" />
                     </DialogClose>
                 </div>
 
-                {/* WalletConnect QR Code Display */}
-                {isWalletConnectFlow ? (
+                {/* Pairing URI display */}
+                {isPairingUriFlow ? (
                     <div className="space-y-4 py-2 flex flex-col items-center">
-                        {/* Tooltip-style hint */}
-                        <div className="relative inline-flex flex-col items-center">
-                            <div className="bg-zinc-800 text-zinc-100 text-xs px-3 py-1.5 rounded-lg shadow-lg flex items-center gap-1.5">
-                                Use a WalletConnect
-                                <div className="">
-                                    <svg
-                                        className="w-6 h-6 inline-block"
-                                        viewBox="0 0 480 480"
-                                        fill="none"
-                                        xmlns="http://www.w3.org/2000/svg"
-                                    >
-                                        <path
-                                            d="M126.613 168.813C193.707 101.719 302.293 101.719 369.387 168.813L377.507 176.933C380.853 180.28 380.853 185.707 377.507 189.053L350.453 216.107C348.787 217.773 346.067 217.773 344.4 216.107L333.387 205.093C287.2 158.907 213.293 158.907 167.107 205.093L155.2 216.987C153.533 218.653 150.813 218.653 149.147 216.987L122.093 189.933C118.747 186.587 118.747 181.16 122.093 177.813L126.613 168.813ZM426.667 225.88L450.827 250.04C454.173 253.387 454.173 258.813 450.827 262.16L343.44 369.547C340.093 372.893 334.667 372.893 331.32 369.547L255.427 293.653C254.587 292.813 253.227 292.813 252.387 293.653L176.493 369.547C173.147 372.893 167.72 372.893 164.373 369.547L56.9867 262.16C53.64 258.813 53.64 253.387 56.9867 250.04L81.1467 225.88C84.4933 222.533 89.92 222.533 93.2667 225.88L169.16 301.773C170 302.613 171.36 302.613 172.2 301.773L248.093 225.88C251.44 222.533 256.867 222.533 260.213 225.88L336.107 301.773C336.947 302.613 338.307 302.613 339.147 301.773L415.04 225.88C418.387 222.533 423.813 222.533 426.667 225.88Z"
-                                            fill="#3B99FC"
-                                        />
-                                    </svg>
+                        {isNativeRelayUri ? (
+                            <>
+                                <p className="text-center text-sm text-muted-foreground">
+                                    Paste this WAP URI into Native Wallet Settings to pair over relay.
+                                </p>
+                                <div className="w-full rounded-[16px] border bg-muted/40 p-3">
+                                    <code className="block max-h-32 overflow-auto break-all text-xs">
+                                        {walletConnectUri ?? 'Creating relay room...'}
+                                    </code>
                                 </div>
-                                supported wallet to scan
-                            </div>
-                            {/* Caret */}
-                            <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-zinc-900" />
-                        </div>
-
-                        {/* QR Code */}
-                        <div className="flex justify-center">
-                            <CustomQRCode
-                                value={walletConnectUri ?? ''}
-                                size={280}
-                                ecl="M"
-                                loading={!walletConnectUri}
-                                scanning={!!walletConnectUri}
-                            />
-                        </div>
+                            </>
+                        ) : (
+                            <>
+                                <div className="relative inline-flex flex-col items-center">
+                                    <div className="bg-zinc-800 text-zinc-100 text-xs px-3 py-1.5 rounded-lg shadow-lg flex items-center gap-1.5">
+                                        Use a WalletConnect supported wallet to scan
+                                    </div>
+                                    <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-zinc-900" />
+                                </div>
+                                <div className="flex justify-center">
+                                    <CustomQRCode
+                                        value={walletConnectUri ?? ''}
+                                        size={280}
+                                        ecl="M"
+                                        loading={!walletConnectUri}
+                                        scanning={!!walletConnectUri}
+                                    />
+                                </div>
+                            </>
+                        )}
                         {/* Copy URI button */}
                         <Button
                             variant="outline"
@@ -307,7 +309,7 @@ export function WalletModal({ open, onOpenChange, walletConnectUri, onClearWalle
                             ) : (
                                 <>
                                     <Copy className="w-4 h-4 mr-2" />
-                                    Copy to Clipboard
+                                    {isNativeRelayUri ? 'Copy URI' : 'Copy to Clipboard'}
                                 </>
                             )}
                         </Button>

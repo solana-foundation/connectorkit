@@ -10,7 +10,7 @@ const getOrigin = () => {
     if (typeof window !== 'undefined') {
         return window.location.origin;
     }
-    return 'http://localhost:3000';
+    return 'http://localhost:3100';
 };
 
 // Enable remote signer via environment variable (set NEXT_PUBLIC_ENABLE_REMOTE_SIGNER=true)
@@ -72,7 +72,13 @@ export function Providers({ children }: { children: ReactNode }) {
             // Metadata is auto-generated from appName/appUrl
             // Callbacks are auto-wired by AppProvider
             walletConnect: true,
-            nativeLocalhost: true,
+            nativeAssociation: {
+                enabled: true,
+                relay: {
+                    enabled: true,
+                    relayHttpUrl: process.env.NEXT_PUBLIC_WAP_RELAY_HTTP_URL ?? 'http://127.0.0.1:51885',
+                },
+            },
         });
     }, []);
 
