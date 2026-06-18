@@ -108,6 +108,7 @@
         "@solana/signers": "^7.0.0",
         "@solana/transaction-messages": "^7.0.0",
         "@solana/transactions": "^7.0.0",
+        "@solana/wallet-standard-features": "^1.4.0",
         "@solana/webcrypto-ed25519-polyfill": "^7.0.0",
         "@wallet-standard/app": "^1.1.1",
         "@wallet-standard/base": "^1.1.1",
