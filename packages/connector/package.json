@@ -100,6 +100,7 @@
         "@solana/signers": "^5.0.0",
         "@solana/transaction-messages": "^5.0.0",
         "@solana/transactions": "^5.0.0",
+        "@solana/wallet-standard-features": "^1.4.0",
         "@wallet-standard/app": "^1.1.0",
         "@wallet-standard/base": "^1.1.0",
         "@wallet-standard/features": "^1.1.0",

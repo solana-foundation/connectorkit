@@ -95,6 +95,27 @@ export {
 export type { TransactionSigner } from './lib/transaction/transaction-signer';
 
 // ============================================================================
+// Off-Chain Message Signing (OCMS)
+// ============================================================================
+export { createOffchainMessageSigner } from './lib/offchain-message/offchain-message-signer';
+export type {
+    OffchainMessageSigner,
+    OffchainMessageSignerConfig,
+    SignOffchainMessageOptions,
+    SignedOffchainMessage,
+} from './lib/offchain-message/offchain-message-signer';
+export { SolanaSignOffchainMessage } from '@solana/wallet-standard-features';
+export type {
+    SolanaSignOffchainMessageFeature,
+    SolanaSignOffchainMessageInput,
+    SolanaSignOffchainMessageInputV1,
+    SolanaSignOffchainMessageOutput,
+    SolanaSignOffchainMessageMethod,
+    SolanaSignOffchainMessageVersion,
+    SolanaOffchainMessageVersion,
+} from '@solana/wallet-standard-features';
+
+// ============================================================================
 // Error Handling
 // ============================================================================
 export { WalletErrorType, isWalletError, createWalletError } from './lib/errors/wallet-errors';
