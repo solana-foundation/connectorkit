@@ -35,8 +35,6 @@ export interface OffchainMessageSignerConfig {
 
 /** Options for signing an off-chain message. */
 export interface SignOffchainMessageOptions {
-    /** Verify the signed envelope against the canonical bytes. Defaults to `true`. */
-    verify?: boolean;
     /** Signal used to abort the request before it is handed to the wallet. */
     abortSignal?: AbortSignal;
 }
@@ -81,7 +79,7 @@ export function createOffchainMessageSigner(config: OffchainMessageSignerConfig)
         supportedMessageVersions: feature?.supportedMessageVersions ?? [],
 
         async signOffchainMessage(message, options = {}): Promise<SignedOffchainMessage> {
-            const { verify = true, abortSignal } = options;
+            const { abortSignal } = options;
 
             abortSignal?.throwIfAborted();
 
@@ -130,9 +128,7 @@ export function createOffchainMessageSigner(config: OffchainMessageSignerConfig)
                 },
             };
 
-            if (verify) {
-                await verifyOffchainMessageEnvelope(signedEnvelope);
-            }
+            await verifyOffchainMessageEnvelope(signedEnvelope);
 
             return {
                 signature: output.signature,
