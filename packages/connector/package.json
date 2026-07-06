@@ -57,15 +57,15 @@
         "test:coverage": "vitest run --coverage"
     },
     "peerDependencies": {
-        "@solana/web3.js": "^1.0.0",
-        "react": ">=18.0.0",
-        "@walletconnect/universal-provider": "^2.23.9",
         "@solana/keychain": "^1.2.0",
+        "@solana/keychain-aws-kms": "^1.2.0",
         "@solana/keychain-fireblocks": "^1.2.0",
         "@solana/keychain-privy": "^1.2.0",
         "@solana/keychain-turnkey": "^1.2.0",
         "@solana/keychain-vault": "^1.2.0",
-        "@solana/keychain-aws-kms": "^1.2.0"
+        "@solana/web3.js": "^1.0.0",
+        "@walletconnect/universal-provider": "^2.23.9",
+        "react": ">=18.0.0"
     },
     "peerDependenciesMeta": {
         "react": {
@@ -100,8 +100,7 @@
         }
     },
     "dependencies": {
-        "@solana-mobile/wallet-standard-mobile": "^0.5.2",
-        "@solana/webcrypto-ed25519-polyfill": "^6.9.0",
+        "@solana-mobile/wallet-standard-mobile": "^0.5.3",
         "@solana/addresses": "^6.9.0",
         "@solana/codecs": "^6.9.0",
         "@solana/keys": "^6.9.0",
@@ -109,25 +108,26 @@
         "@solana/signers": "^6.9.0",
         "@solana/transaction-messages": "^6.9.0",
         "@solana/transactions": "^6.9.0",
-        "@wallet-standard/app": "^1.1.0",
-        "@wallet-standard/base": "^1.1.0",
-        "@wallet-standard/features": "^1.1.0",
-        "@wallet-ui/core": "^4.1.0",
+        "@solana/webcrypto-ed25519-polyfill": "^6.9.0",
+        "@wallet-standard/app": "^1.1.1",
+        "@wallet-standard/base": "^1.1.1",
+        "@wallet-standard/features": "^1.1.1",
+        "@wallet-ui/core": "^4.2.0",
         "zod": "^4.4.3"
     },
     "devDependencies": {
         "@testing-library/jest-dom": "^6.9.1",
         "@testing-library/react": "^16.3.0",
         "@testing-library/user-event": "^14.6.1",
-        "@types/react": "^19.2.15",
-        "@vitest/coverage-v8": "^4.1.7",
-        "@vitest/ui": "^4.1.7",
-        "happy-dom": "^20.9.0",
-        "react": "^19.2.6",
-        "react-dom": "^19.2.6",
+        "@types/react": "^19.2.17",
+        "@vitest/coverage-v8": "^4.1.9",
+        "@vitest/ui": "^4.1.9",
+        "happy-dom": "^20.10.6",
+        "react": "^19.2.7",
+        "react-dom": "^19.2.7",
         "tsup": "^8.5.0",
         "typescript": "^6.0.3",
-        "vitest": "^4.1.7"
+        "vitest": "^4.1.9"
     },
     "license": "MIT",
     "repository": {
