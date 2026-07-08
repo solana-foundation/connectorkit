@@ -3,3 +3,19 @@ packages:
   - 'apps/*'
   - 'examples/*'
   - 'tools/*'
+allowBuilds:
+  bufferutil: true
+  esbuild: true
+  sharp: true
+  unrs-resolver: true
+  utf-8-validate: true
+minimumReleaseAgeExclude:
+  - '@tanstack/query-core@5.100.13'
+  - '@tanstack/react-query@5.100.13'
+peerDependencyRules:
+  allowedVersions:
+    '@solana-program/compute-budget': 0.15.0
+    '@solana/sysvars': 6.9.0
+    eslint: 10.4.0
+    typescript: 6.0.3
+    utf-8-validate: 6.0.6
