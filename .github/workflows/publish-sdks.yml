@@ -43,7 +43,11 @@ jobs:
           version: 10.28.0
 
       - name: Update npm for trusted publishing
-        run: npm install -g npm@latest
+        # Trusted publishing needs npm >=11.5.1. Pinned to 11 because npm@12.0.0
+        # has a packaging bug: libnpmpublish@12 requires `sigstore` but npm@12
+        # doesn't bundle it, so `npm publish` with provenance crashes with
+        # MODULE_NOT_FOUND. Revisit when npm@12.x fixes the sigstore bundling.
+        run: npm install -g npm@11
 
       - name: Setup pnpm cache
         uses: actions/cache@v4
