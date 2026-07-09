@@ -33,21 +33,18 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          # npm@latest (v12+) requires Node ^22.22.2 || ^24.15.0 || >=26
-          node-version: '22'
+          # Latest LTS (Node 24+) bundles npm >=11.6, which supports trusted
+          # publishing (needs npm >=11.5.1) out of the box — no manual npm
+          # upgrade needed. Deliberately NOT running `npm install -g npm@latest`:
+          # npm@12.0.0 has a packaging bug (libnpmpublish requires `sigstore`
+          # but npm@12 doesn't bundle it) that breaks provenance publishes.
+          node-version: 'lts/*'
           registry-url: 'https://registry.npmjs.org'
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v2
+        uses: pnpm/action-setup@v4
         with:
-          version: 10.28.0
-
-      - name: Update npm for trusted publishing
-        # Trusted publishing needs npm >=11.5.1. Pinned to 11 because npm@12.0.0
-        # has a packaging bug: libnpmpublish@12 requires `sigstore` but npm@12
-        # doesn't bundle it, so `npm publish` with provenance crashes with
-        # MODULE_NOT_FOUND. Revisit when npm@12.x fixes the sigstore bundling.
-        run: npm install -g npm@11
+          version: 11
 
       - name: Setup pnpm cache
         uses: actions/cache@v4
