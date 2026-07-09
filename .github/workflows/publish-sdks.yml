@@ -30,6 +30,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v5
 
+      - name: Setup pnpm
+        # No explicit version: action-setup v4 reads the `packageManager`
+        # field from package.json (single source of truth) and errors if
+        # a version is also specified here. Must run before setup-node so
+        # its `cache: pnpm` can resolve the real store path.
+        uses: pnpm/action-setup@v4
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -40,20 +47,10 @@ jobs:
           # but npm@12 doesn't bundle it) that breaks provenance publishes.
           node-version: 'lts/*'
           registry-url: 'https://registry.npmjs.org'
-
-      - name: Setup pnpm
-        # No explicit version: action-setup v4 reads the `packageManager`
-        # field from package.json (single source of truth) and errors if
-        # a version is also specified here.
-        uses: pnpm/action-setup@v4
-
-      - name: Setup pnpm cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.pnpm-store
-          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-
+          # Built-in pnpm caching resolves the store path via `pnpm store path`
+          # (~/.local/share/pnpm/store on Linux) — a hardcoded ~/.pnpm-store
+          # path never matched, so the old manual cache never hit.
+          cache: 'pnpm'
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
