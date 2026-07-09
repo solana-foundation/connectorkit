@@ -29,9 +29,9 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: 9.12.3
+        # No explicit version: action-setup v4 reads the `packageManager`
+        # field from package.json (single source of truth).
+        uses: pnpm/action-setup@v4
 
       - name: Setup pnpm cache
         uses: actions/cache@v4
