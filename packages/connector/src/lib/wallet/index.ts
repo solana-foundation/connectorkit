@@ -27,17 +27,8 @@ export {
     WALLET_STATE_VERSION,
 } from './enhanced-storage';
 
-// Wallet Detector
-export { WalletDetector, type LegacyPublicKey, type DirectWallet } from './detector';
-
-// Authenticity Verifier
-export { WalletAuthenticityVerifier, type WalletVerificationResult } from './authenticity-verifier';
-
-// Connection Manager
-export { ConnectionManager } from './connection-manager';
-
-// Auto Connector
-export { AutoConnector } from './auto-connector';
+// Kit wallet core (discovery + connection via @solana/kit-plugin-wallet)
+export { KitWalletCore, applyWalletDisplayConfig, normalizeWalletChain } from './kit-wallet-core';
 
 // WalletConnect Integration
 // Note: These are lazily loaded to avoid requiring @walletconnect/universal-provider

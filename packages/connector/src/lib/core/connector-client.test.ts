@@ -6,9 +6,7 @@ import type { SolanaCluster } from '@wallet-ui/core';
 
 // Mock all dependencies
 vi.mock('./event-emitter');
-vi.mock('../wallet/detector');
-vi.mock('../wallet/connection-manager');
-vi.mock('../wallet/auto-connector');
+vi.mock('../wallet/kit-wallet-core');
 vi.mock('../cluster/cluster-manager');
 vi.mock('../health/health-monitor');
 vi.mock('../transaction/transaction-tracker');
@@ -26,9 +24,7 @@ describe('ConnectorClient', () => {
 
         // Import mocks
         const { EventEmitter } = await import('./event-emitter');
-        const { WalletDetector } = await import('../wallet/detector');
-        const { ConnectionManager } = await import('../wallet/connection-manager');
-        const { AutoConnector } = await import('../wallet/auto-connector');
+        const { KitWalletCore } = await import('../wallet/kit-wallet-core');
         const { ClusterManager } = await import('../cluster/cluster-manager');
         const { HealthMonitor } = await import('../health/health-monitor');
         const { TransactionTracker } = await import('../transaction/transaction-tracker');
@@ -54,17 +50,17 @@ describe('ConnectorClient', () => {
             } as unknown as InstanceType<typeof EventEmitter>;
         });
 
-        vi.mocked(WalletDetector).mockImplementation(function () {
+        vi.mocked(KitWalletCore).mockImplementation(function () {
             return {
-                initialize: vi.fn(),
+                start: vi.fn(),
+                setChain: vi.fn(async () => {}),
                 destroy: vi.fn(),
-                getDetectedWallets: vi.fn(() => []),
-            } as unknown as InstanceType<typeof WalletDetector>;
-        });
-
-        vi.mocked(ConnectionManager).mockImplementation(function () {
-            return {
-                connect: vi.fn(async () => {
+                getConnectorById: vi.fn(() => undefined),
+                connectWallet: vi.fn(async () => {
+                    mockState.connected = true;
+                    mockState.connecting = false;
+                }),
+                connectByName: vi.fn(async () => {
                     mockState.connected = true;
                     mockState.connecting = false;
                 }),
@@ -72,15 +68,8 @@ describe('ConnectorClient', () => {
                     mockState.connected = false;
                     mockState.selectedWallet = null;
                 }),
-                selectAccount: vi.fn(),
-            } as unknown as InstanceType<typeof ConnectionManager>;
-        });
-
-        vi.mocked(AutoConnector).mockImplementation(function () {
-            return {
-                initialize: vi.fn(),
-                destroy: vi.fn(),
-            } as unknown as InstanceType<typeof AutoConnector>;
+                selectAccount: vi.fn(async () => {}),
+            } as unknown as InstanceType<typeof KitWalletCore>;
         });
 
         vi.mocked(ClusterManager).mockImplementation(function () {

@@ -116,7 +116,11 @@ export function createMockWallet(options: MockWalletOptions): StandardWallet {
             } as StandardEventsFeature['standard:events'],
             ...Object.fromEntries(additionalFeatures.map(feature => [feature, { version: '1.0.0' }])),
         },
-        accounts: currentAccounts,
+        // Live view so consumers reading wallet.accounts after connect()
+        // observe the accounts the wallet authorized
+        get accounts() {
+            return currentAccounts;
+        },
     };
 
     return wallet;

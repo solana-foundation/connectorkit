@@ -7,6 +7,13 @@ export default defineConfig({
             '@': path.resolve(__dirname, './src'),
             // Mock WalletConnect provider for tests (optional dependency)
             '@walletconnect/universal-provider': path.resolve(__dirname, './src/__tests__/mocks/walletconnect-mock.ts'),
+            // Vitest resolves node export conditions, but kit-plugin-wallet's
+            // node build is an SSR stub (permanently 'pending'). Tests run in
+            // happy-dom, so point at the functional browser build.
+            '@solana/kit-plugin-wallet': path.resolve(
+                __dirname,
+                'node_modules/@solana/kit-plugin-wallet/dist/index.browser.mjs',
+            ),
         },
     },
     esbuild: {
