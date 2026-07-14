@@ -219,6 +219,12 @@ importers:
       '@solana/kit-plugin-rpc':
         specifier: ^0.13.0
         version: 0.13.0(@solana/kit@7.0.0(bufferutil@4.1.0)(typescript@6.0.3))
+      '@solana/kit-plugin-wallet':
+        specifier: ^0.13.1
+        version: 0.13.1(@solana/kit@7.0.0(bufferutil@4.1.0)(typescript@6.0.3))(@solana/react@7.0.0(@solana/kit@7.0.0(bufferutil@4.1.0)(typescript@6.0.3))(@tanstack/react-query@5.101.2(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(typescript@6.0.3))(react@19.2.7)(typescript@6.0.3)
+      '@solana/react':
+        specifier: ^7.0.0
+        version: 7.0.0(@solana/kit@7.0.0(bufferutil@4.1.0)(typescript@6.0.3))(@tanstack/react-query@5.101.2(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(typescript@6.0.3)
       '@solana/signers':
         specifier: ^7.0.0
         version: 7.0.0(typescript@6.0.3)
@@ -3158,6 +3164,18 @@ packages:
     peerDependencies:
       '@solana/kit': ^7.0.0
 
+  '@solana/kit-plugin-wallet@0.13.1':
+    resolution: {integrity: sha512-Zmbz7MAa5HHZPKMKoYMzi9Xh6jBD40WTMB5M6oZBkrTQKSnXnsf2wyjDG5NmkaSPS/7He+oLLuxPOeukfzoxvg==}
+    peerDependencies:
+      '@solana/kit': ^7.0.0
+      '@solana/react': ^7.0.0
+      react: ^18.0.0 || ^19.0.0
+    peerDependenciesMeta:
+      '@solana/react':
+        optional: true
+      react:
+        optional: true
+
   '@solana/kit@6.9.0':
     resolution: {integrity: sha512-k7BRz7Akfv8wiRtlCR/xUyDLfuMfYMelMR1+AC5KgwaRRJReDF0BucMLNN1In7WoI+KuWwr1OKv4na/oKpyeAQ==}
     engines: {node: '>=20.18.0'}
@@ -3324,6 +3342,22 @@ packages:
       typescript: '>=5.4.0'
     peerDependenciesMeta:
       typescript:
+        optional: true
+
+  '@solana/react@7.0.0':
+    resolution: {integrity: sha512-+BDWCUdFpRkD+zGV2iiyEVWrF9AWw7tQsdiqHHAZa8Td/7CLYw+H8IjtuapMYNK2RZQhqKrSK9OWLE8rh63Qdg==}
+    engines: {node: '>=20.18.0'}
+    peerDependencies:
+      '@solana/kit': 7.0.0
+      '@tanstack/react-query': ^5.0.0
+      react: '>=18'
+      swr: ^2.0.0
+    peerDependenciesMeta:
+      '@tanstack/react-query':
+        optional: true
+      react:
+        optional: true
+      swr:
         optional: true
 
   '@solana/rpc-api@6.9.0':
@@ -4215,8 +4249,23 @@ packages:
     engines: {node: '>=22'}
     hasBin: true
 
+  '@wallet-standard/experimental-features@0.2.1':
+    resolution: {integrity: sha512-GQ5fsg6Y64o/mOzRMKoannp0ArbQAybFcgxBJl896k0gC9NP9/RYUN/qWCZiwc+PYwmsGDCaF+MrnqhcGtl8dA==}
+    engines: {node: '>=22'}
+
   '@wallet-standard/features@1.1.1':
     resolution: {integrity: sha512-aCWYmVeSCGViyEU5k7GMoW8zxE4Gs+C1s1Pp2XLesvSNlnZ4PMES9HUnTB3hl0b3RVj7C61yze3IWyrncqg4MA==}
+    engines: {node: '>=22'}
+
+  '@wallet-standard/react-core@1.0.3':
+    resolution: {integrity: sha512-kN2Am5cNwIpqCSp+jvQu5J8bF6sdVNyYl9go4N8GDUpj+UJAg6Hfqx18ij7lWY3L8kF6Y9dwVH+DvVvj43elOA==}
+    engines: {node: '>=22'}
+    peerDependencies:
+      react: '>=18'
+      react-dom: '>=18'
+
+  '@wallet-standard/react@1.0.3':
+    resolution: {integrity: sha512-stvjriEfuHnUwZ4PBqkm1/1z9YQpMH6KTHdAql9F3xFoIxm493Hg7IljRW7+5zBEtzwro4L1eQoxBLe34SdbfQ==}
     engines: {node: '>=22'}
 
   '@wallet-standard/ui-compare@1.0.3':
@@ -10681,6 +10730,25 @@ snapshots:
       '@solana/kit': 7.0.0(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@6.0.6)
       '@solana/kit-plugin-instruction-plan': 0.13.0(@solana/kit@7.0.0(bufferutil@4.1.0)(typescript@6.0.3))
 
+  '@solana/kit-plugin-wallet@0.13.1(@solana/kit@7.0.0(bufferutil@4.1.0)(typescript@6.0.3))(@solana/react@7.0.0(@solana/kit@7.0.0(bufferutil@4.1.0)(typescript@6.0.3))(@tanstack/react-query@5.101.2(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(typescript@6.0.3))(react@19.2.7)(typescript@6.0.3)':
+    dependencies:
+      '@solana/kit': 7.0.0(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@6.0.6)
+      '@solana/wallet-account-signer': 7.0.0(typescript@6.0.3)
+      '@solana/wallet-standard-chains': 1.1.2
+      '@solana/wallet-standard-features': 1.4.0
+      '@wallet-standard/app': 1.1.1
+      '@wallet-standard/base': 1.1.1
+      '@wallet-standard/features': 1.1.1
+      '@wallet-standard/ui': 1.0.3
+      '@wallet-standard/ui-features': 1.0.3
+      '@wallet-standard/ui-registry': 1.1.1
+    optionalDependencies:
+      '@solana/react': 7.0.0(@solana/kit@7.0.0(bufferutil@4.1.0)(typescript@6.0.3))(@tanstack/react-query@5.101.2(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(typescript@6.0.3)
+      react: 19.2.7
+    transitivePeerDependencies:
+      - fastestsmallesttextencoderdecoder
+      - typescript
+
   '@solana/kit@6.9.0(bufferutil@4.1.0)(typescript@6.0.3)':
     dependencies:
       '@solana/accounts': 6.9.0(typescript@6.0.3)
@@ -10909,6 +10977,28 @@ snapshots:
   '@solana/promises@7.0.0(typescript@6.0.3)':
     optionalDependencies:
       typescript: 6.0.3
+
+  '@solana/react@7.0.0(@solana/kit@7.0.0(bufferutil@4.1.0)(typescript@6.0.3))(@tanstack/react-query@5.101.2(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(typescript@6.0.3)':
+    dependencies:
+      '@solana/kit': 7.0.0(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@6.0.6)
+      '@solana/promises': 7.0.0(typescript@6.0.3)
+      '@solana/signers': 7.0.0(typescript@6.0.3)
+      '@solana/subscribable': 7.0.0(typescript@6.0.3)
+      '@solana/transaction-messages': 7.0.0(typescript@6.0.3)
+      '@solana/transactions': 7.0.0(typescript@6.0.3)
+      '@solana/wallet-standard-features': 1.4.0
+      '@wallet-standard/base': 1.1.1
+      '@wallet-standard/errors': 0.1.2
+      '@wallet-standard/react': 1.0.3(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+      '@wallet-standard/ui': 1.0.3
+      '@wallet-standard/ui-registry': 1.1.1
+    optionalDependencies:
+      '@tanstack/react-query': 5.101.2(react@19.2.7)
+      react: 19.2.7
+    transitivePeerDependencies:
+      - fastestsmallesttextencoderdecoder
+      - react-dom
+      - typescript
 
   '@solana/rpc-api@6.9.0(typescript@6.0.3)':
     dependencies:
@@ -11960,9 +12050,32 @@ snapshots:
       chalk: 5.6.2
       commander: 13.1.0
 
+  '@wallet-standard/experimental-features@0.2.1':
+    dependencies:
+      '@wallet-standard/base': 1.1.1
+
   '@wallet-standard/features@1.1.1':
     dependencies:
       '@wallet-standard/base': 1.1.1
+
+  '@wallet-standard/react-core@1.0.3(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
+    dependencies:
+      '@wallet-standard/app': 1.1.1
+      '@wallet-standard/base': 1.1.1
+      '@wallet-standard/errors': 0.1.2
+      '@wallet-standard/experimental-features': 0.2.1
+      '@wallet-standard/features': 1.1.1
+      '@wallet-standard/ui': 1.0.3
+      '@wallet-standard/ui-registry': 1.1.1
+      react: 19.2.7
+      react-dom: 19.2.7(react@19.2.7)
+
+  '@wallet-standard/react@1.0.3(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
+    dependencies:
+      '@wallet-standard/react-core': 1.0.3(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+    transitivePeerDependencies:
+      - react
+      - react-dom
 
   '@wallet-standard/ui-compare@1.0.3':
     dependencies:

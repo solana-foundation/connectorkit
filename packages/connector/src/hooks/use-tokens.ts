@@ -663,6 +663,7 @@ export function useTokens(options: UseTokensOptions = {}): UseTokensReturn {
         cacheTimeMs,
         refetchOnMount,
         refetchIntervalMs: autoRefresh ? refreshInterval : false,
+        liveUpdates: autoRefresh,
         client: clientOverride,
         select: selectFn,
     });

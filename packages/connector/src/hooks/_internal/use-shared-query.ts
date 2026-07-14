@@ -581,6 +581,41 @@ export function useSharedQuery<TData, TSelected = TData>(
 }
 
 /**
+ * Write data directly into a query's cache entry, notifying subscribers.
+ * Used to apply push-based updates (e.g. account subscription notifications)
+ * without a fetch round-trip. No-op if the entry does not exist or the
+ * updater returns undefined.
+ */
+export function setSharedQueryData<TData>(key: string, updater: (prev: TData | undefined) => TData | undefined): void {
+    const entry = store.get(key) as SharedQueryEntry<TData> | undefined;
+    if (!entry) return;
+
+    const next = updater(entry.snapshot.data);
+    if (next === undefined || next === entry.snapshot.data) return;
+
+    setSnapshot(entry, {
+        data: next,
+        error: null,
+        status: 'success',
+        updatedAt: Date.now(),
+        isFetching: entry.snapshot.isFetching,
+    });
+}
+
+/**
+ * Force a refetch of a query if it has active subscribers and a registered
+ * query function. Errors are stored in the snapshot, not thrown.
+ */
+export function refetchSharedQueryIfActive(key: string): void {
+    const entry = store.get(key);
+    if (!entry || entry.subscribers.size === 0 || !entry.queryFn) return;
+
+    fetchSharedQuery(key, entry.queryFn, { force: true }).catch(() => {
+        // Error is already stored in snapshot
+    });
+}
+
+/**
  * Invalidate a query, causing it to refetch on next access
  */
 export function invalidateSharedQuery(key: string): void {

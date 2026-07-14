@@ -1,10 +1,11 @@
 'use client';
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { address as toAddress } from '@solana/addresses';
+import { useSubscription } from '@solana/react';
 import { useWallet } from '../use-wallet';
 import { useSolanaClient } from '../use-kit-solana-client';
-import { useSharedQuery } from './use-shared-query';
+import { refetchSharedQueryIfActive, setSharedQueryData, useSharedQuery } from './use-shared-query';
 import type { SharedQueryOptions } from './use-shared-query';
 import type { SolanaClient } from '../../lib/kit';
 
@@ -60,6 +61,13 @@ export interface UseWalletAssetsOptions<TSelected = WalletAssetsData> extends Om
     client?: SolanaClient | null;
     /** Transform/select a subset of data (reduces rerenders) */
     select?: (data: WalletAssetsData | undefined) => TSelected;
+    /**
+     * Subscribe to wallet account notifications for push-based updates.
+     * While the subscription is healthy it supersedes `refetchIntervalMs`
+     * polling; if it errors or WebSocket transport is unavailable, polling
+     * resumes as a fallback. (default: false)
+     */
+    liveUpdates?: boolean;
 }
 
 /**
@@ -178,7 +186,9 @@ export function getWalletAssetsQueryKey(rpcUrl: string | null, address: string |
  * Queries both Token Program and Token-2022 in parallel.
  *
  * This hook is used internally by `useBalance` and `useTokens` to share
- * a single RPC query, preventing duplicate requests.
+ * a single RPC query, preventing duplicate requests. With `liveUpdates`
+ * enabled it also subscribes to the wallet's account notifications so
+ * balance changes are pushed into the shared cache without polling.
  *
  * @internal
  *
@@ -207,6 +217,7 @@ export function useWalletAssets<TSelected = WalletAssetsData>(
         refetchIntervalMs = false,
         client: clientOverride,
         select,
+        liveUpdates = false,
     } = options;
 
     const { account, isConnected } = useWallet();
@@ -288,6 +299,30 @@ export function useWalletAssets<TSelected = WalletAssetsData>(
         [isConnected, address, rpcClient],
     );
 
+    // Push-based updates: subscribe to the wallet's account notifications.
+    // Kit's subscription transport coalesces identical subscriptions, so
+    // multiple components sharing this hook produce a single wire subscription.
+    const accountNotificationsSource = useMemo(() => {
+        if (!liveUpdates || !key || !address || !rpcClient?.rpcSubscriptions) return null;
+        return rpcClient.rpcSubscriptions.accountNotifications(toAddress(address));
+    }, [liveUpdates, key, address, rpcClient]);
+
+    const { data: accountNotification, status: subscriptionStatus } = useSubscription(accountNotificationsSource);
+
+    useEffect(() => {
+        if (!key || !accountNotification) return;
+        const lamports = accountNotification.value.lamports;
+        // Apply the new balance immediately, then refetch to pick up token deltas
+        setSharedQueryData<WalletAssetsData>(key, prev =>
+            !prev || prev.lamports === lamports ? prev : { ...prev, lamports },
+        );
+        refetchSharedQueryIfActive(key);
+    }, [key, accountNotification]);
+
+    // While the subscription is healthy, it supersedes interval polling
+    const subscriptionActive = accountNotificationsSource !== null && subscriptionStatus !== 'error';
+    const effectiveRefetchIntervalMs = subscriptionActive ? false : refetchIntervalMs;
+
     // Use shared query with optional select
     const { data, error, status, updatedAt, isFetching, refetch, abort } = useSharedQuery<WalletAssetsData, TSelected>(
         key,
@@ -297,7 +332,7 @@ export function useWalletAssets<TSelected = WalletAssetsData>(
             staleTimeMs,
             cacheTimeMs,
             refetchOnMount,
-            refetchIntervalMs,
+            refetchIntervalMs: effectiveRefetchIntervalMs,
             select: select as ((data: WalletAssetsData | undefined) => TSelected) | undefined,
         },
     );

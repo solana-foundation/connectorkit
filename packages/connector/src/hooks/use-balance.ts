@@ -137,7 +137,7 @@ function selectBalance(assets: WalletAssetsData | undefined): BalanceSelection {
  * - Automatic request deduplication across components
  * - Shared data with useTokens (single RPC query)
  * - Token-2022 support
- * - Shared polling interval (ref-counted)
+ * - Live balance updates via account subscription (with polling fallback)
  * - Configurable auto-refresh behavior
  * - Abort support for in-flight requests
  * - Optional client override
@@ -211,6 +211,7 @@ export function useBalance(options: UseBalanceOptions = {}): UseBalanceReturn {
         cacheTimeMs,
         refetchOnMount,
         refetchIntervalMs: autoRefresh ? refreshInterval : false,
+        liveUpdates: autoRefresh,
         client: clientOverride,
         select: selectBalance,
     });
