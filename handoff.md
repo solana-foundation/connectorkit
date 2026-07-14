@@ -15,6 +15,16 @@ The plan was mapped against `feat/offchain-message-signing`. This branch (`chore
 - **No OCMS** — `lib/offchain-message/*` does not exist on this branch (it's only on the OCMS branch). The plan's "leave OCMS untouched" is moot here.
 - Run commands against the worktree: `pnpm -C /Users/sf-am/emdash/worktrees/connectorkit/main <script>` (harness pins cwd elsewhere; `cd` into the worktree does not persist).
 
+## Done — Phase 1: RPC/client + Phase 2: data-fetching (partial) + kit entrypoint
+- **RPC/client** — `createSolanaClient` builds rpc/rpcSubscriptions via `createClient().use(solanaRpcConnection(...))` from `@solana/kit-plugin-rpc` (new dep). `prepareTransaction` now really estimates CU/resource limits via kit's `estimateResourceLimitsFactory`/`estimateAndSetResourceLimitsFactory` (multiplier + reset params un-stubbed; explicit-limit messages skip simulation). `lamportsToSol`/`solToLamports` deprecated toward kit's fixed-point versions; `GENESIS_HASH` deleted (internal-only, unused). Explorer modules merged into `lib/kit/explorer.ts`; `lib/utils/explorer-urls.*` deleted; public paths unchanged.
+- **Data-fetching (live balance)** — `useWalletAssets` gained `liveUpdates`: `accountNotifications` subscription via `@solana/react`'s `useSubscription` pushes lamports into the shared cache (`setSharedQueryData`) + refetches for token deltas; polling remains as automatic fallback on subscription error/no-WS. `useBalance` `autoRefresh` now drives the subscription. Kit's transport coalesces duplicate subscriptions across components.
+- **Kit-native surface** — new `@solana/connector/kit` entrypoint (`src/kit.ts`, tsup entry + exports map): `createClient`/`extendClient`, all of `@solana/react`, `@solana/kit-plugin-rpc`, `@solana/kit-plugin-wallet` (+ its `/react` store hooks, minus `useSignIn`/`useSignMessage` which collide with @solana/react's account-based hooks).
+- **Deliberate deviations from this doc:**
+  - `use-shared-query.ts` was NOT rebuilt on @solana/react data hooks: those are per-component primitives with no keyed cache, and `getBalanceQueryKey`/`getTokensQueryKey`/`invalidateSharedQuery` are public documented API — rebuilding would break the locked "keep public API stable" decision. The store stays; it now also serves push-based writes.
+  - jsonParsed→`@solana-program/token` decoder swap is BLOCKED upstream: latest token clients (token 0.14.0 / token-2022 0.12.0) peer on kit ^6 and import `getMinimumBalanceForRentExemption`, removed in kit 7 (ESM link error). Revisit when kit-7 builds ship. (token-2022 also drags a `@solana/zk-sdk` wasm peer — weigh bundle cost then.)
+  - `prepareTransaction` uses kit's estimate factories, not kit-plugin-rpc's planner/executor — the planner assumes a `client.payer` instruction-plan flow; the factories match connector's message-in/message-out shape.
+- Verified green after each slice: type-check, 881 tests / 19 skipped, build, prettier (7 pre-existing failures untouched).
+
 ## Done (commit `b249c64`) — Phase 1: signer bridging
 Deleted hand-rolled Wallet-Standard→kit signer wiring; delegate to `@solana/wallet-account-signer`. Net −102 source lines, non-breaking, green (883 tests / 19 skipped, type-check clean).
 - `src/hooks/use-kit-transaction-signer.ts` — builds via `getOrCreateUiWalletAccountForStandardWalletAccount(selectedWallet, account)` → `createTransactionSignerFromWalletAccount(uiAccount, cluster.id)`. Manual shortvec/wire-format now off the runtime path.
@@ -31,17 +41,9 @@ Deleted hand-rolled Wallet-Standard→kit signer wiring; delegate to `@solana/wa
 - Caveat: `@solana-program/*` still peer-declare kit `^6` while kit is 7 — works fine, ignore the peer warning.
 
 ## Remaining work
-### Phase 1 (continue) — RPC / client + helpers
-- `src/lib/kit/client.ts` `createSolanaClient` — keep `{rpc,rpcSubscriptions,urlOrMoniker}` shape; drop bespoke URL/moniker/WS-port logic for kit RPC transport / `@solana/kit-plugin-rpc`.
-- `src/lib/kit/rpc.ts` — replace reimplemented URL helpers with kit equivalents.
-- `src/lib/kit/prepare-transaction.ts` + `use-transaction-preparer.ts` — route CU estimation + preflight through kit-plugin-rpc planner/executor.
-- `src/lib/kit/constants.ts` — prefer kit `lamports()` units; dedupe the two explorer modules (`lib/kit/explorer.ts` + `lib/utils/explorer-urls.ts`) to one (kit has no explorer helper — internal dedup only).
-- Tests present here: `lib/kit/{client,rpc,constants,explorer,debug}.test.ts` — keep green / update on signature shifts.
-
-### Phase 2 — data-fetching, wallet-core, showcase
-- **Data-fetching:** rebuild `src/hooks/_internal/use-shared-query.ts` on `@solana/react` data hooks (`useRequest`/`useSubscription`/`useTrackedData`); rewire `use-balance.ts`/`use-tokens.ts`/`use-transactions.ts`/`_internal/use-wallet-assets.ts` under the hood (public signatures unchanged). Move balance polling → subscription. Replace hand-rolled Token/Token-2022 jsonParsed parsers with `@solana-program/token`(+`token-2022`) decoders. **Open Q (unresolved):** base `@solana/react` hooks (no extra dep — recommended) vs `/query` (TanStack) vs `/swr`.
-- **Wallet connection core:** back `ConnectorProvider` with a kit client using `walletSigner()` + `client.wallet` store; reimplement connector hooks (`useWallet`/`useConnectWallet`/`useDisconnectWallet`/`useWalletConnectors`/`useAccount`) as thin adapters mapping kit `UiWalletAccount`/`WalletStatus` → connector `SessionAccount`/`WalletStatus`. Keep connector-only layers: MWA registration, WalletConnect, remote signer, cluster manager, devtools metrics. **Open Q:** adopt kit-plugin-wallet discovery wholesale (UiWalletAccount free) vs keep connector discovery + convert via the seam above.
-- **Showcase surface:** new `@solana/connector/kit` entrypoint (`src/kit.ts` + package.json `exports`) re-exporting/wrapping `@solana/react` + `@solana/kit-plugin-wallet/react`.
+- **Wallet connection core (the big one):** back `ConnectorProvider` with a kit client using `walletSigner()` + `client.wallet` store; reimplement connector hooks (`useWallet`/`useConnectWallet`/`useDisconnectWallet`/`useWalletConnectors`/`useAccount`) as thin adapters mapping kit `UiWalletAccount`/`WalletStatus` → connector `SessionAccount`/`WalletStatus`. Keep connector-only layers: MWA registration, WalletConnect, remote signer, cluster manager, devtools metrics. **Open Q (still unresolved, gates scope):** adopt kit-plugin-wallet discovery wholesale (UiWalletAccount free) vs keep connector discovery + convert via `getOrCreateUiWalletAccountForStandardWalletAccount`.
+- **use-transactions.ts** — untouched; candidate for `signatureNotifications`/log-subscription-driven updates in a later slice.
+- **Blocked:** jsonParsed→decoder swap (see deviations above) until `@solana-program/token`/`token-2022` ship kit-7 builds.
 
 ### Demonstration + release
 - Update `connectorkit/SKILL.md` + `connectorkit/references/*` and `examples/*` to show kit-native patterns; reconcile with PR #55.
