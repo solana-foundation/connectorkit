@@ -7,7 +7,8 @@ description: >
     useWallet, useConnectWallet, useBalance, useTransactionSigner,
     WalletListElement, AccountElement, BalanceElement, TransactionHistoryElement,
     migrating from @solana/wallet-adapter, remote signer, server-side signing,
-    Fireblocks Solana, Privy Solana, or mobile wallet adapter integration.
+    Fireblocks Solana, Privy Solana, mobile wallet adapter integration, or the
+    kit-native surface (@solana/connector/kit, walletSigner plugin client).
 ---
 
 # ConnectorKit
@@ -19,14 +20,15 @@ description: >
 
 ## Entry Points
 
-| Import                       | Purpose                                           |
-| ---------------------------- | ------------------------------------------------- |
-| `@solana/connector`          | Full library (React + headless)                   |
-| `@solana/connector/headless` | Framework-agnostic core (Vue, Svelte, vanilla JS) |
-| `@solana/connector/react`    | React hooks + element components                  |
-| `@solana/connector/compat`   | Bridge for existing `@solana/wallet-adapter` code |
-| `@solana/connector/remote`   | Browser-side remote wallet adapter                |
-| `@solana/connector/server`   | Server-side route handlers for remote signing     |
+| Import                       | Purpose                                            |
+| ---------------------------- | -------------------------------------------------- |
+| `@solana/connector`          | Full library (React + headless)                    |
+| `@solana/connector/headless` | Framework-agnostic core (Vue, Svelte, vanilla JS)  |
+| `@solana/connector/react`    | React hooks + element components                   |
+| `@solana/connector/kit`      | Kit-native surface (plugin client + @solana/react) |
+| `@solana/connector/compat`   | Bridge for existing `@solana/wallet-adapter` code  |
+| `@solana/connector/remote`   | Browser-side remote wallet adapter                 |
+| `@solana/connector/server`   | Server-side route handlers for remote signing      |
 
 React hooks and elements are only available via `@solana/connector` or `@solana/connector/react`. For non-React frameworks, use `ConnectorClient` from `@solana/connector/headless` and subscribe to state changes directly.
 
@@ -351,6 +353,30 @@ compat.connected; // boolean
 compat.signTransaction(tx);
 compat.sendTransaction(tx, connection);
 ```
+
+### Kit-Native Surface (`/kit`)
+
+The connector's internals run on `@solana/kit`'s plugin client (`walletSigner()` from `@solana/kit-plugin-wallet` powers discovery/connection; `@solana/kit-plugin-rpc` powers the RPC client). `@solana/connector/kit` re-exports that surface so apps can adopt the kit-native pattern directly, alongside or instead of the connector APIs:
+
+```tsx
+import {
+    createClient,
+    walletSigner,
+    solanaDevnetRpc,
+    ClientProvider,
+    useTrackedData,
+    useWallets,
+    useConnect,
+} from '@solana/connector/kit';
+
+const client = createClient()
+    .use(walletSigner({ chain: 'solana:devnet' }))
+    .use(solanaDevnetRpc());
+
+<ClientProvider client={client}>...</ClientProvider>;
+```
+
+Included: `createClient`/`extendClient`, all of `@solana/react` (ClientProvider, `useRequest`/`useSubscription`/`useTrackedData` data hooks, wallet-account signer hooks), the `@solana/kit-plugin-rpc` plugins, and `@solana/kit-plugin-wallet` plugins + store hooks (`useWallets`, `useConnect`, `useWalletStatus`, `WalletReadyGate`, …). The wallet store's `useSignIn`/`useSignMessage` are not re-exported (they collide with `@solana/react`'s account-based hooks of the same name) — import those from `@solana/kit-plugin-wallet/react` directly.
 
 ## Key Concepts
 

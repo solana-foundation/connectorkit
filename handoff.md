@@ -40,10 +40,19 @@ Deleted hand-rolled Wallet-Standard→kit signer wiring; delegate to `@solana/wa
 - `@solana/kit-plugin-rpc@0.13.0`: `solanaRpc/solanaDevnetRpc/...`, `rpcTransactionPlanner`/`rpcTransactionPlanExecutor` (CU estimation + preflight sim).
 - Caveat: `@solana-program/*` still peer-declare kit `^6` while kit is 7 — works fine, ignore the peer warning.
 
+## Done — Phase 2: wallet core (kit-plugin-wallet wholesale, per user decision)
+`KitWalletCore` (`lib/wallet/kit-wallet-core.ts`) replaces the WalletDetector/ConnectionManager/AutoConnector trio (−3,664/+878 lines). `createClient().use(walletSigner({chain, storageKey: 'connector-kit:v1:kit-wallet', autoConnect, filter}))`; plugin state projected onto `ConnectorState` (vNext machine + legacy `selectedWallet`/`accounts[].raw`/`selectedAccount` that feed the kit signer path) + event parity. Notables:
+- Custom cluster ids normalize to `solana:mainnet` for wallet discovery (`normalizeWalletChain`); cluster switches rebuild the client behind `whenReady()`.
+- `additionalWallets` now register into the wallet-standard registry (connectable, not just listed).
+- Legacy name-storage (`config.storage.wallet`) still written/cleared for compat; auto-connect runs via the plugin's own persistence (one-time non-reconnect for users with only the legacy key).
+- Removed: window-scanning instant connect, authenticity-verifier, `ConnectOptions.silent` semantics (plugin connect is always interactive; silent is auto-connect-only).
+- Tests: vitest aliases `@solana/kit-plugin-wallet` → browser build (node build is an SSR stub, permanently 'pending'); integration mocks register into the real registry; mock wallet `accounts` is a live getter.
+- Changeset added (`.changeset/kit-native-rework.md`, minor); SKILL.md + references/api.md document `/kit` + live balance.
+
 ## Remaining work
-- **Wallet connection core (the big one):** back `ConnectorProvider` with a kit client using `walletSigner()` + `client.wallet` store; reimplement connector hooks (`useWallet`/`useConnectWallet`/`useDisconnectWallet`/`useWalletConnectors`/`useAccount`) as thin adapters mapping kit `UiWalletAccount`/`WalletStatus` → connector `SessionAccount`/`WalletStatus`. Keep connector-only layers: MWA registration, WalletConnect, remote signer, cluster manager, devtools metrics. **Open Q (still unresolved, gates scope):** adopt kit-plugin-wallet discovery wholesale (UiWalletAccount free) vs keep connector discovery + convert via `getOrCreateUiWalletAccountForStandardWalletAccount`.
 - **use-transactions.ts** — untouched; candidate for `signatureNotifications`/log-subscription-driven updates in a later slice.
 - **Blocked:** jsonParsed→decoder swap (see deviations above) until `@solana-program/token`/`token-2022` ship kit-7 builds.
+- **Follow-ups worth considering:** consume `client.wallet` state's cached `signer` in `use-kit-transaction-signer` (currently still built per-hook via the seam); expose the kit client itself from `ConnectorProvider` for `/kit` interop; e2e run vs devnet per the plan's verification section.
 
 ### Demonstration + release
 - Update `connectorkit/SKILL.md` + `connectorkit/references/*` and `examples/*` to show kit-native patterns; reconcile with PR #55.

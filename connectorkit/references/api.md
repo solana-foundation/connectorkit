@@ -95,6 +95,8 @@ const {
 } = useBalance();
 ```
 
+With `autoRefresh` (the default), balance updates arrive live via an `accountNotifications` WebSocket subscription; interval polling (`refreshInterval`, default 30s) is kept as an automatic fallback when the subscription errors or WebSocket transport is unavailable.
+
 ### useTransactions(options?)
 
 ```ts
