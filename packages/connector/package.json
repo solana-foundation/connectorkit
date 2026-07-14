@@ -105,6 +105,7 @@
         "@solana/codecs": "^7.0.0",
         "@solana/keys": "^7.0.0",
         "@solana/kit": "^7.0.0",
+        "@solana/kit-plugin-rpc": "^0.13.0",
         "@solana/signers": "^7.0.0",
         "@solana/transaction-messages": "^7.0.0",
         "@solana/transactions": "^7.0.0",

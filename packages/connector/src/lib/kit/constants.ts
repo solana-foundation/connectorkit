@@ -9,16 +9,12 @@
 export const LAMPORTS_PER_SOL = 1_000_000_000;
 
 /**
- * Genesis hash for Solana network clusters
- */
-export const GENESIS_HASH = {
-    mainnet: '5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d',
-    devnet: 'EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG',
-    testnet: '4uhcVJyU9pJkvQyS88uRDiswHXSCkY3zQawwpjk2NsNY',
-} as const;
-
-/**
  * Convert lamports to SOL
+ *
+ * @deprecated Use `lamportsToSol` from `@solana/kit` instead. Note the kit
+ * version operates on branded `Lamports` input and returns an exact
+ * fixed-point `Sol` value rather than a lossy `number`.
+ *
  * @param lamports - Amount in lamports
  * @returns Amount in SOL
  */
@@ -28,6 +24,11 @@ export function lamportsToSol(lamports: number | bigint): number {
 
 /**
  * Convert SOL to lamports
+ *
+ * @deprecated Use `solToLamports` from `@solana/kit` instead. Note the kit
+ * version operates on an exact fixed-point `Sol` value (see kit's `sol()`
+ * helper) and returns branded `Lamports`.
+ *
  * @param sol - Amount in SOL
  * @returns Amount in lamports
  */

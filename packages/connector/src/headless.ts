@@ -200,9 +200,9 @@ export {
     getAllExplorerUrls,
     formatSignature,
     copySignature,
-} from './lib/utils/explorer-urls';
+} from './lib/kit';
 
-export type { ExplorerType, ExplorerOptions } from './lib/utils/explorer-urls';
+export type { ExplorerType, ExplorerOptions } from './lib/kit';
 
 // ============================================================================
 // Kit Utilities (replaces gill imports)

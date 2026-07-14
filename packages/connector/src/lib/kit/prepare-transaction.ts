@@ -1,19 +1,23 @@
 /**
  * @solana/connector - Kit Transaction Preparation
  *
- * Prepares transactions for sending by setting blockhash.
- * A simplified version that focuses on blockhash management.
+ * Prepares transactions for sending: estimates compute unit / resource limits
+ * via kit's simulation-based estimators and manages the blockhash lifetime.
  */
 
 import type {
     GetLatestBlockhashApi,
     Rpc,
+    SimulateTransactionApi,
     TransactionMessage,
     TransactionMessageWithBlockhashLifetime,
     TransactionMessageWithFeePayer,
 } from '@solana/kit';
 import {
     assertIsTransactionMessageWithBlockhashLifetime,
+    estimateAndSetResourceLimitsFactory,
+    estimateResourceLimitsFactory,
+    setTransactionMessageComputeUnitLimit,
     setTransactionMessageLifetimeUsingBlockhash,
 } from '@solana/kit';
 
@@ -34,18 +38,18 @@ export interface PrepareTransactionConfig<TMessage extends PrepareCompilableTran
      */
     transaction: TMessage;
     /**
-     * RPC client capable of getting the latest blockhash
+     * RPC client capable of simulating transactions and getting the latest blockhash
      */
-    rpc: Rpc<GetLatestBlockhashApi>;
+    rpc: Rpc<GetLatestBlockhashApi & SimulateTransactionApi>;
     /**
      * Multiplier applied to the simulated compute unit value obtained from simulation
      * @default 1.1
-     * @deprecated Compute unit estimation is not currently supported
      */
     computeUnitLimitMultiplier?: number;
     /**
      * Whether or not you wish to force reset the compute unit limit value (if one is already set)
-     * @deprecated Compute unit estimation is not currently supported
+     * using the simulation response and `computeUnitLimitMultiplier`
+     * @default false
      */
     computeUnitLimitReset?: boolean;
     /**
@@ -57,14 +61,17 @@ export interface PrepareTransactionConfig<TMessage extends PrepareCompilableTran
 
 /**
  * Prepare a Transaction to be signed and sent to the network. Including:
+ * - simulating the transaction to estimate its compute unit limit (and, for
+ *   version 1 messages, its loaded accounts data size limit), applying the
+ *   estimate with a configurable safety multiplier
  * - fetching the latest blockhash (if not already set)
  * - (optional) resetting latest blockhash to the most recent
  *
- * Note: Automatic compute unit estimation is not currently supported in this version.
- * You should set compute unit limits manually if needed.
+ * Messages that already carry an explicit compute unit limit are left
+ * untouched unless `computeUnitLimitReset` is set.
  *
  * @param config - Configuration for transaction preparation
- * @returns Prepared transaction with blockhash lifetime set
+ * @returns Prepared transaction with resource limits and blockhash lifetime set
  *
  * @example
  * ```ts
@@ -79,8 +86,26 @@ export async function prepareTransaction<TMessage extends PrepareCompilableTrans
 ): Promise<TMessage & TransactionMessageWithBlockhashLifetime> {
     // Set config defaults
     const blockhashReset = config.blockhashReset !== false;
+    const computeUnitLimitMultiplier = config.computeUnitLimitMultiplier ?? 1.1;
 
     let transaction = config.transaction as TMessage & Partial<TransactionMessageWithBlockhashLifetime>;
+
+    if (config.computeUnitLimitReset) {
+        if (isDebugEnabled()) {
+            debug('Force resetting the compute unit limit.', 'debug');
+        }
+        transaction = setTransactionMessageComputeUnitLimit(undefined, transaction);
+    }
+
+    const estimateResourceLimits = estimateResourceLimitsFactory({ rpc: config.rpc });
+    const estimateAndSetResourceLimits = estimateAndSetResourceLimitsFactory(async (transactionMessage, config_) => {
+        const estimate = await estimateResourceLimits(transactionMessage, config_);
+        return {
+            ...estimate,
+            computeUnitLimit: Math.ceil(estimate.computeUnitLimit * computeUnitLimitMultiplier),
+        };
+    });
+    transaction = await estimateAndSetResourceLimits(transaction);
 
     // Update the latest blockhash
     const hasLifetimeConstraint = 'lifetimeConstraint' in transaction;

@@ -6,7 +6,7 @@
  */
 
 // Constants
-export { LAMPORTS_PER_SOL, GENESIS_HASH, lamportsToSol, solToLamports } from './constants';
+export { LAMPORTS_PER_SOL, lamportsToSol, solToLamports } from './constants';
 
 // RPC utilities
 export {
@@ -21,7 +21,20 @@ export {
 } from './rpc';
 
 // Explorer utilities
-export { getExplorerLink, type ExplorerCluster, type GetExplorerLinkArgs } from './explorer';
+export {
+    getExplorerLink,
+    getSolanaExplorerUrl,
+    getSolscanUrl,
+    getXrayUrl,
+    getSolanaFmUrl,
+    getAllExplorerUrls,
+    formatSignature,
+    copySignature,
+    type ExplorerCluster,
+    type ExplorerOptions,
+    type ExplorerType,
+    type GetExplorerLinkArgs,
+} from './explorer';
 
 // Client factory
 export {
