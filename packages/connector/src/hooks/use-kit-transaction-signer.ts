@@ -9,8 +9,9 @@
 
 import { useMemo } from 'react';
 import type { TransactionModifyingSigner } from '@solana/signers';
-import { useTransactionSigner } from './use-transaction-signer';
-import { createKitTransactionSigner } from '../lib/transaction/kit-transaction-signer';
+import { createTransactionSignerFromWalletAccount } from '@solana/wallet-account-signer';
+import { getOrCreateUiWalletAccountForStandardWalletAccount } from '@wallet-standard/ui-registry';
+import { useConnector } from '../ui/connector-provider';
 
 /**
  * Return value from useKitTransactionSigner hook
@@ -37,68 +38,57 @@ export type UseGillTransactionSignerReturn = UseKitTransactionSignerReturn;
 /**
  * Hook for kit-compatible transaction signing
  *
- * Creates a TransactionPartialSigner that's compatible with @solana/kit,
- * enabling seamless integration with modern Solana development patterns.
- *
- * This hook wraps the standard useTransactionSigner and adapts it to kit's
- * interface, allowing you to use modern libraries without type incompatibilities.
+ * Returns a `TransactionModifyingSigner` from `@solana/kit`, built directly from the
+ * connected Wallet Standard account via `@solana/wallet-account-signer`. Pass it to
+ * kit instruction builders and transaction message helpers.
  *
  * @example
  * ```tsx
  * import { useKitTransactionSigner } from '@solana/connector';
  * import { getTransferSolInstruction } from '@solana-program/system';
- * import { address, pipe, createTransactionMessage } from '@solana/kit';
+ * import { address } from '@solana/kit';
  *
  * function ModernTransfer() {
  *   const { signer, ready } = useKitTransactionSigner();
  *
- *   const handleTransfer = async (recipient: string, amount: number) => {
+ *   const handleTransfer = (recipient: string, amount: bigint) => {
  *     if (!signer) return;
- *
- *     // Fully type-safe with @solana/kit!
  *     const instruction = getTransferSolInstruction({
- *       source: signer, // No type errors
+ *       source: signer,
  *       destination: address(recipient),
- *       amount
+ *       amount,
  *     });
- *
- *     const txMessage = pipe(
- *       createTransactionMessage({ version: 0 }),
- *       (tx) => setTransactionMessageFeePayerSigner(signer, tx), // Works!
- *       // ...
- *     );
+ *     // ...compile and send with kit
  *   };
  *
  *   return (
- *     <button onClick={handleTransfer} disabled={!ready}>
+ *     <button onClick={() => handleTransfer('...', 1_000_000n)} disabled={!ready}>
  *       Send with Kit
  *     </button>
  *   );
  * }
  * ```
- *
- * @example
- * ```tsx
- * // For backward compatibility, continue using useTransactionSigner
- * import { useTransactionSigner } from '@solana/connector';
- *
- * function LegacyTransfer() {
- *   const { signer } = useTransactionSigner(); // Wallet adapter compatible
- *   // Works with @solana/web3.js v1 and wallet-adapter
- * }
- * ```
  */
 export function useKitTransactionSigner(): UseKitTransactionSignerReturn {
-    const { signer: connectorSigner, ready } = useTransactionSigner();
+    const { selectedWallet, selectedAccount, accounts, cluster, connected } = useConnector();
 
-    const kitSigner = useMemo(() => {
-        if (!connectorSigner) return null;
-        return createKitTransactionSigner(connectorSigner);
-    }, [connectorSigner]);
+    const account = useMemo(
+        () => accounts.find(a => a.address === selectedAccount)?.raw ?? null,
+        [accounts, selectedAccount],
+    );
+
+    const signer = useMemo(() => {
+        if (!connected || !selectedWallet || !account || !cluster) {
+            return null;
+        }
+
+        const uiWalletAccount = getOrCreateUiWalletAccountForStandardWalletAccount(selectedWallet, account);
+        return createTransactionSignerFromWalletAccount(uiWalletAccount, cluster.id);
+    }, [connected, selectedWallet, account, cluster]);
 
     return {
-        signer: kitSigner,
-        ready,
+        signer,
+        ready: Boolean(signer),
     };
 }
 
