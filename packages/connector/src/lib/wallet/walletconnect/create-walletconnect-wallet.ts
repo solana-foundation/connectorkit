@@ -461,10 +461,7 @@ export function createWalletConnectWallet(config: WalletConnectConfig, transport
                                 ? {
                                       skipPreflight: options.skipPreflight,
                                       preflightCommitment: options.preflightCommitment as
-                                          | 'processed'
-                                          | 'confirmed'
-                                          | 'finalized'
-                                          | undefined,
+                                          'processed' | 'confirmed' | 'finalized' | undefined,
                                       maxRetries: options.maxRetries,
                                       minContextSlot: options.minContextSlot,
                                   }

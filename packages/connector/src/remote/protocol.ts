@@ -103,10 +103,7 @@ export interface SignAndSendTransactionRequest extends RemoteSignerRequestBase {
  * Union type for all POST request bodies
  */
 export type RemoteSignerRequest =
-    | SignTransactionRequest
-    | SignAllTransactionsRequest
-    | SignMessageRequest
-    | SignAndSendTransactionRequest;
+    SignTransactionRequest | SignAllTransactionsRequest | SignMessageRequest | SignAndSendTransactionRequest;
 
 // ============================================================================
 // Responses

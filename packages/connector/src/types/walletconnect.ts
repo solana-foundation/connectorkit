@@ -220,14 +220,7 @@ export interface WalletConnectSignAndSendTransactionParams {
     sendOptions?: {
         skipPreflight?: boolean;
         preflightCommitment?:
-            | 'processed'
-            | 'confirmed'
-            | 'finalized'
-            | 'recent'
-            | 'single'
-            | 'singleGossip'
-            | 'root'
-            | 'max';
+            'processed' | 'confirmed' | 'finalized' | 'recent' | 'single' | 'singleGossip' | 'root' | 'max';
         maxRetries?: number;
         minContextSlot?: number;
     };

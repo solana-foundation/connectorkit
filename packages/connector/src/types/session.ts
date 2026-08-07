@@ -244,10 +244,7 @@ export interface WalletStatusError {
  * ```
  */
 export type WalletStatus =
-    | WalletStatusDisconnected
-    | WalletStatusConnecting
-    | WalletStatusConnected
-    | WalletStatusError;
+    WalletStatusDisconnected | WalletStatusConnecting | WalletStatusConnected | WalletStatusError;
 
 // ============================================================================
 // Type Guards
