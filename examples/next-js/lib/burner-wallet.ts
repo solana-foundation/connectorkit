@@ -33,14 +33,7 @@ const STORAGE_KEY = 'connectorkit-playground:burner-secret';
 
 const CHAINS: IdentifierArray = ['solana:mainnet', 'solana:devnet', 'solana:testnet'];
 
-const FEATURES: IdentifierArray = [
-    StandardConnect,
-    StandardDisconnect,
-    StandardEvents,
-    SolanaSignTransaction,
-    SolanaSignMessage,
-    SolanaSignOffchainMessage,
-];
+const ACCOUNT_FEATURES: IdentifierArray = [SolanaSignTransaction, SolanaSignMessage, SolanaSignOffchainMessage];
 
 const ICON: WalletIcon = `data:image/svg+xml;base64,${btoa(
     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="#f97316"/><path d="M16 6c2.5 4.2 6 5.9 6 10a6 6 0 1 1-12 0c0-4.1 3.5-5.8 6-10Z" fill="#fff7ed"/></svg>',
@@ -53,30 +46,35 @@ const ICON: WalletIcon = `data:image/svg+xml;base64,${btoa(
  * without a compatible browser extension, and it must never hold anything of value.
  */
 function loadOrCreateSeed(): Uint8Array {
-    const stored = window.localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-        try {
+    try {
+        const stored = window.localStorage.getItem(STORAGE_KEY);
+        if (stored) {
             const bytes = Uint8Array.from(JSON.parse(stored) as number[]);
             if (bytes.length === 32) {
                 return bytes;
             }
-        } catch {
-            // Fall through and mint a replacement for the unreadable entry.
         }
+    } catch {
+        // Storage may be unavailable (private browsing, partitioned iframes) or the
+        // entry unreadable; fall through and mint a seed, persisting it if we can.
     }
     const seed = crypto.getRandomValues(new Uint8Array(32));
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(seed)));
+    try {
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(seed)));
+    } catch {
+        // Ephemeral seed: the burner still works for this page load.
+    }
     return seed;
 }
 
 function loadKeyPair(): Promise<CryptoKeyPair> {
-    return createKeyPairFromPrivateKeyBytes(loadOrCreateSeed(), true);
+    return createKeyPairFromPrivateKeyBytes(loadOrCreateSeed());
 }
 
 class BurnerWalletAccount implements WalletAccount {
     readonly address: string;
     readonly chains = CHAINS;
-    readonly features = FEATURES;
+    readonly features = ACCOUNT_FEATURES;
     readonly label = 'Burner account';
     readonly publicKey: Uint8Array;
 
@@ -106,25 +104,6 @@ class BurnerWallet implements Wallet {
 
     get accounts(): readonly WalletAccount[] {
         return this.#account ? [this.#account] : [];
-    }
-
-    get features() {
-        return {
-            [SolanaSignMessage]: { signMessage: this.#signMessage, version: '1.0.0' as const },
-            [SolanaSignOffchainMessage]: {
-                signOffchainMessage: this.#signOffchainMessage,
-                supportedMessageVersions: [1] as const,
-                version: '1.0.0' as const,
-            },
-            [SolanaSignTransaction]: {
-                signTransaction: this.#signTransaction,
-                supportedTransactionVersions: ['legacy', 0] as const,
-                version: '1.0.0' as const,
-            },
-            [StandardConnect]: { connect: this.#connect, version: '1.0.0' as const },
-            [StandardDisconnect]: { disconnect: this.#disconnect, version: '1.0.0' as const },
-            [StandardEvents]: { on: this.#on, version: '1.0.0' as const },
-        };
     }
 
     #emitChange() {
@@ -197,20 +176,50 @@ class BurnerWallet implements Wallet {
         ...inputs: readonly SolanaSignOffchainMessageInput[]
     ): Promise<readonly SolanaSignOffchainMessageOutput[]> => {
         const keyPair = this.#requireKeyPair();
+        const ownAddress = this.#account?.address;
+        if (!ownAddress) {
+            throw new Error('Burner wallet is not connected');
+        }
         const addressDecoder = getAddressDecoder();
         return await Promise.all(
-            inputs.map(async ({ message, requiredSigners }) => {
+            inputs.map(async ({ message, messageVersion, requiredSigners }) => {
+                if (messageVersion !== 1) {
+                    throw new Error(`Unsupported off-chain message version: ${messageVersion}`);
+                }
+                const requiredSignatories = requiredSigners.map(publicKey => ({
+                    address: addressDecoder.decode(publicKey),
+                }));
+                if (!requiredSignatories.some(({ address }) => address === ownAddress)) {
+                    throw new Error('requiredSigners must include the signing account');
+                }
                 const envelope = compileOffchainMessageV1Envelope({
                     content: message,
-                    requiredSignatories: requiredSigners.map(publicKey => ({
-                        address: addressDecoder.decode(publicKey),
-                    })),
+                    requiredSignatories,
                     version: 1,
                 });
                 const signature = new Uint8Array(await signBytes(keyPair.privateKey, envelope.content));
                 return { signedOffchainMessage: envelope.content, signature };
             }),
         );
+    };
+
+    // Declared after the handlers above so class-field initialization order holds.
+    // A stable object (rather than a getter) keeps `wallet.features` identity-comparable.
+    readonly features = {
+        [SolanaSignMessage]: { signMessage: this.#signMessage, version: '1.0.0' as const },
+        [SolanaSignOffchainMessage]: {
+            signOffchainMessage: this.#signOffchainMessage,
+            supportedMessageVersions: [1] as const,
+            version: '1.0.0' as const,
+        },
+        [SolanaSignTransaction]: {
+            signTransaction: this.#signTransaction,
+            supportedTransactionVersions: ['legacy', 0] as const,
+            version: '1.0.0' as const,
+        },
+        [StandardConnect]: { connect: this.#connect, version: '1.0.0' as const },
+        [StandardDisconnect]: { disconnect: this.#disconnect, version: '1.0.0' as const },
+        [StandardEvents]: { on: this.#on, version: '1.0.0' as const },
     };
 }
 
@@ -231,5 +240,12 @@ export function registerBurnerWallet(): void {
 
 /** Forgets the persisted burner key, so the next connection mints a new one. */
 export function resetBurnerWallet(): void {
-    window.localStorage.removeItem(STORAGE_KEY);
+    if (typeof window === 'undefined') {
+        return;
+    }
+    try {
+        window.localStorage.removeItem(STORAGE_KEY);
+    } catch {
+        // Storage unavailable; nothing to forget.
+    }
 }

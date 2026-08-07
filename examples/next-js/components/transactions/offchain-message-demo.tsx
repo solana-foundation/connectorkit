@@ -44,7 +44,9 @@ export function OffchainMessageDemo() {
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-                {!canSignOffchainMessage ? (
+                {!ready ? (
+                    <Alert>Connect a wallet to sign off-chain messages</Alert>
+                ) : !canSignOffchainMessage ? (
                     <Alert>Connected wallet does not support off-chain message signing</Alert>
                 ) : (
                     <>
@@ -61,7 +63,7 @@ export function OffchainMessageDemo() {
                             />
                             <Button
                                 onClick={handleSign}
-                                disabled={!ready || isSigning || !message.trim()}
+                                disabled={isSigning || !message.trim()}
                                 size="sm"
                                 className="w-full"
                             >

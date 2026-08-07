@@ -24,7 +24,6 @@
         "@solana/connector": "workspace:*",
         "@solana/connector-debugger": "workspace:*",
         "@solana/keychain": "^1.4.0",
-        "@solana/codecs": "^7.0.0",
         "@solana/kit": "^7.0.0",
         "@solana/wallet-standard-features": "^1.4.0",
         "@solana/web3.js": "^1.98.4",

@@ -18,9 +18,16 @@ const getOrigin = () => {
 // For testing, default to true if not explicitly set to 'false'
 const ENABLE_REMOTE_SIGNER = process.env.NEXT_PUBLIC_ENABLE_REMOTE_SIGNER !== 'false';
 
+// The burner wallet keeps its throwaway key in plaintext localStorage and can sign on
+// mainnet, so it stays out of production connect modals unless a deployment opts in.
+const ENABLE_BURNER_WALLET =
+    process.env.NODE_ENV === 'development' || process.env.NEXT_PUBLIC_ENABLE_BURNER_WALLET === 'true';
+
 export function Providers({ children }: { children: ReactNode }) {
     useEffect(() => {
-        registerBurnerWallet();
+        if (ENABLE_BURNER_WALLET) {
+            registerBurnerWallet();
+        }
     }, []);
 
     const connectorConfig = useMemo(() => {

@@ -83,9 +83,6 @@ importers:
       '@solana-program/system':
         specifier: ^0.12.2
         version: 0.12.2(@solana/kit@7.0.0(bufferutil@4.1.0)(typescript@6.0.3))
-      '@solana/codecs':
-        specifier: ^7.0.0
-        version: 7.0.0(typescript@6.0.3)
       '@solana/connector':
         specifier: workspace:*
         version: link:../../packages/connector
@@ -9381,7 +9378,7 @@ snapshots:
       debug: 4.4.3
       invariant: 2.2.4
       metro: 0.83.7(bufferutil@4.1.0)
-      metro-config: 0.83.7(bufferutil@4.1.0)(utf-8-validate@6.0.6)
+      metro-config: 0.83.7(bufferutil@4.1.0)
       metro-core: 0.83.7
       semver: 7.8.5
     transitivePeerDependencies:
@@ -14412,6 +14409,21 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  metro-config@0.83.7(bufferutil@4.1.0):
+    dependencies:
+      connect: 3.7.0
+      flow-enums-runtime: 0.0.6
+      jest-validate: 29.7.0
+      metro: 0.83.7(bufferutil@4.1.0)
+      metro-cache: 0.83.7
+      metro-core: 0.83.7
+      metro-runtime: 0.83.7
+      yaml: 2.9.0
+    transitivePeerDependencies:
+      - bufferutil
+      - supports-color
+      - utf-8-validate
+
   metro-config@0.83.7(bufferutil@4.1.0)(utf-8-validate@6.0.6):
     dependencies:
       connect: 3.7.0
@@ -14426,6 +14438,7 @@ snapshots:
       - bufferutil
       - supports-color
       - utf-8-validate
+    optional: true
 
   metro-core@0.83.7:
     dependencies:
@@ -14536,6 +14549,7 @@ snapshots:
       - bufferutil
       - supports-color
       - utf-8-validate
+    optional: true
 
   metro@0.83.7(bufferutil@4.1.0):
     dependencies:
@@ -14562,7 +14576,7 @@ snapshots:
       metro-babel-transformer: 0.83.7
       metro-cache: 0.83.7
       metro-cache-key: 0.83.7
-      metro-config: 0.83.7(bufferutil@4.1.0)(utf-8-validate@6.0.6)
+      metro-config: 0.83.7(bufferutil@4.1.0)
       metro-core: 0.83.7
       metro-file-map: 0.83.7
       metro-resolver: 0.83.7
@@ -14628,6 +14642,7 @@ snapshots:
       - bufferutil
       - supports-color
       - utf-8-validate
+    optional: true
 
   micromatch@4.0.8:
     dependencies:
