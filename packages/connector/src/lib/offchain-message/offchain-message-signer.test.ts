@@ -124,6 +124,14 @@ describe('createOffchainMessageSigner', () => {
         await expect(signer.signOffchainMessage('original')).rejects.toMatchObject({ code: 'SIGNING_FAILED' });
     });
 
+    it('rejects when the wallet returns a signature from a different key', async () => {
+        const { account } = await createKeyedAccount();
+        const { keyPair: otherKeyPair } = await createKeyedAccount();
+        const signer = createOffchainMessageSigner({ wallet: createOffchainMessageWallet(otherKeyPair), account })!;
+
+        await expect(signer.signOffchainMessage('hello')).rejects.toThrow();
+    });
+
     it('rejects an already-aborted request before contacting the wallet', async () => {
         const { keyPair, account } = await createKeyedAccount();
         const wallet = createOffchainMessageWallet(keyPair);

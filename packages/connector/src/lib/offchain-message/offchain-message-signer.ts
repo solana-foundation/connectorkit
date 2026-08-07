@@ -53,7 +53,7 @@ export interface SignedOffchainMessage {
 export interface OffchainMessageSigner {
     /** The wallet address that will sign. */
     readonly address: string;
-    /** Whether the wallet advertises the `solana:signOffchainMessage` feature. */
+    /** Whether the wallet advertises the `solana:signOffchainMessage` feature with v1 support. */
     readonly canSignOffchainMessage: boolean;
     /** Off-chain message specification versions the wallet can sign. */
     readonly supportedMessageVersions: readonly number[];
@@ -72,10 +72,11 @@ export function createOffchainMessageSigner(config: OffchainMessageSignerConfig)
         | OffchainMessageFeature
         | undefined;
     const signerAddress = account.address as Address;
+    const supportsV1 = feature?.supportedMessageVersions.includes(1) ?? false;
 
     return {
         address: account.address,
-        canSignOffchainMessage: Boolean(feature),
+        canSignOffchainMessage: supportsV1,
         supportedMessageVersions: feature?.supportedMessageVersions ?? [],
 
         async signOffchainMessage(message, options = {}): Promise<SignedOffchainMessage> {
@@ -83,7 +84,7 @@ export function createOffchainMessageSigner(config: OffchainMessageSignerConfig)
 
             abortSignal?.throwIfAborted();
 
-            if (!feature) {
+            if (!feature || !supportsV1) {
                 throw Errors.featureNotSupported('off-chain message signing');
             }
 

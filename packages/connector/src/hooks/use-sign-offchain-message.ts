@@ -4,7 +4,7 @@
 
 'use client';
 
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useConnector } from '../ui/connector-provider';
 import {
     createOffchainMessageSigner,
@@ -44,6 +44,8 @@ export interface UseSignOffchainMessageReturn {
     address: string | null;
 }
 
+const NO_SUPPORTED_MESSAGE_VERSIONS: readonly number[] = Object.freeze([]);
+
 export function useSignOffchainMessage(): UseSignOffchainMessageReturn {
     const { selectedWallet, selectedAccount, accounts, connected } = useConnector();
 
@@ -60,12 +62,18 @@ export function useSignOffchainMessage(): UseSignOffchainMessageReturn {
         return createOffchainMessageSigner({ wallet: selectedWallet, account });
     }, [connected, selectedWallet, account]);
 
+    const signOffchainMessage = useCallback(
+        (message: string, options?: SignOffchainMessageOptions) =>
+            signer
+                ? signer.signOffchainMessage(message, options)
+                : Promise.reject(Errors.featureNotSupported('off-chain message signing')),
+        [signer],
+    );
+
     return {
-        signOffchainMessage: signer
-            ? (message, options) => signer.signOffchainMessage(message, options)
-            : () => Promise.reject(Errors.featureNotSupported('off-chain message signing')),
+        signOffchainMessage,
         canSignOffchainMessage: signer?.canSignOffchainMessage ?? false,
-        supportedMessageVersions: signer?.supportedMessageVersions ?? [],
+        supportedMessageVersions: signer?.supportedMessageVersions ?? NO_SUPPORTED_MESSAGE_VERSIONS,
         ready: Boolean(signer?.canSignOffchainMessage),
         address: selectedAccount,
     };

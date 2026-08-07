@@ -1470,12 +1470,12 @@ import { AppProvider, useConnector, useWallet, useConnectWallet } from '@solana/
 
 #### vNext Hooks (Recommended)
 
-| Hook                    | Description                 | Returns                                                           |
-| ----------------------- | --------------------------- | ----------------------------------------------------------------- |
-| `useWallet()`           | Wallet status state machine | `{ status, isConnected, isConnecting, account, accounts, error }` |
-| `useWalletConnectors()` | Available wallet connectors | `WalletConnectorMetadata[]`                                       |
-| `useConnectWallet()`    | Connect by connector ID     | `{ connect, isConnecting, error, resetError }`                    |
-| `useDisconnectWallet()` | Disconnect current wallet   | `{ disconnect, isDisconnecting }`                                 |
+| Hook                       | Description                         | Returns                                                                                     |
+| -------------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------- |
+| `useWallet()`              | Wallet status state machine         | `{ status, isConnected, isConnecting, account, accounts, error }`                           |
+| `useWalletConnectors()`    | Available wallet connectors         | `WalletConnectorMetadata[]`                                                                 |
+| `useConnectWallet()`       | Connect by connector ID             | `{ connect, isConnecting, error, resetError }`                                              |
+| `useDisconnectWallet()`    | Disconnect current wallet           | `{ disconnect, isDisconnecting }`                                                           |
 | `useSignOffchainMessage()` | Off-chain message signing (sRFC 38) | `{ signOffchainMessage, canSignOffchainMessage, supportedMessageVersions, ready, address }` |
 
 #### Legacy Hooks
