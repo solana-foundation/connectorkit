@@ -712,7 +712,9 @@ import { useSignOffchainMessage } from '@solana/connector/react';
 function SignInButton() {
     const { signOffchainMessage, canSignOffchainMessage, ready } = useSignOffchainMessage();
 
-    if (!canSignOffchainMessage) return null;
+    // `ready` is true once a wallet is connected; `canSignOffchainMessage`
+    // additionally requires the wallet to support v1 off-chain messages.
+    if (!ready || !canSignOffchainMessage) return null;
 
     const handleSignIn = async () => {
         const { signature, signedOffchainMessage, envelope } = await signOffchainMessage(
@@ -723,7 +725,7 @@ function SignInButton() {
         // envelope: verified @solana/kit OffchainMessageEnvelope
     };
 
-    return <button onClick={handleSignIn} disabled={!ready}>Sign In</button>;
+    return <button onClick={handleSignIn}>Sign In</button>;
 }
 ```
 

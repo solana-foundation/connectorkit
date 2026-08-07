@@ -151,6 +151,25 @@ const { signer, ready } = useKitTransactionSigner();
 // signer is TransactionModifyingSigner — compatible with @solana/kit pipelines
 ```
 
+### useSignOffchainMessage()
+
+Sign v1 off-chain messages (sRFC 38) via the `solana:signOffchainMessage` wallet feature.
+
+```ts
+const {
+    signOffchainMessage, // (message: string, options?) => Promise<SignedOffchainMessage>
+    canSignOffchainMessage, // connected wallet supports v1 off-chain messages
+    supportedMessageVersions, // readonly number[]
+    ready, // a wallet is connected and a signer is available
+    address, // string | null
+} = useSignOffchainMessage();
+
+const { signature, signedOffchainMessage, envelope } = await signOffchainMessage('Sign in');
+// Rejects with FEATURE_NOT_SUPPORTED (wallet lacks the feature), USER_REJECTED
+// (user cancelled), or SIGNING_FAILED (compile/sign/verify failure).
+// Headless equivalent: createOffchainMessageSigner({ wallet, account }) from '@solana/connector/headless'
+```
+
 ### useTransactionPreparer()
 
 Add blockhash + compute units to a transaction message.
