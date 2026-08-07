@@ -7,6 +7,7 @@ import { LegacySolTransfer } from './legacy-sol-transfer';
 import { ModernSolTransfer } from './modern-sol-transfer';
 import { KitSignerDemo } from './kit-signer-demo';
 import { ChainUtilitiesDemo } from './chain-utilities-demo';
+import { OffchainMessageDemo } from './offchain-message-demo';
 import { ConnectionAbstractionDemo } from './connection-abstraction-demo';
 
 export function TransactionDemo() {
@@ -37,6 +38,8 @@ export function TransactionDemo() {
                 <KitSignerDemo />
                 <ChainUtilitiesDemo />
             </div>
+
+            <OffchainMessageDemo />
 
             <ConnectionAbstractionDemo />
         </div>

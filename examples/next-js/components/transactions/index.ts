@@ -7,4 +7,5 @@ export { TransactionForm } from './transaction-form';
 export { TransactionResult } from './transaction-result';
 export { KitSignerDemo } from './kit-signer-demo';
 export { ChainUtilitiesDemo } from './chain-utilities-demo';
+export { OffchainMessageDemo } from './offchain-message-demo';
 export { ConnectionAbstractionDemo } from './connection-abstraction-demo';
