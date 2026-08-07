@@ -129,7 +129,28 @@ describe('createOffchainMessageSigner', () => {
         const { keyPair: otherKeyPair } = await createKeyedAccount();
         const signer = createOffchainMessageSigner({ wallet: createOffchainMessageWallet(otherKeyPair), account })!;
 
-        await expect(signer.signOffchainMessage('hello')).rejects.toThrow();
+        await expect(signer.signOffchainMessage('hello')).rejects.toMatchObject({ code: 'SIGNING_FAILED' });
+    });
+
+    it('rejects a message the codec cannot compile with the documented error code', async () => {
+        const { keyPair, account } = await createKeyedAccount();
+        const signer = createOffchainMessageSigner({ wallet: createOffchainMessageWallet(keyPair), account })!;
+
+        await expect(signer.signOffchainMessage('')).rejects.toMatchObject({ code: 'SIGNING_FAILED' });
+    });
+
+    it('classifies wallet cancellation as a recoverable USER_REJECTED error', async () => {
+        const { keyPair, account } = await createKeyedAccount();
+        const wallet = createOffchainMessageWallet(keyPair);
+        (wallet.features as Record<string, { signOffchainMessage: ReturnType<typeof vi.fn> }>)[
+            SolanaSignOffchainMessage
+        ].signOffchainMessage.mockRejectedValueOnce(new Error('User rejected the request.'));
+        const signer = createOffchainMessageSigner({ wallet, account })!;
+
+        await expect(signer.signOffchainMessage('hello')).rejects.toMatchObject({
+            code: 'USER_REJECTED',
+            recoverable: true,
+        });
     });
 
     it('rejects an already-aborted request before contacting the wallet', async () => {
