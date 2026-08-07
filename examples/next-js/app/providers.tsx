@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { useEffect, useMemo } from 'react';
 import { AppProvider, getDefaultConfig, getDefaultMobileConfig } from '@solana/connector/react';
 import { createRemoteSignerWallet } from '@solana/connector/remote';
+import { registerBurnerWallet } from '@/lib/burner-wallet';
 
 // Get origin synchronously on client, fallback for SSR
 const getOrigin = () => {
@@ -18,6 +19,10 @@ const getOrigin = () => {
 const ENABLE_REMOTE_SIGNER = process.env.NEXT_PUBLIC_ENABLE_REMOTE_SIGNER !== 'false';
 
 export function Providers({ children }: { children: ReactNode }) {
+    useEffect(() => {
+        registerBurnerWallet();
+    }, []);
+
     const connectorConfig = useMemo(() => {
         const origin = getOrigin();
 

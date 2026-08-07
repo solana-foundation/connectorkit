@@ -69,8 +69,7 @@ export function createOffchainMessageSigner(config: OffchainMessageSignerConfig)
     }
 
     const feature = (wallet.features as Record<string, unknown>)[SolanaSignOffchainMessage] as
-        | OffchainMessageFeature
-        | undefined;
+        OffchainMessageFeature | undefined;
     const signerAddress = account.address as Address;
     const supportsV1 = feature?.supportedMessageVersions.includes(1) ?? false;
 

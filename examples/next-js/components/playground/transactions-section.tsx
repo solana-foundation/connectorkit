@@ -7,6 +7,7 @@ import {
     TitanSwap,
     titanSwapCode,
     KitSignerDemo,
+    OffchainMessageDemo,
     ChainUtilitiesDemo,
     ConnectionAbstractionDemo,
 } from '@/components/transactions';
@@ -459,6 +460,44 @@ function KitSignerDemo() {
     );
 }`,
         render: () => <KitSignerDemo />,
+    },
+    {
+        id: 'offchain-message-signing',
+        name: 'Off-Chain Message Signing',
+        description:
+            'Sign a human-readable v1 off-chain message (sRFC 38) via the solana:signOffchainMessage wallet feature. Signed bytes are verified against the canonical encoding before being returned.',
+        fileName: 'components/transactions/offchain-message-demo.tsx',
+        code: `import { useSignOffchainMessage } from '@solana/connector/react';
+
+function OffchainMessageDemo() {
+    const {
+        signOffchainMessage,     // (message, options?) => Promise<SignedOffchainMessage>
+        canSignOffchainMessage,  // wallet advertises the feature with v1 support
+        supportedMessageVersions,
+        ready,
+    } = useSignOffchainMessage();
+
+    async function handleSign(message: string) {
+        // The wallet constructs and signs the canonical v1 envelope;
+        // the connector re-compiles the bytes with @solana/kit's codec,
+        // asserts they match, and Ed25519-verifies the signature.
+        const { signature, signedOffchainMessage, envelope } =
+            await signOffchainMessage(message);
+
+        return { signature, signedOffchainMessage };
+    }
+
+    if (!canSignOffchainMessage) {
+        return <p>Wallet does not support off-chain message signing</p>;
+    }
+
+    return (
+        <button onClick={() => handleSign('Sign in to Example App')} disabled={!ready}>
+            Sign Off-Chain Message
+        </button>
+    );
+}`,
+        render: () => <OffchainMessageDemo />,
     },
     {
         id: 'chain-utilities',
