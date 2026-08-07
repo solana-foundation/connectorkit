@@ -472,9 +472,9 @@ function KitSignerDemo() {
 function OffchainMessageDemo() {
     const {
         signOffchainMessage,     // (message, options?) => Promise<SignedOffchainMessage>
-        canSignOffchainMessage,  // wallet advertises the feature with v1 support
+        canSignOffchainMessage,  // connected wallet advertises the feature with v1 support
         supportedMessageVersions,
-        ready,
+        ready,                   // a wallet is connected and a signer is available
     } = useSignOffchainMessage();
 
     async function handleSign(message: string) {
@@ -487,12 +487,16 @@ function OffchainMessageDemo() {
         return { signature, signedOffchainMessage };
     }
 
+    if (!ready) {
+        return <p>Connect a wallet first</p>;
+    }
+
     if (!canSignOffchainMessage) {
         return <p>Wallet does not support off-chain message signing</p>;
     }
 
     return (
-        <button onClick={() => handleSign('Sign in to Example App')} disabled={!ready}>
+        <button onClick={() => handleSign('Sign in to Example App')}>
             Sign Off-Chain Message
         </button>
     );
