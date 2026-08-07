@@ -205,7 +205,7 @@ export {
 export type { ExplorerType, ExplorerOptions } from './lib/kit';
 
 // ============================================================================
-// Kit Utilities (replaces gill imports)
+// Kit Utilities
 // ============================================================================
 export {
     LAMPORTS_PER_SOL,

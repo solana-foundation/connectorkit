@@ -67,8 +67,9 @@ export interface PrepareTransactionConfig<TMessage extends PrepareCompilableTran
  * - fetching the latest blockhash (if not already set)
  * - (optional) resetting latest blockhash to the most recent
  *
- * Messages that already carry an explicit compute unit limit are left
- * untouched unless `computeUnitLimitReset` is set.
+ * Messages that already carry an explicit compute unit limit keep it unless
+ * `computeUnitLimitReset` is set — except the provisory value 0 and the
+ * 1,400,000 maximum, which kit treats as unset and re-estimates.
  *
  * @param config - Configuration for transaction preparation
  * @returns Prepared transaction with resource limits and blockhash lifetime set

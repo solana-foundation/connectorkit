@@ -151,6 +151,8 @@ export class KitWalletCore {
     private connectingConnectorId: WalletConnectorId | null = null;
     private previousConnection: { walletName: string; address: string } | null = null;
     private lastDetectedCount = 0;
+    private lastKitStatus: KitWalletState['status'] | null = null;
+    private lastNotifiedAccountsKey: string | null = null;
     private accountsChangedListeners = new Set<(accounts: SessionAccount[]) => void>();
 
     constructor(
@@ -187,11 +189,16 @@ export class KitWalletCore {
         }
         this.chain = chain;
 
-        const next = this.buildClient(chain);
+        // When a session is live, the replacement client must silently
+        // reconnect it (via the plugin's own persistence) or the chain switch
+        // would drop the user's wallet.
+        const hasLiveSession = Boolean(this.client?.wallet.getState().connected);
+        const next = this.buildClient(chain, hasLiveSession || undefined);
         try {
             await next.wallet.whenReady();
-        } catch {
+        } catch (error) {
             // A disposed or failed warm-up still settles; proceed with the swap
+            if (this.options.debug) logger.warn('Chain-swap warm-up failed', { chain, error });
         }
         this.attachClient(next);
     }
@@ -243,6 +250,7 @@ export class KitWalletCore {
                 error: error.message,
                 timestamp: timestamp(),
             });
+            this.eventEmitter.emit({ type: 'error', error, context: 'connect', timestamp: timestamp() });
             this.sync();
             throw error;
         } finally {
@@ -290,11 +298,11 @@ export class KitWalletCore {
     // Client lifecycle
     // ========================================================================
 
-    private buildClient(chain: string): KitWalletClient {
+    private buildClient(chain: string, autoConnect?: boolean): KitWalletClient {
         const display = this.options.display;
         return createClient().use(
             walletSigner({
-                autoConnect: this.options.autoConnect ?? false,
+                autoConnect: autoConnect ?? this.options.autoConnect ?? false,
                 chain: chain as `${string}:${string}`,
                 filter: display ? wallet => applyWalletDisplayConfig([wallet], display).length > 0 : undefined,
                 storageKey: KIT_WALLET_STORAGE_KEY,
@@ -335,6 +343,40 @@ export class KitWalletCore {
         if (!client) return;
         const kitState = client.wallet.getState();
 
+        // A failed connect attempt to another wallet leaves the plugin's
+        // existing connection in place; a live connection always wins over a
+        // stale error so state, events, and the wallet itself stay agreed.
+        if (kitState.connected) {
+            this.lastError = null;
+        }
+
+        // The plugin swallows silent-reconnect rejections, so the only signal
+        // that a persisted session failed to restore is this transition.
+        if (
+            this.options.debug &&
+            (this.lastKitStatus === 'reconnecting' || this.lastKitStatus === 'pending') &&
+            kitState.status === 'disconnected'
+        ) {
+            logger.warn('Silent reconnect did not restore a session', {
+                persistedConnectorId: this.readPersistedConnectorId(),
+            });
+        }
+        this.lastKitStatus = kitState.status;
+
+        try {
+            this.project(kitState);
+        } catch (error) {
+            logger.error('Wallet state projection failed', { error });
+            this.eventEmitter.emit({
+                type: 'error',
+                error: error instanceof Error ? error : new Error(String(error)),
+                context: 'sync',
+                timestamp: timestamp(),
+            });
+        }
+    }
+
+    private project(kitState: KitWalletState): void {
         const orderedWallets = this.orderWallets(kitState.wallets);
         const connectors = orderedWallets.map(uiWallet => this.toConnectorMetadata(uiWallet));
         const walletInfos = orderedWallets.map(uiWallet => this.toWalletInfo(uiWallet));
@@ -351,11 +393,13 @@ export class KitWalletCore {
         );
 
         this.emitConnectionEvents(kitState);
-        if (session && this.accountsChangedListeners.size > 0) {
+        const accountsKey = session ? session.accounts.map(account => String(account.address)).join(',') : null;
+        if (session && accountsKey !== this.lastNotifiedAccountsKey && this.accountsChangedListeners.size > 0) {
             for (const listener of this.accountsChangedListeners) {
                 listener(session.accounts);
             }
         }
+        this.lastNotifiedAccountsKey = accountsKey;
     }
 
     private projectStatus(kitState: KitWalletState): {
@@ -447,8 +491,10 @@ export class KitWalletCore {
                 return () => this.accountsChangedListeners.delete(listener);
             },
             selectAccount: address => {
-                void this.selectAccount(String(address)).catch(error => {
-                    if (this.options.debug) logger.error('selectAccount failed', { error });
+                void this.selectAccount(String(address)).catch((cause: unknown) => {
+                    const error = cause instanceof Error ? cause : new Error(String(cause));
+                    logger.error('selectAccount failed', { error });
+                    this.eventEmitter.emit({ type: 'error', error, context: 'selectAccount', timestamp: timestamp() });
                 });
             },
             selectedAccount,

@@ -86,29 +86,30 @@ export function createKitSignersFromWallet(
         return empty;
     }
 
-    let chain: `solana:${string}` = 'solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1';
+    // Wallet Standard wallets advertise the standard chain identifiers
+    // (solana:mainnet/devnet/testnet); the signer factories validate the
+    // chain against the account's advertised chains at construction time.
+    let chain: `solana:${string}` = 'solana:devnet';
 
     if (network) {
-        const chainMap: Record<string, `solana:${string}`> = {
-            mainnet: 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp',
-            devnet: 'solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1',
-            testnet: 'solana:4uhcVJyU9pJkvQyS88uRDiswHXSCkY3z',
-        };
-        chain = chainMap[network] || chain;
+        chain = `solana:${network}`;
     } else if (connection) {
         const rpcUrl = connection.rpcEndpoint || '';
-        if (rpcUrl.includes('mainnet') || rpcUrl.includes('api.mainnet-beta')) {
-            chain = 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp';
+        if (rpcUrl.includes('mainnet')) {
+            chain = 'solana:mainnet';
         } else if (rpcUrl.includes('testnet')) {
-            chain = 'solana:4uhcVJyU9pJkvQyS88uRDiswHXSCkY3z';
+            chain = 'solana:testnet';
         }
     }
 
     const uiWalletAccount = getOrCreateUiWalletAccountForStandardWalletAccount(wallet, account);
 
-    const features = wallet.features as Record<string, unknown>;
-    const hasSignMessage = Boolean(features['solana:signMessage']);
-    const hasSendTransaction = Boolean(features['solana:signAndSendTransaction'] || features['solana:sendTransaction']);
+    // The signer factories require the feature on the account (not just the
+    // wallet) and throw when it is missing, so gate on the account's features.
+    const accountFeatures: readonly string[] = uiWalletAccount.features;
+    const hasSignMessage = accountFeatures.includes('solana:signMessage');
+    const hasSendTransaction =
+        accountFeatures.includes('solana:signAndSendTransaction') && uiWalletAccount.chains.includes(chain);
 
     return {
         address: walletAddress,

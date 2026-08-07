@@ -8,6 +8,9 @@ import { useSolanaClient } from '../use-kit-solana-client';
 import { refetchSharedQueryIfActive, setSharedQueryData, useSharedQuery } from './use-shared-query';
 import type { SharedQueryOptions } from './use-shared-query';
 import type { SolanaClient } from '../../lib/kit';
+import { createLogger } from '../../lib/utils/secure-logger';
+
+const logger = createLogger('useWalletAssets');
 
 /**
  * Token Program IDs
@@ -63,9 +66,11 @@ export interface UseWalletAssetsOptions<TSelected = WalletAssetsData> extends Om
     select?: (data: WalletAssetsData | undefined) => TSelected;
     /**
      * Subscribe to wallet account notifications for push-based updates.
-     * While the subscription is healthy it supersedes `refetchIntervalMs`
-     * polling; if it errors or WebSocket transport is unavailable, polling
-     * resumes as a fallback. (default: false)
+     * Once the subscription has delivered data it supersedes
+     * `refetchIntervalMs` polling; while it is connecting, after it errors,
+     * or when WebSocket transport is unavailable, polling runs as the
+     * fallback (so a fallback requires `refetchIntervalMs` to be set).
+     * (default: false)
      */
     liveUpdates?: boolean;
 }
@@ -307,7 +312,11 @@ export function useWalletAssets<TSelected = WalletAssetsData>(
         return rpcClient.rpcSubscriptions.accountNotifications(toAddress(address));
     }, [liveUpdates, key, address, rpcClient]);
 
-    const { data: accountNotification, status: subscriptionStatus } = useSubscription(accountNotificationsSource);
+    const {
+        data: accountNotification,
+        error: subscriptionError,
+        status: subscriptionStatus,
+    } = useSubscription(accountNotificationsSource);
 
     useEffect(() => {
         if (!key || !accountNotification) return;
@@ -319,8 +328,15 @@ export function useWalletAssets<TSelected = WalletAssetsData>(
         refetchSharedQueryIfActive(key);
     }, [key, accountNotification]);
 
-    // While the subscription is healthy, it supersedes interval polling
-    const subscriptionActive = accountNotificationsSource !== null && subscriptionStatus !== 'error';
+    useEffect(() => {
+        if (!subscriptionError) return;
+        logger.warn('Account subscription errored; falling back to polling', { error: subscriptionError });
+    }, [subscriptionError]);
+
+    // Polling yields only to a subscription that has delivered data; while it
+    // is still connecting (or after it errors) polling keeps running so a hung
+    // WebSocket cannot freeze balances.
+    const subscriptionActive = accountNotificationsSource !== null && subscriptionStatus === 'loaded';
     const effectiveRefetchIntervalMs = subscriptionActive ? false : refetchIntervalMs;
 
     // Use shared query with optional select

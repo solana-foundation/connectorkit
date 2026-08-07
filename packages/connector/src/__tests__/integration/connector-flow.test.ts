@@ -209,28 +209,6 @@ describe('Connector Flow Integration', () => {
         });
     });
 
-    describe('state persistence and recovery', () => {
-        it('should recover state on initialization with persisted wallet', async () => {
-            // Pre-populate storage
-            await storage.set('Phantom');
-
-            const newClient = new ConnectorClient({
-                storage: {
-                    wallet: storage,
-                },
-                autoConnect: true,
-                debug: false,
-            });
-
-            // The client should attempt to connect to the saved wallet
-            // In a real scenario with actual wallet detection
-            const state = newClient.getSnapshot();
-            expect(state).toBeDefined();
-
-            newClient.destroy();
-        });
-    });
-
     describe('multiple wallet switching', () => {
         it('should switch between wallets', async () => {
             const account1 = createMockWalletAccount(TEST_ADDRESSES.ACCOUNT_1);

@@ -54,7 +54,7 @@ export interface TokenBalance {
 export interface UseBalanceOptions {
     /** Whether the hook is enabled (default: true) */
     enabled?: boolean;
-    /** Whether to auto-refresh balance (default: true) */
+    /** Whether to keep the balance updated via subscription and polling (default: true) */
     autoRefresh?: boolean;
     /** Refresh interval in milliseconds (default: 30000) */
     refreshInterval?: number;
@@ -156,7 +156,7 @@ function selectBalance(assets: WalletAssetsData | undefined): BalanceSelection {
  * ```tsx
  * function Balance() {
  *   const { formattedSol, refetch, abort } = useBalance({
- *     autoRefresh: false,  // Disable polling
+ *     autoRefresh: false,  // Disable live updates and polling
  *     staleTimeMs: 10000,  // Consider data fresh for 10s
  *   });
  *

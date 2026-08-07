@@ -95,6 +95,9 @@ importers:
       '@solana/kit':
         specifier: ^7.0.0
         version: 7.0.0(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@6.0.6)
+      '@solana/wallet-standard-features':
+        specifier: ^1.4.0
+        version: 1.4.0
       '@solana/web3.js':
         specifier: ^1.98.4
         version: 1.98.4(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@6.0.6)
@@ -102,6 +105,12 @@ importers:
         specifier: ^5.101.2
         version: 5.101.2(react@19.2.7)
       '@wallet-standard/app':
+        specifier: ^1.1.1
+        version: 1.1.1
+      '@wallet-standard/features':
+        specifier: ^1.1.1
+        version: 1.1.1
+      '@wallet-standard/wallet':
         specifier: ^1.1.1
         version: 1.1.1
       '@walletconnect/universal-provider':
@@ -165,6 +174,9 @@ importers:
       '@types/react-syntax-highlighter':
         specifier: ^15.5.13
         version: 15.5.13
+      '@wallet-standard/base':
+        specifier: ^1.1.1
+        version: 1.1.1
       eslint:
         specifier: ^10.6.0
         version: 10.6.0(jiti@2.7.0)
@@ -237,6 +249,9 @@ importers:
       '@solana/wallet-account-signer':
         specifier: ^7.0.0
         version: 7.0.0(typescript@6.0.3)
+      '@solana/wallet-standard-features':
+        specifier: ^1.4.0
+        version: 1.4.0
       '@solana/web3.js':
         specifier: ^1.0.0
         version: 1.98.4(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@6.0.6)

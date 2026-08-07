@@ -10,6 +10,7 @@ import type { ConnectorState } from '../../types/connector';
 import type { ConnectorEvent } from '../../types/events';
 import { createMockPhantomWallet, createMockSolflareWallet } from '../../__tests__/mocks/wallet-standard-mock';
 import { createMockWalletAccount, TEST_ADDRESSES } from '../../__tests__/fixtures/accounts';
+import { setupMockWindow, cleanupMockWindow } from '../../__tests__/mocks/window-mock';
 import { waitForCondition } from '../../__tests__/utils/test-helpers';
 
 describe('normalizeWalletChain', () => {
@@ -185,6 +186,92 @@ describe('KitWalletCore', () => {
         await expect(walletCore.selectAccount(TEST_ADDRESSES.ACCOUNT_2)).rejects.toThrow(
             'Requested account not available',
         );
+    });
+
+    it('keeps the live session when a connect attempt to another wallet fails', async () => {
+        const account = createMockWalletAccount(TEST_ADDRESSES.ACCOUNT_1);
+        registerWallet(createMockPhantomWallet({ accounts: [account] }));
+        const solflare = createMockSolflareWallet();
+        vi.mocked(solflare.features['standard:connect'].connect).mockRejectedValue(new Error('User rejected request'));
+        registerWallet(solflare);
+        const walletCore = createCore();
+
+        await walletCore.connectWallet(createConnectorId('Phantom'));
+        await expect(walletCore.connectWallet(createConnectorId('Solflare'))).rejects.toThrow('User rejected');
+
+        const state = stateManager.getSnapshot();
+        expect(state.wallet.status).toBe('connected');
+        if (state.wallet.status !== 'connected') return;
+        expect(state.wallet.session.connectorId).toBe('wallet-standard:phantom');
+        expect(state.connected).toBe(true);
+        expect(state.selectedWallet?.name).toBe('Phantom');
+        expect(events.some(e => e.type === 'connection:failed')).toBe(true);
+        expect(events.some(e => e.type === 'error' && e.context === 'connect')).toBe(true);
+        expect(events.some(e => e.type === 'wallet:disconnected')).toBe(false);
+    });
+
+    it('preserves the session across setChain', async () => {
+        setupMockWindow();
+        try {
+            const account = createMockWalletAccount(TEST_ADDRESSES.ACCOUNT_1);
+            registerWallet(createMockPhantomWallet({ accounts: [account] }));
+            const walletCore = createCore();
+
+            await walletCore.connectWallet(createConnectorId('Phantom'));
+            events.length = 0;
+
+            await walletCore.setChain('solana:devnet');
+            await waitForCondition(() => stateManager.getSnapshot().wallet.status === 'connected', {
+                timeout: 2000,
+            });
+
+            const state = stateManager.getSnapshot();
+            expect(state.wallet.status).toBe('connected');
+            expect(state.connected).toBe(true);
+            expect(events.some(e => e.type === 'wallet:disconnected')).toBe(false);
+        } finally {
+            cleanupMockWindow();
+        }
+    });
+
+    it('silently restores a persisted session with autoConnect', async () => {
+        setupMockWindow();
+        try {
+            const account = createMockWalletAccount(TEST_ADDRESSES.ACCOUNT_1);
+            registerWallet(createMockPhantomWallet({ accounts: [account] }));
+            localStorage.setItem('connector-kit:v1:kit-wallet', `Phantom:${TEST_ADDRESSES.ACCOUNT_1}`);
+
+            createCore({ autoConnect: true });
+
+            await waitForCondition(() => stateManager.getSnapshot().wallet.status === 'connected', {
+                timeout: 2000,
+            });
+
+            const state = stateManager.getSnapshot();
+            expect(state.wallet.status).toBe('connected');
+            expect(state.selectedAccount).toBe(TEST_ADDRESSES.ACCOUNT_1);
+            expect(events.some(e => e.type === 'wallet:connected')).toBe(true);
+        } finally {
+            cleanupMockWindow();
+        }
+    });
+
+    it('notifies onAccountsChanged only when the account set changes', async () => {
+        const account = createMockWalletAccount(TEST_ADDRESSES.ACCOUNT_1);
+        registerWallet(createMockPhantomWallet({ accounts: [account] }));
+        const walletCore = createCore();
+
+        await walletCore.connectWallet(createConnectorId('Phantom'));
+
+        const state = stateManager.getSnapshot();
+        if (state.wallet.status !== 'connected') throw new Error('expected connected');
+        const listener = vi.fn();
+        state.wallet.session.onAccountsChanged(listener);
+
+        registerWallet(createMockSolflareWallet());
+        await waitForCondition(() => stateManager.getSnapshot().connectors.length === 2, { timeout: 2000 });
+
+        expect(listener).not.toHaveBeenCalled();
     });
 
     it('prefers storage.clear() when clearing the persisted wallet name', async () => {

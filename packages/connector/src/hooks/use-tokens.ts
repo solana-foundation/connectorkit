@@ -74,7 +74,7 @@ export interface UseTokensOptions {
     enabled?: boolean;
     /** Whether to include zero balance tokens */
     includeZeroBalance?: boolean;
-    /** Whether to auto-refresh */
+    /** Whether to keep holdings updated via subscription and polling */
     autoRefresh?: boolean;
     /** Refresh interval in milliseconds */
     refreshInterval?: number;
@@ -573,7 +573,7 @@ function sortByValueDesc(a: Token, b: Token): number {
  * - Automatic request deduplication across components
  * - Shared data with useBalance (single RPC query)
  * - Token-2022 support
- * - Shared polling interval (ref-counted)
+ * - Live updates via account subscription (with polling fallback)
  * - Configurable auto-refresh behavior
  * - Abort support for in-flight requests
  * - Optional client override
