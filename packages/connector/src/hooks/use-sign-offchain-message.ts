@@ -34,7 +34,8 @@ export interface UseSignOffchainMessageReturn {
     supportedMessageVersions: readonly number[];
 
     /**
-     * Whether off-chain message signing is available and ready to use
+     * Whether a wallet is connected and a signer is available.
+     * Check `canSignOffchainMessage` to know if that wallet supports the feature.
      */
     ready: boolean;
 
@@ -74,7 +75,7 @@ export function useSignOffchainMessage(): UseSignOffchainMessageReturn {
         signOffchainMessage,
         canSignOffchainMessage: signer?.canSignOffchainMessage ?? false,
         supportedMessageVersions: signer?.supportedMessageVersions ?? NO_SUPPORTED_MESSAGE_VERSIONS,
-        ready: Boolean(signer?.canSignOffchainMessage),
+        ready: Boolean(signer),
         address: selectedAccount,
     };
 }

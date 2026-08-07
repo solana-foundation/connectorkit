@@ -21,9 +21,21 @@ import type { Wallet, WalletAccount } from '@wallet-standard/base';
 
 import { SolanaSignOffchainMessage, type SolanaSignOffchainMessageFeature } from '@solana/wallet-standard-features';
 
-import { Errors, TransactionError } from '../errors';
+import { Errors, TransactionError, isConnectorError } from '../errors';
 
 type OffchainMessageFeature = SolanaSignOffchainMessageFeature[typeof SolanaSignOffchainMessage];
+
+/** Normalizes wallet-thrown errors so user cancellation surfaces as a recoverable USER_REJECTED. */
+function toOffchainMessageSigningError(error: unknown): Error {
+    if (isConnectorError(error)) {
+        return error;
+    }
+    const message = error instanceof Error ? error.message.toLowerCase() : '';
+    if (message.includes('user rejected') || message.includes('user denied')) {
+        return Errors.userRejected('off-chain message signing');
+    }
+    return new TransactionError('SIGNING_FAILED', 'Failed to sign off-chain message', undefined, error as Error);
+}
 
 /** Configuration for creating an off-chain message signer. */
 export interface OffchainMessageSignerConfig {
@@ -71,7 +83,7 @@ export function createOffchainMessageSigner(config: OffchainMessageSignerConfig)
     const feature = (wallet.features as Record<string, unknown>)[SolanaSignOffchainMessage] as
         OffchainMessageFeature | undefined;
     const signerAddress = account.address as Address;
-    const supportsV1 = feature?.supportedMessageVersions.includes(1) ?? false;
+    const supportsV1 = feature?.supportedMessageVersions?.includes(1) ?? false;
 
     return {
         address: account.address,
@@ -87,11 +99,21 @@ export function createOffchainMessageSigner(config: OffchainMessageSignerConfig)
                 throw Errors.featureNotSupported('off-chain message signing');
             }
 
-            const envelope = compileOffchainMessageV1Envelope({
-                version: 1,
-                content: message,
-                requiredSignatories: [{ address: signerAddress }],
-            });
+            let envelope: OffchainMessageEnvelope;
+            try {
+                envelope = compileOffchainMessageV1Envelope({
+                    version: 1,
+                    content: message,
+                    requiredSignatories: [{ address: signerAddress }],
+                });
+            } catch (error) {
+                throw new TransactionError(
+                    'SIGNING_FAILED',
+                    'Failed to compile off-chain message',
+                    undefined,
+                    error as Error,
+                );
+            }
 
             let output;
             try {
@@ -102,15 +124,8 @@ export function createOffchainMessageSigner(config: OffchainMessageSignerConfig)
                     requiredSigners: [account.publicKey],
                 });
             } catch (error) {
-                throw new TransactionError(
-                    'SIGNING_FAILED',
-                    'Failed to sign off-chain message',
-                    undefined,
-                    error as Error,
-                );
+                throw toOffchainMessageSigningError(error);
             }
-
-            abortSignal?.throwIfAborted();
 
             if (!output) {
                 throw new TransactionError('SIGNING_FAILED', 'Wallet returned no off-chain message signature');
@@ -128,7 +143,16 @@ export function createOffchainMessageSigner(config: OffchainMessageSignerConfig)
                 },
             };
 
-            await verifyOffchainMessageEnvelope(signedEnvelope);
+            try {
+                await verifyOffchainMessageEnvelope(signedEnvelope);
+            } catch (error) {
+                throw new TransactionError(
+                    'SIGNING_FAILED',
+                    'Off-chain message signature failed verification',
+                    undefined,
+                    error as Error,
+                );
+            }
 
             return {
                 signature: output.signature,
