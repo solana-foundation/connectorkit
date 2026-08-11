@@ -43,6 +43,6 @@ export function useWalletConnectors(): WalletConnectorMetadata[] {
     return useSyncExternalStore(
         useCallback(cb => client.subscribe(cb), [client]),
         useCallback(() => client.getSnapshot().connectors, [client]),
-        useCallback(() => client.getSnapshot().connectors, [client]),
+        useCallback(() => client.getServerSnapshot().connectors, [client]),
     );
 }

@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ConnectorClient } from './connector-client';
 import type { ConnectorConfig } from '../../types/connector';
 import type { ConnectorState } from '../../types/connector';
+import type { StateManager } from './state-manager';
 import type { SolanaCluster } from '@wallet-ui/core';
 
 // Mock all dependencies
@@ -149,6 +150,19 @@ describe('ConnectorClient', () => {
             expect(snapshot).toHaveProperty('selectedWallet');
             expect(snapshot).toHaveProperty('accounts');
             expect(snapshot).toHaveProperty('cluster');
+        });
+
+        it('should keep the server snapshot pinned to pre-initialization state', () => {
+            const serverSnapshot = client.getServerSnapshot();
+            const stateManager = (client as unknown as { stateManager: StateManager }).stateManager;
+
+            stateManager.updateState({ connecting: true });
+
+            // React reads the server snapshot while hydrating, so live wallet
+            // activity must not leak into it or the markup diverges.
+            expect(client.getSnapshot().connecting).toBe(true);
+            expect(client.getServerSnapshot()).toBe(serverSnapshot);
+            expect(serverSnapshot.connecting).toBe(false);
         });
     });
 

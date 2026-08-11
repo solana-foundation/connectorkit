@@ -540,7 +540,20 @@ export class KitWalletCore {
     }
 
     private orderWallets(wallets: readonly UiWallet[]): UiWallet[] {
-        return applyWalletDisplayConfig(wallets, this.options.display);
+        const ordered = applyWalletDisplayConfig(wallets, this.options.display);
+
+        // Connector ids derive from the wallet name, so two registered wallets
+        // sharing a name resolve to one id. Keep the first so consumers never
+        // receive two connectors under the same id.
+        const byConnectorId = new Map<WalletConnectorId, UiWallet>();
+        for (const uiWallet of ordered) {
+            const connectorId = createConnectorId(uiWallet.name);
+            if (!byConnectorId.has(connectorId)) {
+                byConnectorId.set(connectorId, uiWallet);
+            }
+        }
+
+        return [...byConnectorId.values()];
     }
 
     private findUiWalletById(connectorId: WalletConnectorId): UiWallet | undefined {

@@ -36,6 +36,7 @@ export class ConnectorClient {
     private debugMetrics: DebugMetrics;
     private healthMonitor: HealthMonitor;
     private initialized = false;
+    private serverSnapshot: ConnectorState;
     private config: ConnectorConfig;
     private walletConnectRegistration: WalletConnectRegistration | null = null;
 
@@ -94,6 +95,8 @@ export class ConnectorClient {
             config.storage?.cluster,
             () => this.initialized,
         );
+
+        this.serverSnapshot = this.stateManager.getSnapshot();
 
         this.initialize();
     }
@@ -232,6 +235,18 @@ export class ConnectorClient {
 
     getSnapshot(): ConnectorState {
         return this.stateManager.getSnapshot();
+    }
+
+    /**
+     * State as it stands before wallet discovery, persistence, and auto-connect
+     * run — all of which are browser-only. A server render can only ever see
+     * this, so React's hydration pass has to see it too: reading live state
+     * there renders an in-flight auto-connect (a spinner, a wallet list) into
+     * markup the server wrote as idle, and the mismatch throws away the tree.
+     * The subscription then delivers live state on the next render.
+     */
+    getServerSnapshot(): ConnectorState {
+        return this.serverSnapshot;
     }
 
     resetStorage(): void {
