@@ -42,16 +42,31 @@ const KIT_WALLET_STORAGE_KEY = 'connector-kit:v1:kit-wallet';
 const STANDARD_WALLET_CHAINS = ['solana:mainnet', 'solana:devnet', 'solana:testnet', 'solana:localnet'] as const;
 
 /**
- * Map a cluster id to a chain the wallet layer can filter on. Wallets only
- * advertise the standard Solana chains, so custom cluster ids fall back to
- * mainnet — signers for the actual cluster are built by the connector hooks,
- * which pass the real cluster id to the kit signer factories.
+ * Map a cluster id to a chain a wallet-standard wallet can advertise, or null
+ * when there is no such chain. Signing against the wrong chain makes a wallet
+ * prompt and simulate on a different network than the dapp is using, so
+ * callers that build signers must treat null as "no signer available" rather
+ * than substituting a default.
+ */
+export function toStandardWalletChain(clusterId: string | null | undefined): `solana:${string}` | null {
+    if (clusterId && (STANDARD_WALLET_CHAINS as readonly string[]).includes(clusterId)) {
+        return clusterId as `solana:${string}`;
+    }
+    return null;
+}
+
+/**
+ * Map a cluster id to a chain the wallet layer can filter and discover on.
+ * Custom cluster ids fall back to mainnet so wallet discovery still works;
+ * this fallback is only safe because nothing is signed with it.
  */
 export function normalizeWalletChain(clusterId: string | null | undefined): string {
-    if (clusterId && (STANDARD_WALLET_CHAINS as readonly string[]).includes(clusterId)) {
-        return clusterId;
-    }
-    return 'solana:mainnet';
+    return toStandardWalletChain(clusterId) ?? 'solana:mainnet';
+}
+
+function disposeClient(client: KitWalletClient): void {
+    const dispose = (Symbol as { dispose?: symbol }).dispose;
+    if (dispose) client[dispose]?.();
 }
 
 function normalizeWalletName(value: string): string {
@@ -146,6 +161,7 @@ export class KitWalletCore {
     private unregisterAdditionalWallets: (() => void) | null = null;
 
     private chain: string = 'solana:mainnet';
+    private chainSwap = 0;
     private started = false;
     private lastError: { error: Error; connectorId?: WalletConnectorId; recoverable: boolean } | null = null;
     private connectingConnectorId: WalletConnectorId | null = null;
@@ -188,6 +204,7 @@ export class KitWalletCore {
             return;
         }
         this.chain = chain;
+        const swap = ++this.chainSwap;
 
         // When a session is live, the replacement client must silently
         // reconnect it (via the plugin's own persistence) or the chain switch
@@ -199,6 +216,14 @@ export class KitWalletCore {
         } catch (error) {
             // A disposed or failed warm-up still settles; proceed with the swap
             if (this.options.debug) logger.warn('Chain-swap warm-up failed', { chain, error });
+        }
+
+        // The warm-up spans a destroy() or a newer switch, either of which
+        // makes this client obsolete; attaching it would leave a live
+        // subscription nothing owns.
+        if (!this.started || swap !== this.chainSwap) {
+            disposeClient(next);
+            return;
         }
         this.attachClient(next);
     }
@@ -321,8 +346,7 @@ export class KitWalletCore {
         this.storeUnsubscribe?.();
         this.storeUnsubscribe = null;
         if (this.client) {
-            const dispose = (Symbol as { dispose?: symbol }).dispose;
-            if (dispose) this.client[dispose]?.();
+            disposeClient(this.client);
             this.client = null;
         }
     }
@@ -508,6 +532,11 @@ export class KitWalletCore {
         const previous = this.previousConnection;
 
         if (next && (!previous || previous.walletName !== next.walletName)) {
+            // Switching wallets ends the previous session; consumers that track
+            // sessions off the event stream need to see it close.
+            if (previous) {
+                this.eventEmitter.emit({ type: 'wallet:disconnected', timestamp: timestamp() });
+            }
             this.eventEmitter.emit({
                 type: 'wallet:connected',
                 wallet: next.walletName as WalletName,

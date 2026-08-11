@@ -29,6 +29,21 @@ const WALLET_ICON_OVERRIDES: Record<string, Wallet['icon']> = {
 
 const ICON_PROXY_CACHE = new WeakMap<Wallet, Wallet>();
 
+const UNDERLYING_WALLET = Symbol('connector:underlyingWallet');
+
+/**
+ * Recover the Wallet Standard object a wallet was derived from.
+ *
+ * Icon overrides are usually applied in place, but a wallet whose `icon` is a
+ * read-only prototype getter is wrapped in a Proxy instead — a different object
+ * identity. The Wallet Standard UI registry keys its account handles on wallet
+ * identity, so anything handing a wallet back to that registry must unwrap
+ * first or it will mint a second, competing set of handles.
+ */
+export function getUnderlyingWallet(wallet: Wallet): Wallet {
+    return (wallet as unknown as Record<symbol, Wallet | undefined>)[UNDERLYING_WALLET] ?? wallet;
+}
+
 export function getWalletIconOverride(walletName: string): Wallet['icon'] | undefined {
     return WALLET_ICON_OVERRIDES[walletName];
 }
@@ -40,6 +55,7 @@ function createIconProxy(wallet: Wallet, icon: Wallet['icon']): Wallet {
     const proxy = new Proxy(wallet as unknown as Record<string, unknown>, {
         get(target, prop) {
             if (prop === 'icon') return icon;
+            if (prop === UNDERLYING_WALLET) return target;
             // Important: use `target` as the receiver so prototype getters that rely on private fields
             // (or expect `this` to be the original instance) keep working.
             const value = Reflect.get(target, prop, target);

@@ -11,6 +11,7 @@ import { Errors } from '../errors';
  */
 export class ClusterManager extends BaseCollaborator {
     private clusterStorage?: StorageAdapter<SolanaClusterId>;
+    private serverCluster: SolanaCluster | null | undefined;
 
     constructor(
         stateManager: import('../core/state-manager').StateManager,
@@ -25,14 +26,26 @@ export class ClusterManager extends BaseCollaborator {
         if (config) {
             const clusters = config.clusters ?? [];
             const storedClusterId = this.clusterStorage?.get();
-            const initialClusterId = storedClusterId ?? config.initialCluster ?? 'solana:mainnet';
-            const initialCluster = clusters.find(c => c.id === initialClusterId) ?? clusters[0] ?? null;
+            const configuredClusterId = config.initialCluster ?? 'solana:mainnet';
+            const initialClusterId = storedClusterId ?? configuredClusterId;
+            const resolve = (id: SolanaClusterId) => clusters.find(c => c.id === id) ?? clusters[0] ?? null;
+
+            this.serverCluster = resolve(configuredClusterId);
 
             this.stateManager.updateState({
-                cluster: initialCluster,
+                cluster: resolve(initialClusterId),
                 clusters,
             });
         }
+    }
+
+    /**
+     * The cluster a render without storage access resolves to — the configured
+     * initial cluster, ignoring any persisted selection. Returns undefined when
+     * no cluster config was supplied and nothing was written to state.
+     */
+    getServerCluster(): SolanaCluster | null | undefined {
+        return this.serverCluster;
     }
 
     /**

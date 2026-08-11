@@ -12,7 +12,8 @@ import type { TransactionModifyingSigner } from '@solana/signers';
 import { createTransactionSignerFromWalletAccount } from '@solana/wallet-account-signer';
 import { getOrCreateUiWalletAccountForStandardWalletAccount } from '@wallet-standard/ui-registry';
 import { useConnector } from '../ui/connector-provider';
-import { normalizeWalletChain } from '../lib/wallet/kit-wallet-core';
+import { toStandardWalletChain } from '../lib/wallet/kit-wallet-core';
+import { getUnderlyingWallet } from '../lib/wallet/wallet-icon-overrides';
 
 /**
  * Return value from useKitTransactionSigner hook
@@ -83,13 +84,20 @@ export function useKitTransactionSigner(): UseKitTransactionSignerReturn {
             return null;
         }
 
+        // No wallet advertises a custom cluster id, and signing on the wrong
+        // chain would prompt against the wrong network.
+        const chain = toStandardWalletChain(cluster.id);
+        if (!chain) return null;
+
         // The signer factory validates the chain and the account's signing
         // features at construction and throws when either is unsupported
-        // (e.g. custom cluster ids, or accounts that advertise no features).
-        // Surface that as "no signer available" rather than a render error.
+        // (e.g. accounts that advertise no features). Surface that as
+        // "no signer available" rather than a render error.
         try {
-            const uiWalletAccount = getOrCreateUiWalletAccountForStandardWalletAccount(selectedWallet, account);
-            const chain = normalizeWalletChain(cluster.id) as `solana:${string}`;
+            const uiWalletAccount = getOrCreateUiWalletAccountForStandardWalletAccount(
+                getUnderlyingWallet(selectedWallet),
+                account,
+            );
             return createTransactionSignerFromWalletAccount(uiWalletAccount, chain);
         } catch {
             return null;

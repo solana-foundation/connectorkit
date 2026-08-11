@@ -30,6 +30,37 @@ import { debug, isDebugEnabled } from './debug';
 type PrepareCompilableTransactionMessage = TransactionMessage & TransactionMessageWithFeePayer;
 
 /**
+ * Smallest headroom added on top of an estimate. Covers, at minimum, the two
+ * Compute Budget instructions that setting the limits itself introduces.
+ */
+const MIN_COMPUTE_UNIT_BUFFER = 300;
+/** Largest compute unit limit the runtime accepts for a single transaction. */
+const MAX_COMPUTE_UNIT_LIMIT = 1_400_000;
+/** Estimate at which the percentage margin stops decaying. */
+const COMPUTE_UNIT_MARGIN_CAP = 500_000;
+/** Margin added to low estimates. */
+const MAX_COMPUTE_UNIT_MARGIN = 0.1;
+/** Margin added to estimates at or above {@link COMPUTE_UNIT_MARGIN_CAP}. */
+const MIN_COMPUTE_UNIT_MARGIN = 0.02;
+
+/**
+ * Map an estimated compute unit consumption to the limit to request.
+ *
+ * Execution can consume slightly more than simulation, so the limit needs
+ * headroom. A flat percentage is the wrong shape at both ends: on a tiny
+ * transaction it rounds to nothing, and on a large one it buys thousands of
+ * units of prioritization fee that will never be used. This takes the greater
+ * of a flat floor and a margin that decays from 10% to 2% as the estimate
+ * approaches {@link COMPUTE_UNIT_MARGIN_CAP}.
+ */
+function getDefaultComputeUnitLimitFromEstimate(estimatedComputeUnits: number): number {
+    const progress = Math.min(estimatedComputeUnits / COMPUTE_UNIT_MARGIN_CAP, 1);
+    const margin = MAX_COMPUTE_UNIT_MARGIN - (MAX_COMPUTE_UNIT_MARGIN - MIN_COMPUTE_UNIT_MARGIN) * progress;
+    const extraComputeUnits = Math.max(Math.ceil(estimatedComputeUnits * margin), MIN_COMPUTE_UNIT_BUFFER);
+    return estimatedComputeUnits + extraComputeUnits;
+}
+
+/**
  * Configuration for preparing a transaction
  */
 export interface PrepareTransactionConfig<TMessage extends PrepareCompilableTransactionMessage> {
@@ -42,8 +73,9 @@ export interface PrepareTransactionConfig<TMessage extends PrepareCompilableTran
      */
     rpc: Rpc<GetLatestBlockhashApi & SimulateTransactionApi>;
     /**
-     * Multiplier applied to the simulated compute unit value obtained from simulation
-     * @default 1.1
+     * Multiplier applied to the simulated compute unit value obtained from simulation.
+     * When omitted, headroom is sized by {@link getDefaultComputeUnitLimitFromEstimate}
+     * instead of a flat multiplier.
      */
     computeUnitLimitMultiplier?: number;
     /**
@@ -87,7 +119,11 @@ export async function prepareTransaction<TMessage extends PrepareCompilableTrans
 ): Promise<TMessage & TransactionMessageWithBlockhashLifetime> {
     // Set config defaults
     const blockhashReset = config.blockhashReset !== false;
-    const computeUnitLimitMultiplier = config.computeUnitLimitMultiplier ?? 1.1;
+    const { computeUnitLimitMultiplier } = config;
+    const getComputeUnitLimit =
+        computeUnitLimitMultiplier === undefined
+            ? getDefaultComputeUnitLimitFromEstimate
+            : (estimate: number) => Math.ceil(estimate * computeUnitLimitMultiplier);
 
     let transaction = config.transaction as TMessage & Partial<TransactionMessageWithBlockhashLifetime>;
 
@@ -103,7 +139,10 @@ export async function prepareTransaction<TMessage extends PrepareCompilableTrans
         const estimate = await estimateResourceLimits(transactionMessage, config_);
         return {
             ...estimate,
-            computeUnitLimit: Math.ceil(estimate.computeUnitLimit * computeUnitLimitMultiplier),
+            computeUnitLimit: Math.min(
+                Math.ceil(getComputeUnitLimit(estimate.computeUnitLimit)),
+                MAX_COMPUTE_UNIT_LIMIT,
+            ),
         };
     });
     transaction = await estimateAndSetResourceLimits(transaction);

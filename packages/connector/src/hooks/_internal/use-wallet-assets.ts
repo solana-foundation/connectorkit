@@ -319,7 +319,9 @@ export function useWalletAssets<TSelected = WalletAssetsData>(
     } = useSubscription(accountNotificationsSource);
 
     useEffect(() => {
-        if (!key || !accountNotification) return;
+        // `value` is null when the account does not exist on chain (unfunded,
+        // or closed and purged), in which case there is no balance to apply.
+        if (!key || !accountNotification?.value) return;
         const lamports = accountNotification.value.lamports;
         // Apply the new balance immediately, then refetch to pick up token deltas
         setSharedQueryData<WalletAssetsData>(key, prev =>

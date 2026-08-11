@@ -35,14 +35,32 @@ function createBaseMessage() {
 }
 
 describe('prepareTransaction', () => {
-    it('estimates the compute unit limit from simulation and applies the default multiplier', async () => {
+    it('estimates the compute unit limit from simulation and applies the default buffer', async () => {
         const { rpc, mocks } = createMockRpc({ unitsConsumed: 1000n });
 
         const prepared = await prepareTransaction({ transaction: createBaseMessage(), rpc });
 
         expect(mocks.simulateTransaction).toHaveBeenCalledTimes(1);
-        expect(getTransactionMessageComputeUnitLimit(prepared)).toBe(Math.ceil(1000 * 1.1));
+        // A 10% margin on 1000 is below the 300 CU floor, so the floor applies.
+        expect(getTransactionMessageComputeUnitLimit(prepared)).toBe(1300);
         expect(prepared.lifetimeConstraint.blockhash).toBe(BLOCKHASH);
+    });
+
+    it('decays the default margin as the estimate grows', async () => {
+        const { rpc } = createMockRpc({ unitsConsumed: 600_000n });
+
+        const prepared = await prepareTransaction({ transaction: createBaseMessage(), rpc });
+
+        // Past the 500,000 CU cap the margin has decayed to its 2% floor.
+        expect(getTransactionMessageComputeUnitLimit(prepared)).toBe(612_001);
+    });
+
+    it('caps the compute unit limit at the per-transaction maximum', async () => {
+        const { rpc } = createMockRpc({ unitsConsumed: 1_390_000n });
+
+        const prepared = await prepareTransaction({ transaction: createBaseMessage(), rpc });
+
+        expect(getTransactionMessageComputeUnitLimit(prepared)).toBe(1_400_000);
     });
 
     it('applies a custom compute unit limit multiplier', async () => {
@@ -74,7 +92,7 @@ describe('prepareTransaction', () => {
         const prepared = await prepareTransaction({ transaction, rpc, computeUnitLimitReset: true });
 
         expect(mocks.simulateTransaction).toHaveBeenCalledTimes(1);
-        expect(getTransactionMessageComputeUnitLimit(prepared)).toBe(Math.ceil(5000 * 1.1));
+        expect(getTransactionMessageComputeUnitLimit(prepared)).toBe(5497);
     });
 
     it('propagates simulation failures instead of defaulting', async () => {

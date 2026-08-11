@@ -96,7 +96,12 @@ export class ConnectorClient {
             () => this.initialized,
         );
 
-        this.serverSnapshot = this.stateManager.getSnapshot();
+        // ClusterManager restores a persisted cluster in its constructor, which
+        // is browser-only, so the live snapshot already diverges from what a
+        // server render produced. Roll that one field back.
+        const snapshot = this.stateManager.getSnapshot();
+        const serverCluster = this.clusterManager.getServerCluster();
+        this.serverSnapshot = serverCluster === undefined ? snapshot : { ...snapshot, cluster: serverCluster };
 
         this.initialize();
     }

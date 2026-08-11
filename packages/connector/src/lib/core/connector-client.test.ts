@@ -77,6 +77,7 @@ describe('ConnectorClient', () => {
             return {
                 setCluster: vi.fn(),
                 getCurrentCluster: vi.fn(() => null),
+                getServerCluster: vi.fn(() => undefined),
             } as unknown as InstanceType<typeof ClusterManager>;
         });
 
