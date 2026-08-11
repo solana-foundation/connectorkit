@@ -1413,9 +1413,10 @@ Storage uses nanostores with built-in enhancements that are **automatically appl
 
 **Most users don't need to configure storage.** Only customize for:
 
-- React Native (custom storage backend)
 - Additional validation rules
 - Custom error tracking
+
+**Auto-connect persistence is separate from `storage.wallet`.** The wallet session is persisted by the underlying `@solana/kit-plugin-wallet` client under the `connector-kit:v1:kit-wallet` localStorage key, and silent reconnect reads that key directly. `storage.wallet` still receives the connected wallet's name, but pointing it at a different backend does not move where reconnect state lives — auto-connect requires `localStorage` and is unavailable in environments without it (React Native, SSR).
 
 ```typescript
 import { getDefaultConfig, createEnhancedStorageWallet, EnhancedStorageAdapter } from '@solana/connector';
@@ -1464,6 +1465,29 @@ import { ConnectorClient, getDefaultConfig } from '@solana/connector/headless';
 import { AppProvider, useConnector, useWallet, useConnectWallet } from '@solana/connector/react';
 ```
 
+### Kit Export
+
+The connector's internals run on `@solana/kit`'s plugin client. This entrypoint re-exports that surface for apps adopting the kit-native pattern directly:
+
+```typescript
+// Kit plugin client, @solana/react hooks, and the kit RPC/wallet plugins
+import { createClient, walletSigner, solanaDevnetRpc, ClientProvider, useWallets } from '@solana/connector/kit';
+
+const client = createClient()
+    .use(walletSigner({ chain: 'solana:devnet' }))
+    .use(solanaDevnetRpc());
+```
+
+The wallet store's `useSignIn`/`useSignMessage` are not re-exported (they collide with `@solana/react`'s account-based hooks of the same name) — import those from `@solana/kit-plugin-wallet/react` directly.
+
+### Other Exports
+
+| Import                     | Purpose                                           |
+| -------------------------- | ------------------------------------------------- |
+| `@solana/connector/compat` | Bridge for existing `@solana/wallet-adapter` code |
+| `@solana/connector/remote` | Browser-side remote wallet adapter                |
+| `@solana/connector/server` | Server-side route handlers for remote signing     |
+
 ---
 
 ## API Reference
@@ -1489,10 +1513,12 @@ import { AppProvider, useConnector, useWallet, useConnectWallet } from '@solana/
 | `useCluster()`              | Network/cluster management hook              | `{ cluster, clusters, setCluster, isMainnet, isDevnet, rpcUrl }` |
 | `useWalletInfo()`           | Wallet metadata hook                         | `{ name, icon, wallet, connecting }`                             |
 | `useTransactionSigner()`    | Legacy transaction signer (web3.js)          | `{ signer, ready, address, capabilities }`                       |
-| `useKitTransactionSigner()` | Modern transaction signer (@solana/kit)      | `{ signer, ready, address }`                                     |
+| `useKitTransactionSigner()` | Modern transaction signer (@solana/kit)      | `{ signer, ready }`                                              |
 | `useBalance()`              | SOL balance hook                             | `{ solBalance, isLoading, refetch }`                             |
 | `useTokens()`               | SPL tokens hook                              | `{ tokens, isLoading, refetch }`                                 |
 | `useTransactions()`         | Transaction history hook                     | `{ transactions, isLoading, refetch }`                           |
+
+With `autoRefresh` (the default), `useBalance()` and `useTokens()` receive live updates via an `accountNotifications` WebSocket subscription; interval polling (`refreshInterval`, default 30s) is kept as an automatic fallback when the subscription errors or WebSocket transport is unavailable.
 
 ### Configuration Functions
 
