@@ -83,7 +83,12 @@ export function createOffchainMessageSigner(config: OffchainMessageSignerConfig)
     const feature = (wallet.features as Record<string, unknown>)[SolanaSignOffchainMessage] as
         OffchainMessageFeature | undefined;
     const signerAddress = account.address as Address;
-    const supportsV1 = feature?.supportedMessageVersions?.includes(1) ?? false;
+    // Wallet Standard scopes features per account: `WalletAccount.features` is a subset of the
+    // wallet's, and wallets reject accounts that omit the name even when the wallet advertises it.
+    const accountFeatures: readonly string[] = account.features;
+    const supportsV1 =
+        accountFeatures.includes(SolanaSignOffchainMessage) &&
+        (feature?.supportedMessageVersions?.includes(1) ?? false);
 
     return {
         address: account.address,

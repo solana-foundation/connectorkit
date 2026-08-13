@@ -28,7 +28,13 @@ export function OffchainMessageDemo() {
             setSignature(base58.decode(result.signature));
             setSignedBytes(base58.decode(result.signedOffchainMessage));
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to sign off-chain message');
+            console.error('signOffchainMessage failed', err);
+            const cause =
+                err && typeof err === 'object' && (err as { originalError?: Error }).originalError instanceof Error
+                    ? (err as { originalError: Error }).originalError
+                    : null;
+            const detail = err instanceof Error ? err.message : 'Failed to sign off-chain message';
+            setError(cause ? `${detail} — ${cause.name}: ${cause.message}` : detail);
         } finally {
             setIsSigning(false);
         }

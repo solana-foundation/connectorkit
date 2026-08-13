@@ -24,7 +24,12 @@ async function createKeyedAccount() {
     const keyPair = await generateKeyPair();
     const address = await getAddressFromPublicKey(keyPair.publicKey);
     const publicKey = getAddressEncoder().encode(address);
-    const account: WalletAccount = { address, publicKey, chains: ['solana:devnet'], features: [] };
+    const account: WalletAccount = {
+        address,
+        publicKey,
+        chains: ['solana:devnet'],
+        features: [SolanaSignOffchainMessage],
+    };
     return { keyPair, address, account };
 }
 
@@ -105,6 +110,16 @@ describe('createOffchainMessageSigner', () => {
 
         expect(signer.canSignOffchainMessage).toBe(false);
         expect(signer.supportedMessageVersions).toEqual([]);
+        await expect(signer.signOffchainMessage('hi')).rejects.toMatchObject({ code: 'FEATURE_NOT_SUPPORTED' });
+    });
+
+    it('reports no capability when the wallet advertises the feature but the account does not', async () => {
+        const { keyPair, account } = await createKeyedAccount();
+        const accountWithoutFeature: WalletAccount = { ...account, features: [] };
+        const wallet = createOffchainMessageWallet(keyPair);
+        const signer = createOffchainMessageSigner({ wallet, account: accountWithoutFeature })!;
+
+        expect(signer.canSignOffchainMessage).toBe(false);
         await expect(signer.signOffchainMessage('hi')).rejects.toMatchObject({ code: 'FEATURE_NOT_SUPPORTED' });
     });
 
