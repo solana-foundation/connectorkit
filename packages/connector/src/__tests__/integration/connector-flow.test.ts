@@ -14,6 +14,7 @@ import { MockStorageAdapter } from '../mocks/storage-mock';
 import { createEventCollector, waitForCondition } from '../utils/test-helpers';
 import { waitForConnection, waitForDisconnection } from '../utils/wait-for-state';
 import { createMockWalletAccount, TEST_ADDRESSES } from '../fixtures/accounts';
+import { setupMockWindow, cleanupMockWindow } from '../mocks/window-mock';
 import type { Wallet } from '@wallet-standard/base';
 
 const KIT_WALLET_STORAGE_KEY = 'connector-kit:v1:kit-wallet';
@@ -235,6 +236,45 @@ describe('Connector Flow Integration', () => {
 
             state = client.getSnapshot();
             expect(state.selectedAccount).toBe(TEST_ADDRESSES.ACCOUNT_2);
+        });
+    });
+
+    describe('lifecycle', () => {
+        // React StrictMode mounts effects twice: setup -> cleanup -> setup. The
+        // second setup has to rebuild the wallet client the cleanup tore down.
+        it('rebuilds the wallet client after destroy so connecting still works', async () => {
+            const wallet = createMockPhantomWallet({
+                accounts: [createMockWalletAccount(TEST_ADDRESSES.ACCOUNT_1)],
+            });
+            registerWallet(wallet);
+
+            const reinitialize = () => (client as unknown as { initialize: () => void }).initialize();
+
+            await waitForCondition(() => client.getSnapshot().connectors.length > 0, { timeout: 2000 });
+            client.destroy();
+            reinitialize();
+
+            await waitForCondition(() => client.getSnapshot().connectors.length > 0, { timeout: 2000 });
+            await client.select(wallet.name);
+            await waitForConnection(client, 2000);
+
+            expect(client.getSnapshot().connected).toBe(true);
+        });
+
+        it('resetStorage clears the plugin persistence that drives reconnect', () => {
+            setupMockWindow();
+            try {
+                // The plugin owns this key; the configured storage adapters do not
+                // cover it, so resetting only those leaves auto-connect armed and
+                // the next page load silently reconnects.
+                localStorage.setItem(KIT_WALLET_STORAGE_KEY, `Phantom:${TEST_ADDRESSES.ACCOUNT_1}`);
+
+                client.resetStorage();
+
+                expect(localStorage.getItem(KIT_WALLET_STORAGE_KEY)).toBeNull();
+            } finally {
+                cleanupMockWindow();
+            }
         });
     });
 });

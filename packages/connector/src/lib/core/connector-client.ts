@@ -277,6 +277,10 @@ export class ConnectorClient {
             }
         }
 
+        // Reconnect is driven by the wallet plugin's own key, not by the adapters
+        // above, so resetting only those would leave auto-connect armed.
+        this.kitWalletCore.clearPersistedConnection();
+
         this.eventEmitter.emit({
             type: 'storage:reset',
             timestamp: new Date().toISOString(),
@@ -373,5 +377,11 @@ export class ConnectorClient {
         this.kitWalletCore.destroy();
         this.eventEmitter.offAll();
         this.stateManager.clear();
+
+        // KitWalletCore.destroy() releases its client, so the next initialize()
+        // has to rebuild one. Leaving this set would make that call a no-op and
+        // strand the client: StrictMode's setup -> cleanup -> setup cycle (and
+        // any provider remount) would then throw on every connect.
+        this.initialized = false;
     }
 }

@@ -210,6 +210,68 @@ describe('KitWalletCore', () => {
         expect(events.some(e => e.type === 'wallet:disconnected')).toBe(false);
     });
 
+    it('keeps reporting the live session while another wallet is connecting', async () => {
+        const account = createMockWalletAccount(TEST_ADDRESSES.ACCOUNT_1);
+        registerWallet(createMockPhantomWallet({ accounts: [account] }));
+        const solflare = createMockSolflareWallet();
+        // Hold the second connect open so the plugin sits in `status: 'connecting'`
+        // while `connected` still describes Phantom.
+        let releaseConnect: (() => void) | undefined;
+        vi.mocked(solflare.features['standard:connect'].connect).mockImplementation(
+            () => new Promise(resolve => (releaseConnect = () => resolve({ accounts: [] }))),
+        );
+        registerWallet(solflare);
+        const walletCore = createCore();
+
+        await walletCore.connectWallet(createConnectorId('Phantom'));
+        const pending = walletCore.connectWallet(createConnectorId('Solflare'));
+        await waitForCondition(() => releaseConnect !== undefined, { timeout: 2000 });
+
+        const during = stateManager.getSnapshot();
+        expect(during.wallet.status).toBe('connected');
+        expect(during.connected).toBe(true);
+        expect(during.selectedWallet?.name).toBe('Phantom');
+        // The in-flight attempt is still visible to legacy spinners.
+        expect(during.connecting).toBe(true);
+
+        releaseConnect!();
+        await pending.catch(() => {});
+    });
+
+    it('drops account listeners belonging to a previous connection', async () => {
+        const phantomAccount = createMockWalletAccount(TEST_ADDRESSES.ACCOUNT_1);
+        registerWallet(createMockPhantomWallet({ accounts: [phantomAccount] }));
+        registerWallet(createMockSolflareWallet({ accounts: [createMockWalletAccount(TEST_ADDRESSES.ACCOUNT_2)] }));
+        const walletCore = createCore();
+
+        await walletCore.connectWallet(createConnectorId('Phantom'));
+        const state = stateManager.getSnapshot();
+        expect(state.wallet.status).toBe('connected');
+        if (state.wallet.status !== 'connected') return;
+
+        const seen: string[][] = [];
+        state.wallet.session.onAccountsChanged(accounts => seen.push(accounts.map(a => String(a.address))));
+
+        await walletCore.connectWallet(createConnectorId('Solflare'));
+
+        // The listener came from Phantom's session; it must not receive Solflare's accounts.
+        expect(seen.flat()).not.toContain(TEST_ADDRESSES.ACCOUNT_2);
+    });
+
+    it('surfaces a failing disconnect instead of silently staying connected', async () => {
+        const account = createMockWalletAccount(TEST_ADDRESSES.ACCOUNT_1);
+        const wallet = createMockPhantomWallet({ accounts: [account] });
+        registerWallet(wallet);
+        const walletCore = createCore();
+
+        await walletCore.connectWallet(createConnectorId('Phantom'));
+        vi.mocked(wallet.features['standard:disconnect'].disconnect).mockRejectedValue(new Error('Disconnect failed'));
+        events.length = 0;
+
+        await expect(walletCore.disconnect()).rejects.toThrow('Disconnect failed');
+        expect(events.some(e => e.type === 'error' && e.context === 'disconnect')).toBe(true);
+    });
+
     it('preserves the session across setChain', async () => {
         setupMockWindow();
         try {

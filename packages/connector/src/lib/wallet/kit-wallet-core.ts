@@ -169,7 +169,10 @@ export class KitWalletCore {
     private lastDetectedCount = 0;
     private lastKitStatus: KitWalletState['status'] | null = null;
     private lastNotifiedAccountsKey: string | null = null;
-    private accountsChangedListeners = new Set<(accounts: SessionAccount[]) => void>();
+    private accountsChangedListeners = new Set<{
+        connectorId: WalletConnectorId;
+        listener: (accounts: SessionAccount[]) => void;
+    }>();
 
     constructor(
         private stateManager: StateManager,
@@ -298,7 +301,17 @@ export class KitWalletCore {
         this.connectingConnectorId = null;
         const client = this.client;
         if (!client) return;
-        await client.wallet.disconnect();
+        try {
+            await client.wallet.disconnect();
+        } catch (cause) {
+            // A wallet that rejects `standard:disconnect` would otherwise leave
+            // the projected state on 'connected' with no error surfaced at all.
+            const error = cause instanceof Error ? cause : new Error(String(cause));
+            this.lastError = { error, recoverable: isRecoverableError(error) };
+            this.eventEmitter.emit({ type: 'error', error, context: 'disconnect', timestamp: timestamp() });
+            this.sync();
+            throw error;
+        }
         this.sync();
     }
 
@@ -419,8 +432,14 @@ export class KitWalletCore {
         this.emitConnectionEvents(kitState);
         const accountsKey = session ? session.accounts.map(account => String(account.address)).join(',') : null;
         if (session && accountsKey !== this.lastNotifiedAccountsKey && this.accountsChangedListeners.size > 0) {
-            for (const listener of this.accountsChangedListeners) {
-                listener(session.accounts);
+            for (const entry of this.accountsChangedListeners) {
+                // Listeners from a previous connection are dropped rather than
+                // called with a different wallet's accounts.
+                if (entry.connectorId !== session.connectorId) {
+                    this.accountsChangedListeners.delete(entry);
+                    continue;
+                }
+                entry.listener(session.accounts);
             }
         }
         this.lastNotifiedAccountsKey = accountsKey;
@@ -452,14 +471,12 @@ export class KitWalletCore {
             };
         }
 
-        if (kitState.status === 'connecting' && this.connectingConnectorId) {
-            return {
-                wallet: { status: 'connecting', connectorId: this.connectingConnectorId },
-                legacy: { connected: false, connecting: true },
-                session: null,
-            };
-        }
-
+        // A live connection outranks an in-flight one. The plugin documents
+        // `connected` as independent of `status`: connecting a second wallet
+        // leaves the first connection describing `connected` while `status` is
+        // 'connecting'. Reporting 'connecting' there would flash the whole app
+        // to disconnected (session null) for the length of the popup, even
+        // though the existing wallet is still connected and usable.
         if (kitState.connected) {
             const session = this.buildSession(kitState.connected);
             return {
@@ -471,11 +488,20 @@ export class KitWalletCore {
                         raw: account.account,
                     })),
                     connected: true,
-                    connecting: false,
+                    // Keeps spinners alive while a second wallet is being connected.
+                    connecting: this.connectingConnectorId !== null,
                     selectedAccount: session.selectedAccount.address,
                     selectedWallet: applyWalletIconOverride(getWalletForHandle(kitState.connected.wallet) as Wallet),
                 },
                 session,
+            };
+        }
+
+        if (kitState.status === 'connecting' && this.connectingConnectorId) {
+            return {
+                wallet: { status: 'connecting', connectorId: this.connectingConnectorId },
+                legacy: { ...legacyReset, connecting: true },
+                session: null,
             };
         }
 
@@ -511,8 +537,12 @@ export class KitWalletCore {
             accounts,
             connectorId,
             onAccountsChanged: listener => {
-                this.accountsChangedListeners.add(listener);
-                return () => this.accountsChangedListeners.delete(listener);
+                // Tagged with the connection it was registered on: this callback
+                // belongs to one session, so it must not keep firing with another
+                // wallet's accounts after a switch.
+                const entry = { connectorId, listener };
+                this.accountsChangedListeners.add(entry);
+                return () => this.accountsChangedListeners.delete(entry);
             },
             selectAccount: address => {
                 void this.selectAccount(String(address)).catch((cause: unknown) => {
@@ -620,6 +650,19 @@ export class KitWalletCore {
         const uiAccount = connected.wallet.accounts.find(account => account.address === String(preferredAccount));
         if (uiAccount && uiAccount.address !== connected.account.address) {
             client.wallet.selectAccount(uiAccount);
+        }
+    }
+
+    /**
+     * Clear the plugin's own reconnect persistence. The plugin owns this key, so
+     * clearing the configured storage adapters alone leaves it behind and the
+     * next page load silently reconnects the wallet the caller just forgot.
+     */
+    clearPersistedConnection(): void {
+        try {
+            localStorage.removeItem(KIT_WALLET_STORAGE_KEY);
+        } catch (error) {
+            if (this.options.debug) logger.warn('Failed to clear persisted connection', { error });
         }
     }
 
