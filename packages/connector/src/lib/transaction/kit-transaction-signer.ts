@@ -246,56 +246,6 @@ function extractSignatureAtIndex(
 }
 
 /**
- * Extract signature bytes from a signed transaction (first signature)
- * @param signedTx - Signed transaction in any format
- * @returns Signature bytes (64 bytes)
- */
-function extractSignature(signedTx: SolanaTransaction): Uint8Array {
-    if (signedTx instanceof Uint8Array) {
-        // Serialized transaction format: [shortvec_length, ...signatures, ...]
-        // First decode the shortvec prefix to find where signatures start
-        const { length: numSignatures, bytesConsumed } = decodeShortVecLength(signedTx);
-
-        if (numSignatures === 0) {
-            throw new Error('No signatures found in serialized transaction');
-        }
-
-        // Extract first 64-byte signature after the shortvec prefix
-        const signatureStart = bytesConsumed;
-        return signedTx.slice(signatureStart, signatureStart + 64);
-    }
-
-    if (isWeb3jsTransaction(signedTx)) {
-        // Extract from web3.js transaction object
-        // Handle both { signature: Uint8Array | null } and raw Uint8Array formats
-        const signatures = (signedTx as unknown as { signatures: Array<Uint8Array | { signature: Uint8Array | null }> })
-            .signatures;
-
-        if (!signatures || signatures.length === 0) {
-            throw new Error('No signatures found in web3.js transaction');
-        }
-
-        const firstSig = signatures[0];
-
-        // Handle raw Uint8Array
-        if (firstSig instanceof Uint8Array) {
-            return firstSig;
-        }
-
-        // Handle { signature: Uint8Array | null } format
-        if (firstSig && typeof firstSig === 'object' && 'signature' in firstSig) {
-            if (firstSig.signature) {
-                return firstSig.signature;
-            }
-        }
-
-        throw new Error('Could not extract signature from web3.js transaction');
-    }
-
-    throw new Error('Cannot extract signature from transaction format');
-}
-
-/**
  * Create a kit-compatible TransactionPartialSigner from connector-kit's TransactionSigner
  *
  * This adapter allows connector-kit to work with modern Solana libraries that use
@@ -340,7 +290,7 @@ export function createKitTransactionSigner<TAddress extends string = string>(
                 const messageBytes = new Uint8Array(tx.messageBytes);
                 // Derive the required signature count from the message header, not from the
                 // current signature dictionary (which is often empty pre-signing).
-                const { numSigners } = parseMessageSigners(messageBytes);
+                const { numSigners, staticAccounts } = parseMessageSigners(messageBytes);
 
                 // Create full transaction wire format for wallet
                 const wireFormat = createTransactionBytesForSigning(messageBytes, numSigners);
@@ -360,6 +310,8 @@ export function createKitTransactionSigner<TAddress extends string = string>(
                     originalTransaction: tx,
                     messageBytes,
                     wireFormat,
+                    staticAccounts,
+                    numSigners,
                 };
             });
 
@@ -369,7 +321,7 @@ export function createKitTransactionSigner<TAddress extends string = string>(
 
             // Extract signatures and return full Transaction objects
             return signedTransactions.map((signedTx, index) => {
-                const { originalTransaction, wireFormat } = transactionData[index];
+                const { originalTransaction, wireFormat, staticAccounts, numSigners } = transactionData[index];
 
                 try {
                     // Get bytes from the signed transaction
@@ -431,8 +383,15 @@ export function createKitTransactionSigner<TAddress extends string = string>(
                         return result as Transaction & TransactionWithinSizeLimit & TransactionWithLifetime;
                     }
 
-                    // Wallet didn't modify - use original messageBytes with wallet signature
-                    const extractedSignatureBytes = extractSignature(signedTxBytes);
+                    // Wallet didn't modify - use original messageBytes with wallet signature.
+                    // Read the signature from the wallet's own slot (its index in the signer
+                    // list), not slot 0: those differ whenever the connected wallet signs a
+                    // transaction whose fee payer is a different account (sponsored/co-signed).
+                    const signerIndex = staticAccounts.indexOf(signerAddress);
+                    if (signerIndex < 0) {
+                        throw new Error('Connected wallet is not a required signer of this transaction');
+                    }
+                    const extractedSignatureBytes = extractSignatureAtIndex(signedTxBytes, signerIndex, numSigners);
                     // Convert to base58 for logging (signature is always 64 bytes)
                     const base58Decoder = getBase58Decoder();
                     const signatureBase58 = base58Decoder.decode(extractedSignatureBytes);

@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { getBase58Decoder } from '@solana/codecs';
 import { createKitTransactionSigner, createGillTransactionSigner } from './kit-transaction-signer';
 import type { TransactionSigner } from './transaction-signer';
 import type { SolanaTransaction, TransactionSignerCapabilities } from '../../types/transactions';
@@ -89,6 +90,45 @@ describe('KitTransactionSigner', () => {
     describe('createGillTransactionSigner (deprecated alias)', () => {
         it('should be an alias to createKitTransactionSigner', () => {
             expect(createGillTransactionSigner).toBe(createKitTransactionSigner);
+        });
+    });
+
+    describe('signature slot binding', () => {
+        it('binds the wallet signature from its own slot, not the fee payer slot 0', async () => {
+            // v0 message with two signers: index 0 is the fee payer, index 1 is the
+            // connected wallet. The wallet signs a transaction it does not pay fees for.
+            const feePayerKey = new Uint8Array(32).fill(0x0a);
+            const walletKey = new Uint8Array(32).fill(0x0b);
+            const messageBytes = new Uint8Array([0x80, 2, 0, 0, 2, ...feePayerKey, ...walletKey]);
+
+            // Wallet returns the same-length wire tx with only its own slot (index 1)
+            // filled; the fee payer slot 0 is still all zeros.
+            const numSigners = 2;
+            const wireTx = new Uint8Array(1 + numSigners * 64 + messageBytes.length);
+            wireTx[0] = numSigners;
+            wireTx.set(new Uint8Array(64).fill(0xbb), 1 + 64);
+            wireTx.set(messageBytes, 1 + numSigners * 64);
+
+            mockConnectorSigner.signAllTransactions = vi.fn(async () => [wireTx as unknown as SolanaTransaction]);
+
+            vi.mocked(getBase58Decoder).mockReturnValue({
+                decode: (bytes: Uint8Array) => {
+                    if (bytes.length === 32 && bytes[0] === 0x0a) return 'FeePayer1111111111111111111111111111111111';
+                    if (bytes.length === 32 && bytes[0] === 0x0b) return mockAddress;
+                    return 'sig-base58';
+                },
+            } as unknown as ReturnType<typeof getBase58Decoder>);
+
+            const signer = createKitTransactionSigner(mockConnectorSigner);
+            const inputTx = { messageBytes, signatures: {} } as unknown as Parameters<
+                typeof signer.modifyAndSignTransactions
+            >[0][number];
+            const [signed] = await signer.modifyAndSignTransactions([inputTx]);
+
+            // The wallet's signature must come from slot 1 (its own), not slot 0.
+            expect(Array.from(signed.signatures[mockAddress] as unknown as Uint8Array)).toEqual(
+                new Array(64).fill(0xbb),
+            );
         });
     });
 });
