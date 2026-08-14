@@ -1478,6 +1478,41 @@ const client = createClient()
     .use(solanaDevnetRpc());
 ```
 
+#### Client capability hooks
+
+Each plugin in the chain installs a capability on the client, and `@solana/react` ships a hook per capability. The client above installs all of the following:
+
+| Hook                          | Installed by      | Returns                                          |
+| ----------------------------- | ----------------- | ------------------------------------------------ |
+| `usePayer(client)`            | `walletSigner`    | `client.payer` signer, or `undefined`            |
+| `useIdentity(client)`         | `walletSigner`    | `client.identity` signer, or `undefined`         |
+| `useAirdrop(client)`          | `solanaDevnetRpc` | Action → `Signature \| undefined`                |
+| `usePlanTransaction(client)`  | `solanaDevnetRpc` | Action → planned transaction message             |
+| `usePlanTransactions(client)` | `solanaDevnetRpc` | Action → `TransactionPlan`                       |
+| `useSendTransaction(client)`  | `solanaDevnetRpc` | Action → `SuccessfulSingleTransactionPlanResult` |
+| `useSendTransactions(client)` | `solanaDevnetRpc` | Action → `TransactionPlanResult`                 |
+
+`usePayer`/`useIdentity` re-render when the signer changes, because `walletSigner` also installs `subscribeToPayer`/`subscribeToIdentity`. The action hooks return `{ dispatch, dispatchAsync, isRunning, data, error }`; each `dispatch` runs under a fresh `AbortSignal` and aborts any call still in flight.
+
+```tsx
+import { usePayer, useSendTransaction } from '@solana/connector/kit';
+
+function Transfer() {
+    const payer = usePayer(client);
+    const { dispatch, isRunning, error } = useSendTransaction(client);
+
+    if (!payer) return <p>Connect a wallet</p>;
+    return (
+        <>
+            <button disabled={isRunning} onClick={() => dispatch([transferInstruction])}>
+                {isRunning ? 'Sending…' : 'Send'}
+            </button>
+            {error ? <p role="alert">{String(error)}</p> : null}
+        </>
+    );
+}
+```
+
 The wallet store's `useSignIn`/`useSignMessage` are not re-exported (they collide with `@solana/react`'s account-based hooks of the same name) — import those from `@solana/kit-plugin-wallet/react` directly.
 
 ### Other Exports

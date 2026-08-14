@@ -19,11 +19,17 @@
 export { createClient, extendClient } from '@solana/kit';
 
 // React bindings: ClientProvider, data hooks (useRequest/useSubscription/useTrackedData),
-// wallet-account signer hooks, and account-based useSignIn/useSignMessage
+// wallet-account signer hooks, and account-based useSignIn/useSignMessage.
+// Also the client-capability hooks, which read a capability off the client the
+// plugin chain installed: usePayer/useIdentity track client.payer and
+// client.identity (reactively, when the client advertises subscribeToPayer /
+// subscribeToIdentity), while useAirdrop, usePlanTransaction(s), and
+// useSendTransaction(s) wrap the matching client method as a dispatchable
+// action with isRunning/data/error state.
 export * from '@solana/react';
 
 // RPC plugins: solanaRpc/solanaDevnetRpc/solanaLocalRpc, connection plugins,
-// and the transaction planner/executor
+// rpcAirdrop, and the transaction planner/executor
 export * from '@solana/kit-plugin-rpc';
 
 // Wallet plugins: walletSigner/walletPayer/walletIdentity/walletWithoutSigner
