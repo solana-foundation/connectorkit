@@ -114,7 +114,7 @@ describe('Connector Flow Integration', () => {
 
             // Check storage
             const savedWallet = await storage.get();
-            expect(savedWallet).toBe('Phantom');
+            expect(savedWallet).toBe(`Phantom:${TEST_ADDRESSES.ACCOUNT_1}`);
         });
 
         it('should handle connection errors gracefully', async () => {

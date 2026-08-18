@@ -20,11 +20,7 @@ export {
     createEnhancedStorageAccount,
     createEnhancedStorageCluster,
     createEnhancedStorageWallet,
-    createEnhancedStorageWalletState,
-    saveWalletState,
-    clearWalletState,
     STORAGE_VERSION,
-    WALLET_STATE_VERSION,
 } from './enhanced-storage';
 
 // Kit wallet core (discovery + connection via @solana/kit-plugin-wallet)

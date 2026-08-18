@@ -41,11 +41,6 @@ export {
     createEnhancedStorageAccount,
     createEnhancedStorageCluster,
     createEnhancedStorageWallet,
-    // vNext storage
-    createEnhancedStorageWalletState,
-    saveWalletState,
-    clearWalletState,
-    WALLET_STATE_VERSION,
 } from './lib/wallet';
 
 // ============================================================================
@@ -86,11 +81,6 @@ export {
     TransactionSignerError,
     isTransactionSignerError,
 } from './lib/transaction/transaction-signer';
-export {
-    createKitTransactionSigner,
-    /** @deprecated Use `createKitTransactionSigner` instead */
-    createGillTransactionSigner,
-} from './lib/transaction/kit-transaction-signer';
 
 export type { TransactionSigner } from './lib/transaction/transaction-signer';
 
@@ -167,7 +157,6 @@ export { installPolyfills, isPolyfillInstalled, isCryptoAvailable, getPolyfillSt
 // Kit Signer Integration
 // ============================================================================
 export * from './lib/kit/signer-types';
-export * from './lib/kit/signer-factories';
 export * from './lib/kit/signer-integration';
 export * from './lib/kit/signer-utils';
 export { createSignableMessage } from '@solana/signers';

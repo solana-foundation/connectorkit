@@ -45,8 +45,6 @@ export type {
     EnhancedStorageAccountOptions,
     EnhancedStorageClusterOptions,
     EnhancedStorageWalletOptions,
-    EnhancedStorageWalletStateOptions,
-    PersistedWalletState,
 } from './storage';
 
 // WalletConnect types

@@ -9,8 +9,12 @@
  */
 
 import { createClient } from '@solana/kit';
-import { walletSigner } from '@solana/kit-plugin-wallet';
-import type { ClientWithWallet, WalletState as KitWalletState } from '@solana/kit-plugin-wallet';
+import { isWalletWarmingUp, walletSigner } from '@solana/kit-plugin-wallet';
+import type {
+    ClientWithWallet,
+    WalletState as KitWalletState,
+    WalletStorage as KitWalletStorage,
+} from '@solana/kit-plugin-wallet';
 import { getWallets } from '@wallet-standard/app';
 import type { UiWallet } from '@wallet-standard/ui';
 import { getWalletAccountForUiWalletAccount, getWalletForHandle } from '@wallet-standard/ui-registry';
@@ -35,7 +39,7 @@ import { applyWalletIconOverride } from './wallet-icon-overrides';
 
 const logger = createLogger('KitWalletCore');
 
-/** Storage key for the kit wallet plugin's own `name:address` persistence */
+/** Key the kit wallet plugin persists the active connection under */
 const KIT_WALLET_STORAGE_KEY = 'connector-kit:v1:kit-wallet';
 
 /** Chains wallet-standard wallets commonly advertise */
@@ -71,6 +75,37 @@ function disposeClient(client: KitWalletClient): void {
 
 function normalizeWalletName(value: string): string {
     return value.trim().toLowerCase();
+}
+
+/**
+ * Adapt the connector's single-slot wallet storage adapter to the keyed
+ * interface the kit wallet plugin persists through. The adapter already owns
+ * the key it writes under, so the key the plugin supplies is ignored.
+ */
+function toKitWalletStorage(adapter: StorageAdapter<string | undefined>): KitWalletStorage {
+    return {
+        getItem: () => adapter.get() ?? null,
+        removeItem: () => {
+            const withClear = adapter as StorageAdapter<string | undefined> & { clear?: () => void };
+            if (typeof withClear.clear === 'function') {
+                withClear.clear();
+            } else {
+                adapter.set(undefined);
+            }
+        },
+        setItem: (_key, value) => adapter.set(value),
+    };
+}
+
+/**
+ * Extract the wallet name from a value persisted by the kit wallet plugin,
+ * which stores the active connection as `<wallet name>:<account address>`.
+ * A wallet name may itself contain a colon, so the address is everything after
+ * the last one. Returns null for a value that does not match the format.
+ */
+function parsePersistedWalletName(value: string): string | null {
+    const separatorIndex = value.lastIndexOf(':');
+    return separatorIndex === -1 ? null : value.slice(0, separatorIndex);
 }
 
 /**
@@ -139,7 +174,7 @@ interface KitWalletCoreOptions {
     autoConnect?: boolean;
     /** Wallets to register into the wallet-standard registry in addition to discovered ones */
     additionalWallets?: Wallet[];
-    /** Legacy wallet-name persistence adapter (kept in sync for external readers) */
+    /** Consumer-supplied adapter the wallet plugin persists the active connection through */
     walletStorage?: StorageAdapter<string | undefined>;
     /** Allow/deny/featured display rules */
     display?: WalletDisplayConfig;
@@ -150,10 +185,13 @@ interface KitWalletCoreOptions {
  * Wallet discovery + connection core built on `@solana/kit-plugin-wallet`.
  *
  * The plugin owns discovery (wallet-standard registry, chain + display
- * filtering), the connection lifecycle, signer creation, persistence
- * (`name:address` under {@link KIT_WALLET_STORAGE_KEY}), and silent
- * auto-connect. This class projects that state into `ConnectorState` and
- * the connector event stream.
+ * filtering), the connection lifecycle, signer creation, persistence, and
+ * silent auto-connect. This class projects that state into `ConnectorState`
+ * and the connector event stream.
+ *
+ * Persistence goes through the consumer's storage adapter when one is
+ * supplied, and otherwise through the plugin's own localStorage default under
+ * {@link KIT_WALLET_STORAGE_KEY}.
  */
 export class KitWalletCore {
     private client: KitWalletClient | null = null;
@@ -325,11 +363,13 @@ export class KitWalletCore {
 
     private buildClient(chain: string, autoConnect?: boolean): KitWalletClient {
         const display = this.options.display;
+        const walletStorage = this.options.walletStorage;
         return createClient().use(
             walletSigner({
                 autoConnect: autoConnect ?? this.options.autoConnect ?? false,
                 chain: chain as `${string}:${string}`,
                 filter: display ? wallet => applyWalletDisplayConfig([wallet], display).length > 0 : undefined,
+                storage: walletStorage ? toKitWalletStorage(walletStorage) : undefined,
                 storageKey: KIT_WALLET_STORAGE_KEY,
             }),
         ) as unknown as KitWalletClient;
@@ -378,7 +418,8 @@ export class KitWalletCore {
         // that a persisted session failed to restore is this transition.
         if (
             this.options.debug &&
-            (this.lastKitStatus === 'reconnecting' || this.lastKitStatus === 'pending') &&
+            this.lastKitStatus !== null &&
+            isWalletWarmingUp(this.lastKitStatus) &&
             kitState.status === 'disconnected'
         ) {
             logger.warn('Silent reconnect did not restore a session', {
@@ -479,7 +520,7 @@ export class KitWalletCore {
             };
         }
 
-        if (kitState.status === 'reconnecting' || kitState.status === 'pending') {
+        if (isWalletWarmingUp(kitState.status)) {
             const persistedId = this.readPersistedConnectorId();
             if (persistedId) {
                 return {
@@ -543,7 +584,6 @@ export class KitWalletCore {
                 account: next.address as Address,
                 timestamp: timestamp(),
             });
-            this.persistWalletName(next.walletName);
         } else if (next && previous && previous.address !== next.address) {
             this.eventEmitter.emit({
                 type: 'account:changed',
@@ -552,7 +592,6 @@ export class KitWalletCore {
             });
         } else if (!next && previous) {
             this.eventEmitter.emit({ type: 'wallet:disconnected', timestamp: timestamp() });
-            this.clearPersistedWalletName();
         }
 
         this.previousConnection = next;
@@ -623,43 +662,20 @@ export class KitWalletCore {
         }
     }
 
-    /** Best-effort read of the plugin's `name:address` persistence for reconnect display */
+    /**
+     * Best-effort read of the wallet the plugin will silently reconnect to, so
+     * the warm-up can be projected as a connect attempt against a known
+     * connector. Reads the same storage the plugin persists through.
+     */
     private readPersistedConnectorId(): WalletConnectorId | null {
         try {
-            const value = localStorage.getItem(KIT_WALLET_STORAGE_KEY);
+            const storage = this.options.walletStorage;
+            const value = storage ? storage.get() : localStorage.getItem(KIT_WALLET_STORAGE_KEY);
             if (!value) return null;
-            const separatorIndex = value.lastIndexOf(':');
-            if (separatorIndex === -1) return null;
-            return createConnectorId(value.slice(0, separatorIndex));
+            const walletName = parsePersistedWalletName(value);
+            return walletName ? createConnectorId(walletName) : null;
         } catch {
             return null;
-        }
-    }
-
-    private persistWalletName(name: string): void {
-        const storage = this.options.walletStorage;
-        if (!storage) return;
-        try {
-            const withAvailability = storage as StorageAdapter<string | undefined> & { isAvailable?: () => boolean };
-            if (typeof withAvailability.isAvailable === 'function' && !withAvailability.isAvailable()) return;
-            storage.set(name);
-        } catch (error) {
-            if (this.options.debug) logger.warn('Failed to persist wallet name', { error });
-        }
-    }
-
-    private clearPersistedWalletName(): void {
-        const storage = this.options.walletStorage;
-        if (!storage) return;
-        try {
-            const withClear = storage as StorageAdapter<string | undefined> & { clear?: () => void };
-            if (typeof withClear.clear === 'function') {
-                withClear.clear();
-            } else {
-                storage.set(undefined);
-            }
-        } catch (error) {
-            if (this.options.debug) logger.warn('Failed to clear persisted wallet name', { error });
         }
     }
 }

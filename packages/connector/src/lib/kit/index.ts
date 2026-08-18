@@ -68,11 +68,6 @@ export {
 } from './signer-types';
 
 // ============================================================================
-// Signer Factories (from kit-signers)
-// ============================================================================
-export { createMessageSignerFromWallet, createTransactionSendingSignerFromWallet } from './signer-factories';
-
-// ============================================================================
 // Signer Integration (from kit-signers)
 // ============================================================================
 export { createKitSignersFromWallet, type KitSignersFromWallet } from './signer-integration';
@@ -80,10 +75,4 @@ export { createKitSignersFromWallet, type KitSignersFromWallet } from './signer-
 // ============================================================================
 // Signer Utilities (from kit-signers)
 // ============================================================================
-export {
-    detectMessageModification,
-    updateSignatureDictionary,
-    freezeSigner,
-    base58ToSignatureBytes,
-    signatureBytesToBase58,
-} from './signer-utils';
+export { detectMessageModification, signatureBytesToBase58 } from './signer-utils';

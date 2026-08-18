@@ -274,18 +274,96 @@ describe('KitWalletCore', () => {
         expect(listener).not.toHaveBeenCalled();
     });
 
-    it('prefers storage.clear() when clearing the persisted wallet name', async () => {
+    it('persists the active connection through a consumer storage adapter', async () => {
         const account = createMockWalletAccount(TEST_ADDRESSES.ACCOUNT_1);
         registerWallet(createMockPhantomWallet({ accounts: [account] }));
 
-        const storage = { get: vi.fn(), set: vi.fn(), clear: vi.fn() };
+        let value: string | undefined;
+        const storage = {
+            get: vi.fn(() => value),
+            set: vi.fn((next: string | undefined) => {
+                value = next;
+            }),
+        };
         const walletCore = createCore({ walletStorage: storage });
 
         await walletCore.connectWallet(createConnectorId('Phantom'));
-        expect(storage.set).toHaveBeenCalledWith('Phantom');
+        await waitForCondition(() => storage.set.mock.calls.length > 0, { timeout: 2000 });
+        expect(value).toBe(`Phantom:${TEST_ADDRESSES.ACCOUNT_1}`);
 
         await walletCore.disconnect();
-        expect(storage.clear).toHaveBeenCalled();
+        await waitForCondition(() => value === undefined, { timeout: 2000 });
         expect(events.some(e => e.type === 'wallet:disconnected')).toBe(true);
+    });
+
+    it('prefers storage.clear() when the adapter exposes it', async () => {
+        const account = createMockWalletAccount(TEST_ADDRESSES.ACCOUNT_1);
+        registerWallet(createMockPhantomWallet({ accounts: [account] }));
+
+        const storage = { get: vi.fn(() => undefined), set: vi.fn(), clear: vi.fn() };
+        const walletCore = createCore({ walletStorage: storage });
+
+        await walletCore.connectWallet(createConnectorId('Phantom'));
+        await walletCore.disconnect();
+
+        await waitForCondition(() => storage.clear.mock.calls.length > 0, { timeout: 2000 });
+        expect(storage.set).not.toHaveBeenCalledWith(undefined);
+    });
+
+    it('auto-reconnects from a consumer storage adapter', async () => {
+        const account = createMockWalletAccount(TEST_ADDRESSES.ACCOUNT_1);
+        registerWallet(createMockPhantomWallet({ accounts: [account] }));
+
+        let value: string | undefined = `Phantom:${TEST_ADDRESSES.ACCOUNT_1}`;
+        const storage = {
+            get: vi.fn(() => value),
+            set: vi.fn((next: string | undefined) => {
+                value = next;
+            }),
+        };
+
+        createCore({ autoConnect: true, walletStorage: storage });
+
+        await waitForCondition(() => stateManager.getSnapshot().wallet.status === 'connected', { timeout: 2000 });
+
+        expect(storage.get).toHaveBeenCalled();
+        expect(stateManager.getSnapshot().selectedAccount).toBe(TEST_ADDRESSES.ACCOUNT_1);
+    });
+
+    it('projects the warm-up as a connect attempt against the persisted connector', async () => {
+        const account = createMockWalletAccount(TEST_ADDRESSES.ACCOUNT_1);
+        registerWallet(createMockPhantomWallet({ accounts: [account] }));
+
+        const storage = { get: vi.fn(() => `Phantom:${TEST_ADDRESSES.ACCOUNT_1}`), set: vi.fn() };
+        const walletCore = new KitWalletCore(stateManager, eventEmitter, {
+            autoConnect: true,
+            walletStorage: storage,
+        });
+        core = walletCore;
+        walletCore.start('solana:mainnet');
+
+        const state = stateManager.getSnapshot();
+        expect(state.wallet.status).toBe('connecting');
+        if (state.wallet.status !== 'connecting') return;
+        expect(state.wallet.connectorId).toBe('wallet-standard:phantom');
+        expect(state.connecting).toBe(true);
+    });
+
+    it('leaves persistence to the plugin default when no adapter is supplied', async () => {
+        setupMockWindow();
+        try {
+            const account = createMockWalletAccount(TEST_ADDRESSES.ACCOUNT_1);
+            registerWallet(createMockPhantomWallet({ accounts: [account] }));
+            const walletCore = createCore();
+
+            await walletCore.connectWallet(createConnectorId('Phantom'));
+            await waitForCondition(() => localStorage.getItem('connector-kit:v1:kit-wallet') !== null, {
+                timeout: 2000,
+            });
+
+            expect(localStorage.getItem('connector-kit:v1:kit-wallet')).toBe(`Phantom:${TEST_ADDRESSES.ACCOUNT_1}`);
+        } finally {
+            cleanupMockWindow();
+        }
     });
 });

@@ -1,12 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import {
-    createKitSignersFromWallet,
-    createMessageSignerFromWallet,
-    createSignableMessage,
-    address,
-} from '@solana/connector/headless';
+import { createKitSignersFromWallet, createSignableMessage } from '@solana/connector/headless';
 import type { MessageModifyingSigner } from '@solana/connector/headless';
 import { useCluster, useConnectorClient, useConnector } from '@solana/connector/react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -60,34 +55,6 @@ export function KitSignerDemo() {
 
         return createKitSignersFromWallet(wallet, account, null, network);
     }, [wallet, account, clusterType]);
-
-    const manualSigner = useMemo(() => {
-        if (!wallet || !account) return null;
-
-        const features = wallet.features as Record<string, unknown> | undefined;
-        const signMessageFeature = features?.['solana:signMessage'];
-
-        if (
-            !signMessageFeature ||
-            typeof signMessageFeature !== 'object' ||
-            typeof (signMessageFeature as { signMessage?: unknown }).signMessage !== 'function'
-        ) {
-            return null;
-        }
-
-        const signMessageFn = (signMessageFeature as { signMessage: (args: unknown) => Promise<unknown> }).signMessage;
-
-        return createMessageSignerFromWallet(address(account.address), async (message: Uint8Array) => {
-            const result = await signMessageFn({ account, message });
-
-            const firstResult = Array.isArray(result) ? result[0] : null;
-            if (!firstResult || !(firstResult.signature instanceof Uint8Array)) {
-                throw new Error('Wallet returned invalid results - expected [{ signature: Uint8Array }]');
-            }
-
-            return firstResult.signature;
-        });
-    }, [wallet, account]);
 
     const handleSignMessage = async (signer: MessageModifyingSigner | null) => {
         if (!signer) {
@@ -145,18 +112,7 @@ export function KitSignerDemo() {
                                 size="sm"
                                 className="flex-1"
                             >
-                                {isSigning ? 'Signing...' : 'Modern'}
-                            </Button>
-                        )}
-                        {manualSigner && (
-                            <Button
-                                onClick={() => handleSignMessage(manualSigner)}
-                                disabled={isSigning || !messageToSign.trim()}
-                                size="sm"
-                                variant="outline"
-                                className="flex-1"
-                            >
-                                Legacy
+                                {isSigning ? 'Signing...' : 'Sign Message'}
                             </Button>
                         )}
                     </div>
@@ -174,7 +130,7 @@ export function KitSignerDemo() {
                     </Alert>
                 )}
 
-                {!kitSigners?.messageSigner && !manualSigner && <Alert>Message signing not supported</Alert>}
+                {!kitSigners?.messageSigner && <Alert>Message signing not supported</Alert>}
             </CardContent>
         </Card>
     );
