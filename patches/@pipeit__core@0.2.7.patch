@@ -1,0 +1,107 @@
+diff --git a/dist/index.cjs b/dist/index.cjs
+index c5efd6fae07adbbb723408e31b9e6264ee7a95be..b1adcd5e729f9b33fdc863a62f9c2d5a9a676233 100644
+--- a/dist/index.cjs
++++ b/dist/index.cjs
+@@ -402,7 +402,7 @@ function formatDiagnosis(diagnosis) {
+ }
+ 
+ // src/validation/validation.ts
+-var MAX_TRANSACTION_SIZE = transactions.TRANSACTION_SIZE_LIMIT;
++var MAX_TRANSACTION_SIZE = 1232;
+ function validateTransaction(message) {
+   if (!("feePayer" in message) || !message.feePayer) {
+     throw new errors.SolanaError(errors.SOLANA_ERROR__TRANSACTION__FEE_PAYER_MISSING);
+@@ -416,17 +416,17 @@ function estimateTransactionSize(message) {
+ }
+ function validateTransactionSize(message) {
+   const size = transactions.getTransactionMessageSize(message);
+-  if (size > transactions.TRANSACTION_SIZE_LIMIT) {
+-    throw new TransactionTooLargeError(size, transactions.TRANSACTION_SIZE_LIMIT);
++  if (size > 1232) {
++    throw new TransactionTooLargeError(size, 1232);
+   }
+ }
+ function getTransactionSizeInfo(message) {
+   const size = transactions.getTransactionMessageSize(message);
+   return {
+     size,
+-    limit: transactions.TRANSACTION_SIZE_LIMIT,
+-    remaining: transactions.TRANSACTION_SIZE_LIMIT - size,
+-    percentUsed: size / transactions.TRANSACTION_SIZE_LIMIT * 100
++    limit: 1232,
++    remaining: 1232 - size,
++    percentUsed: size / 1232 * 100
+   };
+ }
+ var COMPUTE_BUDGET_PROGRAM = addresses.address("ComputeBudget111111111111111111111111111111");
+@@ -2211,10 +2211,10 @@ var TransactionBuilder = class _TransactionBuilder {
+     const size = transactions.getTransactionMessageSize(message);
+     return {
+       size,
+-      limit: transactions.TRANSACTION_SIZE_LIMIT,
+-      remaining: transactions.TRANSACTION_SIZE_LIMIT - size,
+-      percentUsed: size / transactions.TRANSACTION_SIZE_LIMIT * 100,
+-      canFitMore: size < transactions.TRANSACTION_SIZE_LIMIT
++      limit: 1232,
++      remaining: 1232 - size,
++      percentUsed: size / 1232 * 100,
++      canFitMore: size < 1232
+     };
+   }
+   /**
+@@ -2895,7 +2895,7 @@ Object.defineProperty(exports, "isTransactionSigner", {
+ });
+ Object.defineProperty(exports, "TRANSACTION_SIZE_LIMIT", {
+   enumerable: true,
+-  get: function () { return transactions.TRANSACTION_SIZE_LIMIT; }
++  get: function () { return 1232; }
+ });
+ Object.defineProperty(exports, "getTransactionMessageSize", {
+   enumerable: true,
+diff --git a/dist/index.d.cts b/dist/index.d.cts
+index 8f42027bbaeffd60300ae392a525105c6b22f3fb..e17984312387d31089725c38dc885f5b5e6c35fa 100644
+--- a/dist/index.d.cts
++++ b/dist/index.d.cts
+@@ -8,7 +8,9 @@ import { RpcSubscriptions, SignatureNotificationsApi, SlotNotificationsApi } fro
+ import { TransactionSigner } from '@solana/signers';
+ export { AccountSignerMeta, InstructionWithSigners, KeyPairSigner, TransactionMessageWithSigners, TransactionModifyingSigner, TransactionPartialSigner, TransactionSendingSigner, TransactionSigner, createKeyPairSignerFromBytes, createNoopSigner, createSignerFromKeyPair, generateKeyPairSigner, getSignersFromInstruction, getSignersFromTransactionMessage, isTransactionModifyingSigner, isTransactionPartialSigner, isTransactionSendingSigner, isTransactionSigner } from '@solana/signers';
+ import { Base64EncodedWireTransaction } from '@solana/transactions';
+-export { Base64EncodedWireTransaction, TRANSACTION_SIZE_LIMIT, getTransactionMessageSize } from '@solana/transactions';
++export { Base64EncodedWireTransaction, getTransactionMessageSize } from '@solana/transactions';
++declare const TRANSACTION_SIZE_LIMIT = 1232;
++export { TRANSACTION_SIZE_LIMIT };
+ import { InstructionPlan, TransactionPlanResult } from '@solana/instruction-plans';
+ export { InstructionPlan, MessagePacker, MessagePackerInstructionPlan, ParallelInstructionPlan, ParallelTransactionPlan, ParallelTransactionPlanResult, SequentialInstructionPlan, SequentialTransactionPlan, SequentialTransactionPlanResult, SingleInstructionPlan, SingleTransactionPlan, SingleTransactionPlanResult, TransactionPlan, TransactionPlanExecutor, TransactionPlanExecutorConfig, TransactionPlanResult, TransactionPlanResultContext, TransactionPlanner, TransactionPlannerConfig, canceledSingleTransactionPlanResult, createTransactionPlanExecutor, createTransactionPlanner, failedSingleTransactionPlanResult, flattenTransactionPlan, getLinearMessagePackerInstructionPlan, getMessagePackerInstructionPlanFromInstructions, getReallocMessagePackerInstructionPlan, nonDivisibleSequentialInstructionPlan, nonDivisibleSequentialTransactionPlan, nonDivisibleSequentialTransactionPlanResult, parallelInstructionPlan, parallelTransactionPlan, parallelTransactionPlanResult, sequentialInstructionPlan, sequentialTransactionPlan, sequentialTransactionPlanResult, singleInstructionPlan, singleTransactionPlan, successfulSingleTransactionPlanResult } from '@solana/instruction-plans';
+ export { isProgramError } from '@solana/programs';
+diff --git a/dist/index.d.ts b/dist/index.d.ts
+index 8f42027bbaeffd60300ae392a525105c6b22f3fb..e17984312387d31089725c38dc885f5b5e6c35fa 100644
+--- a/dist/index.d.ts
++++ b/dist/index.d.ts
+@@ -8,7 +8,9 @@ import { RpcSubscriptions, SignatureNotificationsApi, SlotNotificationsApi } fro
+ import { TransactionSigner } from '@solana/signers';
+ export { AccountSignerMeta, InstructionWithSigners, KeyPairSigner, TransactionMessageWithSigners, TransactionModifyingSigner, TransactionPartialSigner, TransactionSendingSigner, TransactionSigner, createKeyPairSignerFromBytes, createNoopSigner, createSignerFromKeyPair, generateKeyPairSigner, getSignersFromInstruction, getSignersFromTransactionMessage, isTransactionModifyingSigner, isTransactionPartialSigner, isTransactionSendingSigner, isTransactionSigner } from '@solana/signers';
+ import { Base64EncodedWireTransaction } from '@solana/transactions';
+-export { Base64EncodedWireTransaction, TRANSACTION_SIZE_LIMIT, getTransactionMessageSize } from '@solana/transactions';
++export { Base64EncodedWireTransaction, getTransactionMessageSize } from '@solana/transactions';
++declare const TRANSACTION_SIZE_LIMIT = 1232;
++export { TRANSACTION_SIZE_LIMIT };
+ import { InstructionPlan, TransactionPlanResult } from '@solana/instruction-plans';
+ export { InstructionPlan, MessagePacker, MessagePackerInstructionPlan, ParallelInstructionPlan, ParallelTransactionPlan, ParallelTransactionPlanResult, SequentialInstructionPlan, SequentialTransactionPlan, SequentialTransactionPlanResult, SingleInstructionPlan, SingleTransactionPlan, SingleTransactionPlanResult, TransactionPlan, TransactionPlanExecutor, TransactionPlanExecutorConfig, TransactionPlanResult, TransactionPlanResultContext, TransactionPlanner, TransactionPlannerConfig, canceledSingleTransactionPlanResult, createTransactionPlanExecutor, createTransactionPlanner, failedSingleTransactionPlanResult, flattenTransactionPlan, getLinearMessagePackerInstructionPlan, getMessagePackerInstructionPlanFromInstructions, getReallocMessagePackerInstructionPlan, nonDivisibleSequentialInstructionPlan, nonDivisibleSequentialTransactionPlan, nonDivisibleSequentialTransactionPlanResult, parallelInstructionPlan, parallelTransactionPlan, parallelTransactionPlanResult, sequentialInstructionPlan, sequentialTransactionPlan, sequentialTransactionPlanResult, singleInstructionPlan, singleTransactionPlan, successfulSingleTransactionPlanResult } from '@solana/instruction-plans';
+ export { isProgramError } from '@solana/programs';
+diff --git a/dist/index.js b/dist/index.js
+index 4917ef2b8319237d86b33ec35c91750ab546e88e..4eea8df7bfbf0662255db8fc1e8d12602fd115ce 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -3,8 +3,10 @@ import { compressTransactionMessageUsingAddressLookupTables, createTransactionMe
+ import { addSignersToTransactionMessage, signTransactionMessageWithSigners } from '@solana/signers';
+ export { createKeyPairSignerFromBytes, createNoopSigner, createSignerFromKeyPair, generateKeyPairSigner, getSignersFromInstruction, getSignersFromTransactionMessage, isTransactionModifyingSigner, isTransactionPartialSigner, isTransactionSendingSigner, isTransactionSigner } from '@solana/signers';
+ import { fetchAddressesForLookupTables, sendAndConfirmTransactionFactory, getSignatureFromTransaction, pipe as pipe$1, createTransactionMessage as createTransactionMessage$1, setTransactionMessageFeePayer as setTransactionMessageFeePayer$1, setTransactionMessageLifetimeUsingBlockhash as setTransactionMessageLifetimeUsingBlockhash$1, signTransactionMessageWithSigners as signTransactionMessageWithSigners$1 } from '@solana/kit';
+-import { TRANSACTION_SIZE_LIMIT, getTransactionMessageSize, getTransactionEncoder, getBase64EncodedWireTransaction } from '@solana/transactions';
+-export { TRANSACTION_SIZE_LIMIT, getTransactionMessageSize } from '@solana/transactions';
++import { getTransactionMessageSize, getTransactionEncoder, getBase64EncodedWireTransaction } from '@solana/transactions';
++const TRANSACTION_SIZE_LIMIT = 1232;
++export { getTransactionMessageSize } from '@solana/transactions';
++export { TRANSACTION_SIZE_LIMIT };
+ import { getBase58Decoder } from '@solana/codecs-strings';
+ import { SOLANA_ERROR__BLOCK_HEIGHT_EXCEEDED, SOLANA_ERROR__TRANSACTION__FEE_PAYER_MISSING, SOLANA_ERROR__JSON_RPC__SERVER_ERROR_SEND_TRANSACTION_PREFLIGHT_FAILURE, isSolanaError, SOLANA_ERROR__TRANSACTION__SIGNATURES_MISSING, SOLANA_ERROR__INSTRUCTION_ERROR__CUSTOM, SOLANA_ERROR__INSTRUCTION_ERROR__INSUFFICIENT_FUNDS, SOLANA_ERROR__INSTRUCTION_ERROR__MISSING_REQUIRED_SIGNATURE, SOLANA_ERROR__INSTRUCTION_ERROR__INVALID_ACCOUNT_DATA, SOLANA_ERROR__INSTRUCTION_ERROR__INVALID_INSTRUCTION_DATA, SOLANA_ERROR__INSTRUCTION_ERROR__ACCOUNT_ALREADY_INITIALIZED, SOLANA_ERROR__INSTRUCTION_ERROR__UNINITIALIZED_ACCOUNT, SOLANA_ERROR__INSTRUCTION_ERROR__PROGRAM_FAILED_TO_COMPLETE, SolanaError } from '@solana/errors';
+ export { SOLANA_ERROR__BLOCK_HEIGHT_EXCEEDED, SOLANA_ERROR__JSON_RPC__SERVER_ERROR_SEND_TRANSACTION_PREFLIGHT_FAILURE, SOLANA_ERROR__TRANSACTION__FEE_PAYER_MISSING, SOLANA_ERROR__TRANSACTION__SIGNATURES_MISSING, isSolanaError } from '@solana/errors';
