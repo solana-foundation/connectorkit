@@ -610,6 +610,7 @@ export class KitWalletCore {
             // Switching wallets ends the previous session; consumers that track
             // sessions off the event stream need to see it close.
             if (previous) {
+                this.endSessionListeners();
                 this.eventEmitter.emit({ type: 'wallet:disconnected', timestamp: timestamp() });
             }
             this.eventEmitter.emit({
@@ -625,10 +626,22 @@ export class KitWalletCore {
                 timestamp: timestamp(),
             });
         } else if (!next && previous) {
+            this.endSessionListeners();
             this.eventEmitter.emit({ type: 'wallet:disconnected', timestamp: timestamp() });
         }
 
         this.previousConnection = next;
+    }
+
+    /**
+     * `onAccountsChanged` subscriptions belong to the session that handed them
+     * out; dropping them when it ends keeps a dead session's listeners from
+     * firing with the next session's accounts. (Runs before the notify loop in
+     * `project`, so a wallet switch never dispatches to the old set.)
+     */
+    private endSessionListeners(): void {
+        this.accountsChangedListeners.clear();
+        this.lastNotifiedAccountsKey = null;
     }
 
     // ========================================================================

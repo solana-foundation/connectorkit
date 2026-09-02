@@ -336,6 +336,39 @@ describe('KitWalletCore', () => {
         expect(listener).not.toHaveBeenCalled();
     });
 
+    it('does not fire session listeners after disconnect and a new connection', async () => {
+        registerWallet(createMockPhantomWallet({ accounts: [createMockWalletAccount(TEST_ADDRESSES.ACCOUNT_1)] }));
+        registerWallet(createMockSolflareWallet({ accounts: [createMockWalletAccount(TEST_ADDRESSES.ACCOUNT_2)] }));
+        const walletCore = createCore();
+
+        await walletCore.connectWallet(createConnectorId('Phantom'));
+        const state = stateManager.getSnapshot();
+        if (state.wallet.status !== 'connected') throw new Error('expected connected');
+        const listener = vi.fn();
+        state.wallet.session.onAccountsChanged(listener);
+
+        await walletCore.disconnect();
+        await walletCore.connectWallet(createConnectorId('Solflare'));
+
+        expect(listener).not.toHaveBeenCalled();
+    });
+
+    it('does not fire session listeners across a direct wallet switch', async () => {
+        registerWallet(createMockPhantomWallet({ accounts: [createMockWalletAccount(TEST_ADDRESSES.ACCOUNT_1)] }));
+        registerWallet(createMockSolflareWallet({ accounts: [createMockWalletAccount(TEST_ADDRESSES.ACCOUNT_2)] }));
+        const walletCore = createCore();
+
+        await walletCore.connectWallet(createConnectorId('Phantom'));
+        const state = stateManager.getSnapshot();
+        if (state.wallet.status !== 'connected') throw new Error('expected connected');
+        const listener = vi.fn();
+        state.wallet.session.onAccountsChanged(listener);
+
+        await walletCore.connectWallet(createConnectorId('Solflare'));
+
+        expect(listener).not.toHaveBeenCalled();
+    });
+
     it('supports connecting again after destroy and restart', async () => {
         const account = createMockWalletAccount(TEST_ADDRESSES.ACCOUNT_1);
         registerWallet(createMockPhantomWallet({ accounts: [account] }));
