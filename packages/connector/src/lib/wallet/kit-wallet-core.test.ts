@@ -274,6 +274,19 @@ describe('KitWalletCore', () => {
         expect(listener).not.toHaveBeenCalled();
     });
 
+    it('supports connecting again after destroy and restart', async () => {
+        const account = createMockWalletAccount(TEST_ADDRESSES.ACCOUNT_1);
+        registerWallet(createMockPhantomWallet({ accounts: [account] }));
+        const walletCore = createCore();
+        await waitForCondition(() => stateManager.getSnapshot().connectors.length > 0, { timeout: 2000 });
+
+        walletCore.destroy();
+        walletCore.start('solana:mainnet');
+
+        await walletCore.connectWallet(createConnectorId('Phantom'));
+        expect(stateManager.getSnapshot().wallet.status).toBe('connected');
+    });
+
     it('persists the active connection through a consumer storage adapter', async () => {
         const account = createMockWalletAccount(TEST_ADDRESSES.ACCOUNT_1);
         registerWallet(createMockPhantomWallet({ accounts: [account] }));

@@ -142,7 +142,15 @@ export class ConnectorClient {
         try {
             // Dynamically import to avoid bundling WalletConnect if not used
             const { registerWalletConnectWallet } = await import('../wallet/walletconnect');
-            this.walletConnectRegistration = await registerWalletConnectWallet(this.config.walletConnect);
+            const registration = await registerWalletConnectWallet(this.config.walletConnect);
+
+            // destroy() may have run while the import was in flight; a
+            // registration completing now would outlive the client and leak.
+            if (!this.initialized) {
+                registration.unregister();
+                return;
+            }
+            this.walletConnectRegistration = registration;
 
             if (this.config.debug) {
                 logger.info('WalletConnect wallet registered successfully');
@@ -373,5 +381,10 @@ export class ConnectorClient {
         this.kitWalletCore.destroy();
         this.eventEmitter.offAll();
         this.stateManager.clear();
+
+        // The provider reuses this instance across an unmount/remount cycle
+        // (React StrictMode runs one on every dev mount) and re-runs
+        // initialize(), which must not early-return against a torn-down core.
+        this.initialized = false;
     }
 }

@@ -76,6 +76,7 @@ describe('ConnectorClient', () => {
         vi.mocked(ClusterManager).mockImplementation(function () {
             return {
                 setCluster: vi.fn(),
+                getCluster: vi.fn(() => null),
                 getCurrentCluster: vi.fn(() => null),
                 getServerCluster: vi.fn(() => undefined),
             } as unknown as InstanceType<typeof ClusterManager>;
@@ -187,6 +188,23 @@ describe('ConnectorClient', () => {
     describe('cleanup', () => {
         it('should have destroy method for cleanup', () => {
             expect(typeof client.destroy).toBe('function');
+        });
+
+        it('re-initializes the wallet core after destroy (StrictMode remount)', async () => {
+            const { KitWalletCore } = await import('../wallet/kit-wallet-core');
+            const kitCore = vi.mocked(KitWalletCore).mock.results[0].value as {
+                start: ReturnType<typeof vi.fn>;
+                destroy: ReturnType<typeof vi.fn>;
+            };
+            expect(kitCore.start).toHaveBeenCalledTimes(1);
+
+            // StrictMode runs mount → cleanup (destroy) → mount (initialize)
+            // against the same ref-held client instance.
+            client.destroy();
+            (client as unknown as { initialize: () => void }).initialize();
+
+            expect(kitCore.destroy).toHaveBeenCalledTimes(1);
+            expect(kitCore.start).toHaveBeenCalledTimes(2);
         });
     });
 });

@@ -267,6 +267,10 @@ export class KitWalletCore {
     }
 
     destroy(): void {
+        // Invalidate any in-flight setChain warm-up: after a later start() the
+        // staleness guard would otherwise pass (started is true again, counter
+        // unchanged) and attach a client built for the pre-destroy chain.
+        this.chainSwap++;
         this.detachClient();
         this.unregisterAdditionalWallets?.();
         this.unregisterAdditionalWallets = null;
