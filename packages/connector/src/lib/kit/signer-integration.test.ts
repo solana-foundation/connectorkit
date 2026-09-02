@@ -1,9 +1,13 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import type { Connection } from '@solana/web3.js';
 import { createKitSignersFromWallet } from './signer-integration';
-import { ConfigurationError } from '../errors';
 import { createMockPhantomWallet } from '../../__tests__/mocks/wallet-standard-mock';
 import { createMockWalletAccount, TEST_ADDRESSES } from '../../__tests__/fixtures/accounts';
+
+const warnSpy = vi.hoisted(() => vi.fn());
+vi.mock('../utils/secure-logger', () => ({
+    createLogger: () => ({ debug: vi.fn(), info: vi.fn(), warn: warnSpy, error: vi.fn() }),
+}));
 
 function mockConnection(rpcEndpoint: string): Connection {
     return { rpcEndpoint } as Connection;
@@ -111,28 +115,49 @@ describe('createKitSignersFromWallet', () => {
             expect(result.transactionSigner).not.toBeNull();
         });
 
-        it('does not fall back to devnet for an unrecognized endpoint', () => {
+        it('omits the transaction signer (without throwing or defaulting to devnet) for an unrecognized endpoint', () => {
             const { account, wallet } = signingAccountAndWallet(['solana:devnet']);
+            warnSpy.mockClear();
 
-            expect(() =>
-                createKitSignersFromWallet(wallet, account, mockConnection('https://rpc.example.com')),
-            ).toThrow(ConfigurationError);
-            expect(() =>
-                createKitSignersFromWallet(wallet, account, mockConnection('https://rpc.example.com')),
-            ).toThrow(/Cannot determine the Solana chain/);
+            const result = createKitSignersFromWallet(wallet, account, mockConnection('https://rpc.example.com'));
+
+            expect(result.address).toBe(TEST_ADDRESSES.ACCOUNT_1);
+            expect(result.messageSigner).not.toBeNull();
+            expect(result.transactionSigner).toBeNull();
+            expect(warnSpy).toHaveBeenCalledTimes(1);
+            expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Cannot determine the Solana chain'), {
+                rpcEndpoint: 'https://rpc.example.com',
+            });
         });
 
-        it('throws with the INVALID_CLUSTER code and the endpoint in context', () => {
+        it('logs only the endpoint origin, never credentials in userinfo, path, or query', () => {
             const { account, wallet } = signingAccountAndWallet(['solana:devnet']);
+            warnSpy.mockClear();
 
-            try {
-                createKitSignersFromWallet(wallet, account, mockConnection('not a url'));
-                expect.unreachable('expected a ConfigurationError');
-            } catch (error) {
-                expect(error).toBeInstanceOf(ConfigurationError);
-                expect((error as ConfigurationError).code).toBe('INVALID_CLUSTER');
-                expect((error as ConfigurationError).context).toEqual({ rpcEndpoint: 'not a url' });
-            }
+            createKitSignersFromWallet(
+                wallet,
+                account,
+                mockConnection('https://user:secret@rpc.example.com/v2/apikey123?api-key=xyz'),
+            );
+
+            expect(warnSpy).toHaveBeenCalledTimes(1);
+            const context = warnSpy.mock.calls[0][1] as { rpcEndpoint: string };
+            expect(context.rpcEndpoint).toBe('https://rpc.example.com');
+            const logged = JSON.stringify(warnSpy.mock.calls[0]);
+            expect(logged).not.toContain('secret');
+            expect(logged).not.toContain('apikey123');
+            expect(logged).not.toContain('api-key=xyz');
+        });
+
+        it('treats an unparseable endpoint the same as an unrecognized one', () => {
+            const { account, wallet } = signingAccountAndWallet(['solana:devnet']);
+            warnSpy.mockClear();
+
+            const result = createKitSignersFromWallet(wallet, account, mockConnection('not a url'));
+
+            expect(result.messageSigner).not.toBeNull();
+            expect(result.transactionSigner).toBeNull();
+            expect(warnSpy).toHaveBeenCalledTimes(1);
         });
 
         it('omits the transaction signer when neither a network nor a connection is given', () => {

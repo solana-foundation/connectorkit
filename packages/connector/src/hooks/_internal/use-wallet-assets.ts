@@ -66,10 +66,10 @@ export interface UseWalletAssetsOptions<TSelected = WalletAssetsData> extends Om
     select?: (data: WalletAssetsData | undefined) => TSelected;
     /**
      * Subscribe to wallet account notifications for push-based updates.
-     * Once the subscription has delivered data it supersedes
-     * `refetchIntervalMs` polling; while it is connecting, after it errors,
-     * or when WebSocket transport is unavailable, polling runs as the
-     * fallback (so a fallback requires `refetchIntervalMs` to be set).
+     * The subscription adds immediacy on top of `refetchIntervalMs` polling —
+     * it does not replace it: it only observes the wallet's system account,
+     * so token-account changes still arrive via the poll (and a socket that
+     * closes cleanly surfaces no error to react to).
      * (default: false)
      */
     liveUpdates?: boolean;
@@ -312,18 +312,18 @@ export function useWalletAssets<TSelected = WalletAssetsData>(
         return rpcClient.rpcSubscriptions.accountNotifications(toAddress(address));
     }, [liveUpdates, key, address, rpcClient]);
 
-    const {
-        data: accountNotification,
-        error: subscriptionError,
-        status: subscriptionStatus,
-    } = useSubscription(accountNotificationsSource);
+    const { data: accountNotification, error: subscriptionError } = useSubscription(accountNotificationsSource);
 
     useEffect(() => {
         // `value` is null when the account does not exist on chain (unfunded,
         // or closed and purged), in which case there is no balance to apply.
         if (!key || !accountNotification?.value) return;
         const lamports = accountNotification.value.lamports;
-        // Apply the new balance immediately, then refetch to pick up token deltas
+        // Apply the new balance immediately, then refetch to pick up token
+        // deltas. The refetch re-runs the full query fn — including a
+        // getBalance the push already answered — because a partial fetch
+        // would bypass the shared query's in-flight dedup and cost more
+        // across hook instances than the one redundant call.
         setSharedQueryData<WalletAssetsData>(key, prev =>
             !prev || prev.lamports === lamports ? prev : { ...prev, lamports },
         );
@@ -332,16 +332,14 @@ export function useWalletAssets<TSelected = WalletAssetsData>(
 
     useEffect(() => {
         if (!subscriptionError) return;
-        logger.warn('Account subscription errored; falling back to polling', { error: subscriptionError });
+        logger.warn('Account subscription errored; polling continues to cover updates', { error: subscriptionError });
     }, [subscriptionError]);
 
-    // Polling yields only to a subscription that has delivered data; while it
-    // is still connecting (or after it errors) polling keeps running so a hung
-    // WebSocket cannot freeze balances.
-    const subscriptionActive = accountNotificationsSource !== null && subscriptionStatus === 'loaded';
-    const effectiveRefetchIntervalMs = subscriptionActive ? false : refetchIntervalMs;
-
-    // Use shared query with optional select
+    // Polling never yields to the subscription: it only observes the wallet's
+    // system account, so SPL token movements (which mutate ATAs) emit no
+    // notification, and a WebSocket that closes cleanly parks the
+    // subscription in its last status with no error to react to. The
+    // subscription's job is immediacy, not replacement.
     const { data, error, status, updatedAt, isFetching, refetch, abort } = useSharedQuery<WalletAssetsData, TSelected>(
         key,
         queryFn,
@@ -350,7 +348,7 @@ export function useWalletAssets<TSelected = WalletAssetsData>(
             staleTimeMs,
             cacheTimeMs,
             refetchOnMount,
-            refetchIntervalMs: effectiveRefetchIntervalMs,
+            refetchIntervalMs,
             select: select as ((data: WalletAssetsData | undefined) => TSelected) | undefined,
         },
     );

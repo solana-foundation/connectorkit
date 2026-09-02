@@ -36,6 +36,14 @@ export class ConnectorClient {
     private debugMetrics: DebugMetrics;
     private healthMonitor: HealthMonitor;
     private initialized = false;
+    /**
+     * Bumped by every destroy(). Async initialization work (the WalletConnect
+     * dynamic import + registration) captures the epoch it started under and
+     * discards its result when a destroy intervened — checking `initialized`
+     * alone is not enough, because a re-initialize sets it back to true and
+     * would let a previous lifecycle's registration attach untracked.
+     */
+    private lifecycleEpoch = 0;
     private serverSnapshot: ConnectorState;
     private config: ConnectorConfig;
     private walletConnectRegistration: WalletConnectRegistration | null = null;
@@ -138,11 +146,22 @@ export class ConnectorClient {
      */
     private async initializeWalletConnect(): Promise<void> {
         if (!this.config.walletConnect?.enabled) return;
+        const epoch = this.lifecycleEpoch;
 
         try {
             // Dynamically import to avoid bundling WalletConnect if not used
             const { registerWalletConnectWallet } = await import('../wallet/walletconnect');
-            this.walletConnectRegistration = await registerWalletConnectWallet(this.config.walletConnect);
+            const registration = await registerWalletConnectWallet(this.config.walletConnect);
+
+            // A destroy() (and possibly a re-initialize, which starts its own
+            // registration) ran while the import was in flight; a registration
+            // from a previous lifecycle must not be tracked — an untracked
+            // registry entry can never be unregistered.
+            if (epoch !== this.lifecycleEpoch || !this.initialized) {
+                registration.unregister();
+                return;
+            }
+            this.walletConnectRegistration = registration;
 
             if (this.config.debug) {
                 logger.info('WalletConnect wallet registered successfully');
@@ -164,7 +183,7 @@ export class ConnectorClient {
      * This is the recommended way to connect in vNext.
      *
      * @param connectorId - Stable connector identifier
-     * @param options - Connection options (silent mode, preferred account, etc.)
+     * @param options - Connection options (preferred account)
      */
     async connectWallet(connectorId: WalletConnectorId, options?: ConnectOptions): Promise<void> {
         await this.kitWalletCore.connectWallet(connectorId, options);
@@ -209,7 +228,18 @@ export class ConnectorClient {
 
     async setCluster(clusterId: SolanaClusterId): Promise<void> {
         await this.clusterManager.setCluster(clusterId);
-        await this.kitWalletCore.setChain(normalizeWalletChain(this.clusterManager.getCluster()?.id));
+        // The replacement wallet client's warm-up silently reconnects through
+        // the wallet extension, which can take arbitrarily long (the plugin
+        // puts no timeout on it), so the cluster switch must not wait on it.
+        // KitWalletCore's swap counter discards warm-ups a newer switch or a
+        // destroy() has made stale.
+        void this.kitWalletCore
+            .setChain(normalizeWalletChain(this.clusterManager.getCluster()?.id))
+            .catch((error: unknown) => {
+                if (this.config.debug) {
+                    logger.error('Wallet chain swap failed', { error });
+                }
+            });
     }
 
     getCluster(): SolanaCluster | null {
@@ -358,6 +388,8 @@ export class ConnectorClient {
     }
 
     destroy(): void {
+        this.lifecycleEpoch++;
+
         // Unregister WalletConnect wallet if it was registered
         if (this.walletConnectRegistration) {
             try {
@@ -373,5 +405,10 @@ export class ConnectorClient {
         this.kitWalletCore.destroy();
         this.eventEmitter.offAll();
         this.stateManager.clear();
+
+        // The provider reuses this instance across an unmount/remount cycle
+        // (React StrictMode runs one on every dev mount) and re-runs
+        // initialize(), which must not early-return against a torn-down core.
+        this.initialized = false;
     }
 }

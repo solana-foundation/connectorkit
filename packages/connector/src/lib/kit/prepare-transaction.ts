@@ -89,6 +89,40 @@ export interface PrepareTransactionConfig<TMessage extends PrepareCompilableTran
      * @default true
      */
     blockhashReset?: boolean;
+    /**
+     * Estimate and set compute/resource limits via simulation.
+     * @default true
+     */
+    estimateResources?: true;
+}
+
+/**
+ * Configuration for preparing a transaction without simulation-based resource
+ * estimation: only the blockhash lifetime is managed. For transactions that
+ * cannot simulate at preparation time (e.g. an unfunded fee payer during
+ * onboarding, or an instruction depending on state a prior transaction has
+ * not landed yet).
+ */
+export interface PrepareTransactionConfigWithoutEstimation<TMessage extends PrepareCompilableTransactionMessage> {
+    /**
+     * Transaction to prepare for sending to the blockchain
+     */
+    transaction: TMessage;
+    /**
+     * RPC client capable of getting the latest blockhash. Simulation
+     * capability is not required when estimation is skipped.
+     */
+    rpc: Rpc<GetLatestBlockhashApi>;
+    /**
+     * Whether or not you wish to force reset the latest blockhash (if one is already set)
+     * @default true
+     */
+    blockhashReset?: boolean;
+    /**
+     * Skip simulation-based resource estimation entirely; compute unit limits
+     * are left exactly as the message carries them.
+     */
+    estimateResources: false;
 }
 
 /**
@@ -103,6 +137,11 @@ export interface PrepareTransactionConfig<TMessage extends PrepareCompilableTran
  * `computeUnitLimitReset` is set — except the provisory value 0 and the
  * 1,400,000 maximum, which kit treats as unset and re-estimates.
  *
+ * Pass `estimateResources: false` to skip simulation entirely (blockhash-only
+ * preparation); the `rpc` then only needs `GetLatestBlockhashApi`. Use this
+ * for transactions that cannot simulate at preparation time, e.g. an unfunded
+ * fee payer during onboarding.
+ *
  * @param config - Configuration for transaction preparation
  * @returns Prepared transaction with resource limits and blockhash lifetime set
  *
@@ -116,36 +155,49 @@ export interface PrepareTransactionConfig<TMessage extends PrepareCompilableTran
  */
 export async function prepareTransaction<TMessage extends PrepareCompilableTransactionMessage>(
     config: PrepareTransactionConfig<TMessage>,
+): Promise<TMessage & TransactionMessageWithBlockhashLifetime>;
+export async function prepareTransaction<TMessage extends PrepareCompilableTransactionMessage>(
+    config: PrepareTransactionConfigWithoutEstimation<TMessage>,
+): Promise<TMessage & TransactionMessageWithBlockhashLifetime>;
+export async function prepareTransaction<TMessage extends PrepareCompilableTransactionMessage>(
+    config: PrepareTransactionConfig<TMessage> | PrepareTransactionConfigWithoutEstimation<TMessage>,
 ): Promise<TMessage & TransactionMessageWithBlockhashLifetime> {
     // Set config defaults
     const blockhashReset = config.blockhashReset !== false;
-    const { computeUnitLimitMultiplier } = config;
-    const getComputeUnitLimit =
-        computeUnitLimitMultiplier === undefined
-            ? getDefaultComputeUnitLimitFromEstimate
-            : (estimate: number) => Math.ceil(estimate * computeUnitLimitMultiplier);
 
     let transaction = config.transaction as TMessage & Partial<TransactionMessageWithBlockhashLifetime>;
 
-    if (config.computeUnitLimitReset) {
-        if (isDebugEnabled()) {
-            debug('Force resetting the compute unit limit.', 'debug');
-        }
-        transaction = setTransactionMessageComputeUnitLimit(undefined, transaction);
-    }
+    if (config.estimateResources !== false) {
+        const { computeUnitLimitMultiplier } = config;
+        const getComputeUnitLimit =
+            computeUnitLimitMultiplier === undefined
+                ? getDefaultComputeUnitLimitFromEstimate
+                : (estimate: number) => Math.ceil(estimate * computeUnitLimitMultiplier);
 
-    const estimateResourceLimits = estimateResourceLimitsFactory({ rpc: config.rpc });
-    const estimateAndSetResourceLimits = estimateAndSetResourceLimitsFactory(async (transactionMessage, config_) => {
-        const estimate = await estimateResourceLimits(transactionMessage, config_);
-        return {
-            ...estimate,
-            computeUnitLimit: Math.min(
-                Math.ceil(getComputeUnitLimit(estimate.computeUnitLimit)),
-                MAX_COMPUTE_UNIT_LIMIT,
-            ),
-        };
-    });
-    transaction = await estimateAndSetResourceLimits(transaction);
+        if (config.computeUnitLimitReset) {
+            if (isDebugEnabled()) {
+                debug('Force resetting the compute unit limit.', 'debug');
+            }
+            transaction = setTransactionMessageComputeUnitLimit(undefined, transaction);
+        }
+
+        const estimateResourceLimits = estimateResourceLimitsFactory({ rpc: config.rpc });
+        const estimateAndSetResourceLimits = estimateAndSetResourceLimitsFactory(
+            async (transactionMessage, config_) => {
+                const estimate = await estimateResourceLimits(transactionMessage, config_);
+                return {
+                    ...estimate,
+                    computeUnitLimit: Math.min(
+                        Math.ceil(getComputeUnitLimit(estimate.computeUnitLimit)),
+                        MAX_COMPUTE_UNIT_LIMIT,
+                    ),
+                };
+            },
+        );
+        transaction = await estimateAndSetResourceLimits(transaction);
+    } else if (isDebugEnabled()) {
+        debug('Skipping resource estimation (estimateResources: false).', 'debug');
+    }
 
     // Update the latest blockhash
     const hasLifetimeConstraint = 'lifetimeConstraint' in transaction;

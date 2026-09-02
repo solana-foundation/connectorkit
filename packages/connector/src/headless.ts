@@ -213,6 +213,7 @@ export type {
     CreateSolanaClientArgs,
     GetExplorerLinkArgs,
     PrepareTransactionConfig,
+    PrepareTransactionConfigWithoutEstimation,
 } from './lib/kit';
 
 // ============================================================================

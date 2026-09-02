@@ -137,7 +137,7 @@ function selectBalance(assets: WalletAssetsData | undefined): BalanceSelection {
  * - Automatic request deduplication across components
  * - Shared data with useTokens (single RPC query)
  * - Token-2022 support
- * - Live balance updates via account subscription (with polling fallback)
+ * - Live balance updates via account subscription, with interval polling always running alongside
  * - Configurable auto-refresh behavior
  * - Abort support for in-flight requests
  * - Optional client override

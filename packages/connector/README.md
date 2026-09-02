@@ -470,25 +470,18 @@ function DisconnectButton() {
 }
 ```
 
-### Silent-First Auto-Connect
+### Silent Session Restore
 
-The vNext API supports silent-first auto-connect, which attempts to reconnect without prompting the user:
+Silent reconnection is handled automatically: with `autoConnect` enabled (the default), the wallet plugin silently restores the persisted session on startup without prompting the user. Explicit `connect()` calls are always interactive.
 
 ```typescript
-const { connect } = useConnectWallet();
-
-// Silent connect (won't prompt user)
-await connect('wallet-standard:phantom', {
-    silent: true,
-    allowInteractiveFallback: false,
-});
-
-// Silent-first with interactive fallback (prompts if silent fails)
-await connect('wallet-standard:phantom', {
-    silent: true,
-    allowInteractiveFallback: true,
+const config = getDefaultConfig({
+    appName: 'My App',
+    autoConnect: true, // silent restore of the persisted session on load
 });
 ```
+
+> The `silent` and `allowInteractiveFallback` fields on `ConnectOptions` are deprecated no-ops under the kit wallet plugin backend and will be removed in the next major.
 
 ---
 
@@ -1416,7 +1409,7 @@ Storage uses nanostores with built-in enhancements that are **automatically appl
 - Additional validation rules
 - Custom error tracking
 
-**Auto-connect persistence is separate from `storage.wallet`.** The wallet session is persisted by the underlying `@solana/kit-plugin-wallet` client under the `connector-kit:v1:kit-wallet` localStorage key, and silent reconnect reads that key directly. `storage.wallet` still receives the connected wallet's name, but pointing it at a different backend does not move where reconnect state lives — auto-connect requires `localStorage` and is unavailable in environments without it (React Native, SSR).
+**`storage.wallet` is the auto-connect source when supplied.** The wallet plugin persists the active connection as `<wallet name>:<account address>` through `storage.wallet` when one is configured (the default config always supplies one), and silent reconnect reads it back from there; without an adapter it falls back to the `connector-kit:v1:kit-wallet` localStorage key. Values persisted by pre-plugin releases (a bare wallet name) are preserved untouched until the next connect overwrites them in the new format — they are not used for reconnection.
 
 ```typescript
 import { getDefaultConfig, createEnhancedStorageWallet, EnhancedStorageAdapter } from '@solana/connector';

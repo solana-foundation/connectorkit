@@ -49,7 +49,11 @@ export {
 export { debug, isDebugEnabled, type LogLevel } from './debug';
 
 // Transaction preparation
-export { prepareTransaction, type PrepareTransactionConfig } from './prepare-transaction';
+export {
+    prepareTransaction,
+    type PrepareTransactionConfig,
+    type PrepareTransactionConfigWithoutEstimation,
+} from './prepare-transaction';
 
 // ============================================================================
 // Signer Types (from kit-signers)

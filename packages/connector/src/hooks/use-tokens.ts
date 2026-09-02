@@ -573,7 +573,7 @@ function sortByValueDesc(a: Token, b: Token): number {
  * - Automatic request deduplication across components
  * - Shared data with useBalance (single RPC query)
  * - Token-2022 support
- * - Live updates via account subscription (with polling fallback)
+ * - Live updates via account subscription, with interval polling always running alongside
  * - Configurable auto-refresh behavior
  * - Abort support for in-flight requests
  * - Optional client override

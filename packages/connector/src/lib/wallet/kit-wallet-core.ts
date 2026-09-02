@@ -82,10 +82,24 @@ function normalizeWalletName(value: string): string {
  * interface the kit wallet plugin persists through. The adapter already owns
  * the key it writes under, so the key the plugin supplies is ignored.
  */
-function toKitWalletStorage(adapter: StorageAdapter<string | undefined>): KitWalletStorage {
+function toKitWalletStorage(
+    adapter: StorageAdapter<string | undefined>,
+    suppressRemove?: () => boolean,
+): KitWalletStorage {
     return {
-        getItem: () => adapter.get() ?? null,
+        getItem: () => {
+            const value = adapter.get() ?? null;
+            // Pre-plugin versions persisted the bare wallet name under the
+            // same adapter. The plugin erases any value that does not parse as
+            // `<name>:<address>`, so hand it null instead: it settles
+            // disconnected without touching storage, the legacy value
+            // survives, and the next connect overwrites it in the new format.
+            // (An explicit disconnect still clears it via removeItem.)
+            if (value !== null && parsePersistedWalletName(value) === null) return null;
+            return value;
+        },
         removeItem: () => {
+            if (suppressRemove?.()) return;
             const withClear = adapter as StorageAdapter<string | undefined> & { clear?: () => void };
             if (typeof withClear.clear === 'function') {
                 withClear.clear();
@@ -248,12 +262,25 @@ export class KitWalletCore {
         // reconnect it (via the plugin's own persistence) or the chain switch
         // would drop the user's wallet.
         const hasLiveSession = Boolean(this.client?.wallet.getState().connected);
-        const next = this.buildClient(chain, hasLiveSession || undefined);
+        let warming = true;
+        const next = this.buildClient(chain, {
+            autoConnect: hasLiveSession || undefined,
+            // A failed silent reconnect makes the plugin clear its persisted
+            // account. During a chain swap that would turn a mere network
+            // switch into a permanent logout, so the replacement client must
+            // not remove anything while it warms up. The old client (an
+            // explicit disconnect) and the attached client afterwards clear
+            // normally, and a genuinely revoked session is still cleared by
+            // the next startup reconnect at rest.
+            suppressRemove: () => warming,
+        });
         try {
             await next.wallet.whenReady();
         } catch (error) {
             // A disposed or failed warm-up still settles; proceed with the swap
             if (this.options.debug) logger.warn('Chain-swap warm-up failed', { chain, error });
+        } finally {
+            warming = false;
         }
 
         // The warm-up spans a destroy() or a newer switch, either of which
@@ -267,6 +294,10 @@ export class KitWalletCore {
     }
 
     destroy(): void {
+        // Invalidate any in-flight setChain warm-up: after a later start() the
+        // staleness guard would otherwise pass (started is true again, counter
+        // unchanged) and attach a client built for the pre-destroy chain.
+        this.chainSwap++;
         this.detachClient();
         this.unregisterAdditionalWallets?.();
         this.unregisterAdditionalWallets = null;
@@ -340,6 +371,14 @@ export class KitWalletCore {
         this.sync();
     }
 
+    /**
+     * Select an account within the connected session. When the requested
+     * address is not among the accounts the wallet has exposed yet, connect is
+     * re-invoked to refresh the authorized set before giving up — the user may
+     * have just authorized the account in the wallet. Note the re-connect can
+     * itself move the plugin's active account even when the requested address
+     * never appears.
+     */
     async selectAccount(address: string): Promise<void> {
         const client = this.requireClient();
         const connected = client.wallet.getState().connected;
@@ -349,7 +388,21 @@ export class KitWalletCore {
         if (!address || address.length < 5) {
             throw new Error('Invalid address format');
         }
-        const uiAccount = connected.wallet.accounts.find(account => account.address === address);
+        let uiAccount = connected.wallet.accounts.find(account => account.address === address);
+        if (!uiAccount) {
+            // Keep projecting a connect attempt against the current wallet so
+            // the plugin's transient 'connecting' status does not flicker the
+            // UI to disconnected during the re-authorization.
+            this.connectingConnectorId = createConnectorId(connected.wallet.name);
+            try {
+                const refreshed = await client.wallet.connect(connected.wallet);
+                uiAccount = refreshed.find(account => account.address === address);
+            } catch {
+                throw new Error('Failed to reconnect wallet for account selection');
+            } finally {
+                this.connectingConnectorId = null;
+            }
+        }
         if (!uiAccount) {
             throw new Error('Requested account not available');
         }
@@ -361,15 +414,18 @@ export class KitWalletCore {
     // Client lifecycle
     // ========================================================================
 
-    private buildClient(chain: string, autoConnect?: boolean): KitWalletClient {
+    private buildClient(
+        chain: string,
+        opts?: { autoConnect?: boolean; suppressRemove?: () => boolean },
+    ): KitWalletClient {
         const display = this.options.display;
         const walletStorage = this.options.walletStorage;
         return createClient().use(
             walletSigner({
-                autoConnect: autoConnect ?? this.options.autoConnect ?? false,
+                autoConnect: opts?.autoConnect ?? this.options.autoConnect ?? false,
                 chain: chain as `${string}:${string}`,
                 filter: display ? wallet => applyWalletDisplayConfig([wallet], display).length > 0 : undefined,
-                storage: walletStorage ? toKitWalletStorage(walletStorage) : undefined,
+                storage: walletStorage ? toKitWalletStorage(walletStorage, opts?.suppressRemove) : undefined,
                 storageKey: KIT_WALLET_STORAGE_KEY,
             }),
         ) as unknown as KitWalletClient;
@@ -576,6 +632,7 @@ export class KitWalletCore {
             // Switching wallets ends the previous session; consumers that track
             // sessions off the event stream need to see it close.
             if (previous) {
+                this.endSessionListeners();
                 this.eventEmitter.emit({ type: 'wallet:disconnected', timestamp: timestamp() });
             }
             this.eventEmitter.emit({
@@ -591,10 +648,22 @@ export class KitWalletCore {
                 timestamp: timestamp(),
             });
         } else if (!next && previous) {
+            this.endSessionListeners();
             this.eventEmitter.emit({ type: 'wallet:disconnected', timestamp: timestamp() });
         }
 
         this.previousConnection = next;
+    }
+
+    /**
+     * `onAccountsChanged` subscriptions belong to the session that handed them
+     * out; dropping them when it ends keeps a dead session's listeners from
+     * firing with the next session's accounts. (Runs before the notify loop in
+     * `project`, so a wallet switch never dispatches to the old set.)
+     */
+    private endSessionListeners(): void {
+        this.accountsChangedListeners.clear();
+        this.lastNotifiedAccountsKey = null;
     }
 
     // ========================================================================
