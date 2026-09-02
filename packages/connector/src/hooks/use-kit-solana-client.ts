@@ -9,12 +9,39 @@
 
 import { useMemo } from 'react';
 import { createSolanaClient, type SolanaClient, type ModifiedClusterUrl } from '../lib/kit';
+import { resolveRpcUrl } from '../lib/kit/client';
+import type { SolanaClientUrlOrMoniker } from '../lib/kit/rpc';
 import { useCluster } from './use-cluster';
 import { useConnectorClient } from '../ui/connector-provider';
 import type { ClusterType } from '../utils/cluster';
 import { createLogger } from '../lib/utils/secure-logger';
 
 const logger = createLogger('useSolanaClient');
+
+/**
+ * One client per resolved RPC URL, shared across all hook instances.
+ * Kit's subscription transport only coalesces identical subscriptions within
+ * a single transport, so per-hook clients would open one WebSocket per hook;
+ * sharing the client makes N hooks share one socket. An idle cached client
+ * holds no sockets (channels open lazily on the first subscription and close
+ * when the last one ends), so entries never need disposal.
+ */
+const sharedClients = new Map<string, SolanaClient>();
+
+function getSharedSolanaClient(urlOrMoniker: SolanaClientUrlOrMoniker): SolanaClient {
+    const key = resolveRpcUrl(urlOrMoniker).toString();
+    let client = sharedClients.get(key);
+    if (!client) {
+        client = createSolanaClient({ urlOrMoniker: urlOrMoniker as ModifiedClusterUrl });
+        sharedClients.set(key, client);
+    }
+    return client;
+}
+
+/** Test-only escape hatch; not exported from the package entrypoints. */
+export function clearSharedSolanaClientCache(): void {
+    sharedClients.clear();
+}
 
 /**
  * Return value from useSolanaClient hook
@@ -104,16 +131,12 @@ export function useSolanaClient(): UseSolanaClientReturn {
             // ALWAYS prefer the configured RPC URL from cluster config
             const rpcUrl = connectorClient.getRpcUrl();
             if (rpcUrl) {
-                return createSolanaClient({
-                    urlOrMoniker: rpcUrl as ModifiedClusterUrl,
-                });
+                return getSharedSolanaClient(rpcUrl as ModifiedClusterUrl);
             }
 
             // Fallback to moniker only if no RPC URL configured
             if (type !== 'custom') {
-                return createSolanaClient({
-                    urlOrMoniker: type,
-                });
+                return getSharedSolanaClient(type);
             }
 
             return null;

@@ -62,8 +62,11 @@ export interface SolanaClient<TClusterUrl extends ModifiedClusterUrl | string = 
 
 /**
  * Resolve a URL or cluster moniker to a validated HTTP(S) RPC URL.
+ *
+ * Exported for internal use (the shared-client cache keys by resolved URL so
+ * a moniker and its full URL share one client); not part of the public API.
  */
-function resolveRpcUrl(urlOrMoniker: SolanaClientUrlOrMoniker, port?: number): URL {
+export function resolveRpcUrl(urlOrMoniker: SolanaClientUrlOrMoniker, port?: number): URL {
     let parsedUrl: URL;
 
     if (urlOrMoniker instanceof URL) {

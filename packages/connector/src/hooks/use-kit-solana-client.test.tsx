@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
-import { useSolanaClient, useGillSolanaClient } from './use-kit-solana-client';
+import { useSolanaClient, useGillSolanaClient, clearSharedSolanaClientCache } from './use-kit-solana-client';
 import { ConnectorProvider } from '../ui/connector-provider';
 import type { ReactNode } from 'react';
 import type { ExtendedConnectorConfig } from '../config/default-config';
@@ -30,6 +30,31 @@ describe('useSolanaClient', () => {
         // Without a cluster selected, client should be null and ready should be false
         expect(result.current.client).toBeNull();
         expect(result.current.ready).toBe(false);
+    });
+
+    describe('shared client cache', () => {
+        beforeEach(() => {
+            clearSharedSolanaClientCache();
+        });
+
+        it('shares one client (and its subscription transport) across hook instances', () => {
+            const { result: first } = renderHook(() => useSolanaClient(), { wrapper });
+            const { result: second } = renderHook(() => useSolanaClient(), { wrapper });
+
+            expect(first.current.client).not.toBeNull();
+            expect(first.current.client).toBe(second.current.client);
+        });
+
+        it('returns a fresh client after the cache is cleared', () => {
+            const { result: first } = renderHook(() => useSolanaClient(), { wrapper });
+            expect(first.current.client).not.toBeNull();
+
+            clearSharedSolanaClientCache();
+            const { result: second } = renderHook(() => useSolanaClient(), { wrapper });
+
+            expect(second.current.client).not.toBeNull();
+            expect(second.current.client).not.toBe(first.current.client);
+        });
     });
 
     describe('useGillSolanaClient (deprecated alias)', () => {
