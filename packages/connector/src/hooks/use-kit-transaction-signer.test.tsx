@@ -94,12 +94,15 @@ describe('useKitTransactionSigner', () => {
 
         it('reports disconnected when no wallet is connected', () => {
             vi.mocked(useConnector).mockReturnValue(
-                connectorState({ id: 'solana:devnet', label: 'Devnet', url: 'https://api.devnet.solana.com' }, {
-                    connected: false,
-                    selectedWallet: null,
-                    accounts: [],
-                    selectedAccount: null,
-                }),
+                connectorState(
+                    { id: 'solana:devnet', label: 'Devnet', url: 'https://api.devnet.solana.com' },
+                    {
+                        connected: false,
+                        selectedWallet: null,
+                        accounts: [],
+                        selectedAccount: null,
+                    },
+                ),
             );
 
             const { result } = renderHook(() => useKitTransactionSigner());
