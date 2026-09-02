@@ -323,6 +323,31 @@ describe('KitWalletCore', () => {
         expect(storage.set).not.toHaveBeenCalledWith(undefined);
     });
 
+    it('preserves a legacy bare-name persisted value without reconnecting or clearing', async () => {
+        const account = createMockWalletAccount(TEST_ADDRESSES.ACCOUNT_1);
+        registerWallet(createMockPhantomWallet({ accounts: [account] }));
+
+        // Pre-plugin releases persisted just the wallet name.
+        let value: string | undefined = 'Phantom';
+        const storage = {
+            get: vi.fn(() => value),
+            set: vi.fn((next: string | undefined) => {
+                value = next;
+            }),
+            clear: vi.fn(),
+        };
+        const walletCore = createCore({ autoConnect: true, walletStorage: storage });
+
+        await waitForCondition(() => stateManager.getSnapshot().wallet.status === 'disconnected', { timeout: 2000 });
+        expect(value).toBe('Phantom');
+        expect(storage.clear).not.toHaveBeenCalled();
+        expect(storage.set).not.toHaveBeenCalledWith(undefined);
+
+        // The next manual connect upgrades the value to the plugin format.
+        await walletCore.connectWallet(createConnectorId('Phantom'));
+        await waitForCondition(() => value === `Phantom:${TEST_ADDRESSES.ACCOUNT_1}`, { timeout: 2000 });
+    });
+
     it('auto-reconnects from a consumer storage adapter', async () => {
         const account = createMockWalletAccount(TEST_ADDRESSES.ACCOUNT_1);
         registerWallet(createMockPhantomWallet({ accounts: [account] }));

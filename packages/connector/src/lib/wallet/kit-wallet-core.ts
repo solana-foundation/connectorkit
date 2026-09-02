@@ -84,7 +84,17 @@ function normalizeWalletName(value: string): string {
  */
 function toKitWalletStorage(adapter: StorageAdapter<string | undefined>): KitWalletStorage {
     return {
-        getItem: () => adapter.get() ?? null,
+        getItem: () => {
+            const value = adapter.get() ?? null;
+            // Pre-plugin versions persisted the bare wallet name under the
+            // same adapter. The plugin erases any value that does not parse as
+            // `<name>:<address>`, so hand it null instead: it settles
+            // disconnected without touching storage, the legacy value
+            // survives, and the next connect overwrites it in the new format.
+            // (An explicit disconnect still clears it via removeItem.)
+            if (value !== null && parsePersistedWalletName(value) === null) return null;
+            return value;
+        },
         removeItem: () => {
             const withClear = adapter as StorageAdapter<string | undefined> & { clear?: () => void };
             if (typeof withClear.clear === 'function') {
