@@ -371,6 +371,14 @@ export class KitWalletCore {
         this.sync();
     }
 
+    /**
+     * Select an account within the connected session. When the requested
+     * address is not among the accounts the wallet has exposed yet, connect is
+     * re-invoked to refresh the authorized set before giving up — the user may
+     * have just authorized the account in the wallet. Note the re-connect can
+     * itself move the plugin's active account even when the requested address
+     * never appears.
+     */
     async selectAccount(address: string): Promise<void> {
         const client = this.requireClient();
         const connected = client.wallet.getState().connected;
@@ -380,7 +388,21 @@ export class KitWalletCore {
         if (!address || address.length < 5) {
             throw new Error('Invalid address format');
         }
-        const uiAccount = connected.wallet.accounts.find(account => account.address === address);
+        let uiAccount = connected.wallet.accounts.find(account => account.address === address);
+        if (!uiAccount) {
+            // Keep projecting a connect attempt against the current wallet so
+            // the plugin's transient 'connecting' status does not flicker the
+            // UI to disconnected during the re-authorization.
+            this.connectingConnectorId = createConnectorId(connected.wallet.name);
+            try {
+                const refreshed = await client.wallet.connect(connected.wallet);
+                uiAccount = refreshed.find(account => account.address === address);
+            } catch {
+                throw new Error('Failed to reconnect wallet for account selection');
+            } finally {
+                this.connectingConnectorId = null;
+            }
+        }
         if (!uiAccount) {
             throw new Error('Requested account not available');
         }

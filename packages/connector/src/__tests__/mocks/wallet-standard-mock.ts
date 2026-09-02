@@ -123,7 +123,25 @@ export function createMockWallet(options: MockWalletOptions): StandardWallet {
         },
     };
 
+    Object.defineProperty(wallet, '__setAccountsSilently', {
+        value: (accounts: WalletAccount[]) => {
+            currentAccounts = [...accounts];
+        },
+        enumerable: false,
+    });
+
     return wallet;
+}
+
+/**
+ * Update a mock wallet's accounts without emitting a `change` event,
+ * simulating an authorization the wallet holds but has not propagated
+ * through `standard:events` yet.
+ */
+export function setMockWalletAccountsSilently(wallet: StandardWallet, accounts: WalletAccount[]): void {
+    (wallet as unknown as { __setAccountsSilently: (accounts: WalletAccount[]) => void }).__setAccountsSilently(
+        accounts,
+    );
 }
 
 export function createMockPhantomWallet(overrides?: Partial<MockWalletOptions>): StandardWallet {

@@ -8,7 +8,11 @@ import { EventEmitter } from '../core/event-emitter';
 import { INITIAL_WALLET_STATUS, createConnectorId } from '../../types/session';
 import type { ConnectorState } from '../../types/connector';
 import type { ConnectorEvent } from '../../types/events';
-import { createMockPhantomWallet, createMockSolflareWallet } from '../../__tests__/mocks/wallet-standard-mock';
+import {
+    createMockPhantomWallet,
+    createMockSolflareWallet,
+    setMockWalletAccountsSilently,
+} from '../../__tests__/mocks/wallet-standard-mock';
 import { createMockWalletAccount, TEST_ADDRESSES } from '../../__tests__/fixtures/accounts';
 import { setupMockWindow, cleanupMockWindow } from '../../__tests__/mocks/window-mock';
 import { waitForCondition } from '../../__tests__/utils/test-helpers';
@@ -185,6 +189,37 @@ describe('KitWalletCore', () => {
         await expect(walletCore.selectAccount('abc')).rejects.toThrow('Invalid address format');
         await expect(walletCore.selectAccount(TEST_ADDRESSES.ACCOUNT_2)).rejects.toThrow(
             'Requested account not available',
+        );
+    });
+
+    it('re-authorizes to select an account the session has not exposed yet', async () => {
+        const account1 = createMockWalletAccount(TEST_ADDRESSES.ACCOUNT_1);
+        const account2 = createMockWalletAccount(TEST_ADDRESSES.ACCOUNT_2);
+        const wallet = createMockPhantomWallet({ accounts: [account1] });
+        registerWallet(wallet);
+        const walletCore = createCore();
+
+        await walletCore.connectWallet(createConnectorId('Phantom'));
+
+        // The wallet authorizes a second account, but the change event has
+        // not reached the session yet.
+        setMockWalletAccountsSilently(wallet, [account1, account2]);
+
+        await walletCore.selectAccount(TEST_ADDRESSES.ACCOUNT_2);
+        expect(stateManager.getSnapshot().selectedAccount).toBe(TEST_ADDRESSES.ACCOUNT_2);
+    });
+
+    it('maps a failed re-authorization to a reconnect error', async () => {
+        const account = createMockWalletAccount(TEST_ADDRESSES.ACCOUNT_1);
+        const wallet = createMockPhantomWallet({ accounts: [account] });
+        registerWallet(wallet);
+        const walletCore = createCore();
+
+        await walletCore.connectWallet(createConnectorId('Phantom'));
+        vi.mocked(wallet.features['standard:connect'].connect).mockRejectedValueOnce(new Error('User rejected'));
+
+        await expect(walletCore.selectAccount(TEST_ADDRESSES.ACCOUNT_2)).rejects.toThrow(
+            'Failed to reconnect wallet for account selection',
         );
     });
 
