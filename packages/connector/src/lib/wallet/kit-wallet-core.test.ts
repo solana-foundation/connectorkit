@@ -234,6 +234,68 @@ describe('KitWalletCore', () => {
         }
     });
 
+    it('does not wipe persistence when silent reconnect fails during setChain', async () => {
+        setupMockWindow();
+        try {
+            const account = createMockWalletAccount(TEST_ADDRESSES.ACCOUNT_1);
+            const wallet = createMockPhantomWallet({ accounts: [account] });
+            registerWallet(wallet);
+
+            let value: string | undefined;
+            const storage = {
+                get: vi.fn(() => value),
+                set: vi.fn((next: string | undefined) => {
+                    value = next;
+                }),
+                clear: vi.fn(),
+            };
+            const walletCore = createCore({ walletStorage: storage });
+
+            await walletCore.connectWallet(createConnectorId('Phantom'));
+            await waitForCondition(() => value === `Phantom:${TEST_ADDRESSES.ACCOUNT_1}`, { timeout: 2000 });
+
+            // The replacement client's silent reconnect is rejected (a wallet
+            // that refuses silent connects); a network switch must not turn
+            // that into a wiped persisted session.
+            vi.mocked(wallet.features['standard:connect'].connect).mockRejectedValue(new Error('silent rejected'));
+            await walletCore.setChain('solana:devnet');
+
+            expect(value).toBe(`Phantom:${TEST_ADDRESSES.ACCOUNT_1}`);
+            expect(storage.clear).not.toHaveBeenCalled();
+        } finally {
+            cleanupMockWindow();
+        }
+    });
+
+    it('clears persistence on explicit disconnect after a completed chain swap', async () => {
+        setupMockWindow();
+        try {
+            const account = createMockWalletAccount(TEST_ADDRESSES.ACCOUNT_1);
+            registerWallet(createMockPhantomWallet({ accounts: [account] }));
+
+            let value: string | undefined;
+            const storage = {
+                get: vi.fn(() => value),
+                set: vi.fn((next: string | undefined) => {
+                    value = next;
+                }),
+                clear: vi.fn(),
+            };
+            const walletCore = createCore({ walletStorage: storage });
+
+            await walletCore.connectWallet(createConnectorId('Phantom'));
+            await walletCore.setChain('solana:devnet');
+            await waitForCondition(() => stateManager.getSnapshot().wallet.status === 'connected', { timeout: 2000 });
+
+            // Suppression is scoped to the warm-up; a real disconnect on the
+            // attached client still clears storage.
+            await walletCore.disconnect();
+            await waitForCondition(() => storage.clear.mock.calls.length > 0, { timeout: 2000 });
+        } finally {
+            cleanupMockWindow();
+        }
+    });
+
     it('silently restores a persisted session with autoConnect', async () => {
         setupMockWindow();
         try {

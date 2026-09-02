@@ -168,6 +168,21 @@ describe('ConnectorClient', () => {
         });
     });
 
+    describe('cluster switching', () => {
+        it('setCluster resolves without awaiting the wallet chain swap', async () => {
+            const { KitWalletCore } = await import('../wallet/kit-wallet-core');
+            const kitCore = vi.mocked(KitWalletCore).mock.results[0].value as {
+                setChain: ReturnType<typeof vi.fn>;
+            };
+            // A wallet that never answers its silent reconnect must not hang
+            // the cluster switch.
+            kitCore.setChain.mockReturnValue(new Promise(() => {}));
+
+            await expect(client.setCluster('solana:devnet')).resolves.toBeUndefined();
+            expect(kitCore.setChain).toHaveBeenCalled();
+        });
+    });
+
     describe('event system', () => {
         it('should register event listeners', () => {
             const listener = vi.fn();

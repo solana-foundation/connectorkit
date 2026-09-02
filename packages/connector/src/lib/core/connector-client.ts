@@ -217,7 +217,18 @@ export class ConnectorClient {
 
     async setCluster(clusterId: SolanaClusterId): Promise<void> {
         await this.clusterManager.setCluster(clusterId);
-        await this.kitWalletCore.setChain(normalizeWalletChain(this.clusterManager.getCluster()?.id));
+        // The replacement wallet client's warm-up silently reconnects through
+        // the wallet extension, which can take arbitrarily long (the plugin
+        // puts no timeout on it), so the cluster switch must not wait on it.
+        // KitWalletCore's swap counter discards warm-ups a newer switch or a
+        // destroy() has made stale.
+        void this.kitWalletCore
+            .setChain(normalizeWalletChain(this.clusterManager.getCluster()?.id))
+            .catch((error: unknown) => {
+                if (this.config.debug) {
+                    logger.error('Wallet chain swap failed', { error });
+                }
+            });
     }
 
     getCluster(): SolanaCluster | null {

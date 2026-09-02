@@ -82,7 +82,10 @@ function normalizeWalletName(value: string): string {
  * interface the kit wallet plugin persists through. The adapter already owns
  * the key it writes under, so the key the plugin supplies is ignored.
  */
-function toKitWalletStorage(adapter: StorageAdapter<string | undefined>): KitWalletStorage {
+function toKitWalletStorage(
+    adapter: StorageAdapter<string | undefined>,
+    suppressRemove?: () => boolean,
+): KitWalletStorage {
     return {
         getItem: () => {
             const value = adapter.get() ?? null;
@@ -96,6 +99,7 @@ function toKitWalletStorage(adapter: StorageAdapter<string | undefined>): KitWal
             return value;
         },
         removeItem: () => {
+            if (suppressRemove?.()) return;
             const withClear = adapter as StorageAdapter<string | undefined> & { clear?: () => void };
             if (typeof withClear.clear === 'function') {
                 withClear.clear();
@@ -258,12 +262,25 @@ export class KitWalletCore {
         // reconnect it (via the plugin's own persistence) or the chain switch
         // would drop the user's wallet.
         const hasLiveSession = Boolean(this.client?.wallet.getState().connected);
-        const next = this.buildClient(chain, hasLiveSession || undefined);
+        let warming = true;
+        const next = this.buildClient(chain, {
+            autoConnect: hasLiveSession || undefined,
+            // A failed silent reconnect makes the plugin clear its persisted
+            // account. During a chain swap that would turn a mere network
+            // switch into a permanent logout, so the replacement client must
+            // not remove anything while it warms up. The old client (an
+            // explicit disconnect) and the attached client afterwards clear
+            // normally, and a genuinely revoked session is still cleared by
+            // the next startup reconnect at rest.
+            suppressRemove: () => warming,
+        });
         try {
             await next.wallet.whenReady();
         } catch (error) {
             // A disposed or failed warm-up still settles; proceed with the swap
             if (this.options.debug) logger.warn('Chain-swap warm-up failed', { chain, error });
+        } finally {
+            warming = false;
         }
 
         // The warm-up spans a destroy() or a newer switch, either of which
@@ -375,15 +392,18 @@ export class KitWalletCore {
     // Client lifecycle
     // ========================================================================
 
-    private buildClient(chain: string, autoConnect?: boolean): KitWalletClient {
+    private buildClient(
+        chain: string,
+        opts?: { autoConnect?: boolean; suppressRemove?: () => boolean },
+    ): KitWalletClient {
         const display = this.options.display;
         const walletStorage = this.options.walletStorage;
         return createClient().use(
             walletSigner({
-                autoConnect: autoConnect ?? this.options.autoConnect ?? false,
+                autoConnect: opts?.autoConnect ?? this.options.autoConnect ?? false,
                 chain: chain as `${string}:${string}`,
                 filter: display ? wallet => applyWalletDisplayConfig([wallet], display).length > 0 : undefined,
-                storage: walletStorage ? toKitWalletStorage(walletStorage) : undefined,
+                storage: walletStorage ? toKitWalletStorage(walletStorage, opts?.suppressRemove) : undefined,
                 storageKey: KIT_WALLET_STORAGE_KEY,
             }),
         ) as unknown as KitWalletClient;
