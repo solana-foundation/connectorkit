@@ -5,6 +5,7 @@ export default defineConfig({
         index: 'src/index.ts',
         headless: 'src/headless.ts',
         react: 'src/react.ts',
+        kit: 'src/kit.ts',
         compat: 'src/compat.ts',
         remote: 'src/remote/index.ts',
         server: 'src/server/index.ts',

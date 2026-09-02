@@ -1,9 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
-
-vi.mock('@solana/kit', () => ({
-    createSolanaRpc: vi.fn(url => ({ url, __type: 'rpc' })),
-    createSolanaRpcSubscriptions: vi.fn(url => ({ url, __type: 'rpcSubscriptions' })),
-}));
+import { describe, it, expect } from 'vitest';
 
 import { createSolanaClient } from './client';
 
@@ -43,6 +38,12 @@ describe('Kit Client Factory', () => {
         it('should throw for invalid moniker', () => {
             expect(() => createSolanaClient({ urlOrMoniker: 'invalid-moniker' })).toThrow(
                 'Invalid URL or cluster moniker',
+            );
+        });
+
+        it('should throw for non-http protocols', () => {
+            expect(() => createSolanaClient({ urlOrMoniker: 'ftp://example.com' })).toThrow(
+                'Unsupported protocol. Only HTTP and HTTPS are supported',
             );
         });
 

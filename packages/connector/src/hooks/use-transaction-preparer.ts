@@ -45,6 +45,14 @@ export interface TransactionPrepareOptions {
      * @default true
      */
     blockhashReset?: boolean;
+
+    /**
+     * Estimate and set compute/resource limits via simulation. Set to false
+     * for blockhash-only preparation of transactions that cannot simulate yet
+     * (e.g. an unfunded fee payer during onboarding).
+     * @default true
+     */
+    estimateResources?: boolean;
 }
 
 /**
@@ -87,7 +95,12 @@ export interface UseTransactionPreparerReturn {
  * @example
  * ```tsx
  * import { useTransactionPreparer, useKitTransactionSigner } from '@solana/connector';
- * import { pipe, createTransactionMessage, appendTransactionMessageInstructions } from '@solana/kit';
+ * import {
+ *   pipe,
+ *   createTransactionMessage,
+ *   appendTransactionMessageInstructions,
+ *   sendAndConfirmTransactionFactory,
+ * } from '@solana/kit';
  * import { getTransferSolInstruction } from '@solana-program/system';
  *
  * function SendOptimizedTransaction() {
@@ -118,7 +131,10 @@ export interface UseTransactionPreparerReturn {
  *     const signed = await signTransactionMessageWithSigners(prepared);
  *
  *     // Send and confirm
- *     await client.sendAndConfirmTransaction(signed);
+ *     await sendAndConfirmTransactionFactory({
+ *       rpc: client.rpc,
+ *       rpcSubscriptions: client.rpcSubscriptions,
+ *     })(signed, { commitment: 'confirmed' });
  *   };
  *
  *   return (
@@ -161,6 +177,15 @@ export function useTransactionPreparer(): UseTransactionPreparerReturn {
         ): Promise<TMessage & TransactionMessageWithBlockhashLifetime> => {
             if (!client) {
                 throw new NetworkError('RPC_ERROR', 'Solana client not available. Cannot prepare transaction.');
+            }
+
+            if (options.estimateResources === false) {
+                return prepareTransaction({
+                    transaction,
+                    rpc: client.rpc,
+                    blockhashReset: options.blockhashReset,
+                    estimateResources: false,
+                });
             }
 
             return prepareTransaction({

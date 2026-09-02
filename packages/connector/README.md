@@ -470,25 +470,18 @@ function DisconnectButton() {
 }
 ```
 
-### Silent-First Auto-Connect
+### Silent Session Restore
 
-The vNext API supports silent-first auto-connect, which attempts to reconnect without prompting the user:
+Silent reconnection is handled automatically: with `autoConnect` enabled (the default), the wallet plugin silently restores the persisted session on startup without prompting the user. Explicit `connect()` calls are always interactive.
 
 ```typescript
-const { connect } = useConnectWallet();
-
-// Silent connect (won't prompt user)
-await connect('wallet-standard:phantom', {
-    silent: true,
-    allowInteractiveFallback: false,
-});
-
-// Silent-first with interactive fallback (prompts if silent fails)
-await connect('wallet-standard:phantom', {
-    silent: true,
-    allowInteractiveFallback: true,
+const config = getDefaultConfig({
+    appName: 'My App',
+    autoConnect: true, // silent restore of the persisted session on load
 });
 ```
+
+> The `silent` and `allowInteractiveFallback` fields on `ConnectOptions` are deprecated no-ops under the kit wallet plugin backend and will be removed in the next major.
 
 ---
 
@@ -1413,9 +1406,10 @@ Storage uses nanostores with built-in enhancements that are **automatically appl
 
 **Most users don't need to configure storage.** Only customize for:
 
-- React Native (custom storage backend)
 - Additional validation rules
 - Custom error tracking
+
+**`storage.wallet` is the auto-connect source when supplied.** The wallet plugin persists the active connection as `<wallet name>:<account address>` through `storage.wallet` when one is configured (the default config always supplies one), and silent reconnect reads it back from there; without an adapter it falls back to the `connector-kit:v1:kit-wallet` localStorage key. Values persisted by pre-plugin releases (a bare wallet name) are preserved untouched until the next connect overwrites them in the new format — they are not used for reconnection.
 
 ```typescript
 import { getDefaultConfig, createEnhancedStorageWallet, EnhancedStorageAdapter } from '@solana/connector';
@@ -1464,6 +1458,64 @@ import { ConnectorClient, getDefaultConfig } from '@solana/connector/headless';
 import { AppProvider, useConnector, useWallet, useConnectWallet } from '@solana/connector/react';
 ```
 
+### Kit Export
+
+The connector's internals run on `@solana/kit`'s plugin client. This entrypoint re-exports that surface for apps adopting the kit-native pattern directly:
+
+```typescript
+// Kit plugin client, @solana/react hooks, and the kit RPC/wallet plugins
+import { createClient, walletSigner, solanaDevnetRpc, ClientProvider, useWallets } from '@solana/connector/kit';
+
+const client = createClient()
+    .use(walletSigner({ chain: 'solana:devnet' }))
+    .use(solanaDevnetRpc());
+```
+
+#### Client capability hooks
+
+Each plugin in the chain installs a capability on the client, and `@solana/react` ships a hook per capability. The client above installs all of the following:
+
+| Hook                          | Installed by      | Returns                                          |
+| ----------------------------- | ----------------- | ------------------------------------------------ |
+| `usePayer(client)`            | `walletSigner`    | `client.payer` signer, or `undefined`            |
+| `useIdentity(client)`         | `walletSigner`    | `client.identity` signer, or `undefined`         |
+| `useAirdrop(client)`          | `solanaDevnetRpc` | Action → `Signature \| undefined`                |
+| `usePlanTransaction(client)`  | `solanaDevnetRpc` | Action → planned transaction message             |
+| `usePlanTransactions(client)` | `solanaDevnetRpc` | Action → `TransactionPlan`                       |
+| `useSendTransaction(client)`  | `solanaDevnetRpc` | Action → `SuccessfulSingleTransactionPlanResult` |
+| `useSendTransactions(client)` | `solanaDevnetRpc` | Action → `TransactionPlanResult`                 |
+
+`usePayer`/`useIdentity` re-render when the signer changes, because `walletSigner` also installs `subscribeToPayer`/`subscribeToIdentity`. The action hooks return `{ dispatch, dispatchAsync, isRunning, data, error }`; each `dispatch` runs under a fresh `AbortSignal` and aborts any call still in flight.
+
+```tsx
+import { usePayer, useSendTransaction } from '@solana/connector/kit';
+
+function Transfer() {
+    const payer = usePayer(client);
+    const { dispatch, isRunning, error } = useSendTransaction(client);
+
+    if (!payer) return <p>Connect a wallet</p>;
+    return (
+        <>
+            <button disabled={isRunning} onClick={() => dispatch([transferInstruction])}>
+                {isRunning ? 'Sending…' : 'Send'}
+            </button>
+            {error ? <p role="alert">{String(error)}</p> : null}
+        </>
+    );
+}
+```
+
+The wallet store's `useSignIn`/`useSignMessage` are not re-exported (they collide with `@solana/react`'s account-based hooks of the same name) — import those from `@solana/kit-plugin-wallet/react` directly.
+
+### Other Exports
+
+| Import                     | Purpose                                           |
+| -------------------------- | ------------------------------------------------- |
+| `@solana/connector/compat` | Bridge for existing `@solana/wallet-adapter` code |
+| `@solana/connector/remote` | Browser-side remote wallet adapter                |
+| `@solana/connector/server` | Server-side route handlers for remote signing     |
+
 ---
 
 ## API Reference
@@ -1489,10 +1541,12 @@ import { AppProvider, useConnector, useWallet, useConnectWallet } from '@solana/
 | `useCluster()`              | Network/cluster management hook              | `{ cluster, clusters, setCluster, isMainnet, isDevnet, rpcUrl }` |
 | `useWalletInfo()`           | Wallet metadata hook                         | `{ name, icon, wallet, connecting }`                             |
 | `useTransactionSigner()`    | Legacy transaction signer (web3.js)          | `{ signer, ready, address, capabilities }`                       |
-| `useKitTransactionSigner()` | Modern transaction signer (@solana/kit)      | `{ signer, ready, address }`                                     |
+| `useKitTransactionSigner()` | Modern transaction signer (@solana/kit)      | `{ signer, ready }`                                              |
 | `useBalance()`              | SOL balance hook                             | `{ solBalance, isLoading, refetch }`                             |
 | `useTokens()`               | SPL tokens hook                              | `{ tokens, isLoading, refetch }`                                 |
 | `useTransactions()`         | Transaction history hook                     | `{ transactions, isLoading, refetch }`                           |
+
+With `autoRefresh` (the default), `useBalance()` and `useTokens()` receive live updates via an `accountNotifications` WebSocket subscription; interval polling (`refreshInterval`, default 30s) is kept as an automatic fallback when the subscription errors or WebSocket transport is unavailable.
 
 ### Configuration Functions
 

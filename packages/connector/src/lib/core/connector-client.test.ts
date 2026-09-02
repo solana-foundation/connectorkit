@@ -2,13 +2,15 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ConnectorClient } from './connector-client';
 import type { ConnectorConfig } from '../../types/connector';
 import type { ConnectorState } from '../../types/connector';
+import type { StateManager } from './state-manager';
 import type { SolanaCluster } from '@wallet-ui/core';
+
+const registerWalletConnectWallet = vi.hoisted(() => vi.fn());
 
 // Mock all dependencies
 vi.mock('./event-emitter');
-vi.mock('../wallet/detector');
-vi.mock('../wallet/connection-manager');
-vi.mock('../wallet/auto-connector');
+vi.mock('../wallet/kit-wallet-core');
+vi.mock('../wallet/walletconnect', () => ({ registerWalletConnectWallet }));
 vi.mock('../cluster/cluster-manager');
 vi.mock('../health/health-monitor');
 vi.mock('../transaction/transaction-tracker');
@@ -26,9 +28,7 @@ describe('ConnectorClient', () => {
 
         // Import mocks
         const { EventEmitter } = await import('./event-emitter');
-        const { WalletDetector } = await import('../wallet/detector');
-        const { ConnectionManager } = await import('../wallet/connection-manager');
-        const { AutoConnector } = await import('../wallet/auto-connector');
+        const { KitWalletCore } = await import('../wallet/kit-wallet-core');
         const { ClusterManager } = await import('../cluster/cluster-manager');
         const { HealthMonitor } = await import('../health/health-monitor');
         const { TransactionTracker } = await import('../transaction/transaction-tracker');
@@ -54,17 +54,17 @@ describe('ConnectorClient', () => {
             } as unknown as InstanceType<typeof EventEmitter>;
         });
 
-        vi.mocked(WalletDetector).mockImplementation(function () {
+        vi.mocked(KitWalletCore).mockImplementation(function () {
             return {
-                initialize: vi.fn(),
+                start: vi.fn(),
+                setChain: vi.fn(async () => {}),
                 destroy: vi.fn(),
-                getDetectedWallets: vi.fn(() => []),
-            } as unknown as InstanceType<typeof WalletDetector>;
-        });
-
-        vi.mocked(ConnectionManager).mockImplementation(function () {
-            return {
-                connect: vi.fn(async () => {
+                getConnectorById: vi.fn(() => undefined),
+                connectWallet: vi.fn(async () => {
+                    mockState.connected = true;
+                    mockState.connecting = false;
+                }),
+                connectByName: vi.fn(async () => {
                     mockState.connected = true;
                     mockState.connecting = false;
                 }),
@@ -72,21 +72,16 @@ describe('ConnectorClient', () => {
                     mockState.connected = false;
                     mockState.selectedWallet = null;
                 }),
-                selectAccount: vi.fn(),
-            } as unknown as InstanceType<typeof ConnectionManager>;
-        });
-
-        vi.mocked(AutoConnector).mockImplementation(function () {
-            return {
-                initialize: vi.fn(),
-                destroy: vi.fn(),
-            } as unknown as InstanceType<typeof AutoConnector>;
+                selectAccount: vi.fn(async () => {}),
+            } as unknown as InstanceType<typeof KitWalletCore>;
         });
 
         vi.mocked(ClusterManager).mockImplementation(function () {
             return {
                 setCluster: vi.fn(),
+                getCluster: vi.fn(() => null),
                 getCurrentCluster: vi.fn(() => null),
+                getServerCluster: vi.fn(() => undefined),
             } as unknown as InstanceType<typeof ClusterManager>;
         });
 
@@ -161,6 +156,34 @@ describe('ConnectorClient', () => {
             expect(snapshot).toHaveProperty('accounts');
             expect(snapshot).toHaveProperty('cluster');
         });
+
+        it('should keep the server snapshot pinned to pre-initialization state', () => {
+            const serverSnapshot = client.getServerSnapshot();
+            const stateManager = (client as unknown as { stateManager: StateManager }).stateManager;
+
+            stateManager.updateState({ connecting: true });
+
+            // React reads the server snapshot while hydrating, so live wallet
+            // activity must not leak into it or the markup diverges.
+            expect(client.getSnapshot().connecting).toBe(true);
+            expect(client.getServerSnapshot()).toBe(serverSnapshot);
+            expect(serverSnapshot.connecting).toBe(false);
+        });
+    });
+
+    describe('cluster switching', () => {
+        it('setCluster resolves without awaiting the wallet chain swap', async () => {
+            const { KitWalletCore } = await import('../wallet/kit-wallet-core');
+            const kitCore = vi.mocked(KitWalletCore).mock.results[0].value as {
+                setChain: ReturnType<typeof vi.fn>;
+            };
+            // A wallet that never answers its silent reconnect must not hang
+            // the cluster switch.
+            kitCore.setChain.mockReturnValue(new Promise(() => {}));
+
+            await expect(client.setCluster('solana:devnet')).resolves.toBeUndefined();
+            expect(kitCore.setChain).toHaveBeenCalled();
+        });
     });
 
     describe('event system', () => {
@@ -183,6 +206,56 @@ describe('ConnectorClient', () => {
     describe('cleanup', () => {
         it('should have destroy method for cleanup', () => {
             expect(typeof client.destroy).toBe('function');
+        });
+
+        it('re-initializes the wallet core after destroy (StrictMode remount)', async () => {
+            const { KitWalletCore } = await import('../wallet/kit-wallet-core');
+            const kitCore = vi.mocked(KitWalletCore).mock.results[0].value as {
+                start: ReturnType<typeof vi.fn>;
+                destroy: ReturnType<typeof vi.fn>;
+            };
+            expect(kitCore.start).toHaveBeenCalledTimes(1);
+
+            // StrictMode runs mount → cleanup (destroy) → mount (initialize)
+            // against the same ref-held client instance.
+            client.destroy();
+            (client as unknown as { initialize: () => void }).initialize();
+
+            expect(kitCore.destroy).toHaveBeenCalledTimes(1);
+            expect(kitCore.start).toHaveBeenCalledTimes(2);
+        });
+
+        it('discards a WalletConnect registration that resolves after destroy and re-init', async () => {
+            const resolvers: Array<(registration: { unregister: ReturnType<typeof vi.fn> }) => void> = [];
+            registerWalletConnectWallet.mockImplementation(() => new Promise(resolve => resolvers.push(resolve)));
+
+            const wcClient = new ConnectorClient({ walletConnect: { enabled: true, projectId: 'test' } });
+            await vi.waitFor(() => expect(registerWalletConnectWallet).toHaveBeenCalledTimes(1));
+
+            // Destroy while the first registration is still in flight, then
+            // re-initialize (StrictMode remount) — starting a second one.
+            wcClient.destroy();
+            (wcClient as unknown as { initialize: () => void }).initialize();
+            await vi.waitFor(() => expect(registerWalletConnectWallet).toHaveBeenCalledTimes(2));
+
+            // The stale first registration must be unregistered, not tracked.
+            const stale = { unregister: vi.fn() };
+            resolvers[0](stale);
+            await vi.waitFor(() => expect(stale.unregister).toHaveBeenCalledTimes(1));
+
+            // The current lifecycle's registration is tracked and cleaned up
+            // by the next destroy.
+            const current = { unregister: vi.fn() };
+            resolvers[1](current);
+            await vi.waitFor(() =>
+                expect((wcClient as unknown as { walletConnectRegistration: unknown }).walletConnectRegistration).toBe(
+                    current,
+                ),
+            );
+            expect(current.unregister).not.toHaveBeenCalled();
+
+            wcClient.destroy();
+            expect(current.unregister).toHaveBeenCalledTimes(1);
         });
     });
 });

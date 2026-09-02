@@ -49,9 +49,7 @@ The remote wallet appears in `useWalletConnectors()` like any other wallet. User
 import { createRemoteSignerRouteHandlers } from '@solana/connector/server';
 
 const { GET, POST } = createRemoteSignerRouteHandlers({
-    provider: {
-        /* Fireblocks, Privy, or custom */
-    },
+    provider: {/* Fireblocks, Privy, or custom */},
     authorize: async request => {
         // Validate the request (check JWT, session, etc.)
         return true;

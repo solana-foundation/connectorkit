@@ -9,9 +9,8 @@ allowBuilds:
   sharp: true
   unrs-resolver: true
   utf-8-validate: true
-minimumReleaseAgeExclude:
-  - '@tanstack/query-core@5.100.13'
-  - '@tanstack/react-query@5.100.13'
+patchedDependencies:
+  '@pipeit/core@0.2.7': patches/@pipeit__core@0.2.7.patch
 peerDependencyRules:
   allowedVersions:
     '@solana-program/compute-budget': 0.15.0

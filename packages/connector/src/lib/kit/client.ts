@@ -1,8 +1,8 @@
 /**
  * @solana/connector - Kit Client Factory
  *
- * Creates a Solana RPC and WebSocket subscriptions client.
- * Replaces gill's createSolanaClient with a kit-based implementation.
+ * Creates a Solana RPC and WebSocket subscriptions client on top of kit's
+ * plugin architecture (`createClient` + `@solana/kit-plugin-rpc`).
  */
 
 import type {
@@ -14,10 +14,11 @@ import type {
     SolanaRpcApi,
     SolanaRpcSubscriptionsApi,
 } from '@solana/kit';
-import { createSolanaRpc, createSolanaRpcSubscriptions } from '@solana/kit';
+import { createClient } from '@solana/kit';
+import { solanaRpcConnection } from '@solana/kit-plugin-rpc';
 
 import type { LocalnetUrl, ModifiedClusterUrl, SolanaClientUrlOrMoniker } from './rpc';
-import { getPublicSolanaRpcUrl } from './rpc';
+import { getPublicSolanaRpcUrl, getWebSocketUrl } from './rpc';
 
 /**
  * Configuration for creating a Solana RPC client
@@ -57,6 +58,42 @@ export interface SolanaClient<TClusterUrl extends ModifiedClusterUrl | string = 
     rpcSubscriptions: RpcSubscriptions<SolanaRpcSubscriptionsApi>;
     /** Full RPC URL that was used to create this client */
     urlOrMoniker: SolanaClientUrlOrMoniker | TClusterUrl;
+}
+
+/**
+ * Resolve a URL or cluster moniker to a validated HTTP(S) RPC URL.
+ *
+ * Exported for internal use (the shared-client cache keys by resolved URL so
+ * a moniker and its full URL share one client); not part of the public API.
+ */
+export function resolveRpcUrl(urlOrMoniker: SolanaClientUrlOrMoniker, port?: number): URL {
+    let parsedUrl: URL;
+
+    if (urlOrMoniker instanceof URL) {
+        parsedUrl = urlOrMoniker;
+    } else {
+        try {
+            parsedUrl = new URL(urlOrMoniker.toString());
+        } catch {
+            try {
+                parsedUrl = new URL(
+                    getPublicSolanaRpcUrl(urlOrMoniker.toString() as 'mainnet' | 'devnet' | 'testnet' | 'localnet'),
+                );
+            } catch {
+                throw new Error('Invalid URL or cluster moniker');
+            }
+        }
+    }
+
+    if (!parsedUrl.protocol.match(/^https?:/i)) {
+        throw new Error('Unsupported protocol. Only HTTP and HTTPS are supported');
+    }
+
+    if (port) {
+        parsedUrl.port = port.toString();
+    }
+
+    return parsedUrl;
 }
 
 /**
@@ -107,55 +144,20 @@ export function createSolanaClient<TCluster extends ModifiedClusterUrl>({
 }: CreateSolanaClientArgs<TCluster>): SolanaClient<TCluster> {
     if (!urlOrMoniker) throw new Error('Cluster url or moniker is required');
 
-    let parsedUrl: URL;
+    const rpcUrl = resolveRpcUrl(urlOrMoniker, rpcConfig?.port).toString();
 
-    // Try to parse as URL first
-    if (urlOrMoniker instanceof URL) {
-        parsedUrl = urlOrMoniker;
-    } else {
-        try {
-            parsedUrl = new URL(urlOrMoniker.toString());
-        } catch {
-            // Not a valid URL, try as moniker
-            try {
-                parsedUrl = new URL(
-                    getPublicSolanaRpcUrl(urlOrMoniker.toString() as 'mainnet' | 'devnet' | 'testnet' | 'localnet'),
-                );
-            } catch {
-                throw new Error('Invalid URL or cluster moniker');
-            }
-        }
-    }
-
-    if (!parsedUrl.protocol.match(/^https?:/i)) {
-        throw new Error('Unsupported protocol. Only HTTP and HTTPS are supported');
-    }
-
-    // Apply custom port if specified
-    if (rpcConfig?.port) {
-        parsedUrl.port = rpcConfig.port.toString();
-    }
-
-    const rpcUrl = parsedUrl.toString();
-    const rpc = createSolanaRpc(rpcUrl) as Rpc<SolanaRpcApi>;
-
-    // Convert HTTP to WS for subscriptions
-    parsedUrl.protocol = parsedUrl.protocol.replace('http', 'ws');
-
-    // Apply WebSocket port if specified, or use default 8900 for localhost
+    let rpcSubscriptionsUrl = getWebSocketUrl(rpcUrl);
     if (rpcSubscriptionsConfig?.port) {
-        parsedUrl.port = rpcSubscriptionsConfig.port.toString();
-    } else if (parsedUrl.hostname === 'localhost' || parsedUrl.hostname.startsWith('127')) {
-        parsedUrl.port = '8900';
+        const wsUrl = new URL(rpcSubscriptionsUrl);
+        wsUrl.port = rpcSubscriptionsConfig.port.toString();
+        rpcSubscriptionsUrl = wsUrl.toString();
     }
 
-    const rpcSubscriptions = createSolanaRpcSubscriptions(
-        parsedUrl.toString(),
-    ) as RpcSubscriptions<SolanaRpcSubscriptionsApi>;
+    const { rpc, rpcSubscriptions } = createClient().use(solanaRpcConnection({ rpcUrl, rpcSubscriptionsUrl }));
 
     return {
-        rpc,
-        rpcSubscriptions,
+        rpc: rpc as Rpc<SolanaRpcApi>,
+        rpcSubscriptions: rpcSubscriptions as RpcSubscriptions<SolanaRpcSubscriptionsApi>,
         urlOrMoniker: rpcUrl as TCluster,
     };
 }

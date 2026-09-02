@@ -138,6 +138,19 @@ export function getClusterType(cluster: SolanaCluster): ClusterType {
     return 'custom';
 }
 
+/**
+ * The standard wallet chain (`solana:mainnet|devnet|testnet|localnet`) for a
+ * cluster, or null for custom clusters. Derives from the cluster rather than
+ * its raw id, so aliases like `solana:mainnet-beta` and URL-detected local
+ * clusters resolve correctly. Callers building signers must treat null as "no
+ * signer available" — signing against a substituted chain would prompt the
+ * wallet on a different network than the dapp is using.
+ */
+export function getStandardWalletChainForCluster(cluster: SolanaCluster): `solana:${string}` | null {
+    const type = getClusterType(cluster);
+    return type === 'custom' ? null : `solana:${type}`;
+}
+
 export function getClusterChainId(cluster: SolanaCluster): `solana:${string}` | null {
     const clusterType = getClusterType(cluster);
 

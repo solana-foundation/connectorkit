@@ -7,9 +7,9 @@ Production-ready Solana wallet infrastructure. A headless, framework-agnostic wa
 
 ## Packages
 
-| Package                                   | Description                                                |
-| ----------------------------------------- | ---------------------------------------------------------- |
-| [@solana/connector](./packages/connector) | Core wallet connector with React hooks and headless client |
+| Package                                           | Description                                                |
+| ------------------------------------------------- | ---------------------------------------------------------- |
+| [@solana/connector](./packages/connector)         | Core wallet connector with React hooks and headless client |
 | [@solana/connector-debugger](./packages/devtools) | Framework-agnostic devtools with transaction tracking      |
 
 ## Why ConnectorKit?

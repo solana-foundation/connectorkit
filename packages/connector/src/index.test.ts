@@ -48,12 +48,7 @@ describe('Main Entry Point (index.ts)', () => {
 
         it('should export transaction signing functions', () => {
             expect(ConnectorKit.createTransactionSigner).toBeDefined();
-            expect(ConnectorKit.createKitTransactionSigner).toBeDefined();
             expect(typeof ConnectorKit.createTransactionSigner).toBe('function');
-            expect(typeof ConnectorKit.createKitTransactionSigner).toBe('function');
-            // Deprecated alias
-            expect(ConnectorKit.createGillTransactionSigner).toBeDefined();
-            expect(typeof ConnectorKit.createGillTransactionSigner).toBe('function');
         });
 
         it('should export storage system', () => {

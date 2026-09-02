@@ -23,6 +23,27 @@ const ENABLE_REMOTE_SIGNER = process.env.NEXT_PUBLIC_ENABLE_REMOTE_SIGNER !== 'f
 const ENABLE_BURNER_WALLET =
     process.env.NODE_ENV === 'development' || process.env.NEXT_PUBLIC_ENABLE_BURNER_WALLET === 'true';
 
+let remoteSignerWallet: ReturnType<typeof createRemoteSignerWallet> | undefined;
+
+/**
+ * The remote signer wallet is registered with wallet-standard by whichever
+ * ConnectorClient receives it, and the registry keys wallets by object
+ * identity. A module-level singleton — like `registerBurnerWallet` uses —
+ * keeps a remount from registering a second wallet under the same name, which
+ * would surface as two connectors sharing one id.
+ */
+function getRemoteSignerWallet(origin: string) {
+    remoteSignerWallet ??= createRemoteSignerWallet({
+        endpoint: `${origin}/api/connector-signer`,
+        name: 'Privy',
+        // Optional: provide auth headers for the signing API
+        // getAuthHeaders: () => ({
+        //     'Authorization': `Bearer ${getSessionToken()}`
+        // }),
+    });
+    return remoteSignerWallet;
+}
+
 export function Providers({ children }: { children: ReactNode }) {
     useEffect(() => {
         if (ENABLE_BURNER_WALLET) {
@@ -57,20 +78,8 @@ export function Providers({ children }: { children: ReactNode }) {
             },
         ];
 
-        // Create remote signer wallet if enabled
-        // This wallet delegates signing to the /api/connector-signer endpoint
-        const additionalWallets = ENABLE_REMOTE_SIGNER
-            ? [
-                  createRemoteSignerWallet({
-                      endpoint: `${origin}/api/connector-signer`,
-                      name: 'Privy',
-                      // Optional: provide auth headers for the signing API
-                      // getAuthHeaders: () => ({
-                      //     'Authorization': `Bearer ${getSessionToken()}`
-                      // }),
-                  }),
-              ]
-            : undefined;
+        // Remote signer wallet, which delegates signing to /api/connector-signer
+        const additionalWallets = ENABLE_REMOTE_SIGNER ? [getRemoteSignerWallet(origin)] : undefined;
 
         return getDefaultConfig({
             appName: 'ConnectorKit Example',

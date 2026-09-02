@@ -6,7 +6,7 @@
  */
 
 // Constants
-export { LAMPORTS_PER_SOL, GENESIS_HASH, lamportsToSol, solToLamports } from './constants';
+export { LAMPORTS_PER_SOL, lamportsToSol, solToLamports } from './constants';
 
 // RPC utilities
 export {
@@ -21,7 +21,20 @@ export {
 } from './rpc';
 
 // Explorer utilities
-export { getExplorerLink, type ExplorerCluster, type GetExplorerLinkArgs } from './explorer';
+export {
+    getExplorerLink,
+    getSolanaExplorerUrl,
+    getSolscanUrl,
+    getXrayUrl,
+    getSolanaFmUrl,
+    getAllExplorerUrls,
+    formatSignature,
+    copySignature,
+    type ExplorerCluster,
+    type ExplorerOptions,
+    type ExplorerType,
+    type GetExplorerLinkArgs,
+} from './explorer';
 
 // Client factory
 export {
@@ -36,7 +49,11 @@ export {
 export { debug, isDebugEnabled, type LogLevel } from './debug';
 
 // Transaction preparation
-export { prepareTransaction, type PrepareTransactionConfig } from './prepare-transaction';
+export {
+    prepareTransaction,
+    type PrepareTransactionConfig,
+    type PrepareTransactionConfigWithoutEstimation,
+} from './prepare-transaction';
 
 // ============================================================================
 // Signer Types (from kit-signers)
@@ -55,11 +72,6 @@ export {
 } from './signer-types';
 
 // ============================================================================
-// Signer Factories (from kit-signers)
-// ============================================================================
-export { createMessageSignerFromWallet, createTransactionSendingSignerFromWallet } from './signer-factories';
-
-// ============================================================================
 // Signer Integration (from kit-signers)
 // ============================================================================
 export { createKitSignersFromWallet, type KitSignersFromWallet } from './signer-integration';
@@ -67,10 +79,4 @@ export { createKitSignersFromWallet, type KitSignersFromWallet } from './signer-
 // ============================================================================
 // Signer Utilities (from kit-signers)
 // ============================================================================
-export {
-    detectMessageModification,
-    updateSignatureDictionary,
-    freezeSigner,
-    base58ToSignatureBytes,
-    signatureBytesToBase58,
-} from './signer-utils';
+export { detectMessageModification, signatureBytesToBase58 } from './signer-utils';
