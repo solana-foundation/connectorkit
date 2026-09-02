@@ -15,7 +15,10 @@ import {
     createTransactionSendingSignerFromWalletAccount,
 } from '@solana/wallet-account-signer';
 import { getOrCreateUiWalletAccountForStandardWalletAccount } from '@wallet-standard/ui-registry';
-import { ConfigurationError } from '../errors';
+import { getClusterTypeFromRpcEndpoint } from '../../utils/rpc-endpoint';
+import { createLogger } from '../utils/secure-logger';
+
+const logger = createLogger('createKitSignersFromWallet');
 
 /**
  * Result of creating Kit signers from a Wallet Standard wallet
@@ -39,25 +42,13 @@ export interface KitSignersFromWallet {
  */
 export type KitSignerNetwork = 'mainnet' | 'devnet' | 'testnet' | 'localnet' | `solana:${string}`;
 
-const LOCAL_RPC_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0', '[::1]'];
-
 /**
  * Map an RPC endpoint to a Wallet Standard chain identifier, or null when the
  * endpoint does not identify a cluster.
  */
 function chainFromRpcEndpoint(rpcUrl: string): `solana:${string}` | null {
-    if (rpcUrl.includes('mainnet')) return 'solana:mainnet';
-    if (rpcUrl.includes('testnet')) return 'solana:testnet';
-    if (rpcUrl.includes('devnet')) return 'solana:devnet';
-
-    let host: string;
-    try {
-        host = new URL(rpcUrl).hostname.toLowerCase();
-    } catch {
-        return null;
-    }
-
-    return LOCAL_RPC_HOSTS.includes(host) ? 'solana:localnet' : null;
+    const type = getClusterTypeFromRpcEndpoint(rpcUrl);
+    return type === 'custom' ? null : `solana:${type}`;
 }
 
 /**
@@ -74,20 +65,19 @@ function chainFromRpcEndpoint(rpcUrl: string): `solana:${string}` | null {
  * 2. Otherwise, a `connection` endpoint is matched against the well-known
  *    clusters (a `mainnet`/`testnet`/`devnet` substring) and local hosts
  *    (`localhost`, `127.0.0.1`, `0.0.0.0`, `[::1]` map to `solana:localnet`).
- *    An endpoint that matches nothing throws: signing against a guessed chain
- *    makes a wallet prompt and simulate on a different network than the dapp
- *    is using.
- * 3. With neither an explicit network nor a connection the chain is unknown,
- *    so no transaction signer is returned. Message signing is not chain-scoped
- *    and is still available.
+ *    An endpoint that matches nothing (a custom RPC domain) leaves the chain
+ *    unknown and falls through to rule 3, with a warning telling the caller to
+ *    pass an explicit `network`. Guessing a chain would be worse: signing
+ *    against the wrong one makes a wallet prompt and simulate on a different
+ *    network than the dapp is using.
+ * 3. With an unknown chain no transaction signer is returned. Message signing
+ *    is not chain-scoped and is still available.
  *
  * @param wallet - The Wallet Standard wallet instance
  * @param account - The wallet account to use
  * @param connection - Optional connection whose RPC endpoint identifies the chain
  * @param network - Optional explicit network or `solana:*` chain identifier
  * @returns Kit signers object with address and signer instances
- * @throws {ConfigurationError} `INVALID_CLUSTER` when a connection is supplied
- * whose RPC endpoint does not identify a known cluster
  *
  * @example
  * ```typescript
@@ -137,9 +127,9 @@ export function createKitSignersFromWallet(
         const rpcUrl = connection.rpcEndpoint || '';
         chain = chainFromRpcEndpoint(rpcUrl);
         if (!chain) {
-            throw new ConfigurationError(
-                'INVALID_CLUSTER',
-                `Cannot determine the Solana chain from RPC endpoint "${rpcUrl}". Pass an explicit network to createKitSignersFromWallet.`,
+            logger.warn(
+                'Cannot determine the Solana chain from the RPC endpoint; no transaction signer will be created. ' +
+                    'Pass an explicit network to createKitSignersFromWallet.',
                 { rpcEndpoint: rpcUrl },
             );
         }
