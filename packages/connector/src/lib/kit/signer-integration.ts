@@ -52,6 +52,19 @@ function chainFromRpcEndpoint(rpcUrl: string): `solana:${string}` | null {
 }
 
 /**
+ * Origin-only rendering of an endpoint for log output. Custom RPC URLs
+ * routinely carry credentials in the userinfo, the path (`/v2/<api-key>`),
+ * or the query string — none of which may reach logs.
+ */
+function describeEndpointForLog(rpcUrl: string): string {
+    try {
+        return new URL(rpcUrl).origin;
+    } catch {
+        return '<unparseable endpoint>';
+    }
+}
+
+/**
  * Create Kit-compatible signers from a Wallet Standard wallet
  *
  * Bridges a Wallet Standard wallet to modern Kit signers using
@@ -130,7 +143,7 @@ export function createKitSignersFromWallet(
             logger.warn(
                 'Cannot determine the Solana chain from the RPC endpoint; no transaction signer will be created. ' +
                     'Pass an explicit network to createKitSignersFromWallet.',
-                { rpcEndpoint: rpcUrl },
+                { rpcEndpoint: describeEndpointForLog(rpcUrl) },
             );
         }
     }

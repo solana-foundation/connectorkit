@@ -124,12 +124,17 @@ export function useSolanaClient(): UseSolanaClientReturn {
     const { type } = useCluster();
     const connectorClient = useConnectorClient();
 
+    // Read the URL every render and key the memo on it: the cluster type
+    // alone misses a switch between two custom clusters ('custom' both
+    // before and after while the URL changes). useCluster subscribes to
+    // cluster state, so a switch re-renders this hook.
+    const rpcUrl = connectorClient?.getRpcUrl() ?? null;
+
     const client = useMemo(() => {
         if (!type || !connectorClient) return null;
 
         try {
             // ALWAYS prefer the configured RPC URL from cluster config
-            const rpcUrl = connectorClient.getRpcUrl();
             if (rpcUrl) {
                 return getSharedSolanaClient(rpcUrl as ModifiedClusterUrl);
             }
@@ -144,7 +149,7 @@ export function useSolanaClient(): UseSolanaClientReturn {
             logger.error('Failed to create Solana client', { error });
             return null;
         }
-    }, [type, connectorClient]);
+    }, [type, connectorClient, rpcUrl]);
 
     // Memoize return object to prevent infinite re-renders in consumers
     return useMemo(

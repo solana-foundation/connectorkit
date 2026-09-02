@@ -36,6 +36,14 @@ export class ConnectorClient {
     private debugMetrics: DebugMetrics;
     private healthMonitor: HealthMonitor;
     private initialized = false;
+    /**
+     * Bumped by every destroy(). Async initialization work (the WalletConnect
+     * dynamic import + registration) captures the epoch it started under and
+     * discards its result when a destroy intervened — checking `initialized`
+     * alone is not enough, because a re-initialize sets it back to true and
+     * would let a previous lifecycle's registration attach untracked.
+     */
+    private lifecycleEpoch = 0;
     private serverSnapshot: ConnectorState;
     private config: ConnectorConfig;
     private walletConnectRegistration: WalletConnectRegistration | null = null;
@@ -138,15 +146,18 @@ export class ConnectorClient {
      */
     private async initializeWalletConnect(): Promise<void> {
         if (!this.config.walletConnect?.enabled) return;
+        const epoch = this.lifecycleEpoch;
 
         try {
             // Dynamically import to avoid bundling WalletConnect if not used
             const { registerWalletConnectWallet } = await import('../wallet/walletconnect');
             const registration = await registerWalletConnectWallet(this.config.walletConnect);
 
-            // destroy() may have run while the import was in flight; a
-            // registration completing now would outlive the client and leak.
-            if (!this.initialized) {
+            // A destroy() (and possibly a re-initialize, which starts its own
+            // registration) ran while the import was in flight; a registration
+            // from a previous lifecycle must not be tracked — an untracked
+            // registry entry can never be unregistered.
+            if (epoch !== this.lifecycleEpoch || !this.initialized) {
                 registration.unregister();
                 return;
             }
@@ -377,6 +388,8 @@ export class ConnectorClient {
     }
 
     destroy(): void {
+        this.lifecycleEpoch++;
+
         // Unregister WalletConnect wallet if it was registered
         if (this.walletConnectRegistration) {
             try {

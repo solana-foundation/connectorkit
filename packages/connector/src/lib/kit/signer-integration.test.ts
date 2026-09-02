@@ -130,6 +130,25 @@ describe('createKitSignersFromWallet', () => {
             });
         });
 
+        it('logs only the endpoint origin, never credentials in userinfo, path, or query', () => {
+            const { account, wallet } = signingAccountAndWallet(['solana:devnet']);
+            warnSpy.mockClear();
+
+            createKitSignersFromWallet(
+                wallet,
+                account,
+                mockConnection('https://user:secret@rpc.example.com/v2/apikey123?api-key=xyz'),
+            );
+
+            expect(warnSpy).toHaveBeenCalledTimes(1);
+            const context = warnSpy.mock.calls[0][1] as { rpcEndpoint: string };
+            expect(context.rpcEndpoint).toBe('https://rpc.example.com');
+            const logged = JSON.stringify(warnSpy.mock.calls[0]);
+            expect(logged).not.toContain('secret');
+            expect(logged).not.toContain('apikey123');
+            expect(logged).not.toContain('api-key=xyz');
+        });
+
         it('treats an unparseable endpoint the same as an unrecognized one', () => {
             const { account, wallet } = signingAccountAndWallet(['solana:devnet']);
             warnSpy.mockClear();
