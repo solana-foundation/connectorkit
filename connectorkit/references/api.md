@@ -40,7 +40,9 @@ const {
 } = useConnectWallet();
 
 // ConnectOptions:
-// { silent?: boolean, allowInteractiveFallback?: boolean, preferredAccount?: Address }
+// { preferredAccount?: Address }
+// (silent / allowInteractiveFallback are deprecated no-ops; silent restore
+//  happens automatically via autoConnect persistence)
 ```
 
 ### useDisconnectWallet()

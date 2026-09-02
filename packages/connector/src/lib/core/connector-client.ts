@@ -172,7 +172,7 @@ export class ConnectorClient {
      * This is the recommended way to connect in vNext.
      *
      * @param connectorId - Stable connector identifier
-     * @param options - Connection options (silent mode, preferred account, etc.)
+     * @param options - Connection options (preferred account)
      */
     async connectWallet(connectorId: WalletConnectorId, options?: ConnectOptions): Promise<void> {
         await this.kitWalletCore.connectWallet(connectorId, options);

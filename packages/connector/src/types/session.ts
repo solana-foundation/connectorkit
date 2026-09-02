@@ -127,16 +127,15 @@ export interface WalletConnector extends WalletConnectorMetadata {
  */
 export interface ConnectOptions {
     /**
-     * Attempt silent connection without user prompt.
-     * If the wallet has previously authorized this app, it may connect
-     * without showing a popup.
-     * @default false
+     * @deprecated No-op under the kit wallet plugin backend: its connect is
+     * always interactive. Silent session restore happens automatically via
+     * `autoConnect` persistence instead. Will be removed in the next major.
      */
     silent?: boolean;
 
     /**
-     * If silent connection fails, allow falling back to interactive connection.
-     * @default true (when silent is true)
+     * @deprecated No-op under the kit wallet plugin backend; see
+     * {@link ConnectOptions.silent}. Will be removed in the next major.
      */
     allowInteractiveFallback?: boolean;
 
