@@ -95,6 +95,55 @@ describe('prepareTransaction', () => {
         expect(getTransactionMessageComputeUnitLimit(prepared)).toBe(5497);
     });
 
+    it('skips simulation entirely with estimateResources: false', async () => {
+        // Typed without SimulateTransactionApi: also the compile-time proof
+        // that the narrower rpc is accepted when estimation is skipped.
+        const blockhashSend = vi.fn().mockResolvedValue({
+            value: { blockhash: BLOCKHASH, lastValidBlockHeight: 100n },
+        });
+        const mocks = { getLatestBlockhash: vi.fn(() => ({ send: blockhashSend })) };
+        const rpc = mocks as unknown as Rpc<GetLatestBlockhashApi>;
+
+        const prepared = await prepareTransaction({
+            transaction: createBaseMessage(),
+            rpc,
+            estimateResources: false,
+        });
+
+        expect(mocks.getLatestBlockhash).toHaveBeenCalledTimes(1);
+        expect(getTransactionMessageComputeUnitLimit(prepared)).toBeUndefined();
+        expect(prepared.lifetimeConstraint.blockhash).toBe(BLOCKHASH);
+    });
+
+    it('preserves an explicit compute unit limit with estimateResources: false', async () => {
+        const { rpc, mocks } = createMockRpc();
+        const transaction = setTransactionMessageComputeUnitLimit(200_000, createBaseMessage());
+
+        const prepared = await prepareTransaction({ transaction, rpc, estimateResources: false });
+
+        expect(mocks.simulateTransaction).not.toHaveBeenCalled();
+        expect(getTransactionMessageComputeUnitLimit(prepared)).toBe(200_000);
+    });
+
+    it('makes no RPC calls with estimateResources: false and a preset lifetime', async () => {
+        const { rpc, mocks } = createMockRpc();
+        const withLifetime = {
+            ...createBaseMessage(),
+            lifetimeConstraint: { blockhash: BLOCKHASH, lastValidBlockHeight: 100n },
+        } as Parameters<typeof prepareTransaction>[0]['transaction'];
+
+        const prepared = await prepareTransaction({
+            transaction: withLifetime,
+            rpc,
+            estimateResources: false,
+            blockhashReset: false,
+        });
+
+        expect(mocks.simulateTransaction).not.toHaveBeenCalled();
+        expect(mocks.getLatestBlockhash).not.toHaveBeenCalled();
+        expect(prepared.lifetimeConstraint.blockhash).toBe(BLOCKHASH);
+    });
+
     it('propagates simulation failures instead of defaulting', async () => {
         const rpc = {
             getLatestBlockhash: vi.fn(() => ({
