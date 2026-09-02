@@ -12,8 +12,22 @@ import type { TransactionModifyingSigner } from '@solana/signers';
 import { createTransactionSignerFromWalletAccount } from '@solana/wallet-account-signer';
 import { getOrCreateUiWalletAccountForStandardWalletAccount } from '@wallet-standard/ui-registry';
 import { useConnector } from '../ui/connector-provider';
-import { toStandardWalletChain } from '../lib/wallet/kit-wallet-core';
+import { getStandardWalletChainForCluster } from '../utils/cluster';
 import { getUnderlyingWallet } from '../lib/wallet/wallet-icon-overrides';
+
+/**
+ * Options for useKitTransactionSigner
+ */
+export interface UseKitTransactionSignerOptions {
+    /**
+     * Explicit wallet chain to build the signer for, overriding the chain
+     * derived from the active cluster. The escape hatch for custom clusters
+     * (whose chain cannot be derived): pass the standard chain the custom
+     * endpoint actually serves, e.g. `'solana:mainnet'` for a private
+     * mainnet RPC.
+     */
+    chain?: `solana:${string}`;
+}
 
 /**
  * Return value from useKitTransactionSigner hook
@@ -30,6 +44,14 @@ export interface UseKitTransactionSignerReturn {
      * Useful for disabling transaction buttons
      */
     ready: boolean;
+
+    /**
+     * Why no signer is available, for diagnostics (null when ready).
+     * `'unsupported-chain'` means the active cluster is custom and no
+     * explicit `chain` override was given; `'signer-unavailable'` means the
+     * connected account does not support signing on the resolved chain.
+     */
+    reason: 'disconnected' | 'unsupported-chain' | 'signer-unavailable' | null;
 }
 
 /**
@@ -71,23 +93,26 @@ export type UseGillTransactionSignerReturn = UseKitTransactionSignerReturn;
  * }
  * ```
  */
-export function useKitTransactionSigner(): UseKitTransactionSignerReturn {
+export function useKitTransactionSigner(options?: UseKitTransactionSignerOptions): UseKitTransactionSignerReturn {
     const { selectedWallet, selectedAccount, accounts, cluster, connected } = useConnector();
+    const chainOverride = options?.chain;
 
     const account = useMemo(
         () => accounts.find(a => a.address === selectedAccount)?.raw ?? null,
         [accounts, selectedAccount],
     );
 
-    const signer = useMemo(() => {
+    const { signer, reason } = useMemo((): Pick<UseKitTransactionSignerReturn, 'signer' | 'reason'> => {
         if (!connected || !selectedWallet || !account || !cluster) {
-            return null;
+            return { signer: null, reason: 'disconnected' };
         }
 
-        // No wallet advertises a custom cluster id, and signing on the wrong
-        // chain would prompt against the wrong network.
-        const chain = toStandardWalletChain(cluster.id);
-        if (!chain) return null;
+        // Derive the chain from the cluster (not its raw id), so aliases like
+        // solana:mainnet-beta resolve. Custom clusters have no derivable
+        // chain, and signing on a substituted one would prompt against the
+        // wrong network — callers pass an explicit `chain` instead.
+        const chain = chainOverride ?? getStandardWalletChainForCluster(cluster);
+        if (!chain) return { signer: null, reason: 'unsupported-chain' };
 
         // The signer factory validates the chain and the account's signing
         // features at construction and throws when either is unsupported
@@ -98,15 +123,16 @@ export function useKitTransactionSigner(): UseKitTransactionSignerReturn {
                 getUnderlyingWallet(selectedWallet),
                 account,
             );
-            return createTransactionSignerFromWalletAccount(uiWalletAccount, chain);
+            return { signer: createTransactionSignerFromWalletAccount(uiWalletAccount, chain), reason: null };
         } catch {
-            return null;
+            return { signer: null, reason: 'signer-unavailable' };
         }
-    }, [connected, selectedWallet, account, cluster]);
+    }, [connected, selectedWallet, account, cluster, chainOverride]);
 
     return {
         signer,
         ready: Boolean(signer),
+        reason,
     };
 }
 

@@ -17,7 +17,10 @@
  * ```
  */
 
-import { isDebugEnabled, debug as connectorDebug } from '../kit';
+// Import the concrete module, not the ../kit barrel: modules inside lib/kit
+// (e.g. signer-integration) use this logger, and going through the barrel
+// would create an import cycle that breaks module initialization.
+import { isDebugEnabled, debug as connectorDebug } from '../kit/debug';
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
