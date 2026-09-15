@@ -162,6 +162,10 @@ export function ConnectButton() {
 
 **That's it!** You're ready to go. Everything else below is optional.
 
+`connectors` comes from `useConnector()` or from `useWalletConnectors()`. There is no `useConnectors` hook.
+
+The list is empty until wallets register or are provided through configuration. SSR sees `[]`. Browser-like environments without registered, configured, or enabled wallets (including jsdom without an injected wallet) also see `[]`. Configured `additionalWallets` or WalletConnect can still populate the list.
+
 ---
 
 ## Core Hooks
@@ -394,7 +398,7 @@ function Component() {
 
 ### `useWalletConnectors()`
 
-Get available wallet connectors with stable IDs.
+Get available wallet connectors with stable IDs. Prefer this hook when you only need the wallet list. It is the same array as `useConnector().connectors`.
 
 ```typescript
 import { useWalletConnectors } from '@solana/connector/react';
@@ -978,7 +982,7 @@ export function WalletConnectQRModal() {
 }
 ```
 
-Once enabled, "WalletConnect" appears as a connector (id: `walletconnect`) in your wallet list. When selected, `useConnector().walletConnectUri` will be set to a `wc:` URI that you can display as a QR code or use for deep linking.
+Once enabled, "WalletConnect" appears as a connector in your wallet list. Its connector id is `wallet-standard:walletconnect` (`createConnectorId('WalletConnect')`). Use that id, or the `id` from `connectors`, with `connectWallet`. When selected, `useConnector().walletConnectUri` will be set to a `wc:` URI that you can display as a QR code or use for deep linking.
 
 **Supported WalletConnect Solana methods:**
 

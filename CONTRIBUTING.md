@@ -26,7 +26,7 @@ Thank you for your interest in contributing! This document provides guidelines f
 ## Project Structure
 
 - `packages/connector/` - Core wallet connector with React hooks and headless client
-- `packages/debugger/` - Development debug panel with transaction analysis
+- `packages/devtools/` - Development debug panel with transaction analysis (`@solana/connector-debugger`)
 - `examples/next-js/` - Example Next.js application with shadcn/ui
 
 ## Development Workflow
