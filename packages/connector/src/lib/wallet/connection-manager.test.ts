@@ -553,5 +553,85 @@ describe('ConnectionManager', () => {
             expect(state.connected).toBe(true);
             expect(state.selectedWallet).toBe(wallet);
         });
+
+        it('should update selected account and session when wallet reports a new account after reconnect', async () => {
+            const accountA = createMockAccount('Account111111111111111111111111111111111111');
+            const accountB = createMockAccount('Account222222222222222222222222222222222222');
+            const wallet = createMockWallet({
+                connectResolveAccounts: [accountA],
+                supportsEvents: true,
+            });
+            const emitSpy = vi.spyOn(mockEventEmitter, 'emit');
+
+            await connectionManager.connect(wallet, wallet.name);
+            expect(mockStateManager.getSnapshot().selectedAccount).toBe(accountA.address);
+
+            emitSpy.mockClear();
+            (wallet as unknown as { _emitChange: (accounts: WalletAccount[]) => void })._emitChange([accountB]);
+
+            const state = mockStateManager.getSnapshot();
+            expect(state.selectedAccount).toBe(accountB.address);
+            expect(state.wallet.status).toBe('connected');
+            if (state.wallet.status === 'connected') {
+                expect(state.wallet.session.selectedAccount.address).toBe(accountB.address);
+            }
+            expect(emitSpy).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    type: 'account:changed',
+                    account: accountB.address,
+                }),
+            );
+        });
+
+        it('should keep selected account if it is still present after a change event', async () => {
+            const accountA = createMockAccount('Account111111111111111111111111111111111111');
+            const accountB = createMockAccount('Account222222222222222222222222222222222222');
+            const wallet = createMockWallet({
+                connectResolveAccounts: [accountA, accountB],
+                supportsEvents: true,
+            });
+
+            await connectionManager.connect(wallet, wallet.name);
+            await connectionManager.selectAccount(accountB.address);
+
+            const extra = createMockAccount('Account333333333333333333333333333333333333');
+            (wallet as unknown as { _emitChange: (accounts: WalletAccount[]) => void })._emitChange([
+                accountA,
+                accountB,
+                extra,
+            ]);
+
+            expect(mockStateManager.getSnapshot().selectedAccount).toBe(accountB.address);
+        });
+
+        it('should disconnect when wallet reports no accounts after reconnect', async () => {
+            const wallet = createMockWallet({ supportsEvents: true });
+
+            await connectionManager.connect(wallet, wallet.name);
+            expect(mockStateManager.getSnapshot().connected).toBe(true);
+
+            (wallet as unknown as { _emitChange: (accounts: WalletAccount[]) => void })._emitChange([]);
+
+            expect(mockStateManager.getSnapshot().connected).toBe(false);
+        });
+
+        it('should ignore account change events after disconnect', async () => {
+            const accountA = createMockAccount('Account111111111111111111111111111111111111');
+            const accountB = createMockAccount('Account222222222222222222222222222222222222');
+            const wallet = createMockWallet({
+                connectResolveAccounts: [accountA],
+                supportsEvents: true,
+            });
+
+            await connectionManager.connect(wallet, wallet.name);
+            await connectionManager.disconnect();
+            expect(mockStateManager.getSnapshot().connected).toBe(false);
+
+            (wallet as unknown as { _emitChange: (accounts: WalletAccount[]) => void })._emitChange([accountB]);
+
+            const state = mockStateManager.getSnapshot();
+            expect(state.connected).toBe(false);
+            expect(state.selectedAccount).toBeNull();
+        });
     });
 });

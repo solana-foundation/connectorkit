@@ -715,17 +715,12 @@ export class ConnectionManager extends BaseCollaborator {
         }
 
         try {
+            // Auto-connect still uses this legacy subscriber. Account switches after
+            // a page refresh must update selectedAccount and wallet.session, not just accounts.
+            const connectorId = createConnectorId(wallet.name);
             this.walletChangeUnsub = eventsOn('change', properties => {
                 const changeAccounts = properties?.accounts ?? [];
-                if (changeAccounts.length === 0) return;
-
-                const nextAccounts = changeAccounts.map(a => this.toAccountInfo(a));
-
-                if (nextAccounts.length > 0) {
-                    this.stateManager.updateState({
-                        accounts: nextAccounts,
-                    });
-                }
+                this.handleAccountsChanged(changeAccounts, connectorId, wallet);
             });
         } catch (error) {
             this.startPollingWalletAccounts();
