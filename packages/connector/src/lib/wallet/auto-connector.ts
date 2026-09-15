@@ -27,6 +27,8 @@ export class AutoConnector {
     /** vNext wallet state storage (connector ID + account) */
     private walletStateStorage?: StorageAdapter<PersistedWalletState | null>;
     private debug: boolean;
+    private destroyed = false;
+    private detectorRefreshTimer: ReturnType<typeof setTimeout> | null = null;
 
     constructor(
         walletDetector: WalletDetector,
@@ -311,20 +313,10 @@ export class AutoConnector {
                 logger.info('Instant auto-connect successful', { walletName: storedWalletName });
             }
 
-            setTimeout(() => {
-                const ws = walletsApi.get();
-
-                if (this.debug) {
-                    logger.debug('Checking for wallet standard update', {
-                        wsLength: ws.length,
-                        currentWalletsLength: this.stateManager.getSnapshot().wallets.length,
-                        shouldUpdate: ws.length > 1,
-                    });
-                }
-
-                if (ws.length > 1) {
-                    this.walletDetector.initialize();
-                }
+            this.detectorRefreshTimer = setTimeout(() => {
+                this.detectorRefreshTimer = null;
+                if (this.destroyed) return;
+                this.walletDetector.initialize();
             }, 500);
 
             return true;
@@ -385,6 +377,14 @@ export class AutoConnector {
                 logger.error('Auto-connect failed', { error: e });
             }
             this.walletStorage?.set(undefined);
+        }
+    }
+
+    destroy(): void {
+        this.destroyed = true;
+        if (this.detectorRefreshTimer) {
+            clearTimeout(this.detectorRefreshTimer);
+            this.detectorRefreshTimer = null;
         }
     }
 }

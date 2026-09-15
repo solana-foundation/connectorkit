@@ -57,8 +57,11 @@ describe('ConnectorClient', () => {
         vi.mocked(WalletDetector).mockImplementation(function () {
             return {
                 initialize: vi.fn(),
+                initializeAsync: vi.fn().mockResolvedValue(undefined),
                 destroy: vi.fn(),
                 getDetectedWallets: vi.fn(() => []),
+                setAdditionalWallets: vi.fn(),
+                setWalletDisplayConfig: vi.fn(),
             } as unknown as InstanceType<typeof WalletDetector>;
         });
 
@@ -80,6 +83,7 @@ describe('ConnectorClient', () => {
             return {
                 initialize: vi.fn(),
                 destroy: vi.fn(),
+                attemptAutoConnect: vi.fn().mockResolvedValue(false),
             } as unknown as InstanceType<typeof AutoConnector>;
         });
 
@@ -183,6 +187,48 @@ describe('ConnectorClient', () => {
     describe('cleanup', () => {
         it('should have destroy method for cleanup', () => {
             expect(typeof client.destroy).toBe('function');
+        });
+
+        it('destroy during initializeAsync does not auto-connect', async () => {
+            let resolveInit: () => void = () => {};
+            const initPromise = new Promise<void>(resolve => {
+                resolveInit = resolve;
+            });
+
+            const { WalletDetector } = await import('../wallet/detector');
+            const { AutoConnector } = await import('../wallet/auto-connector');
+
+            const initializeAsync = vi.fn(() => initPromise);
+            const attemptAutoConnect = vi.fn().mockResolvedValue(false);
+
+            vi.mocked(WalletDetector).mockImplementationOnce(function () {
+                return {
+                    initialize: vi.fn(),
+                    initializeAsync,
+                    destroy: vi.fn(),
+                    getDetectedWallets: vi.fn(() => []),
+                    setAdditionalWallets: vi.fn(),
+                    setWalletDisplayConfig: vi.fn(),
+                } as unknown as InstanceType<typeof WalletDetector>;
+            });
+            vi.mocked(AutoConnector).mockImplementationOnce(function () {
+                return {
+                    initialize: vi.fn(),
+                    destroy: vi.fn(),
+                    attemptAutoConnect,
+                } as unknown as InstanceType<typeof AutoConnector>;
+            });
+
+            const isolated = new ConnectorClient({
+                autoConnect: true,
+                cluster: config.cluster,
+            });
+            expect(initializeAsync).toHaveBeenCalled();
+            isolated.destroy();
+            resolveInit();
+            await initPromise;
+            await new Promise(resolve => setTimeout(resolve, 250));
+            expect(attemptAutoConnect).not.toHaveBeenCalled();
         });
     });
 });

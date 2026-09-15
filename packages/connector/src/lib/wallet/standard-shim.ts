@@ -38,6 +38,41 @@ let registry: WalletsRegistry | null = null;
 let registryInitPromise: Promise<void> | null = null;
 let registryInitResolve: (() => void) | null = null;
 
+type RegistryListener = (wallet: BaseWallet) => void;
+
+interface PendingRegistryListener {
+    event: 'register' | 'unregister';
+    callback: RegistryListener;
+    unsubscribe: (() => void) | null;
+}
+
+const pendingRegistryListeners: PendingRegistryListener[] = [];
+
+function getActiveRegistry(): WalletsRegistry | null {
+    if (typeof window === 'undefined') return null;
+    const nav = window.navigator as Navigator & { wallets?: WalletsRegistry };
+    const active = nav.wallets || registry;
+    if (active && typeof active.get === 'function') {
+        return active;
+    }
+    return null;
+}
+
+function flushPendingRegistryListeners(active: WalletsRegistry): void {
+    if (typeof active.on !== 'function') return;
+    for (const pending of pendingRegistryListeners) {
+        if (pending.unsubscribe) continue;
+        pending.unsubscribe = active.on(pending.event, pending.callback);
+    }
+}
+
+function rememberRegistry(active: WalletsRegistry): void {
+    if (!registry) {
+        registry = active;
+    }
+    flushPendingRegistryListeners(active);
+}
+
 /**
  * Promise that resolves when the wallet registry is initialized and ready.
  *
@@ -69,7 +104,7 @@ export const ready: Promise<void> = new Promise((resolve, reject) => {
     // Check if navigator.wallets is already available (injected by wallet extensions)
     const nav = window.navigator as Navigator & { wallets?: WalletsRegistry };
     if (nav.wallets && typeof nav.wallets.get === 'function') {
-        registry = nav.wallets;
+        rememberRegistry(nav.wallets);
         resolve();
         return;
     }
@@ -80,7 +115,7 @@ export const ready: Promise<void> = new Promise((resolve, reject) => {
         .then(mod => {
             const walletStandardRegistry = mod.getWallets?.();
             if (walletStandardRegistry) {
-                registry = walletStandardRegistry;
+                rememberRegistry(walletStandardRegistry);
             }
             resolve();
         })
@@ -125,17 +160,18 @@ export function getWalletsRegistry(): WalletsRegistry {
         const nav = window.navigator as Navigator & { wallets?: WalletsRegistry };
 
         if (nav.wallets && typeof nav.wallets.get === 'function') {
-            registry = nav.wallets;
+            rememberRegistry(nav.wallets);
             registryInitResolve?.();
         } else {
             // ASYNC: This import is asynchronous. Until it completes, `registry` remains null
             // and get() will return an empty array. This is expected graceful degradation.
             // Consumers needing deterministic detection should `await ready` first.
+            // `on()` subscriptions made during this window are queued and attached once ready.
             registryInitPromise = import('@wallet-standard/app')
                 .then(mod => {
                     const walletStandardRegistry = mod.getWallets?.();
                     if (walletStandardRegistry) {
-                        registry = walletStandardRegistry;
+                        rememberRegistry(walletStandardRegistry);
                     }
                     registryInitResolve?.();
                 })
@@ -148,9 +184,9 @@ export function getWalletsRegistry(): WalletsRegistry {
     return {
         get: () => {
             try {
-                const nav = window.navigator as Navigator & { wallets?: WalletsRegistry };
-                const activeRegistry = nav.wallets || registry;
-                if (activeRegistry && typeof activeRegistry.get === 'function') {
+                const activeRegistry = getActiveRegistry();
+                if (activeRegistry) {
+                    rememberRegistry(activeRegistry);
                     const wallets = activeRegistry.get();
                     return Array.isArray(wallets) ? wallets : [];
                 }
@@ -161,12 +197,25 @@ export function getWalletsRegistry(): WalletsRegistry {
         },
         on: (event, callback) => {
             try {
-                const nav = window.navigator as Navigator & { wallets?: WalletsRegistry };
-                const activeRegistry = nav.wallets || registry;
+                const activeRegistry = getActiveRegistry();
                 if (activeRegistry && typeof activeRegistry.on === 'function') {
+                    rememberRegistry(activeRegistry);
                     return activeRegistry.on(event, callback);
                 }
-                return () => {};
+                const pending: PendingRegistryListener = {
+                    event,
+                    callback,
+                    unsubscribe: null,
+                };
+                pendingRegistryListeners.push(pending);
+                return () => {
+                    if (pending.unsubscribe) {
+                        pending.unsubscribe();
+                        pending.unsubscribe = null;
+                    }
+                    const index = pendingRegistryListeners.indexOf(pending);
+                    if (index >= 0) pendingRegistryListeners.splice(index, 1);
+                };
             } catch {
                 return () => {};
             }
@@ -182,6 +231,7 @@ export function getWalletsRegistry(): WalletsRegistry {
 export function __resetWalletRegistryForTesting(): void {
     registry = null;
     registryInitPromise = null;
+    pendingRegistryListeners.length = 0;
     // Note: registryInitResolve is not reset as the original `ready` Promise
     // is already resolved/rejected and cannot be reset. Tests should reload
     // the module if they need a fresh `ready` Promise.

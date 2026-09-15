@@ -41,6 +41,8 @@ export class ConnectorClient {
     private debugMetrics: DebugMetrics;
     private healthMonitor: HealthMonitor;
     private initialized = false;
+    private destroyed = false;
+    private autoConnectTimer: ReturnType<typeof setTimeout> | null = null;
     private config: ConnectorConfig;
     private walletConnectRegistration: WalletConnectRegistration | null = null;
 
@@ -125,7 +127,28 @@ export class ConnectorClient {
             // Apply wallet list controls (allow/deny/featured) before detection
             this.walletDetector.setWalletDisplayConfig(this.config.wallets);
 
-            this.walletDetector.initialize();
+            void this.walletDetector
+                .initializeAsync()
+                .then(() => {
+                    if (this.destroyed) return;
+                    if (this.config.autoConnect) {
+                        this.autoConnectTimer = setTimeout(() => {
+                            this.autoConnectTimer = null;
+                            if (this.destroyed) return;
+                            this.autoConnector.attemptAutoConnect().catch(err => {
+                                if (this.config.debug) {
+                                    logger.error('Auto-connect error', { error: err });
+                                }
+                            });
+                        }, AUTO_CONNECT_DELAY_MS);
+                    }
+                })
+                .catch(err => {
+                    if (this.destroyed) return;
+                    if (this.config.debug) {
+                        logger.error('Wallet detection failed', { error: err });
+                    }
+                });
 
             // Register WalletConnect wallet if enabled
             if (this.config.walletConnect?.enabled) {
@@ -134,16 +157,6 @@ export class ConnectorClient {
                         logger.error('WalletConnect initialization failed', { error: err });
                     }
                 });
-            }
-
-            if (this.config.autoConnect) {
-                setTimeout(() => {
-                    this.autoConnector.attemptAutoConnect().catch(err => {
-                        if (this.config.debug) {
-                            logger.error('Auto-connect error', { error: err });
-                        }
-                    });
-                }, AUTO_CONNECT_DELAY_MS);
             }
 
             this.initialized = true;
@@ -375,6 +388,12 @@ export class ConnectorClient {
     }
 
     destroy(): void {
+        this.destroyed = true;
+        if (this.autoConnectTimer) {
+            clearTimeout(this.autoConnectTimer);
+            this.autoConnectTimer = null;
+        }
+
         // Unregister WalletConnect wallet if it was registered
         if (this.walletConnectRegistration) {
             try {
@@ -388,6 +407,7 @@ export class ConnectorClient {
         }
 
         this.connectionManager.disconnect().catch(() => {});
+        this.autoConnector.destroy();
         this.walletDetector.destroy();
         this.eventEmitter.offAll();
         this.stateManager.clear();
