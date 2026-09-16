@@ -128,7 +128,7 @@
         "react-dom": "^19.2.7",
         "tsup": "^8.5.0",
         "typescript": "^6.0.3",
-        "vitest": "^4.1.9"
+        "vitest": "^4.1.11"
     },
     "license": "MIT",
     "repository": {
