@@ -34,6 +34,15 @@ export * from './hooks';
 export * from './components';
 
 // ============================================================================
+// Kit Signer Factories
+// ============================================================================
+// Previously reachable only from the headless entry point, which made kit-shaped
+// message signing unavailable to React consumers.
+export { createKitSignersFromWallet } from './lib/kit/signer-integration';
+export type { KitSignersFromWallet } from './lib/kit/signer-integration';
+export { createMessageSignerFromWallet, createTransactionSendingSignerFromWallet } from './lib/kit/signer-factories';
+
+// ============================================================================
 // React-specific Types
 // ============================================================================
 export type { ConnectorSnapshot, MobileWalletAdapterConfig } from './ui/connector-provider';

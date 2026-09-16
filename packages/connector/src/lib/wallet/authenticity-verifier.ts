@@ -116,6 +116,15 @@ export class WalletAuthenticityVerifier {
             identityConsistency: 0.1,
         };
 
+        // The compliance weight is deliberately NOT renormalized away when a legacy
+        // injected provider has no `features` object. Dropping it from the denominator
+        // divides every remaining score by 0.75, which *rewards* a provider for not
+        // implementing Wallet Standard: a spoofed `window.<name>` with `connect` /
+        // `disconnect` and a mismatched name scores 0.575 here (rejected) but 0.767
+        // renormalized (accepted). Legacy providers do not need the help - a genuine
+        // one clears the 0.6 threshold on method integrity, chain support, clean
+        // pattern scan and a matching identity flag, and simply tops out at 0.75
+        // confidence rather than 1.0.
         const confidence =
             securityScore.walletStandardCompliance * weights.walletStandardCompliance +
             securityScore.methodIntegrity * weights.methodIntegrity +
@@ -322,12 +331,75 @@ export class WalletAuthenticityVerifier {
         }
 
         // 4. Check for proto pollution or __proto__ manipulation
-        if ('__proto__' in walletObj || 'constructor' in walletObj) {
-            // These are normal on all objects, but check if they're been tampered with
-            const proto = Object.getPrototypeOf(walletObj);
-            if (proto !== Object.prototype && proto !== null) {
-                score -= 0.1;
-                warnings.push('Wallet has unusual prototype chain');
+        //
+        // Note: a prototype other than `Object.prototype` is NOT suspicious on its
+        // own - every wallet that exposes its provider as a class instance (which is
+        // most of them, Phantom included) has one. Deducting for that penalized
+        // essentially every real wallet, so only genuine tampering counts here.
+        //
+        // An own `__proto__` key only exists if it was installed with
+        // `Object.defineProperty` - plain assignment and `{ __proto__: x }` both run
+        // the setter and create no own property - so this catches deliberate hiding
+        // rather than ordinary objects.
+        if (Object.prototype.hasOwnProperty.call(walletObj, '__proto__')) {
+            score -= 0.1;
+            warnings.push('Wallet defines an own __proto__ property');
+        }
+
+        // Actual prototype pollution lands on the shared `Object.prototype` as an
+        // enumerable key and is therefore invisible to any own-property check on the
+        // wallet. `Object.keys(Object.prototype)` is empty in a clean realm.
+        const pollutedPrototypeKeys = Object.keys(Object.prototype);
+        if (pollutedPrototypeKeys.length > 0) {
+            score -= 0.2;
+            warnings.push(`Object.prototype has been polluted: ${pollutedPrototypeKeys.join(', ')}`);
+        }
+
+        if (
+            typeof walletObj.hasOwnProperty === 'function' &&
+            walletObj.hasOwnProperty !== Object.prototype.hasOwnProperty
+        ) {
+            score -= 0.1;
+            warnings.push('Wallet overrides hasOwnProperty');
+        }
+
+        // A custom prototype is neutral on its own, as above - but it is also the one
+        // trait a bare impersonation shell shares with a real provider. A genuine
+        // class-instance wallet carries a broad method surface (signTransaction,
+        // signMessage, event emitters, `request`) and declares `features` or `chains`;
+        // a shell named after the wallet with nothing but `connect` / `disconnect`
+        // declares neither, and would otherwise clear the 0.6 threshold on its name
+        // match alone. Only that combination is penalized, so real providers - which
+        // fail the emptiness test - keep a clean score.
+        const proto = Object.getPrototypeOf(walletObj);
+        const hasCustomPrototype = proto !== Object.prototype && proto !== null;
+
+        if (hasCustomPrototype && !wallet.features && !Array.isArray(wallet.chains)) {
+            const MINIMAL_METHOD_SURFACE = 4;
+            const methodNames = new Set<string>();
+
+            for (
+                let current: object | null = walletObj;
+                current && current !== Object.prototype;
+                current = Object.getPrototypeOf(current)
+            ) {
+                for (const key of Object.getOwnPropertyNames(current)) {
+                    if (key === 'constructor') continue;
+                    try {
+                        if (typeof walletObj[key] === 'function') {
+                            methodNames.add(key);
+                        }
+                    } catch {
+                        // A throwing getter tells us nothing either way - skip it.
+                    }
+                }
+            }
+
+            if (methodNames.size < MINIMAL_METHOD_SURFACE) {
+                score -= 0.15;
+                warnings.push(
+                    `Wallet is a bare custom-prototype object with only ${methodNames.size} method(s) and no features or chains`,
+                );
             }
         }
 

@@ -21,7 +21,7 @@ import type { Wallet, WalletAccount } from '@wallet-standard/base';
 
 import { SolanaSignOffchainMessage, type SolanaSignOffchainMessageFeature } from '@solana/wallet-standard-features';
 
-import { Errors, TransactionError, isConnectorError } from '../errors';
+import { Errors, TransactionError, isConnectorError, toError, withCauseMessage } from '../errors';
 
 type OffchainMessageFeature = SolanaSignOffchainMessageFeature[typeof SolanaSignOffchainMessage];
 
@@ -30,11 +30,17 @@ function toOffchainMessageSigningError(error: unknown): Error {
     if (isConnectorError(error)) {
         return error;
     }
-    const message = error instanceof Error ? error.message.toLowerCase() : '';
+    const cause = toError(error);
+    const message = cause.message.toLowerCase();
     if (message.includes('user rejected') || message.includes('user denied')) {
         return Errors.userRejected('off-chain message signing');
     }
-    return new TransactionError('SIGNING_FAILED', 'Failed to sign off-chain message', undefined, error as Error);
+    return new TransactionError(
+        'SIGNING_FAILED',
+        withCauseMessage('Failed to sign off-chain message', cause),
+        undefined,
+        cause,
+    );
 }
 
 /** Configuration for creating an off-chain message signer. */

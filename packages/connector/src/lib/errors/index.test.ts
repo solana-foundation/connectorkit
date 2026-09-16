@@ -21,6 +21,7 @@ import {
     Errors,
     toConnectorError,
     getUserFriendlyMessage,
+    toError,
 } from './index';
 
 describe('Error System', () => {
@@ -356,6 +357,35 @@ describe('Error System', () => {
         it('should use default message for unknown errors', () => {
             const converted = toConnectorError(null, 'Custom default message');
             expect(converted.message).toBe('Custom default message');
+        });
+    });
+
+    describe('toError', () => {
+        it('should return an Error unchanged', () => {
+            const error = new Error('original');
+            expect(toError(error)).toBe(error);
+        });
+
+        it('should keep the message of a plain-object wallet rejection', () => {
+            const converted = toError({ code: 4001, message: 'User rejected the request.' });
+
+            expect(converted.message).toBe('User rejected the request.');
+            expect((converted as Error & { code?: unknown }).code).toBe(4001);
+        });
+
+        it('should fall back to a `reason` property', () => {
+            expect(toError({ reason: 'Wallet is locked' }).message).toBe('Wallet is locked');
+        });
+
+        it('should keep a thrown string as the message', () => {
+            expect(toError('boom').message).toBe('boom');
+        });
+
+        it('should not paste a stringified value onto a wrapper message', () => {
+            // `toError({})` has to produce *something*, but '[object Object]' is noise -
+            // `toConnectorError` must not append it to the caller's default message.
+            expect(toConnectorError({}, 'Custom default message').message).toBe('Custom default message');
+            expect(toConnectorError(undefined, 'Custom default message').message).toBe('Custom default message');
         });
     });
 

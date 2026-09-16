@@ -15,7 +15,7 @@ import type {
 } from '@solana/signers';
 import type { SignatureBytes } from '@solana/keys';
 import type { Transaction } from '@solana/transactions';
-import { ValidationError, TransactionError, Errors } from '../errors';
+import { ValidationError, TransactionError, Errors, toError, withCauseMessage, isConnectorError } from '../errors';
 import { updateSignatureDictionary, freezeSigner, base58ToSignatureBytes } from './signer-utils';
 
 /**
@@ -92,17 +92,26 @@ export function createMessageSignerFromWallet(
                     },
                 ];
             } catch (error) {
-                // Convert wallet errors to ConnectorKit errors
-                if (error instanceof Error) {
-                    const message = error.message.toLowerCase();
-                    if (message.includes('user rejected') || message.includes('user denied')) {
-                        throw Errors.userRejected('message signing');
-                    }
-                    throw new TransactionError('SIGNING_FAILED', 'Failed to sign message', undefined, error);
+                // A ConnectorError from the inner signer is already classified; rewrapping
+                // it as SIGNING_FAILED discards FEATURE_NOT_SUPPORTED / USER_REJECTED and
+                // the user-facing copy that goes with them. Mirrors the guard in
+                // `toOffchainMessageSigningError`.
+                if (isConnectorError(error)) {
+                    throw error;
                 }
-                throw new TransactionError('SIGNING_FAILED', 'Failed to sign message', {
-                    originalError: String(error),
-                });
+
+                // Convert wallet errors to ConnectorKit errors
+                const cause = toError(error);
+                const causeText = cause.message.toLowerCase();
+                if (causeText.includes('user rejected') || causeText.includes('user denied')) {
+                    throw Errors.userRejected('message signing');
+                }
+                throw new TransactionError(
+                    'SIGNING_FAILED',
+                    withCauseMessage('Failed to sign message', cause),
+                    undefined,
+                    cause,
+                );
             }
         },
     };

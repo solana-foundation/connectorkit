@@ -92,18 +92,28 @@ export function createKitSignersFromWallet(
         };
     }
 
-    // Detect network from connection or use provided override
-    // Note: Will be enhanced in Phase 2 with chain utilities
-    let chain: `solana:${string}` = 'solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1'; // Default to devnet
+    // Detect network from connection or use provided override.
+    //
+    // Deliberately starts `undefined` rather than at devnet. A cluster with no
+    // canonical chain ID - localnet, a custom RPC, or no connection at all - must not
+    // resolve to devnet behind the caller's back: the message signer would then ask
+    // the wallet to sign under a network the app is not on, which the wallet either
+    // rejects or authorizes in the wrong context. `undefined` omits `chain` from the
+    // request and leaves the wallet on its own active network.
+    //
+    // Transaction signing still needs a concrete chain, so it keeps the devnet
+    // fallback below - its behavior is unchanged.
+    const DEVNET_CHAIN = 'solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1' as const;
+    let chain: `solana:${string}` | undefined;
 
     if (network) {
         // Map network to Wallet Standard chain ID
         const chainMap: Record<string, `solana:${string}`> = {
             mainnet: 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp',
-            devnet: 'solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1',
+            devnet: DEVNET_CHAIN,
             testnet: 'solana:4uhcVJyU9pJkvQyS88uRDiswHXSCkY3z',
         };
-        chain = chainMap[network] || chain;
+        chain = chainMap[network];
     } else if (connection) {
         // Detect from connection RPC URL
         const rpcUrl = connection.rpcEndpoint || '';
@@ -111,15 +121,32 @@ export function createKitSignersFromWallet(
             chain = 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp';
         } else if (rpcUrl.includes('testnet')) {
             chain = 'solana:4uhcVJyU9pJkvQyS88uRDiswHXSCkY3z';
-        } else {
-            // Default to devnet
-            chain = 'solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1';
+        } else if (rpcUrl.includes('devnet')) {
+            chain = DEVNET_CHAIN;
         }
     }
 
+    // Chain used for transaction paths, which cannot express "unknown".
+    const transactionChain: `solana:${string}` = chain ?? DEVNET_CHAIN;
+
     // Check wallet features for capabilities
     const features = wallet.features as Record<string, Record<string, (...args: unknown[]) => unknown>>;
-    const hasSignMessage = Boolean(features['solana:signMessage']);
+
+    // Wallet Standard scopes features per account, and wallets reject an account that
+    // omits the feature name even when the wallet itself advertises it - the same gate
+    // `createOffchainMessageSigner` applies.
+    //
+    // Absent and empty `features` are not the same thing. An account with no
+    // `features` member at all does not scope capabilities, so the wallet-level list
+    // is the only evidence available and stands in. An account that ships an *empty*
+    // array has scoped its capabilities and advertised none of them - honoring the
+    // wallet-level list there would report the account ready and then fail inside the
+    // wallet. Shims that synthesize accounts populate the list instead.
+    const accountFeatures = account.features as readonly string[] | undefined;
+    const accountSupports = (feature: string) =>
+        accountFeatures === undefined ? Boolean(features[feature]) : accountFeatures.includes(feature);
+
+    const hasSignMessage = Boolean(features['solana:signMessage']) && accountSupports('solana:signMessage');
     const hasSignAndSendTransaction = Boolean(features['solana:signAndSendTransaction']);
     const hasSendTransaction = Boolean(features['solana:sendTransaction']);
 
@@ -164,47 +191,51 @@ export function createKitSignersFromWallet(
     // Prefer signAndSendTransaction over sendTransaction as it's more efficient
     const transactionSigner: TransactionSendingSigner<string> | null =
         hasSignAndSendTransaction || hasSendTransaction
-            ? createTransactionSendingSignerFromWallet(walletAddress, chain, async (transaction: Transaction) => {
-                  // Prefer signAndSendTransaction (sign + send in one call)
-                  if (hasSignAndSendTransaction) {
-                      try {
-                          const signAndSendFeature = features['solana:signAndSendTransaction'];
-                          const result = (await signAndSendFeature.signAndSendTransaction({
-                              account,
-                              transactions: [transaction],
-                              ...(chain ? { chain } : {}),
-                              ...(connection ? { connection } : {}),
-                          })) as { signatures: string[] };
+            ? createTransactionSendingSignerFromWallet(
+                  walletAddress,
+                  transactionChain,
+                  async (transaction: Transaction) => {
+                      // Prefer signAndSendTransaction (sign + send in one call)
+                      if (hasSignAndSendTransaction) {
+                          try {
+                              const signAndSendFeature = features['solana:signAndSendTransaction'];
+                              const result = (await signAndSendFeature.signAndSendTransaction({
+                                  account,
+                                  transactions: [transaction],
+                                  chain: transactionChain,
+                                  ...(connection ? { connection } : {}),
+                              })) as { signatures: string[] };
 
-                          // Return first signature (wallet limitation: single transaction)
-                          return result.signatures[0] || '';
-                      } catch (error) {
-                          throw error instanceof Error ? error : new Error(String(error));
+                              // Return first signature (wallet limitation: single transaction)
+                              return result.signatures[0] || '';
+                          } catch (error) {
+                              throw error instanceof Error ? error : new Error(String(error));
+                          }
                       }
-                  }
 
-                  // Fallback to sendTransaction (if wallet supports it but not signAndSendTransaction)
-                  // Note: sendTransaction in Wallet Standard typically just signs, but some wallets
-                  // may implement it to also send if connection is available
-                  if (hasSendTransaction) {
-                      try {
-                          const sendFeature = features['solana:sendTransaction'];
-                          const result = (await sendFeature.sendTransaction({
-                              account,
-                              transactions: [transaction],
-                              ...(chain ? { chain } : {}),
-                          })) as { signatures: string[] };
+                      // Fallback to sendTransaction (if wallet supports it but not signAndSendTransaction)
+                      // Note: sendTransaction in Wallet Standard typically just signs, but some wallets
+                      // may implement it to also send if connection is available
+                      if (hasSendTransaction) {
+                          try {
+                              const sendFeature = features['solana:sendTransaction'];
+                              const result = (await sendFeature.sendTransaction({
+                                  account,
+                                  transactions: [transaction],
+                                  chain: transactionChain,
+                              })) as { signatures: string[] };
 
-                          // Return first signature
-                          // Note: Actual sending should be handled by the caller or wallet implementation
-                          return result.signatures[0] || '';
-                      } catch (error) {
-                          throw error instanceof Error ? error : new Error(String(error));
+                              // Return first signature
+                              // Note: Actual sending should be handled by the caller or wallet implementation
+                              return result.signatures[0] || '';
+                          } catch (error) {
+                              throw error instanceof Error ? error : new Error(String(error));
+                          }
                       }
-                  }
 
-                  throw Errors.featureNotSupported('transaction sending');
-              })
+                      throw Errors.featureNotSupported('transaction sending');
+                  },
+              )
             : null;
 
     return {

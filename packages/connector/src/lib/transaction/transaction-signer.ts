@@ -10,7 +10,7 @@ import type {
 import { prepareTransactionForWallet, convertSignedTransaction } from '../../utils/transaction-format';
 import { TransactionValidator } from './transaction-validator';
 import { createLogger } from '../utils/secure-logger';
-import { TransactionError, ValidationError, Errors } from '../errors';
+import { TransactionError, ValidationError, Errors, toError, withCauseMessage } from '../errors';
 import { getBase58Decoder } from '@solana/codecs';
 
 const logger = createLogger('TransactionSigner');
@@ -415,7 +415,13 @@ export function createTransactionSigner(config: TransactionSignerConfig): Transa
                     });
                     return extractSignatureBytes(result);
                 } catch (error) {
-                    throw new TransactionError('SIGNING_FAILED', 'Failed to sign message', undefined, error as Error);
+                    const cause = toError(error);
+                    throw new TransactionError(
+                        'SIGNING_FAILED',
+                        withCauseMessage('Failed to sign message', cause),
+                        undefined,
+                        cause,
+                    );
                 }
             },
         }),

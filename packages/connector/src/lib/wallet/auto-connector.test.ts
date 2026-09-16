@@ -342,6 +342,87 @@ describe('AutoConnector', () => {
 
             expect(mockWalletDetector.detectDirectWallet).toHaveBeenCalledWith('Phantom');
         });
+
+        /**
+         * Drives instant connect and hands back the wallet object the AutoConnector
+         * synthesized, so the `standard:connect` / `standard:disconnect` shims it
+         * installed can be exercised directly.
+         */
+        async function synthesizeWallet(directWallet: Record<string, unknown>): Promise<Wallet> {
+            (mockWalletStateStorage.get as ReturnType<typeof vi.fn>).mockReturnValue(null);
+            (mockWalletStorage.get as ReturnType<typeof vi.fn>).mockReturnValue('Phantom');
+            (mockWalletDetector.detectDirectWallet as ReturnType<typeof vi.fn>).mockReturnValue(directWallet);
+
+            await autoConnector.attemptAutoConnect();
+
+            const [wallet] = (mockConnectionManager.connect as ReturnType<typeof vi.fn>).mock.calls[0] as [Wallet];
+            return wallet;
+        }
+
+        function connectShim(wallet: Wallet) {
+            return (wallet.features['standard:connect'] as { connect: () => Promise<{ accounts: unknown[] }> }).connect;
+        }
+
+        function disconnectShim(wallet: Wallet) {
+            return (wallet.features['standard:disconnect'] as { disconnect: () => Promise<unknown> }).disconnect;
+        }
+
+        function legacyPublicKey(address: string) {
+            return { toString: () => address, toBytes: () => new Uint8Array(32) };
+        }
+
+        it('should populate accounts when the provider already returns a Wallet Standard shape', async () => {
+            const account = {
+                address: 'Standard111111111111111111111111111111111',
+                publicKey: new Uint8Array(32),
+                chains: ['solana:mainnet'],
+                features: ['solana:signMessage'],
+            };
+            const wallet = await synthesizeWallet({
+                connect: vi.fn().mockResolvedValue({ accounts: [account] }),
+                disconnect: vi.fn().mockResolvedValue(undefined),
+            });
+
+            const result = await connectShim(wallet)();
+
+            expect(result.accounts).toHaveLength(1);
+            expect(wallet.accounts.map(a => a.address)).toEqual([account.address]);
+        });
+
+        it('should scope synthesized account features to the shimmed features', async () => {
+            const wallet = await synthesizeWallet({
+                connect: vi.fn().mockResolvedValue({ publicKey: legacyPublicKey('Legacy1111111111111111111111111') }),
+                disconnect: vi.fn().mockResolvedValue(undefined),
+                signMessage: vi.fn(),
+            });
+
+            await connectShim(wallet)();
+
+            expect(wallet.accounts[0].features).toContain('solana:signMessage');
+        });
+
+        it('should drop synthesized accounts on disconnect so a denied reconnect cannot reuse them', async () => {
+            const connect = vi
+                .fn()
+                .mockResolvedValueOnce({ publicKey: legacyPublicKey('Legacy1111111111111111111111111') })
+                .mockResolvedValueOnce(undefined);
+            const wallet = await synthesizeWallet({
+                connect,
+                disconnect: vi.fn().mockResolvedValue(undefined),
+            });
+
+            await connectShim(wallet)();
+            expect(wallet.accounts).toHaveLength(1);
+
+            await disconnectShim(wallet)();
+            expect(wallet.accounts).toHaveLength(0);
+
+            // The provider now denies the request. Nothing must survive from the
+            // earlier session - ConnectionManager treats a non-empty `wallet.accounts`
+            // as proof of a live authorization.
+            await connectShim(wallet)();
+            expect(wallet.accounts).toHaveLength(0);
+        });
     });
 
     describe('error handling', () => {

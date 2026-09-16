@@ -52,6 +52,95 @@ describe('WalletAuthenticityVerifier', () => {
             expect(result.authentic).toBe(false);
         });
 
+        it('should reject a spoofed legacy provider that implements no features', () => {
+            // A fake `window.<name>` with just connect/disconnect and a mismatched
+            // identity. Scoring it 0 on Wallet Standard compliance is what keeps it
+            // under the 0.6 threshold - renormalizing that weight away would push the
+            // same object to 0.77 and mark it authentic.
+            const spoofed = {
+                connect: vi.fn(),
+                disconnect: vi.fn(),
+            } as unknown as DirectWallet;
+
+            const result = WalletAuthenticityVerifier.verify(spoofed, 'Phantom');
+
+            expect(result.confidence).toBeLessThan(0.6);
+            expect(result.authentic).toBe(false);
+        });
+
+        it('should reject a bare class-instance shell impersonating a wallet', () => {
+            // The one trait a minimal impersonation shell shares with a real provider is
+            // a custom prototype, so that alone is not penalized. What gives it away is
+            // the combination: a custom prototype, no `features`, no `chains`, and a
+            // method surface of nothing but connect/disconnect. Without the deduction
+            // for that combination this object rides its name match to 0.625 and clears
+            // the 0.6 threshold, after which direct detection hands it to auto-connect.
+            class FakePhantom {
+                name = 'Phantom';
+                connect() {
+                    return Promise.resolve();
+                }
+                disconnect() {
+                    return Promise.resolve();
+                }
+            }
+
+            const result = WalletAuthenticityVerifier.verify(new FakePhantom() as unknown as DirectWallet, 'Phantom');
+
+            expect(result.confidence).toBeLessThan(0.6);
+            expect(result.authentic).toBe(false);
+        });
+
+        it('should accept a genuine class-instance provider with a broad method surface', () => {
+            // Real wallets expose their provider as a class instance too - Phantom
+            // included - so the check above must not catch them. A genuine provider
+            // fails the emptiness test on every count: it declares chains and carries
+            // far more than the two lifecycle methods.
+            class RealPhantom {
+                isPhantom = true;
+                chains = ['solana:mainnet'];
+                connect() {
+                    return Promise.resolve();
+                }
+                disconnect() {
+                    return Promise.resolve();
+                }
+                signTransaction() {
+                    return Promise.resolve();
+                }
+                signAllTransactions() {
+                    return Promise.resolve();
+                }
+                signMessage() {
+                    return Promise.resolve();
+                }
+                request() {
+                    return Promise.resolve();
+                }
+                on() {}
+                off() {}
+            }
+
+            const result = WalletAuthenticityVerifier.verify(new RealPhantom() as unknown as DirectWallet, 'Phantom');
+
+            expect(result.authentic).toBe(true);
+            expect(result.confidence).toBeGreaterThanOrEqual(0.6);
+        });
+
+        it('should accept a genuine legacy provider despite having no features object', () => {
+            const legacy = {
+                connect: vi.fn(),
+                disconnect: vi.fn(),
+                isPhantom: true,
+                chains: ['solana:mainnet'],
+            } as unknown as DirectWallet;
+
+            const result = WalletAuthenticityVerifier.verify(legacy, 'Phantom');
+
+            expect(result.authentic).toBe(true);
+            expect(result.confidence).toBeLessThanOrEqual(1);
+        });
+
         it('should verify batch of wallets', () => {
             const wallets = [{ wallet: mockWallet, name: 'Phantom' }];
             const results = WalletAuthenticityVerifier.verifyBatch(wallets);
