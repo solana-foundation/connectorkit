@@ -70,7 +70,24 @@ describe('Cluster Utilities', () => {
     describe('Explorer URLs', () => {
         it('should generate explorer URL for cluster', () => {
             const url = getClusterExplorerUrl(mockClusters.mainnet);
-            expect(url).toContain('explorer.solana.com');
+            expect(url).toBe('https://explorer.solana.com');
+        });
+
+        it('should keep public cluster query params', () => {
+            expect(getClusterExplorerUrl(mockClusters.devnet)).toBe('https://explorer.solana.com?cluster=devnet');
+            expect(getClusterExplorerUrl(mockClusters.testnet)).toBe('https://explorer.solana.com?cluster=testnet');
+            expect(getClusterExplorerUrl(mockClusters.mainnetBeta, 'address/abc')).toBe(
+                'https://explorer.solana.com/address/abc',
+            );
+        });
+
+        it('should point localnet and custom clusters at a custom RPC', () => {
+            expect(getClusterExplorerUrl(mockClusters.localnet)).toBe(
+                'https://explorer.solana.com?cluster=custom&customUrl=http%3A%2F%2Flocalhost%3A8899',
+            );
+            expect(getClusterExplorerUrl(mockClusters.custom)).toBe(
+                'https://explorer.solana.com?cluster=custom&customUrl=https%3A%2F%2Fcustom-rpc.com',
+            );
         });
 
         it('should generate transaction explorer URL', () => {
@@ -94,16 +111,30 @@ describe('Cluster Utilities', () => {
             const token = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'; // USDC
             const url = getTokenUrl(token, mockClusters.mainnet);
 
-            expect(url).toContain('explorer.solana.com');
-            expect(url).toContain(token);
+            expect(url).toBe(`https://explorer.solana.com/token/${token}`);
+        });
+
+        it('should generate localnet token and block URLs with the RPC customUrl', () => {
+            const token = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
+            const customQuery = 'cluster=custom&customUrl=http%3A%2F%2Flocalhost%3A8899';
+
+            expect(getTokenUrl(token, mockClusters.localnet)).toBe(
+                `https://explorer.solana.com/token/${token}?${customQuery}`,
+            );
+            expect(getBlockUrl(42, mockClusters.localnet)).toBe(`https://explorer.solana.com/block/42?${customQuery}`);
         });
 
         it('should generate block URL', () => {
             const slot = 123456789;
             const url = getBlockUrl(slot, mockClusters.mainnet);
 
-            expect(url).toContain('explorer.solana.com');
-            expect(url).toContain('123456789');
+            expect(url).toBe('https://explorer.solana.com/block/123456789');
+        });
+
+        it('should still open localnet transactions on devnet', () => {
+            const url = getTransactionUrl('local-sig', mockClusters.localnet);
+            expect(url).toContain('cluster=devnet');
+            expect(url).not.toContain('customUrl');
         });
     });
 
