@@ -384,6 +384,42 @@ describe('KitWalletCore', () => {
         }
     });
 
+    it('holds a waiting connect through consecutive chain swaps', async () => {
+        setupMockWindow();
+        try {
+            const phantom = createMockPhantomWallet({
+                accounts: [createMockWalletAccount(TEST_ADDRESSES.ACCOUNT_1)],
+            });
+            registerWallet(phantom);
+            registerWallet(createMockSolflareWallet({ accounts: [createMockWalletAccount(TEST_ADDRESSES.ACCOUNT_2)] }));
+            const walletCore = createCore();
+            await walletCore.connectWallet(createConnectorId('Phantom'));
+            await waitForCondition(() => localStorage.getItem('connector-kit:v1:kit-wallet') !== null, {
+                timeout: 2000,
+            });
+
+            // The second replacement's silent reconnect is refused. A second
+            // switch supersedes the swap the connect is waiting on; resumed
+            // early, the connect would run on the outgoing client and lift
+            // the storage guard the second replacement still depends on.
+            const firstSwap = walletCore.setChain('solana:devnet');
+            const connect = walletCore.connectWallet(createConnectorId('Solflare'));
+            vi.mocked(phantom.features['standard:connect'].connect).mockRejectedValue(new Error('silent rejected'));
+            const secondSwap = walletCore.setChain('solana:testnet');
+            await Promise.all([firstSwap, connect, secondSwap]);
+
+            const state = stateManager.getSnapshot();
+            expect(state.wallet.status).toBe('connected');
+            expect(state.selectedAccount).toBe(TEST_ADDRESSES.ACCOUNT_2);
+            await waitForCondition(
+                () => localStorage.getItem('connector-kit:v1:kit-wallet') === `Solflare:${TEST_ADDRESSES.ACCOUNT_2}`,
+                { timeout: 2000 },
+            );
+        } finally {
+            cleanupMockWindow();
+        }
+    });
+
     it('clears persistence on a disconnect made during a chain swap', async () => {
         setupMockWindow();
         try {

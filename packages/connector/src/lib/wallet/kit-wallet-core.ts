@@ -526,10 +526,14 @@ export class KitWalletCore {
      * swap would then replace the connection state it produced.
      */
     private async settleChainSwap(): Promise<void> {
-        const pending = this.pendingSwap;
-        if (pending) {
+        // A newer switch can supersede the swap being waited on, so wait out
+        // whichever is current; only then is the attached client the one for
+        // the active chain, and the guard left to lift its own.
+        let pending = this.pendingSwap;
+        while (pending) {
             await pending.warmedUp;
             this.completeChainSwap(pending);
+            pending = this.pendingSwap;
         }
         this.releaseSwapGuard?.();
         this.releaseSwapGuard = null;
