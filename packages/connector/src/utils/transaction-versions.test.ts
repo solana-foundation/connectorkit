@@ -122,6 +122,17 @@ describe('operation-aware negotiation', () => {
         expect(walletSupportsTransactionVersion(batchWallet, 1)).toBe(true);
     });
 
+    it('includes the wallet-standard solana:signAndSendAllTransactions in the union and per-operation reads', () => {
+        const batchSendWallet = walletWithFeatures({
+            'solana:signAndSendAllTransactions': { supportedTransactionVersions: ['legacy', 0, 1] },
+            'solana:signTransaction': { supportedTransactionVersions: ['legacy', 0] },
+        });
+
+        expect(walletSupportsTransactionVersion(batchSendWallet, 1, 'solana:signAndSendAllTransactions')).toBe(true);
+        expect(walletSupportsTransactionVersion(batchSendWallet, 1, 'solana:signTransaction')).toBe(false);
+        expect(walletSupportsTransactionVersion(batchSendWallet, 1)).toBe(true);
+    });
+
     it('falls back to the legacy/v0 baseline for an operation with no declaration', () => {
         const wallet = walletWithFeatures({
             'solana:signTransaction': { signTransaction: () => {} },

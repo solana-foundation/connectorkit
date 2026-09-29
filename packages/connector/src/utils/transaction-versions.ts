@@ -11,12 +11,24 @@
 import type { Wallet } from '@wallet-standard/base';
 import type { SolanaTransactionVersionLike } from '../types/transactions';
 
-/** A wallet-standard signing feature that can declare `supportedTransactionVersions`. */
+/**
+ * A signing feature that can declare `supportedTransactionVersions`.
+ *
+ * `solana:signAndSendAllTransactions`, `solana:signAndSendTransaction` and
+ * `solana:signTransaction` are the wallet-standard features that carry the
+ * field. `solana:signAllTransactions` is not part of wallet-standard: it is
+ * the connector's own batch-signing feature, registered by its WalletConnect
+ * and remote wallets, which declare versions on it the same way.
+ */
 export type SolanaSignFeatureName =
-    'solana:signAllTransactions' | 'solana:signAndSendTransaction' | 'solana:signTransaction';
+    | 'solana:signAllTransactions'
+    | 'solana:signAndSendAllTransactions'
+    | 'solana:signAndSendTransaction'
+    | 'solana:signTransaction';
 
 const SIGN_FEATURES: readonly SolanaSignFeatureName[] = [
     'solana:signAllTransactions',
+    'solana:signAndSendAllTransactions',
     'solana:signAndSendTransaction',
     'solana:signTransaction',
 ];
