@@ -46,6 +46,14 @@ const KIT_WALLET_STORAGE_KEY = 'connector-kit:v1:kit-wallet';
 const STANDARD_WALLET_CHAINS = ['solana:mainnet', 'solana:devnet', 'solana:testnet', 'solana:localnet'] as const;
 
 /**
+ * How long a chain swap waits on the replacement client's silent reconnect
+ * before attaching it regardless. The plugin puts no limit on the reconnect
+ * (it runs through the wallet extension), and wallet actions hold until the
+ * swap completes so they never run against the previous chain.
+ */
+const CHAIN_SWAP_WARMUP_TIMEOUT_MS = 5_000;
+
+/**
  * Map a cluster id to a chain a wallet-standard wallet can advertise, or null
  * when there is no such chain. Signing against the wrong chain makes a wallet
  * prompt and simulate on a different network than the dapp is using, so
@@ -109,6 +117,39 @@ function toKitWalletStorage(
         },
         setItem: (_key, value) => adapter.set(value),
     };
+}
+
+/**
+ * The plugin's default storage (localStorage) behind the same removal guard a
+ * consumer adapter gets, for apps that supply no adapter. Returns undefined
+ * when localStorage is unavailable, leaving the plugin to its own fallback.
+ */
+function toGuardedDefaultStorage(suppressRemove: () => boolean): KitWalletStorage | undefined {
+    let storage: Storage;
+    try {
+        storage = localStorage;
+    } catch {
+        return undefined;
+    }
+    return {
+        getItem: key => storage.getItem(key),
+        removeItem: key => {
+            if (suppressRemove()) return;
+            storage.removeItem(key);
+        },
+        setItem: (key, value) => storage.setItem(key, value),
+    };
+}
+
+/** Resolve once the promise settles or the timeout elapses, whichever is first */
+function settleWithin(promise: Promise<void>, timeoutMs: number): Promise<void> {
+    return new Promise(resolve => {
+        const timer = setTimeout(resolve, timeoutMs);
+        void promise.finally(() => {
+            clearTimeout(timer);
+            resolve();
+        });
+    });
 }
 
 /**
@@ -183,6 +224,13 @@ function timestamp(): string {
 
 type KitWalletClient = ClientWithWallet & { [key: symbol]: (() => void) | undefined };
 
+/** A replacement client built for a new chain that has not been attached yet */
+interface PendingChainSwap {
+    client: KitWalletClient;
+    /** Settles when the client's warm-up does, or after the warm-up timeout */
+    warmedUp: Promise<void>;
+}
+
 interface KitWalletCoreOptions {
     /** Whether to silently reconnect to the persisted wallet account on startup */
     autoConnect?: boolean;
@@ -213,7 +261,8 @@ export class KitWalletCore {
     private unregisterAdditionalWallets: (() => void) | null = null;
 
     private chain: string = 'solana:mainnet';
-    private chainSwap = 0;
+    private pendingSwap: PendingChainSwap | null = null;
+    private releaseSwapGuard: (() => void) | null = null;
     private started = false;
     private lastError: { error: Error; connectorId?: WalletConnectorId; recoverable: boolean } | null = null;
     private connectingConnectorId: WalletConnectorId | null = null;
@@ -248,7 +297,9 @@ export class KitWalletCore {
     /**
      * Rebuild the wallet client for a new chain. The previous client (and its
      * connection state) stays live until the replacement finishes its silent
-     * reconnect warm-up, so the UI does not flash a disconnected state.
+     * reconnect warm-up, so the UI does not flash a disconnected state. The
+     * wait is bounded by {@link CHAIN_SWAP_WARMUP_TIMEOUT_MS}; wallet actions
+     * taken meanwhile hold until the swap completes.
      */
     async setChain(chain: string): Promise<void> {
         if (!this.started || chain === this.chain) {
@@ -256,7 +307,8 @@ export class KitWalletCore {
             return;
         }
         this.chain = chain;
-        const swap = ++this.chainSwap;
+        // A newer switch makes a replacement still warming up obsolete
+        this.discardPendingSwap();
 
         // When a session is live, the replacement client must silently
         // reconnect it (via the plugin's own persistence) or the chain switch
@@ -268,40 +320,54 @@ export class KitWalletCore {
             // A failed silent reconnect makes the plugin clear its persisted
             // account. During a chain swap that would turn a mere network
             // switch into a permanent logout, so the replacement client must
-            // not remove anything while it warms up. The old client (an
-            // explicit disconnect) and the attached client afterwards clear
-            // normally, and a genuinely revoked session is still cleared by
-            // the next startup reconnect at rest.
+            // not remove anything while it warms up. A wallet action lifts
+            // the guard (what the user does next must persist or clear
+            // normally), the attached client clears normally once warm, and a
+            // genuinely revoked session is still cleared by the next startup
+            // reconnect at rest.
             suppressRemove: () => warming,
         });
-        try {
-            await next.wallet.whenReady();
-        } catch (error) {
-            // A disposed or failed warm-up still settles; proceed with the swap
-            if (this.options.debug) logger.warn('Chain-swap warm-up failed', { chain, error });
-        } finally {
+        const release = () => {
             warming = false;
-        }
+        };
+        this.releaseSwapGuard = release;
 
-        // The warm-up spans a destroy() or a newer switch, either of which
-        // makes this client obsolete; attaching it would leave a live
-        // subscription nothing owns.
-        if (!this.started || swap !== this.chainSwap) {
-            disposeClient(next);
-            return;
-        }
-        this.attachClient(next);
+        const ready = next.wallet
+            .whenReady()
+            .catch((error: unknown) => {
+                // A disposed or failed warm-up still settles; proceed with the swap
+                if (this.options.debug) logger.warn('Chain-swap warm-up failed', { chain, error });
+            })
+            .finally(() => {
+                release();
+                if (this.releaseSwapGuard === release) this.releaseSwapGuard = null;
+            });
+
+        const pending: PendingChainSwap = { client: next, warmedUp: settleWithin(ready, CHAIN_SWAP_WARMUP_TIMEOUT_MS) };
+        this.pendingSwap = pending;
+        await pending.warmedUp;
+        this.completeChainSwap(pending);
     }
 
     destroy(): void {
-        // Invalidate any in-flight setChain warm-up: after a later start() the
-        // staleness guard would otherwise pass (started is true again, counter
-        // unchanged) and attach a client built for the pre-destroy chain.
-        this.chainSwap++;
+        // A replacement still warming up must not attach after a later start()
+        this.discardPendingSwap();
+        this.releaseSwapGuard = null;
         this.detachClient();
         this.unregisterAdditionalWallets?.();
         this.unregisterAdditionalWallets = null;
         this.accountsChangedListeners.clear();
+        // Projection bookkeeping belongs to the lifecycle that produced it.
+        // Carried across a restart (React StrictMode runs one on every dev
+        // mount), a restored session would match the retained connection
+        // marker and never emit `wallet:connected` to the listeners the new
+        // lifecycle registered.
+        this.previousConnection = null;
+        this.lastDetectedCount = 0;
+        this.lastKitStatus = null;
+        this.lastNotifiedAccountsKey = null;
+        this.lastError = null;
+        this.connectingConnectorId = null;
         this.started = false;
     }
 
@@ -316,6 +382,7 @@ export class KitWalletCore {
     }
 
     async connectWallet(connectorId: WalletConnectorId, options?: ConnectOptions): Promise<void> {
+        await this.settleChainSwap();
         const client = this.requireClient();
         const uiWallet = this.findUiWalletById(connectorId);
         if (!uiWallet) {
@@ -365,6 +432,7 @@ export class KitWalletCore {
     async disconnect(): Promise<void> {
         this.lastError = null;
         this.connectingConnectorId = null;
+        await this.settleChainSwap();
         const client = this.client;
         if (!client) return;
         await client.wallet.disconnect();
@@ -380,6 +448,7 @@ export class KitWalletCore {
      * never appears.
      */
     async selectAccount(address: string): Promise<void> {
+        await this.settleChainSwap();
         const client = this.requireClient();
         const connected = client.wallet.getState().connected;
         if (!connected) {
@@ -425,7 +494,11 @@ export class KitWalletCore {
                 autoConnect: opts?.autoConnect ?? this.options.autoConnect ?? false,
                 chain: chain as `${string}:${string}`,
                 filter: display ? wallet => applyWalletDisplayConfig([wallet], display).length > 0 : undefined,
-                storage: walletStorage ? toKitWalletStorage(walletStorage, opts?.suppressRemove) : undefined,
+                storage: walletStorage
+                    ? toKitWalletStorage(walletStorage, opts?.suppressRemove)
+                    : opts?.suppressRemove
+                      ? toGuardedDefaultStorage(opts.suppressRemove)
+                      : undefined,
                 storageKey: KIT_WALLET_STORAGE_KEY,
             }),
         ) as unknown as KitWalletClient;
@@ -445,6 +518,36 @@ export class KitWalletCore {
             disposeClient(this.client);
             this.client = null;
         }
+    }
+
+    /**
+     * Hold a wallet action until an in-flight chain swap completes. Run on the
+     * outgoing client, the action would target the previous chain, and the
+     * swap would then replace the connection state it produced.
+     */
+    private async settleChainSwap(): Promise<void> {
+        const pending = this.pendingSwap;
+        if (pending) {
+            await pending.warmedUp;
+            this.completeChainSwap(pending);
+        }
+        this.releaseSwapGuard?.();
+        this.releaseSwapGuard = null;
+    }
+
+    private completeChainSwap(pending: PendingChainSwap): void {
+        // Already attached on behalf of a wallet action, or discarded by a
+        // destroy() or a newer switch
+        if (this.pendingSwap !== pending) return;
+        this.pendingSwap = null;
+        this.attachClient(pending.client);
+    }
+
+    private discardPendingSwap(): void {
+        const pending = this.pendingSwap;
+        if (!pending) return;
+        this.pendingSwap = null;
+        disposeClient(pending.client);
     }
 
     private requireClient(): KitWalletClient {

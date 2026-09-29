@@ -331,6 +331,143 @@ describe('KitWalletCore', () => {
         }
     });
 
+    it('does not wipe the default storage when silent reconnect fails during setChain', async () => {
+        setupMockWindow();
+        try {
+            const account = createMockWalletAccount(TEST_ADDRESSES.ACCOUNT_1);
+            const wallet = createMockPhantomWallet({ accounts: [account] });
+            registerWallet(wallet);
+            // No consumer adapter: the plugin persists to localStorage itself
+            const walletCore = createCore();
+
+            await walletCore.connectWallet(createConnectorId('Phantom'));
+            await waitForCondition(() => localStorage.getItem('connector-kit:v1:kit-wallet') !== null, {
+                timeout: 2000,
+            });
+
+            vi.mocked(wallet.features['standard:connect'].connect).mockRejectedValue(new Error('silent rejected'));
+            await walletCore.setChain('solana:devnet');
+
+            expect(localStorage.getItem('connector-kit:v1:kit-wallet')).toBe(`Phantom:${TEST_ADDRESSES.ACCOUNT_1}`);
+        } finally {
+            cleanupMockWindow();
+        }
+    });
+
+    it('holds a connect made during a chain swap until the replacement client is attached', async () => {
+        setupMockWindow();
+        try {
+            registerWallet(createMockPhantomWallet({ accounts: [createMockWalletAccount(TEST_ADDRESSES.ACCOUNT_1)] }));
+            registerWallet(createMockSolflareWallet({ accounts: [createMockWalletAccount(TEST_ADDRESSES.ACCOUNT_2)] }));
+            const walletCore = createCore();
+            await walletCore.connectWallet(createConnectorId('Phantom'));
+            await waitForCondition(() => localStorage.getItem('connector-kit:v1:kit-wallet') !== null, {
+                timeout: 2000,
+            });
+
+            // Connect to another wallet while the replacement client is still
+            // warming up. Run on the outgoing client, the swap would then
+            // attach a client that restored Phantom and drop this connection.
+            const swap = walletCore.setChain('solana:devnet');
+            await walletCore.connectWallet(createConnectorId('Solflare'));
+            await swap;
+
+            const state = stateManager.getSnapshot();
+            expect(state.wallet.status).toBe('connected');
+            expect(state.selectedAccount).toBe(TEST_ADDRESSES.ACCOUNT_2);
+            await waitForCondition(
+                () => localStorage.getItem('connector-kit:v1:kit-wallet') === `Solflare:${TEST_ADDRESSES.ACCOUNT_2}`,
+                { timeout: 2000 },
+            );
+        } finally {
+            cleanupMockWindow();
+        }
+    });
+
+    it('clears persistence on a disconnect made during a chain swap', async () => {
+        setupMockWindow();
+        try {
+            registerWallet(createMockPhantomWallet({ accounts: [createMockWalletAccount(TEST_ADDRESSES.ACCOUNT_1)] }));
+            const walletCore = createCore();
+            await walletCore.connectWallet(createConnectorId('Phantom'));
+            await waitForCondition(() => localStorage.getItem('connector-kit:v1:kit-wallet') !== null, {
+                timeout: 2000,
+            });
+
+            const swap = walletCore.setChain('solana:devnet');
+            await walletCore.disconnect();
+            await swap;
+
+            await waitForCondition(() => localStorage.getItem('connector-kit:v1:kit-wallet') === null, {
+                timeout: 2000,
+            });
+            expect(stateManager.getSnapshot().connected).toBe(false);
+        } finally {
+            cleanupMockWindow();
+        }
+    });
+
+    it('attaches the replacement client once the warm-up timeout elapses', async () => {
+        setupMockWindow();
+        try {
+            const account = createMockWalletAccount(TEST_ADDRESSES.ACCOUNT_1);
+            const wallet = createMockPhantomWallet({ accounts: [account] });
+            registerWallet(wallet);
+            const walletCore = createCore();
+            await walletCore.connectWallet(createConnectorId('Phantom'));
+            await waitForCondition(() => localStorage.getItem('connector-kit:v1:kit-wallet') !== null, {
+                timeout: 2000,
+            });
+
+            // A silent reconnect the wallet never answers
+            vi.mocked(wallet.features['standard:connect'].connect).mockImplementation(() => new Promise(() => {}));
+
+            vi.useFakeTimers();
+            let settled = false;
+            const swap = walletCore.setChain('solana:devnet').then(() => {
+                settled = true;
+            });
+            await vi.advanceTimersByTimeAsync(4_000);
+            expect(settled).toBe(false);
+            expect(stateManager.getSnapshot().connected).toBe(true);
+
+            await vi.advanceTimersByTimeAsync(1_000);
+            await swap;
+
+            // The replacement is attached while it is still reconnecting, and
+            // the persisted session survives the wait.
+            expect(stateManager.getSnapshot().wallet.status).toBe('connecting');
+            expect(localStorage.getItem('connector-kit:v1:kit-wallet')).toBe(`Phantom:${TEST_ADDRESSES.ACCOUNT_1}`);
+        } finally {
+            vi.useRealTimers();
+            cleanupMockWindow();
+        }
+    });
+
+    it('emits wallet:connected for a session restored after destroy and restart', async () => {
+        setupMockWindow();
+        try {
+            const account = createMockWalletAccount(TEST_ADDRESSES.ACCOUNT_1);
+            registerWallet(createMockPhantomWallet({ accounts: [account] }));
+            const walletCore = createCore({ autoConnect: true });
+
+            await walletCore.connectWallet(createConnectorId('Phantom'));
+            await waitForCondition(() => localStorage.getItem('connector-kit:v1:kit-wallet') !== null, {
+                timeout: 2000,
+            });
+
+            // React StrictMode: mount → cleanup (destroy) → mount (start)
+            walletCore.destroy();
+            events.length = 0;
+            walletCore.start('solana:mainnet');
+
+            await waitForCondition(() => events.some(e => e.type === 'wallet:connected'), { timeout: 2000 });
+            expect(events.some(e => e.type === 'wallets:detected')).toBe(true);
+        } finally {
+            cleanupMockWindow();
+        }
+    });
+
     it('silently restores a persisted session with autoConnect', async () => {
         setupMockWindow();
         try {
