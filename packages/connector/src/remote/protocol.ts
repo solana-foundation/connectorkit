@@ -23,6 +23,12 @@ export interface RemoteSignerCapabilities {
     signMessage: boolean;
     /** Supports sign + send in one operation (server broadcasts) */
     signAndSendTransaction: boolean;
+    /**
+     * Transaction versions the signer accepts (e.g. `['legacy', 0, 1]`).
+     * Optional for wire compatibility: servers that omit it are assumed to
+     * handle legacy and version 0 only.
+     */
+    supportedTransactionVersions?: ('legacy' | number)[];
 }
 
 /**

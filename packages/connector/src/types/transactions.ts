@@ -76,6 +76,16 @@ export interface SignedTransaction {
 }
 
 /**
+ * A transaction version a wallet may advertise support for.
+ *
+ * Forward-compatible superset of wallet-standard's `SolanaTransactionVersion`
+ * (`'legacy' | 0 | 1` as of `@solana/wallet-standard-features` 1.5). The
+ * widened type is kept so permissive reads and the remote-signer protocol
+ * tolerate versions newer than the installed wallet-standard typings.
+ */
+export type SolanaTransactionVersionLike = 'legacy' | number;
+
+/**
  * Capabilities that a transaction signer supports
  * Useful for conditionally enabling/disabling UI features
  */
@@ -88,6 +98,12 @@ export interface TransactionSignerCapabilities {
     canSignMessage: boolean;
     /** Can sign multiple transactions at once */
     supportsBatchSigning: boolean;
+    /**
+     * Transaction versions the wallet advertises on its sign features.
+     * Absent when the wallet declares none — treat that as "unknown, assume
+     * legacy/v0 only".
+     */
+    supportedTransactionVersions?: readonly SolanaTransactionVersionLike[];
 }
 
 /**

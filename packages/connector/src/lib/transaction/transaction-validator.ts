@@ -5,16 +5,24 @@
  * Helps ensure transaction safety and proper error handling
  */
 
+import { getCompiledTransactionMessageDecoder } from '@solana/transaction-messages';
+import { getTransactionDecoder } from '@solana/transactions';
 import type { SolanaTransaction } from '../../types/transactions';
+import { getTransactionVersionFromBytes } from '../../utils/transaction-format';
 import { createLogger } from '../utils/secure-logger';
 
 const logger = createLogger('TransactionValidator');
 
 /**
- * Maximum transaction size in bytes (Solana network limit)
- * Solana enforces a 1232 byte limit for serialized transactions
+ * Maximum size in bytes for legacy and version 0 transactions
+ * (Solana's original 1232 byte network limit)
  */
 export const MAX_TRANSACTION_SIZE = 1232;
+
+/**
+ * Maximum size in bytes for version 1 transactions (SIMD-0296)
+ */
+export const MAX_TRANSACTION_SIZE_V1 = 4096;
 
 /**
  * Minimum reasonable transaction size (empty transaction with signature)
@@ -39,7 +47,10 @@ export interface TransactionValidationResult {
  * Options for transaction validation
  */
 export interface TransactionValidationOptions {
-    /** Maximum allowed transaction size (default: 1232) */
+    /**
+     * Maximum allowed transaction size. Defaults to the limit for the
+     * transaction's version: 1232 bytes for legacy/v0, 4096 bytes for v1.
+     */
     maxSize?: number;
     /** Minimum required transaction size (default: 64) */
     minSize?: number;
@@ -84,12 +95,7 @@ export class TransactionValidator {
         transaction: SolanaTransaction,
         options: TransactionValidationOptions = {},
     ): TransactionValidationResult {
-        const {
-            maxSize = MAX_TRANSACTION_SIZE,
-            minSize = MIN_TRANSACTION_SIZE,
-            checkDuplicateSignatures = true,
-            strict = false,
-        } = options;
+        const { maxSize, minSize = MIN_TRANSACTION_SIZE, checkDuplicateSignatures = true, strict = false } = options;
 
         const errors: string[] = [];
         const warnings: string[] = [];
@@ -132,10 +138,31 @@ export class TransactionValidator {
             if (serialized) {
                 size = serialized.length;
 
+                // The size limit depends on the transaction version: v1 (SIMD-0296)
+                // raised it from 1232 to 4096 bytes. The larger limit is granted
+                // only when the bytes actually decode as a transaction — a
+                // high-bit first byte alone is not proof, and arbitrary blobs
+                // must not gain 4096 bytes of headroom. An explicit maxSize
+                // always wins; unclassifiable bytes keep the legacy/v0 limit.
+                const sniffedVersion = getTransactionVersionFromBytes(serialized);
+                const isVerifiedV1OrNewer =
+                    typeof sniffedVersion === 'number' &&
+                    sniffedVersion >= 1 &&
+                    this.isDecodableTransaction(serialized);
+                const version =
+                    typeof sniffedVersion === 'number' && sniffedVersion >= 1 && !isVerifiedV1OrNewer
+                        ? null
+                        : sniffedVersion;
+                const effectiveMaxSize =
+                    maxSize ?? (isVerifiedV1OrNewer ? MAX_TRANSACTION_SIZE_V1 : MAX_TRANSACTION_SIZE);
+
                 // Check maximum size
-                if (size > maxSize) {
-                    errors.push(`Transaction too large: ${size} bytes (max ${maxSize} bytes)`);
-                    logger.warn('Transaction exceeds maximum size', { size, maxSize });
+                if (size > effectiveMaxSize) {
+                    const versionLabel = version === null ? 'unknown' : version;
+                    errors.push(
+                        `Transaction too large: ${size} bytes (max ${effectiveMaxSize} bytes for version ${versionLabel})`,
+                    );
+                    logger.warn('Transaction exceeds maximum size', { maxSize: effectiveMaxSize, size, version });
                 }
 
                 // Check minimum size
@@ -200,6 +227,25 @@ export class TransactionValidator {
             warnings,
             size,
         };
+    }
+
+    /**
+     * Whether the bytes decode as a supported transaction wire layout.
+     * Used to gate the v1 size limit: kit's transaction decoder only splits
+     * signatures from message bytes, so the compiled message is parsed too
+     * (with full byte consumption required) — arbitrary blobs behind a v1
+     * discriminator must not pass.
+     */
+    private static isDecodableTransaction(serialized: Uint8Array): boolean {
+        try {
+            const [transaction, transactionBytesConsumed] = getTransactionDecoder().read(serialized, 0);
+            if (transactionBytesConsumed !== serialized.length) return false;
+            const messageBytes = transaction.messageBytes as unknown as Uint8Array;
+            const [, messageBytesConsumed] = getCompiledTransactionMessageDecoder().read(messageBytes, 0);
+            return messageBytesConsumed === messageBytes.length;
+        } catch {
+            return false;
+        }
     }
 
     /**

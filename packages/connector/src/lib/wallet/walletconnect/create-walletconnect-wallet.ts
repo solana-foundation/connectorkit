@@ -17,7 +17,10 @@ import type {
     WalletConnectSignAllTransactionsResult,
     WalletConnectSignAndSendTransactionResult,
 } from '../../../types/walletconnect';
+import type { Address } from '@solana/addresses';
 import { getBase58Encoder, getBase58Decoder } from '@solana/codecs';
+import type { SignatureBytes } from '@solana/keys';
+import { getTransactionDecoder, getTransactionEncoder } from '@solana/transactions';
 
 // WalletConnect icon (official WC logo as SVG data URI)
 const WALLETCONNECT_ICON: WalletIcon =
@@ -81,86 +84,32 @@ function decodeTransaction(encoded: string): Uint8Array {
 }
 
 /**
- * Decode shortvec-encoded length prefix from serialized transaction
+ * Inject a signer's signature into a serialized transaction.
+ *
+ * Uses kit's transaction codec instead of hand-rolled wire parsing, so it
+ * works identically for legacy, v0, and v1 (SIMD-0385) transactions — the
+ * codec owns the wire layout, including v1's tail-positioned signatures.
  */
-function decodeShortVecLength(data: Uint8Array): { length: number; bytesConsumed: number } {
-    let length = 0;
-    let size = 0;
-
-    for (;;) {
-        if (size >= data.length) {
-            throw new Error('Invalid shortvec encoding: unexpected end of data');
-        }
-        const byte = data[size];
-        length |= (byte & 0x7f) << (size * 7);
-        size += 1;
-
-        if ((byte & 0x80) === 0) {
-            break;
-        }
-        if (size > 10) {
-            throw new Error('Invalid shortvec encoding: length prefix too long');
-        }
-    }
-
-    return { length, bytesConsumed: size };
-}
-
-/**
- * Parse transaction message to find the index of a signer
- */
-function findSignerIndex(txBytes: Uint8Array, signerPubkeyBase58: string): number {
-    const { length: numSignatures, bytesConsumed: sigCountSize } = decodeShortVecLength(txBytes);
-    const messageOffset = sigCountSize + numSignatures * 64;
-    const messageBytes = txBytes.subarray(messageOffset);
-
-    // Parse message header
-    let offset = 0;
-
-    // Check for version byte (0x80 = version 0)
-    if (messageBytes[0] === 0x80) {
-        offset = 1;
-    }
-
-    // Read header (3 bytes)
-    const numSignerAccounts = messageBytes[offset];
-    offset += 3;
-
-    // Read static accounts array
-    const { length: numStaticAccounts, bytesConsumed } = decodeShortVecLength(messageBytes.subarray(offset));
-    offset += bytesConsumed;
-
-    // Search for the signer pubkey in the static accounts
-    const base58Decoder = getBase58Decoder();
-    for (let i = 0; i < Math.min(numStaticAccounts, numSignerAccounts); i++) {
-        const accountBytes = messageBytes.subarray(offset + i * 32, offset + (i + 1) * 32);
-        const accountAddress = base58Decoder.decode(accountBytes);
-        if (accountAddress === signerPubkeyBase58) {
-            return i;
-        }
-    }
-
-    return -1;
-}
-
-/**
- * Inject a signature into a serialized transaction at the specified signer index
- */
-function injectSignature(txBytes: Uint8Array, signerIndex: number, signatureBase58: string): Uint8Array {
-    const { bytesConsumed: sigCountSize } = decodeShortVecLength(txBytes);
-
-    // Decode signature from base58 to bytes
+function injectSignature(txBytes: Uint8Array, signerAddress: string, signatureBase58: string): Uint8Array {
     const signatureBytes = getBase58Encoder().encode(signatureBase58);
     if (signatureBytes.length !== 64) {
         throw new Error(`Invalid signature length: expected 64 bytes, got ${signatureBytes.length}`);
     }
 
-    // Create a copy and inject the signature
-    const result = new Uint8Array(txBytes);
-    const signatureOffset = sigCountSize + signerIndex * 64;
-    result.set(signatureBytes, signatureOffset);
+    const transaction = getTransactionDecoder().decode(txBytes);
+    if (!(signerAddress in transaction.signatures)) {
+        throw new Error('Signer pubkey not found in transaction');
+    }
 
-    return result;
+    return new Uint8Array(
+        getTransactionEncoder().encode({
+            ...transaction,
+            signatures: {
+                ...transaction.signatures,
+                [signerAddress as Address]: signatureBytes as SignatureBytes,
+            },
+        }),
+    );
 }
 
 /**
@@ -181,6 +130,15 @@ function toWalletAccount(account: WalletConnectSolanaAccount, chains: readonly s
  */
 export function createWalletConnectWallet(config: WalletConnectConfig, transport: WalletConnectTransport): Wallet {
     const chains = (config.defaultChain ? [config.defaultChain] : DEFAULT_CHAINS) as readonly `${string}:${string}`[];
+
+    // The WalletConnect protocol cannot discover the remote wallet's actual
+    // transaction-version support, so advertise the universally safe
+    // legacy/v0 floor unless the app overrides it (e.g. with ['legacy', 0, 1]
+    // for a wallet known to handle v1 / SIMD-0296).
+    const supportedTransactionVersions: readonly ('legacy' | number)[] = config.supportedTransactionVersions ?? [
+        'legacy',
+        0,
+    ];
 
     // Function to get the current CAIP chain ID dynamically
     function getCurrentCaipChainId(): string {
@@ -349,6 +307,7 @@ export function createWalletConnectWallet(config: WalletConnectConfig, transport
             // Solana sign transaction feature
             'solana:signTransaction': {
                 version: '1.0.0',
+                supportedTransactionVersions,
                 signTransaction: async ({
                     account,
                     transaction,
@@ -376,11 +335,7 @@ export function createWalletConnectWallet(config: WalletConnectConfig, transport
                         signedTransaction = decodeTransaction(result.transaction);
                     } else if (result.signature) {
                         // Wallet returned only the signature, inject it into the original transaction
-                        const signerIndex = findSignerIndex(transaction, account.address);
-                        if (signerIndex < 0) {
-                            throw new Error('Signer pubkey not found in transaction');
-                        }
-                        signedTransaction = injectSignature(transaction, signerIndex, result.signature);
+                        signedTransaction = injectSignature(transaction, account.address, result.signature);
                     } else {
                         throw new Error('Invalid solana_signTransaction response: no signature or transaction');
                     }
@@ -392,6 +347,7 @@ export function createWalletConnectWallet(config: WalletConnectConfig, transport
             // Solana sign all transactions feature
             'solana:signAllTransactions': {
                 version: '1.0.0',
+                supportedTransactionVersions,
                 signAllTransactions: async ({
                     account,
                     transactions,
@@ -437,6 +393,7 @@ export function createWalletConnectWallet(config: WalletConnectConfig, transport
             // Solana sign and send transaction feature
             'solana:signAndSendTransaction': {
                 version: '1.0.0',
+                supportedTransactionVersions,
                 signAndSendTransaction: async ({
                     transaction,
                     options,

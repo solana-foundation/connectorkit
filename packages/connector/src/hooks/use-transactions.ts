@@ -1080,7 +1080,9 @@ export function useTransactions(options: UseTransactionsOptions = {}): UseTransa
                         rpc
                             .getTransaction(toSignature(String(sig.signature)), {
                                 encoding: 'jsonParsed',
-                                maxSupportedTransactionVersion: 0,
+                                // Ceiling, not a target: without 1, fetching any
+                                // v1 (SIMD-0296) transaction errors outright.
+                                maxSupportedTransactionVersion: 1,
                             })
                             .send()
                             .catch(() => null),

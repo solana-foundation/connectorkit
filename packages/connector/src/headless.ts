@@ -84,6 +84,11 @@ export {
 
 export type { TransactionSigner } from './lib/transaction/transaction-signer';
 
+// Transaction version negotiation (v1 / SIMD-0296 aware)
+export { getWalletSupportedTransactionVersions, walletSupportsTransactionVersion } from './utils/transaction-versions';
+export type { SolanaSignFeatureName } from './utils/transaction-versions';
+export type { SolanaTransactionVersionLike } from './types/transactions';
+
 // ============================================================================
 // Off-Chain Message Signing (OCMS)
 // ============================================================================

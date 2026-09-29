@@ -152,6 +152,10 @@ export function createKitSignersFromWallet(
 
     // The signer factories require the feature on the account (not just the
     // wallet) and throw when it is missing, so gate on the account's features.
+    // No transaction-version gating happens here: kit signers pass wire bytes
+    // through regardless of version. Apps deciding whether to build a v1
+    // (SIMD-0296) transaction should check walletSupportsTransactionVersion
+    // from '@solana/connector' before opting in.
     const accountFeatures: readonly string[] = uiWalletAccount.features;
     const hasSignMessage = accountFeatures.includes('solana:signMessage');
     const hasSendTransaction =

@@ -16,9 +16,13 @@ import { prepareTransaction } from './prepare-transaction';
 const FEE_PAYER = address('HMJfh9P8FEF5eVHp3XypYWThUYCQ9sWNZZQQxVP2jjr1');
 const BLOCKHASH = 'GK1nopeF3P8J46dGqq4KfaEWopZU7K65F6CKQXuUdr3z';
 
-function createMockRpc(options: { unitsConsumed?: bigint } = {}) {
+function createMockRpc(options: { unitsConsumed?: bigint; loadedAccountsDataSize?: bigint } = {}) {
     const simulateSend = vi.fn().mockResolvedValue({
-        value: { err: null, unitsConsumed: options.unitsConsumed ?? 1000n },
+        value: {
+            err: null,
+            loadedAccountsDataSize: options.loadedAccountsDataSize,
+            unitsConsumed: options.unitsConsumed ?? 1000n,
+        },
     });
     const blockhashSend = vi.fn().mockResolvedValue({
         value: { blockhash: BLOCKHASH, lastValidBlockHeight: 100n },
@@ -93,6 +97,26 @@ describe('prepareTransaction', () => {
 
         expect(mocks.simulateTransaction).toHaveBeenCalledTimes(1);
         expect(getTransactionMessageComputeUnitLimit(prepared)).toBe(5497);
+    });
+
+    it('estimates and sets both resource limits for a version 1 message', async () => {
+        // Guards the v1 unset-config failure mode: absent computeUnitLimit or
+        // loadedAccountsDataSizeLimit budgets zero (not a default) and the
+        // transaction fails at execution, so preparation must set both.
+        const { rpc, mocks } = createMockRpc({ loadedAccountsDataSize: 2048n, unitsConsumed: 1000n });
+        const transaction = pipe(createTransactionMessage({ version: 1 }), m =>
+            setTransactionMessageFeePayer(FEE_PAYER, m),
+        );
+
+        const prepared = await prepareTransaction({ transaction, rpc });
+
+        expect(mocks.simulateTransaction).toHaveBeenCalledTimes(1);
+        // Compute unit limit carries the same headroom policy as v0.
+        expect(getTransactionMessageComputeUnitLimit(prepared)).toBe(1300);
+        expect(prepared.config?.computeUnitLimit).toBe(1300);
+        expect(prepared.config?.loadedAccountsDataSizeLimit).toBeDefined();
+        expect(prepared.config?.loadedAccountsDataSizeLimit).toBeGreaterThanOrEqual(2048);
+        expect(prepared.lifetimeConstraint.blockhash).toBe(BLOCKHASH);
     });
 
     it('skips simulation entirely with estimateResources: false', async () => {

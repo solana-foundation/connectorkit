@@ -86,6 +86,18 @@ export interface WalletConnectConfig {
     getCurrentChain?: () => 'solana:mainnet' | 'solana:devnet' | 'solana:testnet';
 
     /**
+     * Transaction versions to advertise on the wallet's sign features.
+     *
+     * The WalletConnect protocol has no way to discover what the remote
+     * wallet actually supports, so the default is the universally safe
+     * `['legacy', 0]`. Apps that know their target wallet handles v1
+     * (SIMD-0296) can override this with `['legacy', 0, 1]`.
+     *
+     * @default ['legacy', 0]
+     */
+    supportedTransactionVersions?: readonly ('legacy' | number)[];
+
+    /**
      * Callback invoked when WalletConnect needs to display a connection URI.
      * The app should render this as a QR code or use it for deep linking.
      *

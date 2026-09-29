@@ -2,12 +2,16 @@
 
 import { useMemo } from 'react';
 import type { TransactionSigner } from '@solana/kit';
-import { createClient, solanaRpc } from '@solana/connector/kit';
+import { createClient, solanaRpc, type TransactionPlannerConfig } from '@solana/connector/kit';
 import { signer } from '@solana/kit-plugin-signer';
 import { useConnectorClient, useKitTransactionSigner } from '@solana/connector';
 
-function createKitClient(walletSigner: TransactionSigner, rpcUrl: string) {
-    return createClient().use(signer(walletSigner)).use(solanaRpc({ rpcUrl }));
+function createKitClient(
+    walletSigner: TransactionSigner,
+    rpcUrl: string,
+    transactionConfig?: TransactionPlannerConfig,
+) {
+    return createClient().use(signer(walletSigner)).use(solanaRpc({ rpcUrl, transactionConfig }));
 }
 
 /**
@@ -41,10 +45,19 @@ function hasWebSocketEndpoint(rpcUrl: string): boolean {
     }
 }
 
-export function useKitClient(): UseKitClientReturn {
+export interface UseKitClientOptions {
+    /**
+     * Planner config passed through to `solanaRpc`. Set `{ version: 1, ... }`
+     * to build v1 (SIMD-0296) transactions; omit for the default (version 0).
+     */
+    transactionConfig?: TransactionPlannerConfig;
+}
+
+export function useKitClient(options?: UseKitClientOptions): UseKitClientReturn {
     const { signer: walletSigner } = useKitTransactionSigner();
     const connectorClient = useConnectorClient();
     const rpcUrl = connectorClient?.getRpcUrl() ?? null;
+    const transactionConfig = options?.transactionConfig;
 
     return useMemo(() => {
         if (!walletSigner || !rpcUrl) {
@@ -52,9 +65,9 @@ export function useKitClient(): UseKitClientReturn {
         }
 
         return {
-            client: createKitClient(walletSigner, rpcUrl),
+            client: createKitClient(walletSigner, rpcUrl, transactionConfig),
             ready: true,
             canSendTransactions: hasWebSocketEndpoint(rpcUrl),
         };
-    }, [rpcUrl, walletSigner]);
+    }, [rpcUrl, transactionConfig, walletSigner]);
 }

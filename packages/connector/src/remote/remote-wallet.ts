@@ -147,6 +147,15 @@ export function createRemoteSignerWallet(config: RemoteWalletConfig): Wallet {
         }
     }
 
+    // Transaction versions advertised on the sign features. The remote
+    // protocol lets the server declare its supported versions in the metadata
+    // capabilities (available after connect); before that — or when the server
+    // omits the field — the universally safe legacy/v0 floor is advertised.
+    // Values are widened beyond wallet-standard's `'legacy' | 0 | 1` union so
+    // a server can advertise versions newer than the installed typings.
+    const getSupportedTransactionVersions = (): readonly ('legacy' | number)[] =>
+        metadata?.capabilities.supportedTransactionVersions ?? ['legacy', 0];
+
     // Build features object
     const features: Wallet['features'] = {
         // Standard connect
@@ -216,7 +225,9 @@ export function createRemoteSignerWallet(config: RemoteWalletConfig): Wallet {
         // Solana sign transaction
         'solana:signTransaction': {
             version: '1.0.0',
-            supportedTransactionVersions: ['legacy', 0],
+            get supportedTransactionVersions() {
+                return getSupportedTransactionVersions();
+            },
             signTransaction: async (...inputs: SignTransactionInput[]) => {
                 if (!connected) {
                     throw new RemoteWalletError('Wallet not connected', 'NOT_CONNECTED');
@@ -244,7 +255,9 @@ export function createRemoteSignerWallet(config: RemoteWalletConfig): Wallet {
         // Solana sign all transactions (batch)
         'solana:signAllTransactions': {
             version: '1.0.0',
-            supportedTransactionVersions: ['legacy', 0],
+            get supportedTransactionVersions() {
+                return getSupportedTransactionVersions();
+            },
             signAllTransactions: async (...inputs: SignTransactionInput[]) => {
                 if (!connected) {
                     throw new RemoteWalletError('Wallet not connected', 'NOT_CONNECTED');
@@ -299,7 +312,9 @@ export function createRemoteSignerWallet(config: RemoteWalletConfig): Wallet {
         // Solana sign and send transaction (optional)
         'solana:signAndSendTransaction': {
             version: '1.0.0',
-            supportedTransactionVersions: ['legacy', 0],
+            get supportedTransactionVersions() {
+                return getSupportedTransactionVersions();
+            },
             signAndSendTransaction: async (...inputs: SignAndSendTransactionInput[]) => {
                 if (!connected) {
                     throw new RemoteWalletError('Wallet not connected', 'NOT_CONNECTED');

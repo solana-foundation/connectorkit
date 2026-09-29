@@ -13,6 +13,28 @@
  *
  * <ClientProvider client={client}>...</ClientProvider>
  * ```
+ *
+ * ## Version 1 transactions (SIMD-0296)
+ *
+ * The transaction planner builds version 0 messages by default. To opt into
+ * v1 (4096-byte limit, resource budget embedded in the transaction config),
+ * pass a planner config to the RPC plugin:
+ *
+ * ```ts
+ * const client = createClient()
+ *     .use(walletSigner({ chain: 'solana:devnet' }))
+ *     .use(solanaRpc({
+ *         rpcUrl,
+ *         transactionConfig: { version: 1, priorityFeeLamports: lamports(5_000n) },
+ *     }));
+ * ```
+ *
+ * Note the v1 priority fee is a total lamport amount for the transaction,
+ * not a micro-lamports-per-CU price. Caveats: v1 requires cluster activation
+ * (live on devnet/testnet; mainnet targets Agave v4.2), an RPC whose
+ * simulation returns `loadedAccountsDataSize` (kit's resource estimator
+ * throws otherwise), and a wallet that signs v1 wire bytes — see
+ * `walletSupportsTransactionVersion` in `@solana/connector`.
  */
 
 // Plugin client entrypoint

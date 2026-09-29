@@ -11,7 +11,7 @@ import type { ConnectorDevtoolsPlugin, PluginContext } from '../types';
 import { ICONS } from '../components/icons';
 
 import { bytesToHexPreview, formatByteSize } from '../utils/tx-bytes';
-import { decodeWireTransactionBase64 } from '../utils/tx-decode';
+import { decodeWireTransactionBase64, type DecodedWireTransactionSummary } from '../utils/tx-decode';
 import { copyToClipboard, escapeHtml, getExplorerUrl, truncateMiddle } from '../utils/dom';
 import { createTransactionDetailsState, fetchTransactionDetails, mergeTransactions } from './transactions/details';
 import { formatRelativeTime, safeJsonStringify } from './transactions/format';
@@ -20,6 +20,43 @@ import { renderSentTransactionDetailsPanel } from './transactions/render-sent-de
 import { renderTransactionSimulationPanel } from './transactions/render-simulation';
 import { runTransactionSimulation } from './transactions/simulation/engine';
 import { createTransactionSimulationState, type SimulationCommitment } from './transactions/simulation/state';
+
+/**
+ * Render the priority-fee key/value rows for a decoded transaction summary.
+ *
+ * The unit differs by version and the two do not port: legacy/v0 express the
+ * fee as micro-lamports per compute unit (SetComputeUnitPrice), v1 as a total
+ * lamport amount in the embedded config. For v1 the equivalent per-CU price is
+ * shown alongside for comparison.
+ */
+function renderPriorityFeeRows(summary: DecodedWireTransactionSummary): string {
+    const rows: string[] = [];
+    if (summary.priorityFeeLamports !== undefined) {
+        const { computeUnitLimit, priorityFeeLamports } = summary;
+        const equivalent =
+            computeUnitLimit !== undefined && computeUnitLimit > 0
+                ? ` (≈ ${((priorityFeeLamports * 1_000_000n) / BigInt(computeUnitLimit)).toString()} µ-lamports/CU)`
+                : '';
+        rows.push(
+            `<div class="cdt-k">priority fee (v1)</div><div class="cdt-v">${priorityFeeLamports.toString()} lamports${equivalent}</div>`,
+        );
+    } else {
+        rows.push(
+            `<div class="cdt-k">CU price</div><div class="cdt-v">${summary.computeUnitPriceMicroLamports ? `${summary.computeUnitPriceMicroLamports.toString()} µ-lamports/CU` : 'N/A'}</div>`,
+        );
+    }
+    if (summary.loadedAccountsDataSizeLimit !== undefined) {
+        rows.push(
+            `<div class="cdt-k">loaded accounts data limit</div><div class="cdt-v">${summary.loadedAccountsDataSizeLimit.toLocaleString('en-US')} bytes</div>`,
+        );
+    }
+    if (summary.heapSize !== undefined) {
+        rows.push(
+            `<div class="cdt-k">heap size</div><div class="cdt-v">${summary.heapSize.toLocaleString('en-US')} bytes</div>`,
+        );
+    }
+    return rows.join('\n');
+}
 
 export function createTransactionsPlugin(_maxTransactions = 50): ConnectorDevtoolsPlugin {
     let unsubscribeCache: (() => void) | undefined;
@@ -247,7 +284,7 @@ export function createTransactionsPlugin(_maxTransactions = 50): ConnectorDevtoo
                                 <div class="cdt-k">required signers</div><div class="cdt-v">${selectedInflightDecoded.summary.requiredSigners}</div>
                                 <div class="cdt-k">instructions</div><div class="cdt-v">${selectedInflightDecoded.summary.instructionCount}</div>
                                 <div class="cdt-k">CU limit</div><div class="cdt-v">${selectedInflightDecoded.summary.computeUnitLimit ?? 'N/A'}</div>
-                                <div class="cdt-k">CU price</div><div class="cdt-v">${selectedInflightDecoded.summary.computeUnitPriceMicroLamports ? `${selectedInflightDecoded.summary.computeUnitPriceMicroLamports.toString()} µ-lamports/CU` : 'N/A'}</div>
+                                ${renderPriorityFeeRows(selectedInflightDecoded.summary)}
                                 `
                                         : `
                                 <div class="cdt-k">decode</div><div class="cdt-v">Failed to decode bytes</div>
@@ -258,7 +295,10 @@ export function createTransactionsPlugin(_maxTransactions = 50): ConnectorDevtoo
                                 selectedInflightDecoded
                                     ? `
                                 <div class="cdt-json">${safeJsonStringify(
-                                    selectedInflightDecoded.compiledMessage.instructions.map(ix => ({
+                                    // v1 compiled messages have no `instructions` array
+                                    // (headers/payloads are split); show the embedded
+                                    // config alongside whatever is renderable.
+                                    (selectedInflightDecoded.compiledMessage.instructions ?? []).map(ix => ({
                                         dataHexPreview: ix.data ? bytesToHexPreview(ix.data, 32) : '',
                                         program:
                                             selectedInflightDecoded!.compiledMessage.staticAccounts[
