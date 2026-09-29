@@ -2,7 +2,11 @@ import { type Base64EncodedWireTransaction } from '@solana/kit';
 
 import { getRpcUrl } from '../../../utils/dom';
 import { bytesToBase64, base64ToBytes, bytesToHexPreview } from '../../../utils/tx-bytes';
-import { decodeWireTransactionBase64, decompileMessageFromWireTransactionBase64 } from '../../../utils/tx-decode';
+import {
+    decodeWireTransactionBase64,
+    decompileMessageFromWireTransactionBase64,
+    getCompiledInstructions,
+} from '../../../utils/tx-decode';
 import {
     fetchMultipleAccountsBase64,
     fetchTransactionWireBase64,
@@ -469,11 +473,10 @@ export async function runTransactionSimulation(
         includeSnapshots,
         instructions: decodedInstructions.map(ix => {
             // If we couldn’t decompile instruction data, ensure we have a minimal raw payload.
-            const rawHex = ix.raw.dataHex
-                ? ix.raw.dataHex
-                : decoded.compiledMessage?.instructions?.[ix.index]?.data
-                  ? bytesToHexPreview(decoded.compiledMessage.instructions[ix.index].data as Uint8Array, 256)
-                  : '';
+            const compiledData = decoded.compiledMessage
+                ? getCompiledInstructions(decoded.compiledMessage)[ix.index]?.data
+                : undefined;
+            const rawHex = ix.raw.dataHex ? ix.raw.dataHex : compiledData ? bytesToHexPreview(compiledData, 256) : '';
             return { ...ix, raw: { ...ix.raw, dataHex: rawHex } };
         }),
         key: params.key,

@@ -21,6 +21,18 @@ interface CompiledInstructionLike {
     data?: Uint8Array;
 }
 
+/** v1 compiled messages split each instruction into a header and a payload */
+interface CompiledInstructionHeaderLike {
+    numInstructionAccounts: number;
+    numInstructionDataBytes: number;
+    programAccountIndex: number;
+}
+
+interface CompiledInstructionPayloadLike {
+    instructionAccountIndices: readonly number[];
+    instructionData: Uint8Array;
+}
+
 type CompiledConfigValueLike = { kind: 'u32'; value: number } | { kind: 'u64'; value: bigint };
 
 interface CompiledTransactionMessageLike {
@@ -33,7 +45,8 @@ interface CompiledTransactionMessageLike {
     /** v1 compiled messages carry the embedded transaction config instead */
     configMask?: number;
     configValues?: readonly CompiledConfigValueLike[];
-    instructionHeaders?: readonly unknown[];
+    instructionHeaders?: readonly CompiledInstructionHeaderLike[];
+    instructionPayloads?: readonly CompiledInstructionPayloadLike[];
     numInstructions?: number;
 }
 
@@ -76,6 +89,26 @@ function readU64LE(bytes: Uint8Array, offset: number): bigint | undefined {
     if (bytes.byteLength < offset + 8) return;
     const view = new DataView(bytes.buffer, bytes.byteOffset + offset, 8);
     return view.getBigUint64(0, true);
+}
+
+/**
+ * The instructions of a compiled message in one shape for every version.
+ *
+ * Legacy/v0 compiled messages carry an `instructions` array. v1 (SIMD-0296)
+ * messages have none: each instruction is split into a header (program index
+ * and lengths) and a payload (account indices and data), paired by position.
+ */
+export function getCompiledInstructions(
+    compiledMessage: CompiledTransactionMessageLike,
+): readonly CompiledInstructionLike[] {
+    if (compiledMessage.instructions) return compiledMessage.instructions;
+
+    const payloads = compiledMessage.instructionPayloads ?? [];
+    return (compiledMessage.instructionHeaders ?? []).map((header, index) => ({
+        accountIndices: payloads[index]?.instructionAccountIndices ?? [],
+        data: payloads[index]?.instructionData,
+        programAddressIndex: header.programAccountIndex,
+    }));
 }
 
 /**
@@ -184,9 +217,11 @@ export function decodeWireTransactionBase64(transactionBase64: string): DecodedW
 
     const budget = getComputeBudgetSummaryFromCompiledMessage(compiledMessage);
 
-    // Legacy/v0 compiled messages carry an `instructions` array; v1 splits
-    // instructions into headers/payloads and records the count separately.
-    const instructionCount = compiledMessage.instructions?.length ?? compiledMessage.numInstructions ?? 0;
+    // Prefer the count a v1 message records over the headers that decoded
+    const instructionCount =
+        compiledMessage.instructions?.length ??
+        compiledMessage.numInstructions ??
+        getCompiledInstructions(compiledMessage).length;
 
     return {
         compiledMessage,

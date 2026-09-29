@@ -11,7 +11,11 @@ import type { ConnectorDevtoolsPlugin, PluginContext } from '../types';
 import { ICONS } from '../components/icons';
 
 import { bytesToHexPreview, formatByteSize } from '../utils/tx-bytes';
-import { decodeWireTransactionBase64, type DecodedWireTransactionSummary } from '../utils/tx-decode';
+import {
+    decodeWireTransactionBase64,
+    getCompiledInstructions,
+    type DecodedWireTransactionSummary,
+} from '../utils/tx-decode';
 import { copyToClipboard, escapeHtml, getExplorerUrl, truncateMiddle } from '../utils/dom';
 import { createTransactionDetailsState, fetchTransactionDetails, mergeTransactions } from './transactions/details';
 import { formatRelativeTime, safeJsonStringify } from './transactions/format';
@@ -295,10 +299,7 @@ export function createTransactionsPlugin(_maxTransactions = 50): ConnectorDevtoo
                                 selectedInflightDecoded
                                     ? `
                                 <div class="cdt-json">${safeJsonStringify(
-                                    // v1 compiled messages have no `instructions` array
-                                    // (headers/payloads are split); show the embedded
-                                    // config alongside whatever is renderable.
-                                    (selectedInflightDecoded.compiledMessage.instructions ?? []).map(ix => ({
+                                    getCompiledInstructions(selectedInflightDecoded.compiledMessage).map(ix => ({
                                         dataHexPreview: ix.data ? bytesToHexPreview(ix.data, 32) : '',
                                         program:
                                             selectedInflightDecoded!.compiledMessage.staticAccounts[
