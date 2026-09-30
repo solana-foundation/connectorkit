@@ -24,7 +24,7 @@
         "clean": "rm -rf dist"
     },
     "peerDependencies": {
-        "@solana/connector": ">=0.3.0"
+        "@solana/connector": ">=0.2.6"
     },
     "peerDependenciesMeta": {
         "@solana/connector": {
