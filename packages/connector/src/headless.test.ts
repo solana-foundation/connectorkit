@@ -77,10 +77,6 @@ describe('headless entrypoint', () => {
                 createEnhancedStorageAccount,
                 createEnhancedStorageCluster,
                 createEnhancedStorageWallet,
-                createEnhancedStorageWalletState,
-                saveWalletState,
-                clearWalletState,
-                WALLET_STATE_VERSION,
             } = await import('./headless');
 
             expect(EnhancedStorage).toBeDefined();
@@ -88,10 +84,6 @@ describe('headless entrypoint', () => {
             expect(createEnhancedStorageAccount).toBeDefined();
             expect(createEnhancedStorageCluster).toBeDefined();
             expect(createEnhancedStorageWallet).toBeDefined();
-            expect(createEnhancedStorageWalletState).toBeDefined();
-            expect(saveWalletState).toBeDefined();
-            expect(clearWalletState).toBeDefined();
-            expect(WALLET_STATE_VERSION).toBe(1);
         });
 
         it('should export wallet error utilities without React', async () => {
@@ -139,17 +131,12 @@ describe('headless entrypoint', () => {
         });
 
         it('should export transaction signing utilities without React', async () => {
-            const {
-                createTransactionSigner,
-                TransactionSignerError,
-                isTransactionSignerError,
-                createKitTransactionSigner,
-            } = await import('./headless');
+            const { createTransactionSigner, TransactionSignerError, isTransactionSignerError } =
+                await import('./headless');
 
             expect(createTransactionSigner).toBeDefined();
             expect(TransactionSignerError).toBeDefined();
             expect(isTransactionSignerError).toBeDefined();
-            expect(createKitTransactionSigner).toBeDefined();
         });
 
         it('should export WalletConnect utilities without React', async () => {

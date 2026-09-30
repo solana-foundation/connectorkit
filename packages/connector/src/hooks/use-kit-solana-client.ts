@@ -9,12 +9,39 @@
 
 import { useMemo } from 'react';
 import { createSolanaClient, type SolanaClient, type ModifiedClusterUrl } from '../lib/kit';
+import { resolveRpcUrl } from '../lib/kit/client';
+import type { SolanaClientUrlOrMoniker } from '../lib/kit/rpc';
 import { useCluster } from './use-cluster';
 import { useConnectorClient } from '../ui/connector-provider';
 import type { ClusterType } from '../utils/cluster';
 import { createLogger } from '../lib/utils/secure-logger';
 
 const logger = createLogger('useSolanaClient');
+
+/**
+ * One client per resolved RPC URL, shared across all hook instances.
+ * Kit's subscription transport only coalesces identical subscriptions within
+ * a single transport, so per-hook clients would open one WebSocket per hook;
+ * sharing the client makes N hooks share one socket. An idle cached client
+ * holds no sockets (channels open lazily on the first subscription and close
+ * when the last one ends), so entries never need disposal.
+ */
+const sharedClients = new Map<string, SolanaClient>();
+
+function getSharedSolanaClient(urlOrMoniker: SolanaClientUrlOrMoniker): SolanaClient {
+    const key = resolveRpcUrl(urlOrMoniker).toString();
+    let client = sharedClients.get(key);
+    if (!client) {
+        client = createSolanaClient({ urlOrMoniker: urlOrMoniker as ModifiedClusterUrl });
+        sharedClients.set(key, client);
+    }
+    return client;
+}
+
+/** Test-only escape hatch; not exported from the package entrypoints. */
+export function clearSharedSolanaClientCache(): void {
+    sharedClients.clear();
+}
 
 /**
  * Return value from useSolanaClient hook
@@ -97,23 +124,24 @@ export function useSolanaClient(): UseSolanaClientReturn {
     const { type } = useCluster();
     const connectorClient = useConnectorClient();
 
+    // Read the URL every render and key the memo on it: the cluster type
+    // alone misses a switch between two custom clusters ('custom' both
+    // before and after while the URL changes). useCluster subscribes to
+    // cluster state, so a switch re-renders this hook.
+    const rpcUrl = connectorClient?.getRpcUrl() ?? null;
+
     const client = useMemo(() => {
         if (!type || !connectorClient) return null;
 
         try {
             // ALWAYS prefer the configured RPC URL from cluster config
-            const rpcUrl = connectorClient.getRpcUrl();
             if (rpcUrl) {
-                return createSolanaClient({
-                    urlOrMoniker: rpcUrl as ModifiedClusterUrl,
-                });
+                return getSharedSolanaClient(rpcUrl as ModifiedClusterUrl);
             }
 
             // Fallback to moniker only if no RPC URL configured
             if (type !== 'custom') {
-                return createSolanaClient({
-                    urlOrMoniker: type,
-                });
+                return getSharedSolanaClient(type);
             }
 
             return null;
@@ -121,7 +149,7 @@ export function useSolanaClient(): UseSolanaClientReturn {
             logger.error('Failed to create Solana client', { error });
             return null;
         }
-    }, [type, connectorClient]);
+    }, [type, connectorClient, rpcUrl]);
 
     // Memoize return object to prevent infinite re-renders in consumers
     return useMemo(

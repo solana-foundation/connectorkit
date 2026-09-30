@@ -2,6 +2,7 @@ import type { SolanaCluster, SolanaClusterId } from '@wallet-ui/core';
 import type { Connection } from '@solana/web3.js';
 import type { ClusterType } from './cluster';
 import { getClusterType, isMainnetCluster, isDevnetCluster, isTestnetCluster } from './cluster';
+import { getClusterTypeFromRpcEndpoint } from './rpc-endpoint';
 
 export const SOLANA_CHAIN_IDS = {
     mainnet: 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp',
@@ -97,25 +98,7 @@ export function getClusterTypeFromConnection(connection: Connection | null): Clu
         return null;
     }
 
-    const rpcUrl = connection.rpcEndpoint || '';
-
-    if (rpcUrl.includes('mainnet') || rpcUrl.includes('api.mainnet-beta')) {
-        return 'mainnet';
-    }
-
-    if (rpcUrl.includes('testnet')) {
-        return 'testnet';
-    }
-
-    if (rpcUrl.includes('devnet')) {
-        return 'devnet';
-    }
-
-    if (rpcUrl.includes('localhost') || rpcUrl.includes('127.0.0.1')) {
-        return 'localnet';
-    }
-
-    return 'custom';
+    return getClusterTypeFromRpcEndpoint(connection.rpcEndpoint || '');
 }
 
 export function getChainIdFromConnection(

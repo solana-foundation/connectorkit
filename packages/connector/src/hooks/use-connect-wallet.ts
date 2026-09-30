@@ -32,7 +32,7 @@ export interface UseConnectWalletReturn {
      * Connect to a wallet by connector ID.
      *
      * @param connectorId - Stable connector identifier (e.g., 'wallet-standard:phantom')
-     * @param options - Connection options (silent mode, preferred account)
+     * @param options - Connection options (preferred account)
      */
     connect: (connectorId: WalletConnectorId, options?: ConnectOptions) => Promise<void>;
 
@@ -54,7 +54,7 @@ export interface UseConnectWalletReturn {
 
 /**
  * Hook to connect to a wallet by connector ID.
- * Uses the vNext connectWallet API with silent-first support.
+ * Uses the vNext connectWallet API.
  */
 export function useConnectWallet(): UseConnectWalletReturn {
     const client = useContext(ConnectorContext);

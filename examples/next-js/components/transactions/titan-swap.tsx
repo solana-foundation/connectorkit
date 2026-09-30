@@ -89,6 +89,7 @@ export function TitanSwap() {
 
                 visualPipeline.setStepState('Swap transaction', { type: 'signing' });
 
+                // Uses address lookup tables, which v1 (SIMD-0296) dropped — this stays a v0 transaction.
                 const exportedTransaction = await new TransactionBuilder({
                     rpc,
                     computeUnits,

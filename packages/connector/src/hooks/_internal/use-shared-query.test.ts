@@ -1,6 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
-import { useSharedQuery, clearSharedQueryCache } from './use-shared-query';
+import {
+    useSharedQuery,
+    clearSharedQueryCache,
+    setSharedQueryData,
+    refetchSharedQueryIfActive,
+} from './use-shared-query';
 
 describe('useSharedQuery', () => {
     beforeEach(() => {
@@ -255,6 +260,100 @@ describe('useSharedQuery', () => {
             });
 
             expect(queryFn).toHaveBeenCalledTimes(2);
+        });
+    });
+
+    describe('setSharedQueryData', () => {
+        it('writes pushed data into an existing entry and notifies subscribers', async () => {
+            const queryFn = vi.fn().mockResolvedValue('initial');
+            const { result } = renderHook(() => useSharedQuery('push-key', queryFn));
+
+            await waitFor(() => {
+                expect(result.current.data).toBe('initial');
+            });
+
+            act(() => {
+                setSharedQueryData<string>('push-key', () => 'pushed');
+            });
+
+            expect(result.current.data).toBe('pushed');
+            expect(result.current.status).toBe('success');
+            expect(result.current.error).toBeNull();
+        });
+
+        it('no-ops for missing entries', () => {
+            expect(() => setSharedQueryData<string>('missing-key', () => 'value')).not.toThrow();
+        });
+
+        it('ignores updaters returning undefined or the previous data', async () => {
+            const queryFn = vi.fn().mockResolvedValue('initial');
+            const { result } = renderHook(() => useSharedQuery('noop-key', queryFn));
+
+            await waitFor(() => {
+                expect(result.current.data).toBe('initial');
+            });
+            const updatedAtBefore = result.current.updatedAt;
+
+            act(() => {
+                setSharedQueryData<string>('noop-key', () => undefined);
+                setSharedQueryData<string>('noop-key', prev => prev);
+            });
+
+            expect(result.current.data).toBe('initial');
+            expect(result.current.updatedAt).toBe(updatedAtBefore);
+        });
+    });
+
+    describe('refetchSharedQueryIfActive', () => {
+        it('refetches when the entry has subscribers', async () => {
+            const queryFn = vi.fn().mockResolvedValue('data');
+            renderHook(() => useSharedQuery('active-key', queryFn));
+
+            await waitFor(() => {
+                expect(queryFn).toHaveBeenCalledTimes(1);
+            });
+
+            act(() => {
+                refetchSharedQueryIfActive('active-key');
+            });
+
+            await waitFor(() => {
+                expect(queryFn).toHaveBeenCalledTimes(2);
+            });
+        });
+
+        it('no-ops when the entry has no subscribers', async () => {
+            const queryFn = vi.fn().mockResolvedValue('data');
+            const { unmount } = renderHook(() => useSharedQuery('inactive-key', queryFn));
+
+            await waitFor(() => {
+                expect(queryFn).toHaveBeenCalledTimes(1);
+            });
+            unmount();
+
+            refetchSharedQueryIfActive('inactive-key');
+            refetchSharedQueryIfActive('never-existed-key');
+
+            await new Promise(resolve => setTimeout(resolve, 50));
+            expect(queryFn).toHaveBeenCalledTimes(1);
+        });
+
+        it('stores fetch errors in the snapshot instead of throwing', async () => {
+            const queryFn = vi.fn().mockResolvedValueOnce('ok').mockRejectedValueOnce(new Error('refetch failed'));
+            const { result } = renderHook(() => useSharedQuery('error-refetch-key', queryFn));
+
+            await waitFor(() => {
+                expect(result.current.data).toBe('ok');
+            });
+
+            act(() => {
+                refetchSharedQueryIfActive('error-refetch-key');
+            });
+
+            await waitFor(() => {
+                expect(result.current.error?.message).toBe('refetch failed');
+            });
+            expect(result.current.data).toBe('ok');
         });
     });
 });

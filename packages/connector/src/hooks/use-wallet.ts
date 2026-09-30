@@ -93,7 +93,7 @@ export function useWallet(): UseWalletReturn {
     const walletStatus = useSyncExternalStore(
         useCallback(cb => client.subscribe(cb), [client]),
         useCallback(() => client.getSnapshot().wallet, [client]),
-        useCallback(() => client.getSnapshot().wallet, [client]),
+        useCallback(() => client.getServerSnapshot().wallet, [client]),
     );
 
     return useMemo(() => {

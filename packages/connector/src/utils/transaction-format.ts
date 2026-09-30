@@ -54,16 +54,68 @@ export function serializeTransaction(tx: SolanaTransaction): Uint8Array {
 }
 
 /**
- * Check if transaction bytes represent a legacy transaction
- * Legacy transactions have high bit = 0, versioned have high bit = 1
- *
- * @param bytes - Serialized transaction bytes
- * @returns True if legacy transaction
+ * Decode a shortvec-encoded (compact-u16) length prefix.
  */
-function isLegacyTransaction(bytes: Uint8Array): boolean {
-    if (bytes.length === 0) return false;
-    // High bit of first byte: 0 = legacy, 1 = versioned
-    return (bytes[0] & 0x80) === 0;
+function decodeShortVecLength(data: Uint8Array): { length: number; bytesConsumed: number } {
+    let length = 0;
+    let size = 0;
+
+    for (;;) {
+        if (size >= data.length) {
+            throw new Error('Invalid shortvec encoding: unexpected end of data');
+        }
+        const byte = data[size];
+        length |= (byte & 0x7f) << (size * 7);
+        size += 1;
+
+        if ((byte & 0x80) === 0) {
+            break;
+        }
+        if (size > 10) {
+            throw new Error('Invalid shortvec encoding: length prefix too long');
+        }
+    }
+
+    return { length, bytesConsumed: size };
+}
+
+/**
+ * Determine the version of a fully serialized transaction from its wire bytes.
+ *
+ * Two wire layouts exist:
+ * - Version 1 and later (SIMD-0385) place a discriminator byte with the high
+ *   bit set at offset 0 (`0x81` = v1) and move signatures to the transaction
+ *   tail, so the version is readable without any parsing.
+ * - Legacy and version 0 start with a shortvec signature count followed by the
+ *   64-byte signatures; the message that follows starts with a version prefix
+ *   byte (`0x80` = v0) or, for legacy, the message header directly.
+ *
+ * A legacy/v0 transaction can never start with a high-bit byte: that would be
+ * a shortvec continuation implying 128+ signatures, which cannot fit inside
+ * the transaction size limit.
+ *
+ * @param bytes - Fully serialized transaction bytes (not a bare message)
+ * @returns `'legacy'`, a numeric version (0, 1, …), or `null` when the bytes
+ *          are too short or malformed to classify. Never throws.
+ */
+export function getTransactionVersionFromBytes(bytes: Uint8Array): 'legacy' | number | null {
+    if (bytes.length === 0) return null;
+
+    // Discriminator wire format (v1+): version readable at byte 0
+    if ((bytes[0] & 0x80) !== 0) {
+        return bytes[0] & 0x7f;
+    }
+
+    // Legacy/v0 wire format: signature-count shortvec, signatures, then message
+    try {
+        const { length: numSignatures, bytesConsumed } = decodeShortVecLength(bytes);
+        const messageOffset = bytesConsumed + numSignatures * 64;
+        if (messageOffset >= bytes.length) return null;
+        const firstMessageByte = bytes[messageOffset];
+        return (firstMessageByte & 0x80) === 0 ? 'legacy' : firstMessageByte & 0x7f;
+    } catch {
+        return null;
+    }
 }
 
 /**
@@ -71,19 +123,32 @@ function isLegacyTransaction(bytes: Uint8Array): boolean {
  * Uses dynamic import to avoid bundling @solana/web3.js
  * Automatically detects legacy vs versioned format
  *
+ * Version 1 transactions (SIMD-0296) cannot be represented by web3.js 1.x:
+ * stable releases have no v1 support at all (read-only support starts at
+ * `1.99.0-beta.0` and only via RPC responses, not wire deserialization), so
+ * v1 bytes are rejected with a descriptive error instead of being misparsed.
+ *
  * @param bytes - Serialized transaction bytes
  * @returns Transaction or VersionedTransaction object
+ * @throws If the bytes are a v1 (or newer) transaction, or fail to deserialize
  */
 export async function deserializeToWeb3jsTransaction(bytes: Uint8Array): Promise<Transaction | VersionedTransaction> {
-    if (isLegacyTransaction(bytes)) {
-        // Legacy transaction - use Transaction.deserialize to preserve legacy-only fields
+    const version = getTransactionVersionFromBytes(bytes);
+    if (typeof version === 'number' && version >= 1) {
+        throw new Error(
+            `Transaction v${version} (SIMD-0296) cannot be represented as a web3.js transaction object. ` +
+                'Keep the transaction as serialized bytes or use @solana/kit codecs instead.',
+        );
+    }
+    if (version === 'legacy' || version === null) {
+        // Legacy transaction - use Transaction.from to preserve legacy-only fields.
+        // Unclassifiable bytes take this path too and fail inside web3.js.
         const { Transaction } = await import('@solana/web3.js');
         return Transaction.from(bytes);
-    } else {
-        // Versioned transaction
-        const { VersionedTransaction } = await import('@solana/web3.js');
-        return VersionedTransaction.deserialize(bytes);
     }
+    // Version 0 transaction
+    const { VersionedTransaction } = await import('@solana/web3.js');
+    return VersionedTransaction.deserialize(bytes);
 }
 
 /**
@@ -101,6 +166,12 @@ export function prepareTransactionForWallet(tx: SolanaTransaction): { serialized
 
 /**
  * Convert signed transaction bytes back to original format if needed
+ *
+ * When `wasWeb3js` is false the bytes pass through untouched, so v1
+ * transactions flow through the wallet-standard path without conversion.
+ * (A web3.js caller can never produce v1 bytes, so the v1 rejection in
+ * {@link deserializeToWeb3jsTransaction} is unreachable from a well-formed
+ * round trip.)
  *
  * @param signedBytes - Signed transaction as Uint8Array
  * @param wasWeb3js - Whether the original was a web3.js object

@@ -91,11 +91,7 @@ export class ConfigurationError extends ConnectorError {
 }
 
 export type ConfigurationErrorCode =
-    | 'MISSING_PROVIDER'
-    | 'INVALID_CLUSTER'
-    | 'CLUSTER_NOT_FOUND'
-    | 'INVALID_CONFIG'
-    | 'INITIALIZATION_FAILED';
+    'MISSING_PROVIDER' | 'INVALID_CLUSTER' | 'CLUSTER_NOT_FOUND' | 'INVALID_CONFIG' | 'INITIALIZATION_FAILED';
 
 export class NetworkError extends ConnectorError {
     readonly code: NetworkErrorCode;
@@ -108,10 +104,7 @@ export class NetworkError extends ConnectorError {
 }
 
 export type NetworkErrorCode =
-    | 'RPC_ERROR'
-    | 'NETWORK_TIMEOUT'
-    | 'NETWORK_UNAVAILABLE'
-    | 'TRANSACTION_SIMULATION_FAILED';
+    'RPC_ERROR' | 'NETWORK_TIMEOUT' | 'NETWORK_UNAVAILABLE' | 'TRANSACTION_SIMULATION_FAILED';
 
 export class TransactionError extends ConnectorError {
     readonly code: TransactionErrorCode;

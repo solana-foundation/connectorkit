@@ -135,6 +135,12 @@ export interface SimplifiedWalletConnectConfig {
      * Optional relay URL override.
      */
     relayUrl?: string;
+    /**
+     * Transaction versions to advertise on the WalletConnect wallet's sign
+     * features. Defaults to `['legacy', 0]`; pass `['legacy', 0, 1]` for a
+     * wallet known to handle v1 (SIMD-0296).
+     */
+    supportedTransactionVersions?: WalletConnectConfig['supportedTransactionVersions'];
 }
 
 /** Extended ConnectorConfig with app metadata */
@@ -347,6 +353,8 @@ function buildWalletConnectConfig(
     const customMetadata = typeof walletConnect === 'object' ? walletConnect.metadata : undefined;
     const customDefaultChain = typeof walletConnect === 'object' ? walletConnect.defaultChain : undefined;
     const customRelayUrl = typeof walletConnect === 'object' ? walletConnect.relayUrl : undefined;
+    const customSupportedTransactionVersions =
+        typeof walletConnect === 'object' ? walletConnect.supportedTransactionVersions : undefined;
 
     return {
         enabled: true,
@@ -359,6 +367,7 @@ function buildWalletConnectConfig(
         },
         defaultChain: customDefaultChain ?? 'solana:mainnet',
         relayUrl: customRelayUrl,
+        supportedTransactionVersions: customSupportedTransactionVersions,
         // Auto-sync with cluster storage
         getCurrentChain: () => {
             if (typeof window === 'undefined') return 'solana:mainnet';

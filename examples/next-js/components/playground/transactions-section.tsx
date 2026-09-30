@@ -3,6 +3,7 @@
 import {
     LegacySolTransfer,
     ModernSolTransfer,
+    V1SolTransfer,
     ModernWalletTransfer,
     TitanSwap,
     titanSwapCode,
@@ -141,38 +142,28 @@ export function LegacySolTransfer() {
         code: `'use client';
 
 import { useCallback, useMemo } from 'react';
-import {
-    createSolanaRpc,
-    pipe,
-    createTransactionMessage,
-    setTransactionMessageFeePayerSigner,
-    setTransactionMessageLifetimeUsingBlockhash,
-    appendTransactionMessageInstructions,
-    sendAndConfirmTransactionFactory,
-    signTransactionMessageWithSigners,
-    createSolanaRpcSubscriptions,
-    lamports,
-    assertIsTransactionWithBlockhashLifetime,
-    signature as createSignature,
-    type TransactionSigner,
-} from '@solana/kit';
+import { lamports } from '@solana/kit';
 import { getTransferSolInstruction } from '@solana-program/system';
-import { useKitTransactionSigner, useCluster, useConnectorClient } from '@solana/connector';
+import { useCluster, useConnectorClient } from '@solana/connector';
+import { getSolanaExplorerUrl } from '@solana/connector/headless';
 import { PipelineHeaderButton, PipelineVisualization } from '@/components/pipeline';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { VisualPipeline } from '@/lib/visual-pipeline';
+import { useKitClient } from '@/lib/kit-client';
 import { useExampleCardHeaderActions } from '@/components/playground/example-card-actions';
-import {
-    getBase58SignatureFromSignedTransaction,
-    getBase64EncodedWireTransaction,
-    getWebSocketUrlForRpcUrl,
-    isRpcProxyUrl,
-    waitForSignatureConfirmation,
-} from './rpc-utils';
 
+/**
+ * Modern Self Transfer Component
+ *
+ * Self-transfers 1 lamport with a @solana/kit plugin client. The connected
+ * wallet fills the client's payer and identity roles, and \`sendTransaction\`
+ * plans the instruction into a transaction message, estimates its compute
+ * budget, signs, sends, and confirms it in one call.
+ */
 export function ModernSolTransfer() {
-    const { signer, ready } = useKitTransactionSigner();
+    const { client: kitClient, ready, canSendTransactions } = useKitClient();
     const { cluster } = useCluster();
-    const client = useConnectorClient();
+    const connectorClient = useConnectorClient();
 
     const visualPipeline = useMemo(
         () =>
@@ -184,82 +175,243 @@ export function ModernSolTransfer() {
     );
 
     const getExplorerUrl = useCallback(
-        (sig: string) => {
-            const clusterSlug = cluster?.id?.replace('solana:', '');
-            if (!clusterSlug || clusterSlug === 'mainnet' || clusterSlug === 'mainnet-beta') {
-                return 'https://explorer.solana.com/tx/' + sig;
-            }
-            return 'https://explorer.solana.com/tx/' + sig + '?cluster=' + clusterSlug;
-        },
+        (signature: string) => getSolanaExplorerUrl(signature, { cluster: cluster?.id.replace('solana:', '') }),
         [cluster?.id],
     );
 
     const executeSelfTransfer = useCallback(async () => {
-        if (!signer || !client) return;
+        if (!kitClient) return;
 
-        const rpcUrl = client.getRpcUrl();
-        if (!rpcUrl) throw new Error('No RPC endpoint configured');
-        const rpc = createSolanaRpc(rpcUrl);
+        try {
+            await visualPipeline.execute(async () => {
+                visualPipeline.setStepState('Build instruction', { type: 'building' });
+                visualPipeline.setStepState('Self transfer', { type: 'building' });
 
-        let signatureBase58: string | null = null;
+                // 1 lamport self-transfer (net effect: only pay fees)
+                const transferInstruction = getTransferSolInstruction({
+                    source: kitClient.payer,
+                    destination: kitClient.payer.address,
+                    amount: lamports(1n),
+                });
 
-        await visualPipeline.execute(async () => {
-            visualPipeline.setStepState('Build instruction', { type: 'building' });
-            visualPipeline.setStepState('Self transfer', { type: 'building' });
+                visualPipeline.setStepState('Self transfer', { type: 'sending' });
 
-            const { value: latestBlockhash } = await rpc.getLatestBlockhash().send();
-            const transferInstruction = getTransferSolInstruction({
-                source: signer as TransactionSigner,
-                destination: signer.address,
-                amount: lamports(1n),
+                const { context } = await kitClient.sendTransaction([transferInstruction]);
+                const signature = context.signature;
+
+                connectorClient?.trackTransaction({
+                    signature,
+                    status: 'confirmed',
+                    method: 'sendTransaction',
+                    feePayer: kitClient.payer.address,
+                });
+
+                visualPipeline.setStepState('Build instruction', { type: 'confirmed', signature, cost: 0 });
+                visualPipeline.setStepState('Self transfer', { type: 'confirmed', signature, cost: 0.000005 });
             });
+        } catch {
+            // The pipeline marks its own steps as failed and renders the error.
+        }
+    }, [connectorClient, kitClient, visualPipeline]);
 
-            const transactionMessage = pipe(
-                createTransactionMessage({ version: 0 }),
-                tx => setTransactionMessageFeePayerSigner(signer, tx),
-                tx => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
-                tx => appendTransactionMessageInstructions([transferInstruction], tx),
-            );
-
-            visualPipeline.setStepState('Self transfer', { type: 'signing' });
-
-            const signedTransaction = await signTransactionMessageWithSigners(transactionMessage);
-            signatureBase58 = getBase58SignatureFromSignedTransaction(signedTransaction);
-
-            visualPipeline.setStepState('Build instruction', { type: 'confirmed', signature: signatureBase58, cost: 0 });
-            visualPipeline.setStepState('Self transfer', { type: 'sending' });
-
-            assertIsTransactionWithBlockhashLifetime(signedTransaction);
-
-            if (isRpcProxyUrl(rpcUrl)) {
-                const encodedTransaction = getBase64EncodedWireTransaction(signedTransaction);
-                await rpc.sendTransaction(encodedTransaction, { encoding: 'base64' }).send();
-                await waitForSignatureConfirmation({
-                    signature: signatureBase58,
-                    commitment: 'confirmed',
-                    getSignatureStatuses: async sig =>
-                        await rpc.getSignatureStatuses([createSignature(sig)]).send(),
-                });
-            } else {
-                const rpcSubscriptions = createSolanaRpcSubscriptions(getWebSocketUrlForRpcUrl(rpcUrl));
-                await sendAndConfirmTransactionFactory({ rpc, rpcSubscriptions })(signedTransaction, {
-                    commitment: 'confirmed',
-                });
-            }
-
-            visualPipeline.setStepState('Self transfer', { type: 'confirmed', signature: signatureBase58, cost: 0.000005 });
-        });
-    }, [client, signer, visualPipeline]);
-
-    useExampleCardHeaderActions(
-        <PipelineHeaderButton visualPipeline={visualPipeline} disabled={!ready || !client} onExecute={executeSelfTransfer} />,
+    const headerAction = useMemo(
+        () => (
+            <PipelineHeaderButton
+                visualPipeline={visualPipeline}
+                disabled={!ready || !canSendTransactions}
+                onExecute={executeSelfTransfer}
+            />
+        ),
+        [canSendTransactions, executeSelfTransfer, ready, visualPipeline],
     );
 
+    useExampleCardHeaderActions(headerAction);
+
     return (
-        <PipelineVisualization visualPipeline={visualPipeline} strategy="sequential" getExplorerUrl={getExplorerUrl} />
+        <div className="w-full flex flex-col">
+            {ready && !canSendTransactions && (
+                <Alert className="mb-3">
+                    <AlertDescription>
+                        This cluster is served by the HTTP-only <code>/api/rpc</code> proxy, which cannot deliver the
+                        signature subscription kit uses to confirm sends. Switch to devnet or testnet to run this
+                        example.
+                    </AlertDescription>
+                </Alert>
+            )}
+            <PipelineVisualization
+                visualPipeline={visualPipeline}
+                strategy="sequential"
+                getExplorerUrl={getExplorerUrl}
+            />
+        </div>
     );
 }`,
         render: () => <ModernSolTransfer />,
+    },
+    {
+        id: 'v1-sol-transfer',
+        name: 'V1 Self Transfer (SIMD-0296)',
+        description:
+            'Self-transfer 1 lamport as a version 1 transaction: 4096-byte limit, compute budget embedded in the transaction config. Devnet/testnet only, requires a wallet advertising v1 support (e.g. the burner wallet).',
+        fileName: 'components/transactions/v1-sol-transfer.tsx',
+        code: `'use client';
+
+import { useCallback, useMemo } from 'react';
+import { lamports } from '@solana/kit';
+import { getTransferSolInstruction } from '@solana-program/system';
+import { useCluster, useConnector, useConnectorClient, walletSupportsTransactionVersion } from '@solana/connector';
+import type { TransactionPlannerConfig } from '@solana/connector/kit';
+import { getSolanaExplorerUrl } from '@solana/connector/headless';
+import { PipelineHeaderButton, PipelineVisualization } from '@/components/pipeline';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { VisualPipeline } from '@/lib/visual-pipeline';
+import { useKitClient } from '@/lib/kit-client';
+import { useExampleCardHeaderActions } from '@/components/playground/example-card-actions';
+
+// Opt the planner into version 1 (SIMD-0296): 4096-byte size limit, resource
+// budget embedded in the transaction config. The priority fee is a total
+// lamport amount for the transaction — not a micro-lamports-per-CU price as
+// in legacy/v0 — and compute/data-size limits are estimated via simulation
+// (unset v1 config fields budget zero, not a default).
+const V1_TRANSACTION_CONFIG: TransactionPlannerConfig = {
+    priorityFeeLamports: lamports(5_000n),
+    version: 1,
+};
+
+// v1 is live on devnet/testnet; mainnet activation ships with Agave v4.2.
+const V1_CLUSTERS = ['solana:devnet', 'solana:testnet', 'solana:localnet'];
+
+/**
+ * V1 Self Transfer Component
+ *
+ * Self-transfers 1 lamport as a version 1 (SIMD-0296) transaction. Identical
+ * plumbing to the modern transfer demo, but the kit client's planner is
+ * configured with \`{ version: 1 }\`, and the send button is gated on a cluster
+ * where v1 is active and a wallet that advertises v1 support (the burner
+ * wallet does; extension wallets don't yet).
+ */
+export function V1SolTransfer() {
+    const {
+        client: kitClient,
+        ready,
+        canSendTransactions,
+    } = useKitClient({ transactionConfig: V1_TRANSACTION_CONFIG });
+    const { cluster } = useCluster();
+    const { connectorId } = useConnector();
+    const connectorClient = useConnectorClient();
+
+    const wallet = useMemo(() => {
+        if (!connectorClient || !connectorId) return null;
+        return connectorClient.getConnector(connectorId);
+    }, [connectorClient, connectorId]);
+
+    const clusterSupportsV1 = cluster ? V1_CLUSTERS.includes(cluster.id) : false;
+    // The kit client signs via the wallet's solana:signTransaction feature, so
+    // gate on that operation's declared versions specifically.
+    const walletSupportsV1 = wallet ? walletSupportsTransactionVersion(wallet, 1, 'solana:signTransaction') : false;
+
+    const visualPipeline = useMemo(
+        () =>
+            new VisualPipeline('v1-self-transfer', [
+                { name: 'Build instruction', type: 'instruction' },
+                { name: 'v1 self transfer', type: 'transaction' },
+            ]),
+        [],
+    );
+
+    const getExplorerUrl = useCallback(
+        (signature: string) => getSolanaExplorerUrl(signature, { cluster: cluster?.id.replace('solana:', '') }),
+        [cluster?.id],
+    );
+
+    const executeSelfTransfer = useCallback(async () => {
+        if (!kitClient) return;
+
+        try {
+            await visualPipeline.execute(async () => {
+                visualPipeline.setStepState('Build instruction', { type: 'building' });
+                visualPipeline.setStepState('v1 self transfer', { type: 'building' });
+
+                // 1 lamport self-transfer (net effect: only pay fees)
+                const transferInstruction = getTransferSolInstruction({
+                    source: kitClient.payer,
+                    destination: kitClient.payer.address,
+                    amount: lamports(1n),
+                });
+
+                visualPipeline.setStepState('v1 self transfer', { type: 'sending' });
+
+                // The planner compiles a version 1 message, sets the embedded
+                // config (CU limit + loaded accounts data size via simulation,
+                // priority fee from the client config), signs, sends, confirms.
+                const { context } = await kitClient.sendTransaction([transferInstruction]);
+                const signature = context.signature;
+
+                connectorClient?.trackTransaction({
+                    signature,
+                    status: 'confirmed',
+                    method: 'sendTransaction',
+                    feePayer: kitClient.payer.address,
+                });
+
+                visualPipeline.setStepState('Build instruction', { type: 'confirmed', signature, cost: 0 });
+                visualPipeline.setStepState('v1 self transfer', { type: 'confirmed', signature, cost: 0.000005 });
+            });
+        } catch {
+            // The pipeline marks its own steps as failed and renders the error.
+        }
+    }, [connectorClient, kitClient, visualPipeline]);
+
+    const canExecute = ready && canSendTransactions && clusterSupportsV1 && walletSupportsV1;
+
+    const headerAction = useMemo(
+        () => (
+            <PipelineHeaderButton
+                visualPipeline={visualPipeline}
+                disabled={!canExecute}
+                onExecute={executeSelfTransfer}
+            />
+        ),
+        [canExecute, executeSelfTransfer, visualPipeline],
+    );
+
+    useExampleCardHeaderActions(headerAction);
+
+    // At most one gating message, in priority order: cluster, then wallet,
+    // then confirmation transport.
+    const gateMessage = !clusterSupportsV1 ? (
+        <>
+            Version 1 transactions are not active on this cluster yet. Switch to devnet or testnet (mainnet activation
+            ships with Agave v4.2).
+        </>
+    ) : !walletSupportsV1 ? (
+        <>
+            The connected wallet does not advertise v1 transaction support (<code>supportedTransactionVersions</code>).
+            Connect the burner wallet to run this example.
+        </>
+    ) : !canSendTransactions ? (
+        <>
+            This cluster is served by the HTTP-only <code>/api/rpc</code> proxy, which cannot deliver the signature
+            subscription kit uses to confirm sends. Switch to devnet or testnet to run this example.
+        </>
+    ) : null;
+
+    return (
+        <div className="w-full flex flex-col">
+            {ready && gateMessage && (
+                <Alert className="mb-3">
+                    <AlertDescription>{gateMessage}</AlertDescription>
+                </Alert>
+            )}
+            <PipelineVisualization
+                visualPipeline={visualPipeline}
+                strategy="sequential"
+                getExplorerUrl={getExplorerUrl}
+            />
+        </div>
+    );
+}`,
+        render: () => <V1SolTransfer />,
     },
     {
         id: 'modern-wallet-transfer',
@@ -269,42 +421,31 @@ export function ModernSolTransfer() {
         code: `'use client';
 
 import { useCallback, useMemo } from 'react';
-import {
-    createSolanaRpc,
-    pipe,
-    createTransactionMessage,
-    setTransactionMessageFeePayerSigner,
-    setTransactionMessageLifetimeUsingBlockhash,
-    appendTransactionMessageInstructions,
-    sendAndConfirmTransactionFactory,
-    signTransactionMessageWithSigners,
-    createSolanaRpcSubscriptions,
-    lamports,
-    assertIsTransactionWithBlockhashLifetime,
-    signature as createSignature,
-    address,
-    type TransactionSigner,
-} from '@solana/kit';
+import { address, lamports } from '@solana/kit';
 import { getTransferSolInstruction } from '@solana-program/system';
-import { useKitTransactionSigner, useCluster, useConnectorClient } from '@solana/connector';
+import { useCluster, useConnectorClient } from '@solana/connector';
+import { getSolanaExplorerUrl } from '@solana/connector/headless';
 import { PipelineHeaderButton, PipelineVisualization } from '@/components/pipeline';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { VisualPipeline } from '@/lib/visual-pipeline';
+import { useKitClient } from '@/lib/kit-client';
 import { useExampleCardHeaderActions } from '@/components/playground/example-card-actions';
-import {
-    getBase58SignatureFromSignedTransaction,
-    getBase64EncodedWireTransaction,
-    getWebSocketUrlForRpcUrl,
-    isRpcProxyUrl,
-    waitForSignatureConfirmation,
-} from './rpc-utils';
 
 // Destination wallet address
 const DESTINATION_ADDRESS = address('A7Xmq3qqt4uvw3GELHw9HHNFbwZzHDJNtmk6fe2p5b5s');
 
+/**
+ * Modern Wallet Transfer Component
+ *
+ * Transfers 1 lamport to another wallet with a @solana/kit plugin client. The
+ * connected wallet fills the client's payer and identity roles, and
+ * \`sendTransaction\` plans the instruction into a transaction message, estimates
+ * its compute budget, signs, sends, and confirms it in one call.
+ */
 export function ModernWalletTransfer() {
-    const { signer, ready } = useKitTransactionSigner();
+    const { client: kitClient, ready, canSendTransactions } = useKitClient();
     const { cluster } = useCluster();
-    const client = useConnectorClient();
+    const connectorClient = useConnectorClient();
 
     const visualPipeline = useMemo(
         () =>
@@ -316,81 +457,74 @@ export function ModernWalletTransfer() {
     );
 
     const getExplorerUrl = useCallback(
-        (sig: string) => {
-            const clusterSlug = cluster?.id?.replace('solana:', '');
-            if (!clusterSlug || clusterSlug === 'mainnet' || clusterSlug === 'mainnet-beta') {
-                return 'https://explorer.solana.com/tx/' + sig;
-            }
-            return 'https://explorer.solana.com/tx/' + sig + '?cluster=' + clusterSlug;
-        },
+        (signature: string) => getSolanaExplorerUrl(signature, { cluster: cluster?.id.replace('solana:', '') }),
         [cluster?.id],
     );
 
     const executeWalletTransfer = useCallback(async () => {
-        if (!signer || !client) return;
+        if (!kitClient) return;
 
-        const rpcUrl = client.getRpcUrl();
-        if (!rpcUrl) throw new Error('No RPC endpoint configured');
-        const rpc = createSolanaRpc(rpcUrl);
+        try {
+            await visualPipeline.execute(async () => {
+                visualPipeline.setStepState('Build instruction', { type: 'building' });
+                visualPipeline.setStepState('Transfer SOL', { type: 'building' });
 
-        let signatureBase58: string | null = null;
+                const transferInstruction = getTransferSolInstruction({
+                    source: kitClient.payer,
+                    destination: DESTINATION_ADDRESS,
+                    amount: lamports(1n),
+                });
 
-        await visualPipeline.execute(async () => {
-            visualPipeline.setStepState('Build instruction', { type: 'building' });
-            visualPipeline.setStepState('Transfer SOL', { type: 'building' });
+                visualPipeline.setStepState('Transfer SOL', { type: 'sending' });
 
-            const { value: latestBlockhash } = await rpc.getLatestBlockhash().send();
-            
-            // Transfer to another wallet instead of self
-            const transferInstruction = getTransferSolInstruction({
-                source: signer as TransactionSigner,
-                destination: DESTINATION_ADDRESS,
-                amount: lamports(1n),
+                const { context } = await kitClient.sendTransaction([transferInstruction]);
+                const signature = context.signature;
+
+                connectorClient?.trackTransaction({
+                    signature,
+                    status: 'confirmed',
+                    method: 'sendTransaction',
+                    feePayer: kitClient.payer.address,
+                });
+
+                visualPipeline.setStepState('Build instruction', { type: 'confirmed', signature, cost: 0 });
+                visualPipeline.setStepState('Transfer SOL', { type: 'confirmed', signature, cost: 0.000005 });
             });
+        } catch {
+            // The pipeline marks its own steps as failed and renders the error.
+        }
+    }, [connectorClient, kitClient, visualPipeline]);
 
-            const transactionMessage = pipe(
-                createTransactionMessage({ version: 0 }),
-                tx => setTransactionMessageFeePayerSigner(signer, tx),
-                tx => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
-                tx => appendTransactionMessageInstructions([transferInstruction], tx),
-            );
-
-            visualPipeline.setStepState('Transfer SOL', { type: 'signing' });
-
-            const signedTransaction = await signTransactionMessageWithSigners(transactionMessage);
-            signatureBase58 = getBase58SignatureFromSignedTransaction(signedTransaction);
-
-            visualPipeline.setStepState('Build instruction', { type: 'confirmed', signature: signatureBase58, cost: 0 });
-            visualPipeline.setStepState('Transfer SOL', { type: 'sending' });
-
-            assertIsTransactionWithBlockhashLifetime(signedTransaction);
-
-            if (isRpcProxyUrl(rpcUrl)) {
-                const encodedTransaction = getBase64EncodedWireTransaction(signedTransaction);
-                await rpc.sendTransaction(encodedTransaction, { encoding: 'base64' }).send();
-                await waitForSignatureConfirmation({
-                    signature: signatureBase58,
-                    commitment: 'confirmed',
-                    getSignatureStatuses: async sig =>
-                        await rpc.getSignatureStatuses([createSignature(sig)]).send(),
-                });
-            } else {
-                const rpcSubscriptions = createSolanaRpcSubscriptions(getWebSocketUrlForRpcUrl(rpcUrl));
-                await sendAndConfirmTransactionFactory({ rpc, rpcSubscriptions })(signedTransaction, {
-                    commitment: 'confirmed',
-                });
-            }
-
-            visualPipeline.setStepState('Transfer SOL', { type: 'confirmed', signature: signatureBase58, cost: 0.000005 });
-        });
-    }, [client, signer, visualPipeline]);
-
-    useExampleCardHeaderActions(
-        <PipelineHeaderButton visualPipeline={visualPipeline} disabled={!ready || !client} onExecute={executeWalletTransfer} />,
+    const headerAction = useMemo(
+        () => (
+            <PipelineHeaderButton
+                visualPipeline={visualPipeline}
+                disabled={!ready || !canSendTransactions}
+                onExecute={executeWalletTransfer}
+            />
+        ),
+        [canSendTransactions, executeWalletTransfer, ready, visualPipeline],
     );
 
+    useExampleCardHeaderActions(headerAction);
+
     return (
-        <PipelineVisualization visualPipeline={visualPipeline} strategy="sequential" getExplorerUrl={getExplorerUrl} />
+        <div className="w-full flex flex-col">
+            {ready && !canSendTransactions && (
+                <Alert className="mb-3">
+                    <AlertDescription>
+                        This cluster is served by the HTTP-only <code>/api/rpc</code> proxy, which cannot deliver the
+                        signature subscription kit uses to confirm sends. Switch to devnet or testnet to run this
+                        example.
+                    </AlertDescription>
+                </Alert>
+            )}
+            <PipelineVisualization
+                visualPipeline={visualPipeline}
+                strategy="sequential"
+                getExplorerUrl={getExplorerUrl}
+            />
+        </div>
     );
 }`,
         render: () => <ModernWalletTransfer />,
@@ -409,20 +543,18 @@ export function ModernWalletTransfer() {
         name: 'Kit Signers',
         description:
             'Create framework-agnostic signers from wallet connections. Supports both transaction signing and message signing with modern Kit APIs.',
-        code: `import { 
-    createKitSignersFromWallet, 
-    createMessageSignerFromWallet, 
-    createSignableMessage 
+        code: `import {
+    createKitSignersFromWallet,
+    createSignableMessage
 } from '@solana/connector/headless';
 import { useConnector, useCluster, useConnectorClient } from '@solana/connector';
-import { Connection } from '@solana/web3.js';
 import { useMemo } from 'react';
 
 function KitSignerDemo() {
     const { walletStatus, connectorId } = useConnector();
-    const { cluster } = useCluster();
+    const { type: clusterType } = useCluster();
     const client = useConnectorClient();
-    
+
     // Get the active connector instance (Wallet Standard)
     const wallet = useMemo(() => {
         if (!client || !connectorId) return null;
@@ -434,21 +566,23 @@ function KitSignerDemo() {
         ? walletStatus.session.selectedAccount.account
         : null;
 
-    // Create Kit-compatible signers from wallet
+    // Create Kit-compatible signers from the wallet. The signers derive their
+    // chain from the connected cluster; no legacy web3.js Connection involved.
     const kitSigners = useMemo(() => {
-        if (!wallet || !account || !cluster || !client) return null;
-        const rpcUrl = client.getRpcUrl();
-        const connection = rpcUrl ? new Connection(rpcUrl) : null;
-        return createKitSignersFromWallet(wallet, account, connection, undefined);
-    }, [wallet, account, cluster, client]);
+        if (!wallet || !account) return null;
+        const network = clusterType === 'mainnet' || clusterType === 'devnet' || clusterType === 'testnet'
+            ? clusterType
+            : undefined;
+        return createKitSignersFromWallet(wallet, account, null, network);
+    }, [wallet, account, clusterType]);
 
     async function signMessage(message: string) {
         if (!kitSigners?.messageSigner) return;
-        
+
         const messageBytes = new TextEncoder().encode(message);
         const signableMessage = createSignableMessage(messageBytes);
         const signedMessages = await kitSigners.messageSigner.modifyAndSignMessages([signableMessage]);
-        
+
         return signedMessages[0].signatures;
     }
 
@@ -548,30 +682,30 @@ function ChainUtilitiesDemo() {
         name: 'Connection Abstraction',
         description:
             'Dual-architecture helpers that work with both legacy @solana/web3.js Connection and modern @solana/kit Rpc clients.',
-        code: `import { useConnectorClient } from '@solana/connector';
+        code: `import { useConnectorClient, useSolanaClient } from '@solana/connector';
 import { getLatestBlockhash, isLegacyConnection, isKitConnection } from '@solana/connector/headless';
-import { createSolanaRpc } from '@solana/kit';
 import { Connection } from '@solana/web3.js';
 
 function ConnectionAbstractionDemo() {
     const client = useConnectorClient();
+    // Kit rpc + rpcSubscriptions for the connected cluster
+    const { client: solanaClient } = useSolanaClient();
 
     // Works with legacy Connection
     async function getBlockhashLegacy() {
         const connection = new Connection(client.getRpcUrl(), 'confirmed');
-        console.log('Is Legacy:', isLegacyConnection(connection)); // true
-        
+        isLegacyConnection(connection); // true
+
         // Same helper works with both connection types!
         return await getLatestBlockhash(connection, 'confirmed');
     }
 
     // Works with Kit Rpc
     async function getBlockhashKit() {
-        const rpc = createSolanaRpc(client.getRpcUrl());
-        console.log('Is Kit:', isKitConnection(rpc)); // true
-        
+        isKitConnection(solanaClient.rpc); // true
+
         // Same helper, different connection type
-        return await getLatestBlockhash(rpc, 'confirmed');
+        return await getLatestBlockhash(solanaClient.rpc, 'confirmed');
     }
 
     return (

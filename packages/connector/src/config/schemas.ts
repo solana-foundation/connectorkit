@@ -73,6 +73,7 @@ export const walletConnectObjectConfigSchema = z.object({
     onSessionEstablished: z.custom<() => void>(val => typeof val === 'function').optional(),
     onSessionDisconnected: z.custom<() => void>(val => typeof val === 'function').optional(),
     relayUrl: urlSchema.optional(),
+    supportedTransactionVersions: z.array(z.union([z.literal('legacy'), z.number()])).optional(),
 });
 
 /**

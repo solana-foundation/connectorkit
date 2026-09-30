@@ -54,7 +54,7 @@ export interface TokenBalance {
 export interface UseBalanceOptions {
     /** Whether the hook is enabled (default: true) */
     enabled?: boolean;
-    /** Whether to auto-refresh balance (default: true) */
+    /** Whether to keep the balance updated via subscription and polling (default: true) */
     autoRefresh?: boolean;
     /** Refresh interval in milliseconds (default: 30000) */
     refreshInterval?: number;
@@ -137,7 +137,7 @@ function selectBalance(assets: WalletAssetsData | undefined): BalanceSelection {
  * - Automatic request deduplication across components
  * - Shared data with useTokens (single RPC query)
  * - Token-2022 support
- * - Shared polling interval (ref-counted)
+ * - Live balance updates via account subscription, with interval polling always running alongside
  * - Configurable auto-refresh behavior
  * - Abort support for in-flight requests
  * - Optional client override
@@ -156,7 +156,7 @@ function selectBalance(assets: WalletAssetsData | undefined): BalanceSelection {
  * ```tsx
  * function Balance() {
  *   const { formattedSol, refetch, abort } = useBalance({
- *     autoRefresh: false,  // Disable polling
+ *     autoRefresh: false,  // Disable live updates and polling
  *     staleTimeMs: 10000,  // Consider data fresh for 10s
  *   });
  *
@@ -211,6 +211,7 @@ export function useBalance(options: UseBalanceOptions = {}): UseBalanceReturn {
         cacheTimeMs,
         refetchOnMount,
         refetchIntervalMs: autoRefresh ? refreshInterval : false,
+        liveUpdates: autoRefresh,
         client: clientOverride,
         select: selectBalance,
     });

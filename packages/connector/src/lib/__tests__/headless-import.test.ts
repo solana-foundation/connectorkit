@@ -45,7 +45,6 @@ describe('headless entrypoint', () => {
 
         // Verify storage exports
         expect(headless.createEnhancedStorageWallet).toBeDefined();
-        expect(headless.createEnhancedStorageWalletState).toBeDefined();
         expect(headless.EnhancedStorage).toBeDefined();
     });
 

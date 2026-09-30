@@ -8,6 +8,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createWalletConnectWallet } from './create-walletconnect-wallet';
 import type { WalletConnectConfig, WalletConnectTransport } from '../../../types/walletconnect';
 import { getBase58Encoder } from '@solana/codecs';
+import type { Address } from '@solana/addresses';
+import { getTransactionDecoder } from '@solana/transactions';
+import { createWireTransactionBytes, WIRE_FIXTURE_FEE_PAYER } from '../../../__tests__/fixtures/transactions';
 
 /**
  * Create a mock transport for testing purposes
@@ -513,12 +516,52 @@ describe('createWalletConnectWallet', () => {
             expect(result[0].signedTransaction).toBeInstanceOf(Uint8Array);
         });
 
-        it('should inject signature when wallet returns only signature', async () => {
-            const mockTx = createMockTransaction();
+        it.each(['legacy', 0, 1] as const)(
+            'should inject signature into a %s transaction when wallet returns only a signature',
+            async version => {
+                const wireTx = createWireTransactionBytes(version);
+
+                const requestMock = vi.fn().mockResolvedValue({
+                    signature: TEST_SIGNATURE,
+                    // No transaction field - only signature
+                });
+                mockTransport = createMockWalletConnectTransport({ request: requestMock });
+                const wallet = createWalletConnectWallet(config, mockTransport);
+
+                const signTxFeature = wallet.features['solana:signTransaction'] as {
+                    signTransaction: (args: {
+                        account: { address: string };
+                        transaction: Uint8Array;
+                    }) => Promise<{ signedTransaction: Uint8Array }[]>;
+                };
+
+                const result = await signTxFeature.signTransaction({
+                    account: { address: WIRE_FIXTURE_FEE_PAYER },
+                    transaction: wireTx,
+                });
+
+                expect(result).toHaveLength(1);
+                const signed = result[0].signedTransaction;
+                expect(signed).toBeInstanceOf(Uint8Array);
+                expect(signed.length).toBe(wireTx.length);
+
+                // The signature landed on the fee payer's slot and everything
+                // else round-tripped byte-identically
+                const decoded = getTransactionDecoder().decode(signed);
+                const expectedSignature = new Uint8Array(getBase58Encoder().encode(TEST_SIGNATURE));
+                expect(new Uint8Array(decoded.signatures[WIRE_FIXTURE_FEE_PAYER as Address]!)).toEqual(
+                    expectedSignature,
+                );
+                const original = getTransactionDecoder().decode(wireTx);
+                expect(decoded.messageBytes).toEqual(original.messageBytes);
+            },
+        );
+
+        it('should reject signature injection for a signer not in the transaction', async () => {
+            const wireTx = createWireTransactionBytes(0);
 
             const requestMock = vi.fn().mockResolvedValue({
                 signature: TEST_SIGNATURE,
-                // No transaction field - only signature
             });
             mockTransport = createMockWalletConnectTransport({ request: requestMock });
             const wallet = createWalletConnectWallet(config, mockTransport);
@@ -530,15 +573,12 @@ describe('createWalletConnectWallet', () => {
                 }) => Promise<{ signedTransaction: Uint8Array }[]>;
             };
 
-            const result = await signTxFeature.signTransaction({
-                account: { address: TEST_PUBKEY },
-                transaction: mockTx,
-            });
-
-            expect(result).toHaveLength(1);
-            expect(result[0].signedTransaction).toBeInstanceOf(Uint8Array);
-            // The signed transaction should have the signature injected
-            expect(result[0].signedTransaction.length).toBe(mockTx.length);
+            await expect(
+                signTxFeature.signTransaction({
+                    account: { address: TEST_PUBKEY },
+                    transaction: wireTx,
+                }),
+            ).rejects.toThrow('Signer pubkey not found in transaction');
         });
 
         it('should send transaction as base64 to WalletConnect', async () => {

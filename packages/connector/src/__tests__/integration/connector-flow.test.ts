@@ -1,39 +1,46 @@
 /**
  * Connector flow integration tests
  *
- * Tests complete connection workflows from wallet detection to disconnection
+ * Tests complete connection workflows from wallet detection to disconnection.
+ * Mock wallets are registered into the real wallet-standard registry so the
+ * kit wallet plugin discovers and connects them like production wallets.
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { getWallets } from '@wallet-standard/app';
 import { ConnectorClient } from '../../lib/core/connector-client';
-import { createMockPhantomWallet, mockWalletRegistry } from '../mocks/wallet-standard-mock';
+import { createMockPhantomWallet, createMockSolflareWallet } from '../mocks/wallet-standard-mock';
 import { MockStorageAdapter } from '../mocks/storage-mock';
 import { createEventCollector, waitForCondition } from '../utils/test-helpers';
 import { waitForConnection, waitForDisconnection } from '../utils/wait-for-state';
 import { createMockWalletAccount, TEST_ADDRESSES } from '../fixtures/accounts';
 import type { Wallet } from '@wallet-standard/base';
-import type { WalletInfo } from '../../types/wallets';
-import { StateManager } from '../../lib/core/state-manager';
+
+const KIT_WALLET_STORAGE_KEY = 'connector-kit:v1:kit-wallet';
+
+function clearKitWalletStorage() {
+    try {
+        window.localStorage.removeItem(KIT_WALLET_STORAGE_KEY);
+    } catch {
+        // localStorage unavailable in this environment
+    }
+}
 
 describe('Connector Flow Integration', () => {
     let client: ConnectorClient;
     let storage: MockStorageAdapter<string | undefined>;
     let eventCollector: ReturnType<typeof createEventCollector>;
+    let unregisterFns: Array<() => void>;
 
-    // Helper to add a wallet to the connector's state
-    function getStateManager(client: ConnectorClient): StateManager {
-        return (client as unknown as { stateManager: StateManager }).stateManager;
-    }
-
-    const addWalletToClient = (wallet: Wallet) => {
-        const state = client.getSnapshot();
-        const entry: WalletInfo = { wallet, installed: true, connectable: true };
-        getStateManager(client).updateState({ wallets: [...state.wallets, entry] });
+    // Register a wallet into the real wallet-standard registry so the kit
+    // wallet plugin can discover and connect it
+    const registerWallet = (wallet: Wallet) => {
+        unregisterFns.push(getWallets().register(wallet));
     };
 
     beforeEach(() => {
-        // Setup mock window environment
-        (globalThis as unknown as { window?: unknown }).window = {} as Window & typeof globalThis;
+        clearKitWalletStorage();
+        unregisterFns = [];
 
         storage = new MockStorageAdapter('test-wallet');
         eventCollector = createEventCollector();
@@ -50,38 +57,30 @@ describe('Connector Flow Integration', () => {
 
     afterEach(() => {
         client.destroy();
-        delete (globalThis as unknown as { window?: unknown }).window;
+        for (const unregister of unregisterFns) unregister();
+        clearKitWalletStorage();
         vi.clearAllMocks();
     });
 
     describe('wallet detection and connection', () => {
         it('should detect and list available wallets', async () => {
             const wallet = createMockPhantomWallet();
-            const registry = mockWalletRegistry([wallet]);
+            registerWallet(wallet);
 
-            // Client initializes automatically in constructor
-            // Manually add wallet to simulate detection
+            await waitForCondition(() => client.getSnapshot().connectors.length > 0, { timeout: 2000 });
+
             const state = client.getSnapshot();
-
-            expect(state).toBeDefined();
+            expect(state.connectors.map(c => c.name)).toContain('Phantom');
+            expect(state.wallets.map(w => w.wallet.name)).toContain('Phantom');
         });
 
         it('should connect to a wallet successfully', async () => {
-            const wallet = createMockPhantomWallet();
             const account = createMockWalletAccount(TEST_ADDRESSES.ACCOUNT_1);
+            const wallet = createMockPhantomWallet({ accounts: [account] });
+            registerWallet(wallet);
 
-            const connectFeature = wallet.features['standard:connect'];
-            vi.mocked(connectFeature.connect).mockResolvedValue({
-                accounts: [account],
-            });
-
-            // Add wallet to client state
-            addWalletToClient(wallet);
-
-            // Attempt connection
             await client.select(wallet.name);
 
-            // Wait for connection
             const state = await waitForConnection(client, 2000);
 
             expect(state.connected).toBe(true);
@@ -89,39 +88,25 @@ describe('Connector Flow Integration', () => {
         });
 
         it('should emit correct events during connection', async () => {
-            const wallet = createMockPhantomWallet();
             const account = createMockWalletAccount(TEST_ADDRESSES.ACCOUNT_1);
-
-            const connectFeature = wallet.features['standard:connect'];
-            vi.mocked(connectFeature.connect).mockResolvedValue({
-                accounts: [account],
-            });
-
-            // Add wallet to client state
-            addWalletToClient(wallet);
+            const wallet = createMockPhantomWallet({ accounts: [account] });
+            registerWallet(wallet);
 
             eventCollector.clear();
 
             await client.select(wallet.name);
 
-            // Wait for connection to complete
             await waitForConnection(client, 2000);
 
             // Check events in order
             eventCollector.assertEventEmitted('connecting');
+            eventCollector.assertEventEmitted('wallet:connected');
         });
 
         it('should persist wallet selection to storage', async () => {
-            const wallet = createMockPhantomWallet();
             const account = createMockWalletAccount(TEST_ADDRESSES.ACCOUNT_1);
-
-            const connectFeature = wallet.features['standard:connect'];
-            vi.mocked(connectFeature.connect).mockResolvedValue({
-                accounts: [account],
-            });
-
-            // Add wallet to client state
-            addWalletToClient(wallet);
+            const wallet = createMockPhantomWallet({ accounts: [account] });
+            registerWallet(wallet);
 
             await client.select(wallet.name);
 
@@ -129,39 +114,30 @@ describe('Connector Flow Integration', () => {
 
             // Check storage
             const savedWallet = await storage.get();
-            expect(savedWallet).toBe('Phantom');
+            expect(savedWallet).toBe(`Phantom:${TEST_ADDRESSES.ACCOUNT_1}`);
         });
 
         it('should handle connection errors gracefully', async () => {
             const wallet = createMockPhantomWallet();
+            registerWallet(wallet);
 
             const connectFeature = wallet.features['standard:connect'];
             vi.mocked(connectFeature.connect).mockRejectedValue(new Error('User rejected'));
-
-            // Add wallet to client state
-            addWalletToClient(wallet);
 
             await expect(client.select(wallet.name)).rejects.toThrow('User rejected');
 
             const state = client.getSnapshot();
             expect(state.connected).toBe(false);
             expect(state.connecting).toBe(false);
+            expect(state.wallet.status).toBe('error');
         });
     });
 
     describe('disconnection flow', () => {
         beforeEach(async () => {
-            // Helper to setup connected state
-            const wallet = createMockPhantomWallet();
             const account = createMockWalletAccount(TEST_ADDRESSES.ACCOUNT_1);
-
-            const connectFeature = wallet.features['standard:connect'];
-            vi.mocked(connectFeature.connect).mockResolvedValue({
-                accounts: [account],
-            });
-
-            // Add wallet to client state
-            addWalletToClient(wallet);
+            const wallet = createMockPhantomWallet({ accounts: [account] });
+            registerWallet(wallet);
 
             await client.select(wallet.name);
             await waitForConnection(client, 2000);
@@ -191,18 +167,11 @@ describe('Connector Flow Integration', () => {
 
     describe('account selection', () => {
         beforeEach(async () => {
-            const wallet = createMockPhantomWallet();
             const account1 = createMockWalletAccount(TEST_ADDRESSES.ACCOUNT_1);
             const account2 = createMockWalletAccount(TEST_ADDRESSES.ACCOUNT_2);
             const account3 = createMockWalletAccount(TEST_ADDRESSES.ACCOUNT_3);
-
-            const connectFeature = wallet.features['standard:connect'];
-            vi.mocked(connectFeature.connect).mockResolvedValue({
-                accounts: [account1, account2, account3],
-            });
-
-            // Add wallet to client state
-            addWalletToClient(wallet);
+            const wallet = createMockPhantomWallet({ accounts: [account1, account2, account3] });
+            registerWallet(wallet);
 
             await client.select(wallet.name);
             await waitForConnection(client, 2000);
@@ -240,48 +209,16 @@ describe('Connector Flow Integration', () => {
         });
     });
 
-    describe('state persistence and recovery', () => {
-        it('should recover state on initialization with persisted wallet', async () => {
-            // Pre-populate storage
-            await storage.set('Phantom');
-
-            const newClient = new ConnectorClient({
-                storage: {
-                    wallet: storage,
-                },
-                autoConnect: true,
-                debug: false,
-            });
-
-            // The client should attempt to connect to the saved wallet
-            // In a real scenario with actual wallet detection
-            const state = newClient.getSnapshot();
-            expect(state).toBeDefined();
-
-            newClient.destroy();
-        });
-    });
-
     describe('multiple wallet switching', () => {
         it('should switch between wallets', async () => {
-            const wallet1 = createMockPhantomWallet();
-            const wallet2 = createMockPhantomWallet();
-            wallet2.name = 'Solflare';
-
             const account1 = createMockWalletAccount(TEST_ADDRESSES.ACCOUNT_1);
             const account2 = createMockWalletAccount(TEST_ADDRESSES.ACCOUNT_2);
 
-            vi.mocked(wallet1.features['standard:connect'].connect).mockResolvedValue({
-                accounts: [account1],
-            });
+            const wallet1 = createMockPhantomWallet({ accounts: [account1] });
+            const wallet2 = createMockSolflareWallet({ accounts: [account2] });
 
-            vi.mocked(wallet2.features['standard:connect'].connect).mockResolvedValue({
-                accounts: [account2],
-            });
-
-            // Add wallets to client state
-            addWalletToClient(wallet1);
-            addWalletToClient(wallet2);
+            registerWallet(wallet1);
+            registerWallet(wallet2);
 
             // Connect to first wallet
             await client.select(wallet1.name);
@@ -292,7 +229,9 @@ describe('Connector Flow Integration', () => {
 
             // Switch to second wallet
             await client.select(wallet2.name);
-            await waitForConnection(client, 2000);
+            await waitForCondition(() => client.getSnapshot().selectedAccount === TEST_ADDRESSES.ACCOUNT_2, {
+                timeout: 2000,
+            });
 
             state = client.getSnapshot();
             expect(state.selectedAccount).toBe(TEST_ADDRESSES.ACCOUNT_2);

@@ -9,9 +9,11 @@ import {
     isWeb3jsTransaction,
     serializeTransaction,
     deserializeToWeb3jsTransaction,
+    getTransactionVersionFromBytes,
     prepareTransactionForWallet,
     convertSignedTransaction,
 } from './transaction-format';
+import { createWireTransactionBytes } from '../__tests__/fixtures/transactions';
 import type { Transaction, VersionedTransaction } from '@solana/web3.js';
 
 describe('Transaction Format Utilities', () => {
@@ -157,6 +159,84 @@ describe('Transaction Format Utilities', () => {
             expect(result).toBeInstanceOf(Uint8Array);
             expect(result.length).toBe(5);
             expect(result.every(byte => byte === 42)).toBe(true);
+        });
+    });
+
+    describe('getTransactionVersionFromBytes', () => {
+        it('should classify wire-correct legacy transaction bytes', () => {
+            expect(getTransactionVersionFromBytes(createWireTransactionBytes('legacy'))).toBe('legacy');
+        });
+
+        it('should classify wire-correct v0 transaction bytes', () => {
+            expect(getTransactionVersionFromBytes(createWireTransactionBytes(0))).toBe(0);
+        });
+
+        it('should classify wire-correct v1 transaction bytes via the 0x81 discriminator', () => {
+            const bytes = createWireTransactionBytes(1);
+            expect(bytes[0]).toBe(0x81);
+            expect(getTransactionVersionFromBytes(bytes)).toBe(1);
+        });
+
+        it('should return null for empty bytes', () => {
+            expect(getTransactionVersionFromBytes(new Uint8Array())).toBeNull();
+        });
+
+        it('should return null for truncated bytes', () => {
+            // Claims one signature but has no room for it or a message
+            expect(getTransactionVersionFromBytes(new Uint8Array([0x01, 0x00, 0x00]))).toBeNull();
+        });
+
+        it('should read an unknown high-bit first byte as a future-version discriminator', () => {
+            // 0xff can never start a legacy/v0 transaction (it would imply a
+            // shortvec continuation, i.e. 128+ signatures), so it reads as a
+            // discriminator for a future version — which downstream consumers
+            // then reject explicitly instead of misparsing.
+            expect(getTransactionVersionFromBytes(new Uint8Array(16).fill(0xff))).toBe(127);
+        });
+
+        it('should not misclassify a signed transaction by its signature count byte', () => {
+            // Regression: the old check read byte 0 (the shortvec signature
+            // count, e.g. 0x01) as the message version byte, so every real
+            // signed v0 transaction was misrouted to the legacy parser.
+            const v0Bytes = createWireTransactionBytes(0);
+            expect(v0Bytes[0]).toBe(0x01);
+            expect(getTransactionVersionFromBytes(v0Bytes)).toBe(0);
+        });
+    });
+
+    describe('deserializeToWeb3jsTransaction with wire-correct fixtures', () => {
+        it('should deserialize legacy bytes to a web3.js Transaction', async () => {
+            const { Transaction } = await import('@solana/web3.js');
+            const result = await deserializeToWeb3jsTransaction(createWireTransactionBytes('legacy'));
+            expect(result).toBeInstanceOf(Transaction);
+        });
+
+        it('should deserialize v0 bytes to a web3.js VersionedTransaction', async () => {
+            const { VersionedTransaction } = await import('@solana/web3.js');
+            const result = await deserializeToWeb3jsTransaction(createWireTransactionBytes(0));
+            expect(result).toBeInstanceOf(VersionedTransaction);
+            expect((result as VersionedTransaction).version).toBe(0);
+        });
+
+        it('should reject v1 bytes with a descriptive error', async () => {
+            await expect(deserializeToWeb3jsTransaction(createWireTransactionBytes(1))).rejects.toThrow(
+                /Transaction v1 .*cannot be represented as a web3\.js transaction object/,
+            );
+        });
+    });
+
+    describe('v1 pass-through', () => {
+        it('should pass v1 bytes through convertSignedTransaction untouched when not web3.js', async () => {
+            const v1Bytes = createWireTransactionBytes(1);
+            const result = await convertSignedTransaction(v1Bytes, false);
+            expect(result).toBe(v1Bytes);
+        });
+
+        it('should prepare v1 bytes for the wallet without conversion', () => {
+            const v1Bytes = createWireTransactionBytes(1);
+            const { serialized, wasWeb3js } = prepareTransactionForWallet(v1Bytes);
+            expect(serialized).toBe(v1Bytes);
+            expect(wasWeb3js).toBe(false);
         });
     });
 

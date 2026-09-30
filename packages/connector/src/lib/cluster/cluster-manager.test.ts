@@ -96,6 +96,28 @@ describe('ClusterManager', () => {
             // Storage initialization test - requires sync storage.get()
         });
 
+        it('should resolve the server cluster from config, ignoring storage', () => {
+            const syncStorage = {
+                get: () => 'solana:devnet' as SolanaClusterId,
+                set: vi.fn(),
+                remove: vi.fn(),
+            };
+
+            const manager = new ClusterManager(stateManager, eventEmitter, syncStorage, {
+                clusters,
+                initialCluster: 'solana:mainnet',
+            });
+
+            expect(stateManager.getSnapshot().cluster).toEqual(devnetCluster);
+            expect(manager.getServerCluster()).toEqual(mainnetCluster);
+        });
+
+        it('should report no server cluster when no config is supplied', () => {
+            const manager = new ClusterManager(stateManager, eventEmitter);
+
+            expect(manager.getServerCluster()).toBeUndefined();
+        });
+
         it('should fallback to mainnet if no initial cluster specified', () => {
             const manager = new ClusterManager(stateManager, eventEmitter, storage, {
                 clusters,

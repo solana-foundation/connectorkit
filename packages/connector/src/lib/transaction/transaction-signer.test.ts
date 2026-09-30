@@ -145,6 +145,35 @@ describe('Transaction Signer', () => {
             expect(capabilities.supportsBatchSigning).toBe(true);
         });
 
+        it('should leave supportedTransactionVersions undefined when no feature declares it', () => {
+            const signer = createTransactionSigner({ wallet: mockWallet, account: mockAccount })!;
+
+            expect(signer.getCapabilities().supportedTransactionVersions).toBeUndefined();
+        });
+
+        it('should union supportedTransactionVersions across sign features', () => {
+            const walletWithVersions = {
+                ...mockWallet,
+                features: {
+                    ...mockWallet.features,
+                    'solana:signTransaction': {
+                        ...mockWallet.features['solana:signTransaction'],
+                        supportedTransactionVersions: ['legacy', 0],
+                    },
+                    'solana:signAndSendTransaction': {
+                        ...mockWallet.features['solana:signAndSendTransaction'],
+                        supportedTransactionVersions: [0, 1],
+                    },
+                },
+            } as unknown as WalletStandardWallet;
+
+            const signer = createTransactionSigner({ wallet: walletWithVersions, account: mockAccount })!;
+            const versions = signer.getCapabilities().supportedTransactionVersions;
+
+            expect(versions).toBeDefined();
+            expect([...versions!].sort()).toEqual(['legacy', 0, 1].sort());
+        });
+
         it('should detect missing sign capability', () => {
             const walletWithoutSign = {
                 ...mockWallet,

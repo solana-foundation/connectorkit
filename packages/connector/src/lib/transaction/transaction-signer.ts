@@ -8,6 +8,7 @@ import type {
     TransactionSignerCapabilities,
 } from '../../types/transactions';
 import { prepareTransactionForWallet, convertSignedTransaction } from '../../utils/transaction-format';
+import { getWalletSupportedTransactionVersions } from '../../utils/transaction-versions';
 import { TransactionValidator } from './transaction-validator';
 import { createLogger } from '../utils/secure-logger';
 import { TransactionError, ValidationError, Errors } from '../errors';
@@ -117,6 +118,7 @@ export function createTransactionSigner(config: TransactionSignerConfig): Transa
         canSend: Boolean(features['solana:signAndSendTransaction']),
         canSignMessage: Boolean(features['solana:signMessage']),
         supportsBatchSigning: Boolean(features['solana:signAllTransactions']),
+        supportedTransactionVersions: getWalletSupportedTransactionVersions(wallet),
     };
 
     const signer: TransactionSigner = {

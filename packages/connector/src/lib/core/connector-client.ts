@@ -9,20 +9,17 @@ import type {
 import type { SolanaTransaction, TransactionActivity } from '../../types/transactions';
 import type { ConnectorEvent, ConnectorEventListener } from '../../types/events';
 import type { SolanaClusterId, SolanaCluster } from '@wallet-ui/core';
-import type { WalletInfo } from '../../types/wallets';
 import type { WalletConnectorId, ConnectOptions } from '../../types/session';
 import { INITIAL_WALLET_STATUS } from '../../types/session';
 import { StateManager } from './state-manager';
 import { EventEmitter } from './event-emitter';
 import { DebugMetrics } from './debug-metrics';
-import { WalletDetector } from '../wallet/detector';
-import { ConnectionManager } from '../wallet/connection-manager';
-import { AutoConnector } from '../wallet/auto-connector';
+import { KitWalletCore, normalizeWalletChain } from '../wallet/kit-wallet-core';
 import { ClusterManager } from '../cluster/cluster-manager';
 import { TransactionTracker } from '../transaction/transaction-tracker';
 import { HealthMonitor } from '../health/health-monitor';
 import { getClusterRpcUrl } from '../../utils/cluster';
-import { AUTO_CONNECT_DELAY_MS, DEFAULT_MAX_TRACKED_TRANSACTIONS } from '../constants';
+import { DEFAULT_MAX_TRACKED_TRANSACTIONS } from '../constants';
 import { createLogger } from '../utils/secure-logger';
 import { tryCatchSync } from './try-catch';
 import type { WalletConnectRegistration } from '../wallet/walletconnect';
@@ -33,14 +30,21 @@ const logger = createLogger('ConnectorClient');
 export class ConnectorClient {
     private stateManager: StateManager;
     private eventEmitter: EventEmitter;
-    private walletDetector: WalletDetector;
-    private connectionManager: ConnectionManager;
-    private autoConnector: AutoConnector;
+    private kitWalletCore: KitWalletCore;
     private clusterManager: ClusterManager;
     private transactionTracker: TransactionTracker;
     private debugMetrics: DebugMetrics;
     private healthMonitor: HealthMonitor;
     private initialized = false;
+    /**
+     * Bumped by every destroy(). Async initialization work (the WalletConnect
+     * dynamic import + registration) captures the epoch it started under and
+     * discards its result when a destroy intervened — checking `initialized`
+     * alone is not enough, because a re-initialize sets it back to true and
+     * would let a previous lifecycle's registration attach untracked.
+     */
+    private lifecycleEpoch = 0;
+    private serverSnapshot: ConnectorState;
     private config: ConnectorConfig;
     private walletConnectRegistration: WalletConnectRegistration | null = null;
 
@@ -70,22 +74,13 @@ export class ConnectorClient {
         this.eventEmitter = new EventEmitter(config.debug);
         this.debugMetrics = new DebugMetrics();
 
-        this.walletDetector = new WalletDetector(this.stateManager, this.eventEmitter, config.debug ?? false);
-
-        this.connectionManager = new ConnectionManager(
-            this.stateManager,
-            this.eventEmitter,
-            config.storage?.wallet,
-            config.debug ?? false,
-        );
-
-        this.autoConnector = new AutoConnector(
-            this.walletDetector,
-            this.connectionManager,
-            this.stateManager,
-            config.storage?.wallet,
-            config.debug ?? false,
-        );
+        this.kitWalletCore = new KitWalletCore(this.stateManager, this.eventEmitter, {
+            additionalWallets: config.additionalWallets,
+            autoConnect: config.autoConnect ?? false,
+            debug: config.debug ?? false,
+            display: config.wallets,
+            walletStorage: config.storage?.wallet,
+        });
 
         this.clusterManager = new ClusterManager(
             this.stateManager,
@@ -109,6 +104,13 @@ export class ConnectorClient {
             () => this.initialized,
         );
 
+        // ClusterManager restores a persisted cluster in its constructor, which
+        // is browser-only, so the live snapshot already diverges from what a
+        // server render produced. Roll that one field back.
+        const snapshot = this.stateManager.getSnapshot();
+        const serverCluster = this.clusterManager.getServerCluster();
+        this.serverSnapshot = serverCluster === undefined ? snapshot : { ...snapshot, cluster: serverCluster };
+
         this.initialize();
     }
 
@@ -117,15 +119,9 @@ export class ConnectorClient {
         if (this.initialized) return;
 
         const { error } = tryCatchSync(() => {
-            // Set additional wallets before detection if configured
-            if (this.config.additionalWallets && this.config.additionalWallets.length > 0) {
-                this.walletDetector.setAdditionalWallets(this.config.additionalWallets);
-            }
-
-            // Apply wallet list controls (allow/deny/featured) before detection
-            this.walletDetector.setWalletDisplayConfig(this.config.wallets);
-
-            this.walletDetector.initialize();
+            // Discovery, connection lifecycle, persistence, and auto-connect
+            // are handled by the kit wallet plugin behind KitWalletCore
+            this.kitWalletCore.start(normalizeWalletChain(this.clusterManager.getCluster()?.id));
 
             // Register WalletConnect wallet if enabled
             if (this.config.walletConnect?.enabled) {
@@ -134,16 +130,6 @@ export class ConnectorClient {
                         logger.error('WalletConnect initialization failed', { error: err });
                     }
                 });
-            }
-
-            if (this.config.autoConnect) {
-                setTimeout(() => {
-                    this.autoConnector.attemptAutoConnect().catch(err => {
-                        if (this.config.debug) {
-                            logger.error('Auto-connect error', { error: err });
-                        }
-                    });
-                }, AUTO_CONNECT_DELAY_MS);
             }
 
             this.initialized = true;
@@ -160,11 +146,22 @@ export class ConnectorClient {
      */
     private async initializeWalletConnect(): Promise<void> {
         if (!this.config.walletConnect?.enabled) return;
+        const epoch = this.lifecycleEpoch;
 
         try {
             // Dynamically import to avoid bundling WalletConnect if not used
             const { registerWalletConnectWallet } = await import('../wallet/walletconnect');
-            this.walletConnectRegistration = await registerWalletConnectWallet(this.config.walletConnect);
+            const registration = await registerWalletConnectWallet(this.config.walletConnect);
+
+            // A destroy() (and possibly a re-initialize, which starts its own
+            // registration) ran while the import was in flight; a registration
+            // from a previous lifecycle must not be tracked — an untracked
+            // registry entry can never be unregistered.
+            if (epoch !== this.lifecycleEpoch || !this.initialized) {
+                registration.unregister();
+                return;
+            }
+            this.walletConnectRegistration = registration;
 
             if (this.config.debug) {
                 logger.info('WalletConnect wallet registered successfully');
@@ -186,14 +183,10 @@ export class ConnectorClient {
      * This is the recommended way to connect in vNext.
      *
      * @param connectorId - Stable connector identifier
-     * @param options - Connection options (silent mode, preferred account, etc.)
+     * @param options - Connection options (preferred account)
      */
     async connectWallet(connectorId: WalletConnectorId, options?: ConnectOptions): Promise<void> {
-        const connector = this.walletDetector.getConnectorById(connectorId);
-        if (!connector) {
-            throw new Error(`Connector ${connectorId} not found`);
-        }
-        await this.connectionManager.connectWallet(connector, connectorId, options);
+        await this.kitWalletCore.connectWallet(connectorId, options);
     }
 
     /**
@@ -201,14 +194,14 @@ export class ConnectorClient {
      * This is the vNext equivalent of disconnect().
      */
     async disconnectWallet(): Promise<void> {
-        await this.connectionManager.disconnect();
+        await this.kitWalletCore.disconnect();
     }
 
     /**
      * Get a connector by its ID (for advanced use cases).
      */
     getConnector(connectorId: WalletConnectorId) {
-        return this.walletDetector.getConnectorById(connectorId);
+        return this.kitWalletCore.getConnectorById(connectorId);
     }
 
     // ========================================================================
@@ -219,26 +212,34 @@ export class ConnectorClient {
      * @deprecated Use `connectWallet(connectorId)` instead.
      */
     async select(walletName: string): Promise<void> {
-        const wallet = this.stateManager
-            .getSnapshot()
-            .wallets.find((w: WalletInfo) => w.wallet.name === walletName)?.wallet;
-        if (!wallet) throw new Error(`Wallet ${walletName} not found`);
-        await this.connectionManager.connect(wallet, walletName);
+        await this.kitWalletCore.connectByName(walletName);
     }
 
     /**
      * @deprecated Use `disconnectWallet()` instead.
      */
     async disconnect(): Promise<void> {
-        await this.connectionManager.disconnect();
+        await this.kitWalletCore.disconnect();
     }
 
     async selectAccount(address: string): Promise<void> {
-        await this.connectionManager.selectAccount(address);
+        await this.kitWalletCore.selectAccount(address);
     }
 
     async setCluster(clusterId: SolanaClusterId): Promise<void> {
         await this.clusterManager.setCluster(clusterId);
+        // The replacement wallet client's warm-up silently reconnects through
+        // the wallet extension, which can take arbitrarily long (the plugin
+        // puts no timeout on it), so the cluster switch must not wait on it.
+        // KitWalletCore's swap counter discards warm-ups a newer switch or a
+        // destroy() has made stale.
+        void this.kitWalletCore
+            .setChain(normalizeWalletChain(this.clusterManager.getCluster()?.id))
+            .catch((error: unknown) => {
+                if (this.config.debug) {
+                    logger.error('Wallet chain swap failed', { error });
+                }
+            });
     }
 
     getCluster(): SolanaCluster | null {
@@ -269,6 +270,18 @@ export class ConnectorClient {
 
     getSnapshot(): ConnectorState {
         return this.stateManager.getSnapshot();
+    }
+
+    /**
+     * State as it stands before wallet discovery, persistence, and auto-connect
+     * run — all of which are browser-only. A server render can only ever see
+     * this, so React's hydration pass has to see it too: reading live state
+     * there renders an in-flight auto-connect (a spinner, a wallet list) into
+     * markup the server wrote as idle, and the mismatch throws away the tree.
+     * The subscription then delivers live state on the next render.
+     */
+    getServerSnapshot(): ConnectorState {
+        return this.serverSnapshot;
     }
 
     resetStorage(): void {
@@ -375,6 +388,8 @@ export class ConnectorClient {
     }
 
     destroy(): void {
+        this.lifecycleEpoch++;
+
         // Unregister WalletConnect wallet if it was registered
         if (this.walletConnectRegistration) {
             try {
@@ -387,9 +402,13 @@ export class ConnectorClient {
             }
         }
 
-        this.connectionManager.disconnect().catch(() => {});
-        this.walletDetector.destroy();
+        this.kitWalletCore.destroy();
         this.eventEmitter.offAll();
         this.stateManager.clear();
+
+        // The provider reuses this instance across an unmount/remount cycle
+        // (React StrictMode runs one on every dev mount) and re-runs
+        // initialize(), which must not early-return against a torn-down core.
+        this.initialized = false;
     }
 }

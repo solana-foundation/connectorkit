@@ -1,22 +1,37 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import {
-    createKitSignersFromWallet,
-    createMessageSignerFromWallet,
-    createSignableMessage,
-    address,
-} from '@solana/connector/headless';
+import { createKitSignersFromWallet, createSignableMessage } from '@solana/connector/headless';
+import type { MessageModifyingSigner } from '@solana/connector/headless';
 import { useCluster, useConnectorClient, useConnector } from '@solana/connector/react';
-import { Connection } from '@solana/web3.js';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert } from '@/components/ui/alert';
 
+/** Signer chains the Kit signer factories accept as a network override */
+type SignerNetwork = 'mainnet' | 'devnet' | 'testnet';
+
+function isSignerNetwork(clusterType: string | null): clusterType is SignerNetwork {
+    return clusterType === 'mainnet' || clusterType === 'devnet' || clusterType === 'testnet';
+}
+
+/** Sign `message` and return the signature as base64 */
+async function signMessageToBase64(signer: MessageModifyingSigner, message: string): Promise<string> {
+    const signableMessage = createSignableMessage(new TextEncoder().encode(message));
+    const [signed] = await signer.modifyAndSignMessages([signableMessage]);
+
+    const [signature] = Object.values(signed?.signatures ?? {});
+    if (!(signature instanceof Uint8Array)) {
+        throw new Error('Signer did not return a signature');
+    }
+
+    return btoa(String.fromCharCode(...signature));
+}
+
 export function KitSignerDemo() {
     const { walletStatus, connectorId } = useConnector();
     const session = walletStatus.status === 'connected' ? walletStatus.session : null;
-    const { cluster } = useCluster();
+    const { type: clusterType } = useCluster();
     const client = useConnectorClient();
 
     const wallet = useMemo(() => {
@@ -32,74 +47,18 @@ export function KitSignerDemo() {
     const [error, setError] = useState<string | null>(null);
 
     const kitSigners = useMemo(() => {
-        if (!wallet || !account || !cluster) return null;
-
-        const rpcUrl = client?.getRpcUrl();
-        const connection = rpcUrl ? new Connection(rpcUrl) : null;
-
-        return createKitSignersFromWallet(wallet, account, connection, undefined);
-    }, [wallet, account, cluster, client]);
-
-    const manualSigner = useMemo(() => {
         if (!wallet || !account) return null;
 
-        // Validate features structure
-        if (!wallet.features || typeof wallet.features !== 'object') {
-            return null;
-        }
+        // The signers derive their chain from the connected cluster; no legacy
+        // web3.js Connection is involved.
+        const network = isSignerNetwork(clusterType) ? clusterType : undefined;
 
-        const features = wallet.features as Record<string, unknown>;
-        const signMessageFeature = features['solana:signMessage'];
+        return createKitSignersFromWallet(wallet, account, null, network);
+    }, [wallet, account, clusterType]);
 
-        // Validate signMessage feature exists and has the expected structure
-        if (
-            !signMessageFeature ||
-            typeof signMessageFeature !== 'object' ||
-            !('signMessage' in signMessageFeature) ||
-            typeof (signMessageFeature as { signMessage?: unknown }).signMessage !== 'function'
-        ) {
-            return null;
-        }
-
-        const signMessageFn = (signMessageFeature as { signMessage: (args: unknown) => Promise<unknown> }).signMessage;
-
-        return createMessageSignerFromWallet(address(account.address), async (message: Uint8Array) => {
-            try {
-                const result = await signMessageFn({
-                    account,
-                    message,
-                });
-
-                // Validate result structure
-                if (!Array.isArray(result)) {
-                    throw new Error('Wallet signMessage did not return an array');
-                }
-
-                if (result.length === 0) {
-                    throw new Error('Wallet returned empty results array');
-                }
-
-                const firstResult = result[0];
-                if (
-                    !firstResult ||
-                    typeof firstResult !== 'object' ||
-                    !('signature' in firstResult) ||
-                    !(firstResult.signature instanceof Uint8Array)
-                ) {
-                    throw new Error('Wallet returned invalid result structure - expected { signature: Uint8Array }');
-                }
-
-                return firstResult.signature;
-            } catch (error) {
-                console.error('Manual signer message signing error:', error);
-                throw error instanceof Error ? error : new Error(String(error));
-            }
-        });
-    }, [wallet, account]);
-
-    const handleSignMessage = async () => {
-        if (!kitSigners?.messageSigner) {
-            setError('Message signer not available');
+    const handleSignMessage = async (signer: MessageModifyingSigner | null) => {
+        if (!signer) {
+            setError('Signer not available');
             return;
         }
 
@@ -108,78 +67,9 @@ export function KitSignerDemo() {
         setSignedMessage(null);
 
         try {
-            const messageBytes = new TextEncoder().encode(messageToSign);
-            const signableMessage = createSignableMessage(messageBytes);
-
-            const signedMessages = await kitSigners.messageSigner.modifyAndSignMessages([signableMessage]);
-
-            if (!Array.isArray(signedMessages) || signedMessages.length === 0) {
-                throw new Error('Signer did not return signed messages');
-            }
-
-            const signed = signedMessages[0];
-            if (!signed || !signed.signatures || typeof signed.signatures !== 'object') {
-                throw new Error('Invalid signed message structure');
-            }
-
-            const signatureValues = Object.values(signed.signatures);
-            if (signatureValues.length === 0) {
-                throw new Error('No signatures found in signed message');
-            }
-
-            const signature = signatureValues[0];
-            if (!(signature instanceof Uint8Array)) {
-                throw new Error('Signature is not a Uint8Array');
-            }
-
-            const signatureBase64 = btoa(String.fromCharCode(...Array.from(signature)));
-            setSignedMessage(signatureBase64);
+            setSignedMessage(await signMessageToBase64(signer, messageToSign));
         } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : 'Failed to sign message';
-            console.error('Message signing error:', err);
-            setError(errorMessage);
-        } finally {
-            setIsSigning(false);
-        }
-    };
-
-    const handleSignMessageManual = async () => {
-        if (!manualSigner) {
-            setError('Manual signer not available');
-            return;
-        }
-
-        setIsSigning(true);
-        setError(null);
-        setSignedMessage(null);
-
-        try {
-            const signedMessages = await manualSigner.modifyAndSignMessages([
-                createSignableMessage(new TextEncoder().encode(messageToSign)),
-            ]);
-
-            if (!Array.isArray(signedMessages) || signedMessages.length === 0) {
-                throw new Error('Signer did not return signed messages');
-            }
-
-            const signed = signedMessages[0];
-            if (!signed || !signed.signatures || typeof signed.signatures !== 'object') {
-                throw new Error('Invalid signed message structure');
-            }
-
-            const signatureValues = Object.values(signed.signatures);
-            if (signatureValues.length === 0) {
-                throw new Error('No signatures found in signed message');
-            }
-
-            const sig = signatureValues[0];
-            if (!(sig instanceof Uint8Array)) {
-                throw new Error('Signature is not a Uint8Array');
-            }
-
-            setSignedMessage(btoa(String.fromCharCode(...Array.from(sig))));
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed');
+            setError(err instanceof Error ? err.message : 'Failed to sign message');
         } finally {
             setIsSigning(false);
         }
@@ -217,23 +107,12 @@ export function KitSignerDemo() {
                     <div className="flex gap-2">
                         {kitSigners?.messageSigner && (
                             <Button
-                                onClick={handleSignMessage}
+                                onClick={() => handleSignMessage(kitSigners.messageSigner)}
                                 disabled={isSigning || !messageToSign.trim()}
                                 size="sm"
                                 className="flex-1"
                             >
-                                {isSigning ? 'Signing...' : 'Modern'}
-                            </Button>
-                        )}
-                        {manualSigner && (
-                            <Button
-                                onClick={handleSignMessageManual}
-                                disabled={isSigning || !messageToSign.trim()}
-                                size="sm"
-                                variant="outline"
-                                className="flex-1"
-                            >
-                                Legacy
+                                {isSigning ? 'Signing...' : 'Sign Message'}
                             </Button>
                         )}
                     </div>
@@ -251,7 +130,7 @@ export function KitSignerDemo() {
                     </Alert>
                 )}
 
-                {!kitSigners?.messageSigner && !manualSigner && <Alert>Message signing not supported</Alert>}
+                {!kitSigners?.messageSigner && <Alert>Message signing not supported</Alert>}
             </CardContent>
         </Card>
     );

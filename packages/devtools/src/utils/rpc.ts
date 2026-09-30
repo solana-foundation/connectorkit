@@ -52,7 +52,7 @@ export async function fetchSignatureStatus(rpcUrl: string, signature: string): P
 export async function fetchTransactionJsonParsed(rpcUrl: string, signature: string) {
     const rpc = createRpc(rpcUrl);
     return await rpc
-        .getTransaction(createSignature(signature), { encoding: 'jsonParsed', maxSupportedTransactionVersion: 0 })
+        .getTransaction(createSignature(signature), { encoding: 'jsonParsed', maxSupportedTransactionVersion: 1 })
         .send();
 }
 
@@ -66,7 +66,7 @@ export async function fetchTransactionWireBase64(
         .getTransaction(createSignature(signature), {
             commitment: config?.commitment ?? 'confirmed',
             encoding: 'base64',
-            maxSupportedTransactionVersion: 0,
+            maxSupportedTransactionVersion: 1,
         })
         .send();
 

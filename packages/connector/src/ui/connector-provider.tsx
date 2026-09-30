@@ -131,6 +131,12 @@ function ConnectorProviderInternal({
         const currentClient = clientRef.current;
 
         if (currentClient) {
+            // Republished on every run because the cleanup below clears it, and
+            // an unmount/remount cycle reuses the client this ref already holds.
+            if (typeof window !== 'undefined') {
+                window.__connectorClient = currentClient;
+            }
+
             const privateClient = currentClient as unknown as { initialize?: () => void };
             if (privateClient.initialize && typeof privateClient.initialize === 'function') {
                 privateClient.initialize();
@@ -138,7 +144,9 @@ function ConnectorProviderInternal({
         }
 
         return () => {
-            if (typeof window !== 'undefined') {
+            // A replacement provider may already have published its own client;
+            // only the owner clears the handle devtools reads.
+            if (typeof window !== 'undefined' && window.__connectorClient === currentClient) {
                 window.__connectorClient = undefined;
             }
             if (currentClient && typeof currentClient.destroy === 'function') {
@@ -237,7 +245,7 @@ export function useConnector(): ConnectorSnapshot {
     const state = useSyncExternalStore(
         React.useCallback(cb => client.subscribe(cb), [client]),
         React.useCallback(() => client.getSnapshot(), [client]),
-        React.useCallback(() => client.getSnapshot(), [client]),
+        React.useCallback(() => client.getServerSnapshot(), [client]),
     );
 
     // Legacy + vNext actions

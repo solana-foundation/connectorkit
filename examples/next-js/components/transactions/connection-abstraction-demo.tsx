@@ -8,9 +8,9 @@
  */
 
 import { useState } from 'react';
-import { useConnectorClient } from '@solana/connector';
+import { useConnectorClient, useSolanaClient } from '@solana/connector';
 import { getLatestBlockhash, isLegacyConnection, isKitConnection } from '@solana/connector/headless';
-import { createSolanaRpc } from '@solana/kit';
+import type { DualConnection } from '@solana/connector/headless';
 import { Connection } from '@solana/web3.js';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -19,14 +19,16 @@ import { Alert } from '@/components/ui/alert';
 
 export function ConnectionAbstractionDemo() {
     const client = useConnectorClient();
+    const { client: solanaClient } = useSolanaClient();
     const [blockhash, setBlockhash] = useState<{ blockhash: string; lastValidBlockHeight: number } | null>(null);
     const [connectionType, setConnectionType] = useState<'legacy' | 'kit' | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     const handleGetBlockhashLegacy = async () => {
-        if (!client) {
-            setError('Client not available');
+        const rpcUrl = client?.getRpcUrl();
+        if (!rpcUrl) {
+            setError('No RPC URL available');
             return;
         }
 
@@ -35,18 +37,11 @@ export function ConnectionAbstractionDemo() {
         setBlockhash(null);
 
         try {
-            const rpcUrl = client.getRpcUrl();
-            if (!rpcUrl) {
-                throw new Error('No RPC URL available');
-            }
-
-            // Create legacy Connection
             const connection = new Connection(rpcUrl, 'confirmed');
             setConnectionType(isLegacyConnection(connection) ? 'legacy' : null);
 
             // Use abstraction helper - works with legacy Connection
-            const result = await getLatestBlockhash(connection, 'confirmed');
-            setBlockhash(result);
+            setBlockhash(await getLatestBlockhash(connection, 'confirmed'));
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to get blockhash');
         } finally {
@@ -55,8 +50,8 @@ export function ConnectionAbstractionDemo() {
     };
 
     const handleGetBlockhashKit = async () => {
-        if (!client) {
-            setError('Client not available');
+        if (!solanaClient) {
+            setError('Kit client not available');
             return;
         }
 
@@ -65,35 +60,13 @@ export function ConnectionAbstractionDemo() {
         setBlockhash(null);
 
         try {
-            const rpcUrl = client.getRpcUrl();
-            if (!rpcUrl) {
-                throw new Error('No RPC URL available');
-            }
-
-            // Create Kit Rpc
-            const rpc = createSolanaRpc(rpcUrl);
-            // Cast to DualConnection - kit's Rpc is compatible with our KitRpc structural type
-            const dualRpc = rpc as unknown as Parameters<typeof getLatestBlockhash>[0];
-
-            // Debug: Check what properties the rpc has
-            console.log('Kit Rpc object inspection:', {
-                hasRpcEndpoint: 'rpcEndpoint' in rpc,
-                hasGetLatestBlockhash: 'getLatestBlockhash' in rpc,
-                hasSendTransaction: 'sendTransaction' in rpc,
-                hasGetBalance: 'getBalance' in rpc,
-                isLegacy: isLegacyConnection(dualRpc),
-                isKit: isKitConnection(dualRpc),
-                allKeys: Object.keys(rpc),
-                getLatestBlockhashType: typeof rpc.getLatestBlockhash,
-            });
-
+            // Kit's Rpc satisfies the helper's structural KitRpc shape
+            const dualRpc = solanaClient.rpc as unknown as DualConnection;
             setConnectionType(isKitConnection(dualRpc) ? 'kit' : null);
 
             // Use abstraction helper - works with Kit Rpc
-            const result = await getLatestBlockhash(dualRpc, 'confirmed');
-            setBlockhash(result);
+            setBlockhash(await getLatestBlockhash(dualRpc, 'confirmed'));
         } catch (err) {
-            console.error('Kit Rpc error:', err);
             setError(err instanceof Error ? err.message : 'Failed to get blockhash');
         } finally {
             setLoading(false);

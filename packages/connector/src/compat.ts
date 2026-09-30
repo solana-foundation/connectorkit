@@ -1,5 +1,12 @@
 /**
  * Wallet Adapter Compatibility Bridge
+ *
+ * This surface is inherently legacy/v0-only: it round-trips transactions
+ * through web3.js 1.x objects, which cannot represent version 1 (SIMD-0296)
+ * transactions (read-only v1 support only lands in web3.js 1.99.0-beta.0,
+ * and only for RPC responses). v1 bytes are rejected with a descriptive
+ * error instead of being misparsed; use the kit-native surface
+ * (`@solana/connector/kit`) for v1 transactions.
  */
 
 import { useMemo } from 'react';

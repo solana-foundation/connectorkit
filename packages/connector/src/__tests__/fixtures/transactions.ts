@@ -2,6 +2,63 @@ import type { TransactionActivity, TransactionMethod } from '../../types/transac
 import type { SolanaClusterId } from '@wallet-ui/core';
 import type { Signature } from '@solana/keys';
 import { signature as toSignature } from '@solana/keys';
+import { address } from '@solana/addresses';
+import {
+    appendTransactionMessageInstruction,
+    blockhash,
+    compileTransaction,
+    createTransactionMessage,
+    getTransactionEncoder,
+    pipe,
+    setTransactionMessageConfig,
+    setTransactionMessageFeePayer,
+    setTransactionMessageLifetimeUsingBlockhash,
+} from '@solana/kit';
+
+/** Fee payer used by the wire-format transaction fixtures. */
+export const WIRE_FIXTURE_FEE_PAYER = '11111111111111111111111111111112';
+const WIRE_FIXTURE_PROGRAM = 'MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr';
+const WIRE_FIXTURE_BLOCKHASH = 'GfVcyD4kkTrj4bKc7WA9sZCin9JDbdT4Zkd3EittNR1W';
+
+/**
+ * Build wire-correct serialized transaction bytes for a given version using
+ * kit's compiler and codecs (unsigned: signature slots are zero-filled).
+ *
+ * Legacy/v0 encode as: shortvec signature count, 64-byte signatures, message
+ * (v0 message prefixed with 0x80). v1 encodes with the 0x81 discriminator at
+ * byte 0 and signatures at the tail (SIMD-0385).
+ *
+ * @param version - Transaction version to compile
+ * @param options.instructionDataBytes - Pads the transaction with an
+ *   instruction carrying this many data bytes, to control the wire size.
+ */
+export function createWireTransactionBytes(
+    version: 'legacy' | 0 | 1,
+    options: { instructionDataBytes?: number } = {},
+): Uint8Array {
+    const lifetime = { blockhash: blockhash(WIRE_FIXTURE_BLOCKHASH), lastValidBlockHeight: 0n };
+    let message = pipe(
+        createTransactionMessage({ version }),
+        m => setTransactionMessageFeePayer(address(WIRE_FIXTURE_FEE_PAYER), m),
+        m => setTransactionMessageLifetimeUsingBlockhash(lifetime, m),
+    );
+    if (options.instructionDataBytes !== undefined) {
+        message = appendTransactionMessageInstruction(
+            {
+                data: new Uint8Array(options.instructionDataBytes).fill(1),
+                programAddress: address(WIRE_FIXTURE_PROGRAM),
+            },
+            message,
+        );
+    }
+    if (message.version === 1) {
+        message = setTransactionMessageConfig(
+            { computeUnitLimit: 200_000, loadedAccountsDataSizeLimit: 1_024, priorityFeeLamports: 5_000n },
+            message,
+        );
+    }
+    return new Uint8Array(getTransactionEncoder().encode(compileTransaction(message)));
+}
 
 export const TEST_SIGNATURES = {
     TX_1: '5j7s6NiJS3JAkvgkoc18WVAsiSaci2pxB2A6ueCJP4tprA2TFg9wSyTLeYouxPBJEMzJinENTkpA52YStRW5Dia7',

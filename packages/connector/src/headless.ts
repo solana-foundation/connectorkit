@@ -41,11 +41,6 @@ export {
     createEnhancedStorageAccount,
     createEnhancedStorageCluster,
     createEnhancedStorageWallet,
-    // vNext storage
-    createEnhancedStorageWalletState,
-    saveWalletState,
-    clearWalletState,
-    WALLET_STATE_VERSION,
 } from './lib/wallet';
 
 // ============================================================================
@@ -86,13 +81,13 @@ export {
     TransactionSignerError,
     isTransactionSignerError,
 } from './lib/transaction/transaction-signer';
-export {
-    createKitTransactionSigner,
-    /** @deprecated Use `createKitTransactionSigner` instead */
-    createGillTransactionSigner,
-} from './lib/transaction/kit-transaction-signer';
 
 export type { TransactionSigner } from './lib/transaction/transaction-signer';
+
+// Transaction version negotiation (v1 / SIMD-0296 aware)
+export { getWalletSupportedTransactionVersions, walletSupportsTransactionVersion } from './utils/transaction-versions';
+export type { SolanaSignFeatureName } from './utils/transaction-versions';
+export type { SolanaTransactionVersionLike } from './types/transactions';
 
 // ============================================================================
 // Off-Chain Message Signing (OCMS)
@@ -167,7 +162,6 @@ export { installPolyfills, isPolyfillInstalled, isCryptoAvailable, getPolyfillSt
 // Kit Signer Integration
 // ============================================================================
 export * from './lib/kit/signer-types';
-export * from './lib/kit/signer-factories';
 export * from './lib/kit/signer-integration';
 export * from './lib/kit/signer-utils';
 export { createSignableMessage } from '@solana/signers';
@@ -200,12 +194,12 @@ export {
     getAllExplorerUrls,
     formatSignature,
     copySignature,
-} from './lib/utils/explorer-urls';
+} from './lib/kit';
 
-export type { ExplorerType, ExplorerOptions } from './lib/utils/explorer-urls';
+export type { ExplorerType, ExplorerOptions } from './lib/kit';
 
 // ============================================================================
-// Kit Utilities (replaces gill imports)
+// Kit Utilities
 // ============================================================================
 export {
     LAMPORTS_PER_SOL,
@@ -224,6 +218,7 @@ export type {
     CreateSolanaClientArgs,
     GetExplorerLinkArgs,
     PrepareTransactionConfig,
+    PrepareTransactionConfigWithoutEstimation,
 } from './lib/kit';
 
 // ============================================================================
