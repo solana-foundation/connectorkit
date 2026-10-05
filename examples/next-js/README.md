@@ -307,19 +307,25 @@ Edit `app/api/connector-signer/route.ts` to add custom authorization:
 ```typescript
 const { GET, POST } = createRemoteSignerRouteHandlers({
     provider: getProviderConfig(),
+    // Return `{ principal }` to tell policy hooks who was authorized,
+    // or a plain boolean to allow/reject anonymously.
     authorize: async request => {
-        // Example: verify user session
         const session = await getServerSession(request);
-        return session?.user?.role === 'admin';
+        if (session?.user?.role !== 'admin') return false;
+        return { principal: { userId: session.user.id } };
     },
     policy: {
-        validateTransaction: async (txBytes, request) => {
-            // Example: only allow transfers under 1 SOL
-            return true;
+        validateTransaction: async (txBytes, request, context) => {
+            // context.principal is the value returned by `authorize` above
+            // (typed from it, so keep `authorize` above `policy` in this literal).
+            // context.operation / context.index / context.total describe the call.
+            return isAllowedFor(context.principal.userId, txBytes);
         },
     },
 });
 ```
+
+The default `authorize` (used when you omit the option) compares the `Authorization` header against `CONNECTOR_SIGNER_TOKEN` in constant time. Passing your own `authorize` replaces it entirely.
 
 ## 🚢 Production Tips
 

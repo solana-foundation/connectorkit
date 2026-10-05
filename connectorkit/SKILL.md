@@ -270,12 +270,14 @@ import { createRemoteSignerRouteHandlers } from '@solana/connector/server';
 
 const { GET, POST } = createRemoteSignerRouteHandlers({
     provider: { type: 'custom', signer: myRemoteSigner }, // implements RemoteSigner (see references/remote-signer.md)
-    authorize: async request => true,
+    // Return `{ principal }` (passed to policy hooks) or a boolean. Omit to use the
+    // default CONNECTOR_SIGNER_TOKEN bearer check. Keep `authorize` above `policy`.
+    authorize: async request => ({ principal: { userId: 'u1' } }),
     policy: {
-        validateTransaction: async bytes => true,
-        validateMessage: async bytes => true,
+        validateTransaction: async (bytes, request, context) => context.principal.userId === 'u1',
+        validateMessage: async (bytes, request, context) => true,
     },
-    rpc: { endpoint: process.env.RPC_URL },
+    rpc: { url: process.env.RPC_URL },
     chains: ['solana:mainnet'],
     name: 'Treasury',
 });

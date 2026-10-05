@@ -96,22 +96,24 @@ const { GET, POST } = createRemoteSignerRouteHandlers({
           }
         : undefined,
 
-    // For development: allow all requests (skip auth)
-    // In production, set CONNECTOR_SIGNER_TOKEN or implement custom auth
-    authorize: async () => {
-        // Allow all requests in development when no token is configured
-        if (!process.env.CONNECTOR_SIGNER_TOKEN) {
-            console.log('[connector-signer] No CONNECTOR_SIGNER_TOKEN set, allowing request (dev mode)');
-            return true;
-        }
-        // In production with token set, the default auth handler will be used
-        return true;
-    },
+    // Authorization. Passing `authorize` REPLACES the built-in token check, so
+    // only override it when no token is configured (dev mode). With
+    // CONNECTOR_SIGNER_TOKEN set, the default handler compares the
+    // `Authorization: Bearer <token>` header in constant time.
+    ...(process.env.CONNECTOR_SIGNER_TOKEN
+        ? {}
+        : {
+              authorize: async () => {
+                  console.log('[connector-signer] No CONNECTOR_SIGNER_TOKEN set, allowing request (dev mode)');
+                  // `{ principal }` is handed to policy hooks as `context.principal`
+                  return { principal: { mode: 'dev' as const } };
+              },
+          }),
 
-    // Optional: policy hooks
+    // Optional: policy hooks receive (bytes, request, context)
     // policy: {
-    //     validateTransaction: async (txBytes, request) => {
-    //         // Example: check transaction against allowlist
+    //     validateTransaction: async (txBytes, request, context) => {
+    //         // Example: check transaction against an allowlist for context.principal
     //         return true;
     //     },
     // },

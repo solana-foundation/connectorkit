@@ -52,17 +52,20 @@ const { GET, POST } = createRemoteSignerRouteHandlers({
     provider: {/* Fireblocks, Privy, or custom */},
     authorize: async request => {
         // Validate the request (check JWT, session, etc.)
-        return true;
+        const user = await getUser(request);
+        if (!user) return false; // -> 401
+        return { principal: user }; // passed to policy hooks as context.principal
     },
     policy: {
-        validateTransaction: async (bytes, request) => {
-            // Inspect transaction before signing
-            return true;
+        validateTransaction: async (bytes, request, context) => {
+            // Inspect transaction before signing; context.principal is `user` above
+            return context.principal.canSign;
         },
-        validateMessage: async (bytes, request) => true,
+        validateMessage: async (bytes, request, context) => true,
     },
     rpc: {
-        endpoint: process.env.RPC_URL, // Required for signAndSend
+        url: process.env.RPC_URL, // Required for signAndSend
+        commitment: 'confirmed', // optional preflight commitment
     },
     chains: ['solana:mainnet'],
     name: 'Treasury Wallet',
@@ -72,6 +75,14 @@ export { GET, POST };
 ```
 
 `GET` returns wallet metadata (address, capabilities). `POST` handles sign operations.
+
+### Authorization and policy
+
+- `authorize(request)` may return `true` (allow, no identity), `{ principal }` (allow and identify the caller), or `false` / `null` / `undefined` (reject with 401). Omit it to use the default: the `Authorization` header (`Bearer <token>` or raw) is compared against `CONNECTOR_SIGNER_TOKEN` in constant time; an unset token rejects everything.
+- Policy hooks receive `(bytes, request, context)`. `context` is a `PolicyContext<P>` with `principal` (whatever `authorize` returned, `undefined` for boolean results), `request`, `operation` (`'signTransaction' | 'signAllTransactions' | 'signAndSendTransaction' | 'signMessage'`), and for batches `index` / `total`. Two-argument hooks still work.
+- The principal type is inferred from `authorize`, so put `authorize` before `policy` in the config literal (or pass the type explicitly: `createRemoteSignerRouteHandlers<User>({...})`).
+- Internally, signing requires evidence that both steps ran: the handlers hold a signer that only accepts policy-approved values, and approval requires the authorization result. A code path that skips either step does not type-check.
+- Each `createRemoteSignerRouteHandlers` call owns its own signer instance; concurrent first requests share a single provider initialisation and a failed initialisation is retried on the next request.
 
 ## Provider Configurations
 
@@ -132,13 +143,14 @@ The remote signer uses a JSON protocol over HTTP.
 
 **Success responses:**
 
-- `{ signedTransaction: base64 }`
-- `{ signedTransactions: base64[] }`
-- `{ signature: base64 }`
+- `signTransaction` — `{ signedTransaction: base64 }`
+- `signAllTransactions` — `{ signedTransactions: base64[] }`
+- `signMessage` — `{ signature: base64 }` (64-byte signature)
+- `signAndSendTransaction` — `{ signature: base58 }` (transaction signature)
 
 **Error response:**
 
-- `{ error: RemoteSignerErrorCode, message: string }`
+- `{ error: { code: RemoteSignerErrorCode, message: string, details?: unknown } }`
 
 **Utilities** (from `@solana/connector/remote`):
 
@@ -148,8 +160,8 @@ The remote signer uses a JSON protocol over HTTP.
 
 ## Security
 
-- Always implement `authorize` to validate requests (JWT, session, API key)
-- Use `policy.validateTransaction` to inspect transactions before signing (whitelist programs, check amounts)
+- Always implement `authorize` to validate requests (JWT, session, API key), or set `CONNECTOR_SIGNER_TOKEN` to use the built-in constant-time bearer check
+- Use `policy.validateTransaction` to inspect transactions before signing (whitelist programs, check amounts); use `context.principal` to apply per-caller rules
 - The server handler never exposes private keys to the browser
 - Use HTTPS in production
 - Consider rate limiting the signing endpoint
