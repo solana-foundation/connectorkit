@@ -122,9 +122,12 @@ export class TransactionValidator {
                     });
                 }
             }
-            // Handle already-serialized transactions
+            // Handle already-serialized transactions (any typed array / DataView,
+            // normalised the same way serializeTransaction does)
             else if (transaction instanceof Uint8Array) {
                 serialized = transaction;
+            } else if (ArrayBuffer.isView(transaction)) {
+                serialized = new Uint8Array(transaction.buffer, transaction.byteOffset, transaction.byteLength);
             }
             // Handle unknown transaction types
             else {

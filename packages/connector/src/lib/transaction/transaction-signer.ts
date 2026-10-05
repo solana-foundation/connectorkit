@@ -7,6 +7,7 @@ import type {
     TransactionSignerConfig,
     TransactionSignerCapabilities,
 } from '../../types/transactions';
+import type { WalletAccount } from '../../types/wallets';
 import { prepareTransactionForWallet, convertSignedTransaction } from '../../utils/transaction-format';
 import { getWalletSupportedTransactionVersions } from '../../utils/transaction-versions';
 import { TransactionValidator } from './transaction-validator';
@@ -15,6 +16,75 @@ import { TransactionError, ValidationError, Errors } from '../errors';
 import { getBase58Decoder } from '@solana/codecs';
 
 const logger = createLogger('TransactionSigner');
+
+declare const VALIDATED: unique symbol;
+
+/**
+ * Serialized transaction bytes that passed {@link TransactionValidator}.
+ *
+ * Only {@link validateForWallet} produces this type, and the wallet-feature
+ * calls below accept nothing else, so no signing path can reach the wallet
+ * without validation. The brand is a phantom type: it is erased at runtime.
+ *
+ * @internal
+ */
+export type ValidatedWireTransaction = Uint8Array & { readonly [VALIDATED]: true };
+
+type ChainInput = { chain?: string };
+type AccountInput = { account: WalletAccount };
+type SingleOrBatch = { transactions: ValidatedWireTransaction[] } | { transaction: ValidatedWireTransaction };
+
+/**
+ * The Wallet Standard signing features, typed so that transaction bytes must
+ * be {@link ValidatedWireTransaction}. Capability detection only checks for
+ * the presence of each key.
+ *
+ * @internal
+ */
+export interface SigningFeatures {
+    'solana:signTransaction'?: {
+        signTransaction(input: AccountInput & ChainInput & SingleOrBatch): Promise<unknown>;
+    };
+    'solana:signAllTransactions'?: {
+        signAllTransactions(
+            input: AccountInput & ChainInput & { transactions: ValidatedWireTransaction[] },
+        ): Promise<unknown>;
+    };
+    'solana:signAndSendTransaction'?: {
+        signAndSendTransaction(
+            input: AccountInput &
+                ChainInput &
+                SingleOrBatch & { options?: { skipPreflight?: boolean; maxRetries?: number } },
+        ): Promise<unknown>;
+    };
+    'solana:signMessage'?: {
+        signMessage(input: AccountInput & ChainInput & { message: Uint8Array }): Promise<unknown>;
+    };
+}
+
+/**
+ * Validate a transaction and serialize it for the wallet. The only producer
+ * of {@link ValidatedWireTransaction}.
+ *
+ * @throws ValidationError (INVALID_TRANSACTION) when validation fails
+ */
+function validateForWallet(
+    transaction: SolanaTransaction,
+    position?: { index: number; total: number },
+): { serialized: ValidatedWireTransaction; wasWeb3js: boolean } {
+    const validation = TransactionValidator.validate(transaction);
+    if (!validation.valid) {
+        logger.error('Transaction validation failed', { errors: validation.errors, ...position });
+        throw Errors.invalidTransaction(validation.errors.join(', '), position);
+    }
+
+    if (validation.warnings.length > 0) {
+        logger.warn('Transaction validation warnings', { warnings: validation.warnings, ...position });
+    }
+
+    const { serialized, wasWeb3js } = prepareTransactionForWallet(transaction);
+    return { serialized: serialized as ValidatedWireTransaction, wasWeb3js };
+}
 
 function signatureBytesToBase58(bytes: Uint8Array): string {
     if (bytes.length !== 64) {
@@ -110,7 +180,7 @@ export function createTransactionSigner(config: TransactionSignerConfig): Transa
         return null;
     }
 
-    const features = wallet.features as Record<string, Record<string, (...args: unknown[]) => unknown>>;
+    const features = wallet.features as unknown as SigningFeatures;
     const address = account.address as string;
 
     const capabilities: TransactionSignerCapabilities = {
@@ -129,20 +199,10 @@ export function createTransactionSigner(config: TransactionSignerConfig): Transa
                 throw Errors.featureNotSupported('transaction signing');
             }
 
-            const validation = TransactionValidator.validate(transaction);
-            if (!validation.valid) {
-                logger.error('Transaction validation failed', { errors: validation.errors });
-                throw Errors.invalidTransaction(validation.errors.join(', '));
-            }
-
-            if (validation.warnings.length > 0) {
-                logger.warn('Transaction validation warnings', { warnings: validation.warnings });
-            }
+            const { serialized, wasWeb3js } = validateForWallet(transaction);
 
             try {
-                const signFeature = features['solana:signTransaction'];
-
-                const { serialized, wasWeb3js } = prepareTransactionForWallet(transaction);
+                const signFeature = features['solana:signTransaction']!;
 
                 logger.debug('Signing transaction', {
                     wasWeb3js,
@@ -241,12 +301,15 @@ export function createTransactionSigner(config: TransactionSignerConfig): Transa
             }
 
             if (capabilities.supportsBatchSigning) {
-                try {
-                    const signFeature = features['solana:signAllTransactions'];
+                // Validate everything before touching the wallet; a ValidationError
+                // surfaces directly, as it does for signTransaction.
+                const total = transactions.length;
+                const prepared = transactions.map((tx, index) => validateForWallet(tx, { index, total }));
+                const serializedTxs = prepared.map(p => p.serialized);
+                const wasWeb3js = prepared[0].wasWeb3js;
 
-                    const prepared = transactions.map(tx => prepareTransactionForWallet(tx));
-                    const serializedTxs = prepared.map(p => p.serialized);
-                    const wasWeb3js = prepared[0].wasWeb3js;
+                try {
+                    const signFeature = features['solana:signAllTransactions']!;
 
                     type SignAllResult =
                         | { signedTransaction: Uint8Array }[] // Wallet Standard format
@@ -318,10 +381,10 @@ export function createTransactionSigner(config: TransactionSignerConfig): Transa
                 throw Errors.featureNotSupported('sending transactions');
             }
 
-            try {
-                const sendFeature = features['solana:signAndSendTransaction'];
+            const { serialized } = validateForWallet(transaction);
 
-                const { serialized } = prepareTransactionForWallet(transaction);
+            try {
+                const sendFeature = features['solana:signAndSendTransaction']!;
 
                 if (eventEmitter) {
                     eventEmitter.emit({
@@ -409,7 +472,7 @@ export function createTransactionSigner(config: TransactionSignerConfig): Transa
         ...(capabilities.canSignMessage && {
             async signMessage(message: Uint8Array): Promise<Uint8Array> {
                 try {
-                    const signFeature = features['solana:signMessage'];
+                    const signFeature = features['solana:signMessage']!;
                     const result = await signFeature.signMessage({
                         account,
                         message,

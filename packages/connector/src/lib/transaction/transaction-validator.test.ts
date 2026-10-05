@@ -24,6 +24,31 @@ describe('TransactionValidator', () => {
             expect(result.size).toBe(100);
         });
 
+        it('should validate non-Uint8Array typed array views the same as Uint8Array', () => {
+            const bytes = createWireTransactionBytes('legacy', { instructionDataBytes: 100 });
+            const asInt8 = new Int8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+            const asDataView = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+
+            expect(TransactionValidator.validate(bytes).valid).toBe(true);
+
+            for (const view of [asInt8, asDataView]) {
+                const result = TransactionValidator.validate(view);
+                expect(result.valid).toBe(true);
+                expect(result.errors).toEqual([]);
+                expect(result.size).toBe(bytes.byteLength);
+            }
+        });
+
+        it('should apply the size limit to non-Uint8Array views', () => {
+            const bytes = createWireTransactionBytes('legacy', { instructionDataBytes: 1300 });
+            const result = TransactionValidator.validate(
+                new Int8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength),
+            );
+
+            expect(result.valid).toBe(false);
+            expect(result.errors[0]).toContain('Transaction too large');
+        });
+
         it('should reject null transaction', () => {
             const result = TransactionValidator.validate(
                 null as unknown as Parameters<typeof TransactionValidator.validate>[0],
