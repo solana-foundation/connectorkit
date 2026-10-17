@@ -56,6 +56,13 @@ export function getClusterRpcUrl(cluster: SolanaCluster | string): string {
 }
 
 export function getClusterExplorerUrl(cluster: SolanaCluster, path?: string): string {
+    const clusterType = getClusterType(cluster);
+    // Explorer has no localnet/custom cluster param. Match getExplorerLink / getSolanaExplorerUrl.
+    if (clusterType === 'localnet' || clusterType === 'custom') {
+        const query = `cluster=custom&customUrl=${encodeURIComponent(getClusterRpcUrl(cluster))}`;
+        return path ? `https://explorer.solana.com/${path}?${query}` : `https://explorer.solana.com?${query}`;
+    }
+
     const parts = cluster.id.split(':');
     const clusterSegment = parts[1] || 'devnet';
 
