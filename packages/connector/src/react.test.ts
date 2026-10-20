@@ -68,6 +68,11 @@ describe('React Entry Point (react.ts)', () => {
             expect(typeof ConnectorKitReact.useKitTransactionSigner).toBe('function');
         });
 
+        it('should export useKitMessageSigner hook', () => {
+            expect(ConnectorKitReact.useKitMessageSigner).toBeDefined();
+            expect(typeof ConnectorKitReact.useKitMessageSigner).toBe('function');
+        });
+
         it('should export useGillTransactionSigner hook (deprecated alias)', () => {
             expect(ConnectorKitReact.useGillTransactionSigner).toBeDefined();
             expect(typeof ConnectorKitReact.useGillTransactionSigner).toBe('function');
