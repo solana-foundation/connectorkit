@@ -168,6 +168,33 @@ describe('createOffchainMessageSigner', () => {
         });
     });
 
+    it('classifies a plain-object wallet cancellation as USER_REJECTED', async () => {
+        const { keyPair, account } = await createKeyedAccount();
+        const wallet = createOffchainMessageWallet(keyPair);
+        (wallet.features as Record<string, { signOffchainMessage: ReturnType<typeof vi.fn> }>)[
+            SolanaSignOffchainMessage
+        ].signOffchainMessage.mockRejectedValueOnce({ code: 4001, message: 'User rejected the request.' });
+        const signer = createOffchainMessageSigner({ wallet, account })!;
+
+        await expect(signer.signOffchainMessage('hello')).rejects.toMatchObject({ code: 'USER_REJECTED' });
+    });
+
+    it("keeps the wallet's own diagnostic on a signing failure", async () => {
+        const { keyPair, account } = await createKeyedAccount();
+        const wallet = createOffchainMessageWallet(keyPair);
+        (wallet.features as Record<string, { signOffchainMessage: ReturnType<typeof vi.fn> }>)[
+            SolanaSignOffchainMessage
+        ].signOffchainMessage.mockRejectedValueOnce({ code: -32603, message: 'Wallet is locked' });
+        const signer = createOffchainMessageSigner({ wallet, account })!;
+
+        const error = await signer.signOffchainMessage('hello').catch((e: unknown) => e as Error);
+        expect(error).toMatchObject({
+            code: 'SIGNING_FAILED',
+            message: 'Failed to sign off-chain message: Wallet is locked',
+        });
+        expect((error.cause as Error).message).toBe('Wallet is locked');
+    });
+
     it('rejects an already-aborted request before contacting the wallet', async () => {
         const { keyPair, account } = await createKeyedAccount();
         const wallet = createOffchainMessageWallet(keyPair);

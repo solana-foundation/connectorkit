@@ -11,7 +11,7 @@ import { prepareTransactionForWallet, convertSignedTransaction } from '../../uti
 import { getWalletSupportedTransactionVersions } from '../../utils/transaction-versions';
 import { TransactionValidator } from './transaction-validator';
 import { createLogger } from '../utils/secure-logger';
-import { TransactionError, ValidationError, Errors } from '../errors';
+import { TransactionError, ValidationError, Errors, toError, withCauseMessage } from '../errors';
 import { getBase58Decoder } from '@solana/codecs';
 
 const logger = createLogger('TransactionSigner');
@@ -231,7 +231,7 @@ export function createTransactionSigner(config: TransactionSignerConfig): Transa
                     'Wallet returned unexpected format - not a Transaction or Uint8Array',
                 );
             } catch (error) {
-                throw Errors.signingFailed(error as Error);
+                throw Errors.signingFailed(toError(error));
             }
         },
 
@@ -280,7 +280,7 @@ export function createTransactionSigner(config: TransactionSignerConfig): Transa
                         'SIGNING_FAILED',
                         `Failed to sign transactions in batch`,
                         { count: transactions.length },
-                        error as Error,
+                        toError(error),
                     );
                 }
             }
@@ -299,7 +299,7 @@ export function createTransactionSigner(config: TransactionSignerConfig): Transa
                         'SIGNING_FAILED',
                         `Failed to sign transaction ${i + 1} of ${transactions.length}`,
                         { index: i, total: transactions.length },
-                        error as Error,
+                        toError(error),
                     );
                 }
             }
@@ -368,7 +368,7 @@ export function createTransactionSigner(config: TransactionSignerConfig): Transa
 
                 return signature;
             } catch (error) {
-                throw new TransactionError('SEND_FAILED', 'Failed to send transaction', undefined, error as Error);
+                throw new TransactionError('SEND_FAILED', 'Failed to send transaction', undefined, toError(error));
             }
         },
 
@@ -395,7 +395,7 @@ export function createTransactionSigner(config: TransactionSignerConfig): Transa
                         'SEND_FAILED',
                         `Failed to send transaction ${i + 1} of ${transactions.length}`,
                         { index: i, total: transactions.length },
-                        error as Error,
+                        toError(error),
                     );
                 }
             }
@@ -414,7 +414,13 @@ export function createTransactionSigner(config: TransactionSignerConfig): Transa
                     });
                     return extractSignatureBytes(result);
                 } catch (error) {
-                    throw new TransactionError('SIGNING_FAILED', 'Failed to sign message', undefined, error as Error);
+                    const cause = toError(error);
+                    throw new TransactionError(
+                        'SIGNING_FAILED',
+                        withCauseMessage('Failed to sign message', cause),
+                        undefined,
+                        cause,
+                    );
                 }
             },
         }),
