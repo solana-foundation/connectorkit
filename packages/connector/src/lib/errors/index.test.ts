@@ -21,6 +21,8 @@ import {
     Errors,
     toConnectorError,
     getUserFriendlyMessage,
+    toError,
+    withCauseMessage,
 } from './index';
 
 describe('Error System', () => {
@@ -356,6 +358,84 @@ describe('Error System', () => {
         it('should use default message for unknown errors', () => {
             const converted = toConnectorError(null, 'Custom default message');
             expect(converted.message).toBe('Custom default message');
+        });
+
+        it('should classify a plain-object user rejection', () => {
+            const converted = toConnectorError({ code: 4001, message: 'User rejected the request.' });
+            expect(converted.code).toBe('USER_REJECTED');
+        });
+
+        it('should keep a plain-object wallet error as the cause', () => {
+            const converted = toConnectorError({ code: -32603, message: 'Internal wallet error' });
+            expect(converted.code).toBe('SIGNING_FAILED');
+            expect(converted.message).toBe('Internal wallet error');
+            expect((converted.cause as Error).message).toBe('Internal wallet error');
+        });
+
+        it('should not paste a stringified value onto the default message', () => {
+            // `toError({})` has to produce *something*, but '[object Object]' is noise.
+            expect(toConnectorError({}, 'Custom default message').message).toBe('Custom default message');
+            expect(toConnectorError(undefined, 'Custom default message').message).toBe('Custom default message');
+        });
+    });
+
+    describe('cause', () => {
+        it('should set the standard `cause` alongside `originalError`', () => {
+            const original = new Error('wallet said no');
+            const error = new TransactionError('SIGNING_FAILED', 'Failed to sign', undefined, original);
+
+            expect(error.cause).toBe(original);
+            expect(error.originalError).toBe(original);
+        });
+
+        it('should leave `cause` unset without an original error', () => {
+            expect('cause' in new TransactionError('SIGNING_FAILED', 'Failed to sign')).toBe(false);
+        });
+
+        it('should serialize the cause as message and name, without a stack', () => {
+            const original = new TypeError('bad bytes');
+            const json = new TransactionError('SIGNING_FAILED', 'Failed to sign', undefined, original).toJSON();
+
+            expect(json.originalError).toBe('bad bytes');
+            expect(json.originalErrorName).toBe('TypeError');
+            expect(JSON.stringify(json)).not.toContain('stack');
+        });
+    });
+
+    describe('toError', () => {
+        it('should return an Error unchanged', () => {
+            const error = new Error('original');
+            expect(toError(error)).toBe(error);
+        });
+
+        it('should keep the message of a plain-object wallet rejection', () => {
+            const rejection = { code: 4001, message: 'User rejected the request.' };
+            const converted = toError(rejection);
+
+            expect(converted.message).toBe('User rejected the request.');
+            expect((converted as Error & { code?: unknown }).code).toBe(4001);
+            expect(converted.cause).toBe(rejection);
+        });
+
+        it('should fall back to a `reason` property', () => {
+            expect(toError({ reason: 'Wallet is locked' }).message).toBe('Wallet is locked');
+        });
+
+        it('should keep a thrown string as the message', () => {
+            expect(toError('boom').message).toBe('boom');
+        });
+    });
+
+    describe('withCauseMessage', () => {
+        it('should append the cause message to the summary', () => {
+            expect(withCauseMessage('Failed to sign message', new Error('Wallet is locked'))).toBe(
+                'Failed to sign message: Wallet is locked',
+            );
+        });
+
+        it('should leave the summary alone for a value with no message of its own', () => {
+            expect(withCauseMessage('Failed to sign message', toError({}))).toBe('Failed to sign message');
+            expect(withCauseMessage('Failed to sign message', toError(null))).toBe('Failed to sign message');
         });
     });
 

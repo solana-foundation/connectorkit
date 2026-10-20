@@ -13,7 +13,10 @@ export abstract class ConnectorError extends Error {
     readonly timestamp: string;
 
     constructor(message: string, context?: Record<string, unknown>, originalError?: Error) {
-        super(message);
+        // Set the standard ES `cause` as well as `.originalError`. Only `cause`
+        // is walked by console/`util.inspect` and by most error-reporting tools,
+        // so without it the wallet's own diagnostic never reaches the developer.
+        super(message, originalError ? { cause: originalError } : undefined);
         this.name = this.constructor.name;
         this.context = context;
         this.originalError = originalError;
@@ -32,7 +35,15 @@ export abstract class ConnectorError extends Error {
             recoverable: this.recoverable,
             context: this.context,
             timestamp: this.timestamp,
+            // `originalError` stays the message string it has always been - this payload
+            // is public and consumers store, validate and forward it as such. The name
+            // rides alongside in its own field instead of restructuring the old one.
+            //
+            // Deliberately no `stack`: `toJSON()` is what consumers hand to telemetry,
+            // and a wallet extension's stack leaks its internal paths and extension ID.
+            // The stack stays on the live error object for local debugging.
             originalError: this.originalError?.message,
+            originalErrorName: this.originalError?.name,
         };
     }
 }
@@ -206,38 +217,100 @@ export const Errors = {
         new TransactionError('USER_REJECTED', `User rejected ${operation}`, { operation }),
 } as const;
 
+/** Marks an `Error` whose message is only a stringification of the thrown value. */
+const SYNTHESIZED_MESSAGE = Symbol('connector.synthesizedMessage');
+
+/**
+ * Coerce an unknown thrown value into an `Error` so it can always be carried as
+ * a `cause`. Wallets throw strings and plain objects as often as they throw
+ * `Error`s, and those used to be dropped entirely.
+ */
+export function toError(value: unknown): Error {
+    if (value instanceof Error) {
+        return value;
+    }
+
+    if (typeof value === 'string') {
+        return new Error(value);
+    }
+
+    // Injected providers reject with plain objects far more often than with `Error`s -
+    // `{ code: 4001, message: 'User rejected the request.' }` is the shape every
+    // EIP-1193-style provider uses. `String(value)` renders that as '[object Object]',
+    // which loses the message and, with it, the user-rejection classification that
+    // every caller downstream derives from the message text.
+    if (value !== null && typeof value === 'object') {
+        const record = value as { message?: unknown; reason?: unknown; code?: unknown };
+        const text = typeof record.message === 'string' ? record.message : record.reason;
+
+        if (typeof text === 'string' && text.length > 0) {
+            const error = new Error(text, { cause: value });
+            if (record.code !== undefined) {
+                (error as Error & { code?: unknown }).code = record.code;
+            }
+            return error;
+        }
+    }
+
+    // Nothing here carries a diagnostic of its own - the message is only a
+    // stringification ('null', 'undefined', '[object Object]'). Mark it so
+    // `withCauseMessage` does not paste that onto a user-facing summary.
+    const synthesized = new Error(String(value), { cause: value });
+    Object.defineProperty(synthesized, SYNTHESIZED_MESSAGE, { value: true });
+    return synthesized;
+}
+
+/**
+ * Build a wrapper message that keeps the underlying error's own text visible.
+ *
+ * A bare 'Failed to sign message' hides every wallet-specific diagnostic behind
+ * one generic string, which makes these failures very hard to triage. An error
+ * `toError` synthesized from a value with no message of its own is skipped:
+ * 'Failed to sign message: [object Object]' is noise, not a diagnostic.
+ */
+export function withCauseMessage(summary: string, cause: Error): string {
+    if (!cause.message || SYNTHESIZED_MESSAGE in cause) {
+        return summary;
+    }
+
+    return `${summary}: ${cause.message}`;
+}
+
 export function toConnectorError(error: unknown, defaultMessage = 'An unexpected error occurred'): ConnectorError {
     if (isConnectorError(error)) {
         return error;
     }
 
-    if (error instanceof Error) {
-        const message = error.message.toLowerCase();
-
-        if (message.includes('user rejected') || message.includes('user denied')) {
-            return Errors.userRejected('transaction');
-        }
-
-        if (message.includes('wallet not found') || message.includes('not installed')) {
-            return Errors.walletNotFound();
-        }
-
-        if (message.includes('not connected')) {
-            return Errors.walletNotConnected();
-        }
-
-        if (message.includes('network') || message.includes('fetch')) {
-            return Errors.rpcError(error.message, error);
-        }
-
-        if (message.includes('invalid')) {
-            return new ValidationError('VALIDATION_FAILED', error.message, undefined, error);
-        }
-
-        return new TransactionError('SIGNING_FAILED', error.message, undefined, error);
+    // Classify on the coerced error, so a plain-object rejection is read by the
+    // same message checks as an `Error` instead of falling through to SIGNING_FAILED.
+    const cause = toError(error);
+    if (SYNTHESIZED_MESSAGE in cause) {
+        return new TransactionError('SIGNING_FAILED', defaultMessage, undefined, cause);
     }
 
-    return new TransactionError('SIGNING_FAILED', defaultMessage, { originalError: String(error) });
+    const message = cause.message.toLowerCase();
+
+    if (message.includes('user rejected') || message.includes('user denied')) {
+        return Errors.userRejected('transaction');
+    }
+
+    if (message.includes('wallet not found') || message.includes('not installed')) {
+        return Errors.walletNotFound();
+    }
+
+    if (message.includes('not connected')) {
+        return Errors.walletNotConnected();
+    }
+
+    if (message.includes('network') || message.includes('fetch')) {
+        return Errors.rpcError(cause.message, cause);
+    }
+
+    if (message.includes('invalid')) {
+        return new ValidationError('VALIDATION_FAILED', cause.message, undefined, cause);
+    }
+
+    return new TransactionError('SIGNING_FAILED', cause.message, undefined, cause);
 }
 
 export function getUserFriendlyMessage(error: unknown): string {
