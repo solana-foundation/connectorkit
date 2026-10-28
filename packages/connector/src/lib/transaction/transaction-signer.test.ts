@@ -13,6 +13,7 @@ import { createWireTransactionBytes } from '../../__tests__/fixtures/transaction
 import type { SolanaCluster } from '@wallet-ui/core';
 import type { SignatureBytes } from '@solana/keys';
 import { signatureBytesToBase58 } from '../kit/signer-utils';
+import { createWireTransactionBytes } from '../../__tests__/fixtures/transactions';
 
 /** A structurally valid legacy transaction that exceeds the 1232-byte wire limit. */
 function oversizedTransaction(): Uint8Array {
@@ -318,6 +319,28 @@ describe('Transaction Signer', () => {
             expect(Array.isArray(signedTxs)).toBe(true);
             expect(signedTxs.length).toBe(2);
             expect(mockWallet.features['solana:signAllTransactions'].signAllTransactions).toHaveBeenCalled();
+        });
+
+        it('should preserve each transaction format in a mixed batch', async () => {
+            const { Transaction, VersionedTransaction } = await import('@solana/web3.js');
+            const legacyBytes = createWireTransactionBytes('legacy');
+            const v0Bytes = createWireTransactionBytes(0);
+            const rawBytes = new Uint8Array([2, 3, 4, 5, 6]);
+
+            (
+                mockWallet.features['solana:signAllTransactions'].signAllTransactions as ReturnType<typeof vi.fn>
+            ).mockResolvedValueOnce({ signedTransactions: [legacyBytes, v0Bytes, rawBytes] });
+
+            const signer = createTransactionSigner({ wallet: mockWallet, account: mockAccount })!;
+            const [legacy, versioned, raw] = await signer.signAllTransactions([
+                Transaction.from(legacyBytes),
+                VersionedTransaction.deserialize(v0Bytes),
+                rawBytes,
+            ]);
+
+            expect(legacy).toBeInstanceOf(Transaction);
+            expect(versioned).toBeInstanceOf(VersionedTransaction);
+            expect(raw).toBe(rawBytes);
         });
 
         it('should fallback to sequential signing if batch not supported', async () => {

@@ -273,12 +273,12 @@ export function createTransactionSigner(config: TransactionSignerConfig): Transa
                     logger.debug('Found signedTransaction property');
                     const bytes = signedTx.signedTransaction;
                     if (bytes instanceof Uint8Array) {
-                        return await convertSignedTransaction(bytes, wasWeb3js);
+                        return convertSignedTransaction(bytes, transaction);
                     }
                 }
 
                 if (signedTx instanceof Uint8Array) {
-                    return await convertSignedTransaction(signedTx, wasWeb3js);
+                    return convertSignedTransaction(signedTx, transaction);
                 }
 
                 logger.error('Unexpected wallet response format', {
@@ -304,9 +304,9 @@ export function createTransactionSigner(config: TransactionSignerConfig): Transa
                 // Validate everything before touching the wallet; a ValidationError
                 // surfaces directly, as it does for signTransaction.
                 const total = transactions.length;
-                const prepared = transactions.map((tx, index) => validateForWallet(tx, { index, total }));
-                const serializedTxs = prepared.map(p => p.serialized);
-                const wasWeb3js = prepared[0].wasWeb3js;
+                const serializedTxs = transactions.map(
+                    (tx, index) => validateForWallet(tx, { index, total }).serialized,
+                );
 
                 try {
                     const signFeature = features['solana:signAllTransactions']!;
@@ -336,10 +336,8 @@ export function createTransactionSigner(config: TransactionSignerConfig): Transa
                         throw new Error('Unexpected signAllTransactions response format');
                     }
 
-                    return await Promise.all(
-                        signedBytesArray.map((signedBytes: Uint8Array) =>
-                            convertSignedTransaction(signedBytes, wasWeb3js),
-                        ),
+                    return signedBytesArray.map((signedBytes, index) =>
+                        convertSignedTransaction(signedBytes, transactions[index]),
                     );
                 } catch (error) {
                     throw new TransactionError(
