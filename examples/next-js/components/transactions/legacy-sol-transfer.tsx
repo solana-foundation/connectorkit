@@ -85,7 +85,7 @@ export function LegacySolTransfer() {
                 visualPipeline.setStepState('Self transfer', { type: 'signing' });
 
                 // Pre-send devtools preview: emit wire bytes so the debugger can simulate before sending.
-                client.previewTransaction(transaction);
+                await client.previewTransaction(transaction);
 
                 sig = await walletAdapter.sendTransaction(transaction, connection);
                 typedSignature = createSignature(sig);

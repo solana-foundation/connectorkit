@@ -154,6 +154,65 @@ describe('Wallet Adapter Compatibility (compat.ts)', () => {
             });
         });
 
+        describe('sendTransaction', () => {
+            const signedBytes = new Uint8Array([9, 8, 7, 6]);
+
+            function mockConnection() {
+                return {
+                    rpcEndpoint: 'https://api.devnet.solana.com',
+                    sendRawTransaction: vi.fn().mockResolvedValue('sig123'),
+                } as unknown as Parameters<ReturnType<typeof createWalletAdapterCompat>['sendTransaction']>[1];
+            }
+
+            function signerReturning(signed: unknown) {
+                return {
+                    ...mockSigner,
+                    getCapabilities: () => ({
+                        canSign: true,
+                        canSend: false,
+                        canSignMessage: false,
+                        supportsBatchSigning: false,
+                    }),
+                    signTransaction: vi.fn().mockResolvedValue(signed),
+                } as unknown as TransactionSigner;
+            }
+
+            it('should await an async serialize() on the signed transaction (web3.js 3.x)', async () => {
+                const signed = { serialize: vi.fn().mockResolvedValue(signedBytes) };
+                const adapter = createWalletAdapterCompat(signerReturning(signed), { disconnect: mockDisconnect });
+                const connection = mockConnection();
+
+                const signature = await adapter.sendTransaction(new Uint8Array([1]), connection);
+
+                expect(signature).toBe('sig123');
+                const [raw] = (connection.sendRawTransaction as ReturnType<typeof vi.fn>).mock.calls[0];
+                expect(raw).toBeInstanceOf(Uint8Array);
+                expect(raw).toBe(signedBytes);
+            });
+
+            it('should handle a sync serialize() on the signed transaction (web3.js 1.x)', async () => {
+                const signed = { serialize: vi.fn().mockReturnValue(signedBytes) };
+                const adapter = createWalletAdapterCompat(signerReturning(signed), { disconnect: mockDisconnect });
+                const connection = mockConnection();
+
+                await adapter.sendTransaction(new Uint8Array([1]), connection, { skipPreflight: true });
+
+                const [raw, options] = (connection.sendRawTransaction as ReturnType<typeof vi.fn>).mock.calls[0];
+                expect(raw).toBe(signedBytes);
+                expect(options).toEqual({ skipPreflight: true });
+            });
+
+            it('should pass signed bytes straight through', async () => {
+                const adapter = createWalletAdapterCompat(signerReturning(signedBytes), { disconnect: mockDisconnect });
+                const connection = mockConnection();
+
+                await adapter.sendTransaction(new Uint8Array([1]), connection);
+
+                const [raw] = (connection.sendRawTransaction as ReturnType<typeof vi.fn>).mock.calls[0];
+                expect(raw).toBe(signedBytes);
+            });
+        });
+
         describe('interface compatibility', () => {
             it('should match WalletAdapterCompatible interface', () => {
                 const adapter = createWalletAdapterCompat(mockSigner, {

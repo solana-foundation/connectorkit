@@ -58,6 +58,22 @@ export interface TransactionValidationOptions {
     checkDuplicateSignatures?: boolean;
     /** Enable strict validation (fails on warnings) */
     strict?: boolean;
+    /**
+     * Pre-serialized wire bytes for `transaction`. When provided, size and
+     * pattern checks run against these bytes and `transaction.serialize()` is
+     * never called. Needed for web3.js 3.x, whose `Transaction.serialize()`
+     * is asynchronous and cannot be measured from this synchronous validator.
+     * The duplicate-signer check still inspects the original object.
+     */
+    serialized?: Uint8Array;
+}
+
+function isThenable(value: unknown): value is PromiseLike<unknown> {
+    return (
+        value !== null &&
+        (typeof value === 'object' || typeof value === 'function') &&
+        typeof (value as { then?: unknown }).then === 'function'
+    );
 }
 
 /**
@@ -95,7 +111,13 @@ export class TransactionValidator {
         transaction: SolanaTransaction,
         options: TransactionValidationOptions = {},
     ): TransactionValidationResult {
-        const { maxSize, minSize = MIN_TRANSACTION_SIZE, checkDuplicateSignatures = true, strict = false } = options;
+        const {
+            maxSize,
+            minSize = MIN_TRANSACTION_SIZE,
+            checkDuplicateSignatures = true,
+            strict = false,
+            serialized: providedBytes,
+        } = options;
 
         const errors: string[] = [];
         const warnings: string[] = [];
@@ -111,10 +133,24 @@ export class TransactionValidator {
         try {
             let serialized: Uint8Array | undefined;
 
+            // Caller already produced the wire bytes (the signer does this so
+            // async web3.js 3.x serialization can be measured).
+            if (providedBytes instanceof Uint8Array) {
+                serialized = providedBytes;
+            }
             // Handle web3.js Transaction objects
-            if (typeof (transaction as { serialize?: () => Uint8Array }).serialize === 'function') {
+            else if (typeof (transaction as { serialize?: () => unknown }).serialize === 'function') {
                 try {
-                    serialized = (transaction as { serialize: () => Uint8Array }).serialize();
+                    const result = (transaction as { serialize: () => unknown }).serialize();
+                    if (result instanceof Uint8Array) {
+                        serialized = result;
+                    } else if (isThenable(result)) {
+                        // web3.js 3.x: serialize() is async. The size cannot be
+                        // measured synchronously; pass `serialized` to measure it.
+                        logger.debug('Transaction serialize() is async; size not measured');
+                        // Swallow the rejection, if any — the promise is not awaited here.
+                        result.then(undefined, () => {});
+                    }
                 } catch (serializeError) {
                     // If serialize fails, it might not be signed yet - this is okay
                     logger.debug('Transaction not yet serializable (may need signing)', {

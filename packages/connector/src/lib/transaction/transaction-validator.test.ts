@@ -4,7 +4,7 @@
  * Comprehensive tests for transaction validation logic
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
     TransactionValidator,
     MAX_TRANSACTION_SIZE,
@@ -226,6 +226,66 @@ describe('TransactionValidator', () => {
             );
 
             expect(result.size).toBe(456);
+        });
+    });
+
+    describe('web3.js 3.x (async serialize)', () => {
+        type ValidateInput = Parameters<typeof TransactionValidator.validate>[0];
+
+        it('should not measure size when serialize() returns a promise', () => {
+            const mockTx = {
+                serialize: () => Promise.resolve(new Uint8Array(5000)),
+            };
+            const result = TransactionValidator.validate(mockTx as unknown as ValidateInput);
+
+            expect(result.valid).toBe(true);
+            expect(result.size).toBeUndefined();
+            expect(result.errors).toEqual([]);
+        });
+
+        it('should not surface an unhandled rejection from an async serialize()', async () => {
+            const mockTx = {
+                serialize: () => Promise.reject(new Error('not signed')),
+            };
+            const result = TransactionValidator.validate(mockTx as unknown as ValidateInput);
+            await new Promise(resolve => setTimeout(resolve, 0));
+
+            expect(result.valid).toBe(true);
+            expect(result.size).toBeUndefined();
+        });
+
+        it('should use the serialized option instead of calling serialize()', () => {
+            const serialize = vi.fn(() => new Uint8Array(10));
+            const mockTx = { serialize };
+            const bytes = new Uint8Array(300).fill(1);
+
+            const result = TransactionValidator.validate(mockTx as unknown as ValidateInput, { serialized: bytes });
+
+            expect(serialize).not.toHaveBeenCalled();
+            expect(result.size).toBe(300);
+            expect(result.valid).toBe(true);
+        });
+
+        it('should enforce the size limit on the serialized option', () => {
+            const mockTx = { serialize: () => Promise.resolve(new Uint8Array(1)) };
+            const bytes = new Uint8Array(MAX_TRANSACTION_SIZE + 1).fill(1);
+
+            const result = TransactionValidator.validate(mockTx as unknown as ValidateInput, { serialized: bytes });
+
+            expect(result.valid).toBe(false);
+            expect(result.errors.some(e => e.includes('too large'))).toBe(true);
+        });
+
+        it('should still run the duplicate-signer check when serialized is provided', () => {
+            const mockTx = {
+                serialize: () => Promise.resolve(new Uint8Array(1)),
+                signatures: [{ publicKey: 'A' }, { publicKey: 'A' }],
+            };
+            const bytes = new Uint8Array(200).fill(1);
+
+            const result = TransactionValidator.validate(mockTx as unknown as ValidateInput, { serialized: bytes });
+
+            expect(result.warnings).toContain('Transaction contains duplicate signers');
         });
     });
 

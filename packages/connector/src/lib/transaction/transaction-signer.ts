@@ -129,7 +129,19 @@ export function createTransactionSigner(config: TransactionSignerConfig): Transa
                 throw Errors.featureNotSupported('transaction signing');
             }
 
-            const validation = TransactionValidator.validate(transaction);
+            // Serialize first: web3.js 3.x serializes asynchronously, so the
+            // validator (synchronous) is handed the wire bytes to measure.
+            let serialized: Uint8Array;
+            let wasWeb3js: boolean;
+            try {
+                ({ serialized, wasWeb3js } = await prepareTransactionForWallet(transaction));
+            } catch (error) {
+                const message = error instanceof Error ? error.message : String(error);
+                logger.error('Transaction serialization failed', { error: message });
+                throw Errors.invalidTransaction(message);
+            }
+
+            const validation = TransactionValidator.validate(transaction, { serialized });
             if (!validation.valid) {
                 logger.error('Transaction validation failed', { errors: validation.errors });
                 throw Errors.invalidTransaction(validation.errors.join(', '));
@@ -141,8 +153,6 @@ export function createTransactionSigner(config: TransactionSignerConfig): Transa
 
             try {
                 const signFeature = features['solana:signTransaction'];
-
-                const { serialized, wasWeb3js } = prepareTransactionForWallet(transaction);
 
                 logger.debug('Signing transaction', {
                     wasWeb3js,
@@ -244,7 +254,7 @@ export function createTransactionSigner(config: TransactionSignerConfig): Transa
                 try {
                     const signFeature = features['solana:signAllTransactions'];
 
-                    const prepared = transactions.map(tx => prepareTransactionForWallet(tx));
+                    const prepared = await Promise.all(transactions.map(tx => prepareTransactionForWallet(tx)));
                     const serializedTxs = prepared.map(p => p.serialized);
 
                     type SignAllResult =
@@ -318,7 +328,7 @@ export function createTransactionSigner(config: TransactionSignerConfig): Transa
             try {
                 const sendFeature = features['solana:signAndSendTransaction'];
 
-                const { serialized } = prepareTransactionForWallet(transaction);
+                const { serialized } = await prepareTransactionForWallet(transaction);
 
                 if (eventEmitter) {
                     eventEmitter.emit({

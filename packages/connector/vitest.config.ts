@@ -1,9 +1,16 @@
 import { defineConfig } from 'vitest/config';
 import path from 'path';
 
+// Run the suite against @solana/web3.js 3.x (`pnpm test:web3v3`). The
+// `web3js-v3` devDependency is an npm alias for @solana/web3.js@3; the
+// default run resolves the 1.x peer installed under its real name.
+const web3jsV3Alias =
+    process.env.WEB3JS_MAJOR === '3' ? { '@solana/web3.js': path.resolve(__dirname, 'node_modules/web3js-v3') } : {};
+
 export default defineConfig({
     resolve: {
         alias: {
+            ...web3jsV3Alias,
             '@': path.resolve(__dirname, './src'),
             // Mock WalletConnect provider for tests (optional dependency)
             '@walletconnect/universal-provider': path.resolve(__dirname, './src/__tests__/mocks/walletconnect-mock.ts'),

@@ -9,6 +9,9 @@
  * @solana/web3.js is only referenced as a type. Signed bytes are rehydrated
  * through the class of the caller's own transaction object, so apps that never
  * install web3.js (it is an optional peer) bundle without resolving it.
+ *
+ * Both web3.js 1.x and 3.x are supported. 3.x makes `Transaction.serialize()`
+ * asynchronous, so serialization here is awaited (a no-op on 1.x).
  */
 
 import type { Transaction, VersionedTransaction } from '@solana/web3.js';
@@ -28,17 +31,25 @@ export function isWeb3jsTransaction(tx: unknown): tx is Transaction | VersionedT
 /**
  * Serialize a transaction to Uint8Array format (required for Wallet Standard)
  *
+ * Async because web3.js 3.x makes `Transaction.serialize()` return a
+ * promise (1.x and `VersionedTransaction` stay synchronous); awaiting the
+ * result handles both majors uniformly.
+ *
  * @param tx - Transaction to serialize (web3.js object, Uint8Array, or TypedArray)
  * @returns Serialized transaction bytes
  * @throws Error if transaction format is unsupported
  */
-export function serializeTransaction(tx: SolanaTransaction): Uint8Array {
+export async function serializeTransaction(tx: SolanaTransaction): Promise<Uint8Array> {
     // web3.js Transaction/VersionedTransaction object
     if (isWeb3jsTransaction(tx)) {
-        return tx.serialize({
+        const serialized: unknown = await tx.serialize({
             requireAllSignatures: false,
             verifySignatures: false,
         });
+        if (!(serialized instanceof Uint8Array)) {
+            throw new Error('Transaction serialize() did not produce a Uint8Array');
+        }
+        return serialized;
     }
 
     // Already serialized as Uint8Array
@@ -128,31 +139,42 @@ export function getTransactionVersionFromBytes(bytes: Uint8Array): 'legacy' | nu
  * `Transaction` rehydrates via its static `from`, `VersionedTransaction` via
  * its static `deserialize`.
  *
- * Version 1 transactions (SIMD-0296) cannot be represented by web3.js 1.x:
- * stable releases have no v1 support at all (read-only support starts at
- * `1.99.0-beta.0` and only via RPC responses, not wire deserialization), so
- * v1 bytes are rejected with a descriptive error instead of being misparsed.
+ * Version 1 transactions (SIMD-0296) are only representable on web3.js 3.x,
+ * whose `VersionedTransaction.deserialize` understands the v1 wire format.
+ * web3.js 1.x stable has no v1 support at all (read-only support starts at
+ * `1.99.0-beta.0` and only via RPC responses, not wire deserialization).
+ * Since the module is never imported, v1 support is detected by rehydrating
+ * through `original`'s class and checking that the result reports version 1
+ * and re-serializes to the same bytes; anything else is rejected with a
+ * descriptive error instead of being misparsed.
  *
  * @param bytes - Serialized transaction bytes
  * @param original - The web3.js transaction the bytes were signed from
  * @returns A new instance of `original`'s class holding the signed bytes
- * @throws If the bytes are a v1 (or newer) transaction, or fail to deserialize
+ * @throws If the bytes are a v1 (or newer) transaction that `original`'s
+ *         class cannot represent, or if they fail to deserialize
  */
 export function deserializeToWeb3jsTransaction(
     bytes: Uint8Array,
     original: Transaction | VersionedTransaction,
 ): Transaction | VersionedTransaction {
     const version = getTransactionVersionFromBytes(bytes);
-    if (typeof version === 'number' && version >= 1) {
-        throw new Error(
-            `Transaction v${version} (SIMD-0296) cannot be represented as a web3.js transaction object. ` +
-                'Keep the transaction as serialized bytes or use @solana/kit codecs instead.',
-        );
-    }
     const web3jsClass = original.constructor as Partial<{
         from(bytes: Uint8Array): Transaction;
         deserialize(bytes: Uint8Array): VersionedTransaction;
     }>;
+    if (typeof version === 'number' && version >= 1) {
+        const deserialize = web3jsClass.deserialize;
+        const rehydrated = typeof deserialize === 'function' ? tryDeserializeV1(deserialize, bytes) : null;
+        if (rehydrated && rehydrated.version === version && bytesEqual(rehydrated.serialize(), bytes)) {
+            return rehydrated;
+        }
+        throw new Error(
+            `Transaction v${version} (SIMD-0296) cannot be represented by this web3.js transaction class. ` +
+                'Use a VersionedTransaction on @solana/web3.js 3.x, keep the transaction as serialized bytes, ' +
+                'or use @solana/kit codecs instead.',
+        );
+    }
     if (typeof web3jsClass.from === 'function') {
         return web3jsClass.from(bytes);
     }
@@ -162,6 +184,27 @@ export function deserializeToWeb3jsTransaction(
     throw new Error('Unsupported transaction object - expected a web3.js Transaction or VersionedTransaction');
 }
 
+function tryDeserializeV1(
+    deserialize: (bytes: Uint8Array) => VersionedTransaction,
+    bytes: Uint8Array,
+): VersionedTransaction | null {
+    try {
+        return deserialize(bytes);
+    } catch {
+        // web3.js 1.x reads the 0x81 discriminator as a shortvec continuation
+        // byte and fails (or misparses) here; the caller reports it.
+        return null;
+    }
+}
+
+function bytesEqual(a: Uint8Array, b: Uint8Array): boolean {
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+        if (a[i] !== b[i]) return false;
+    }
+    return true;
+}
+
 /**
  * Smart converter that preserves the original format
  * Converts to Wallet Standard format (Uint8Array) and tracks original type
@@ -169,9 +212,11 @@ export function deserializeToWeb3jsTransaction(
  * @param tx - Transaction in any supported format
  * @returns Object with serialized bytes and format flag
  */
-export function prepareTransactionForWallet(tx: SolanaTransaction): { serialized: Uint8Array; wasWeb3js: boolean } {
+export async function prepareTransactionForWallet(
+    tx: SolanaTransaction,
+): Promise<{ serialized: Uint8Array; wasWeb3js: boolean }> {
     const wasWeb3js = isWeb3jsTransaction(tx);
-    const serialized = serializeTransaction(tx);
+    const serialized = await serializeTransaction(tx);
     return { serialized, wasWeb3js };
 }
 
@@ -180,9 +225,9 @@ export function prepareTransactionForWallet(tx: SolanaTransaction): { serialized
  *
  * When `original` is not a web3.js object the bytes pass through untouched, so v1
  * transactions flow through the wallet-standard path without conversion.
- * (A web3.js caller can never produce v1 bytes, so the v1 rejection in
- * {@link deserializeToWeb3jsTransaction} is unreachable from a well-formed
- * round trip.)
+ * (A web3.js 1.x caller can never produce v1 bytes, so the v1 rejection in
+ * {@link deserializeToWeb3jsTransaction} is unreachable from a well-formed 1.x
+ * round trip; a 3.x caller's v1 `VersionedTransaction` round-trips.)
  *
  * @param signedBytes - Signed transaction as Uint8Array
  * @param original - The transaction that was handed to the wallet for signing
