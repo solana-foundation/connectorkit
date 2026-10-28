@@ -205,34 +205,60 @@ describe('Transaction Format Utilities', () => {
     });
 
     describe('deserializeToWeb3jsTransaction with wire-correct fixtures', () => {
-        it('should deserialize legacy bytes to a web3.js Transaction', async () => {
+        it('should deserialize legacy bytes into the Transaction class of the original', async () => {
             const { Transaction } = await import('@solana/web3.js');
-            const result = await deserializeToWeb3jsTransaction(createWireTransactionBytes('legacy'));
+            const bytes = createWireTransactionBytes('legacy');
+            const result = deserializeToWeb3jsTransaction(bytes, Transaction.from(bytes));
             expect(result).toBeInstanceOf(Transaction);
         });
 
-        it('should deserialize v0 bytes to a web3.js VersionedTransaction', async () => {
+        it('should deserialize v0 bytes into the VersionedTransaction class of the original', async () => {
             const { VersionedTransaction } = await import('@solana/web3.js');
-            const result = await deserializeToWeb3jsTransaction(createWireTransactionBytes(0));
+            const bytes = createWireTransactionBytes(0);
+            const result = deserializeToWeb3jsTransaction(bytes, VersionedTransaction.deserialize(bytes));
             expect(result).toBeInstanceOf(VersionedTransaction);
             expect((result as VersionedTransaction).version).toBe(0);
         });
 
-        it('should deserialize v1 bytes on web3.js 3.x and reject them on 1.x', async () => {
+        it('should keep a legacy-message VersionedTransaction as a VersionedTransaction', async () => {
+            const { VersionedTransaction } = await import('@solana/web3.js');
+            const bytes = createWireTransactionBytes('legacy');
+            const result = deserializeToWeb3jsTransaction(bytes, VersionedTransaction.deserialize(bytes));
+            expect(result).toBeInstanceOf(VersionedTransaction);
+            expect((result as VersionedTransaction).version).toBe('legacy');
+        });
+
+        it('should always reject v1 bytes for a legacy Transaction original', async () => {
+            const { Transaction } = await import('@solana/web3.js');
+            const original = Transaction.from(createWireTransactionBytes('legacy'));
+            expect(() => deserializeToWeb3jsTransaction(createWireTransactionBytes(1), original)).toThrow(
+                /Transaction v1 .*cannot be represented/,
+            );
+        });
+
+        it('should deserialize v1 bytes into a VersionedTransaction on web3.js 3.x and reject them on 1.x', async () => {
             const web3 = await import('@solana/web3.js');
             const supportsV1 = typeof (web3 as { MessageV1?: unknown }).MessageV1 !== 'undefined';
+            const original = web3.VersionedTransaction.deserialize(createWireTransactionBytes(0));
             const v1Bytes = createWireTransactionBytes(1);
 
             if (supportsV1) {
-                const result = await deserializeToWeb3jsTransaction(v1Bytes);
+                const result = deserializeToWeb3jsTransaction(v1Bytes, original);
                 expect(result).toBeInstanceOf(web3.VersionedTransaction);
                 expect((result as VersionedTransaction).version).toBe(1);
-                expect((result as VersionedTransaction).serialize()).toEqual(v1Bytes);
+                expect(Array.from((result as VersionedTransaction).serialize())).toEqual(Array.from(v1Bytes));
             } else {
-                await expect(deserializeToWeb3jsTransaction(v1Bytes)).rejects.toThrow(
-                    /Transaction v1 .*cannot be represented as a web3\.js transaction object/,
+                expect(() => deserializeToWeb3jsTransaction(v1Bytes, original)).toThrow(
+                    /Transaction v1 .*cannot be represented/,
                 );
             }
+        });
+
+        it('should reject objects whose class has neither from nor deserialize', () => {
+            const original = { serialize: () => new Uint8Array() } as unknown as Transaction;
+            expect(() => deserializeToWeb3jsTransaction(createWireTransactionBytes('legacy'), original)).toThrow(
+                /Unsupported transaction object/,
+            );
         });
     });
 
@@ -270,7 +296,7 @@ describe('Transaction Format Utilities', () => {
             expect(serialized).toBeInstanceOf(Uint8Array);
             expect(Array.from(serialized)).toEqual(Array.from(wireBytes));
 
-            const restored = await convertSignedTransaction(serialized, wasWeb3js);
+            const restored = convertSignedTransaction(serialized, original);
             expect(restored).toBeInstanceOf(Transaction);
             const reserialized = await (restored as Transaction).serialize({
                 requireAllSignatures: false,
@@ -286,18 +312,18 @@ describe('Transaction Format Utilities', () => {
 
             const { serialized, wasWeb3js } = await prepareTransactionForWallet(original);
             expect(wasWeb3js).toBe(true);
-            expect(serialized).toEqual(bytes);
+            expect(Array.from(serialized)).toEqual(Array.from(bytes));
 
-            const restored = await convertSignedTransaction(serialized, wasWeb3js);
+            const restored = convertSignedTransaction(serialized, original);
             expect(restored).toBeInstanceOf(VersionedTransaction);
-            expect((restored as VersionedTransaction).serialize()).toEqual(bytes);
+            expect(Array.from((restored as VersionedTransaction).serialize())).toEqual(Array.from(bytes));
         });
     });
 
     describe('v1 pass-through', () => {
         it('should pass v1 bytes through convertSignedTransaction untouched when not web3.js', async () => {
             const v1Bytes = createWireTransactionBytes(1);
-            const result = await convertSignedTransaction(v1Bytes, false);
+            const result = convertSignedTransaction(v1Bytes, v1Bytes);
             expect(result).toBe(v1Bytes);
         });
 
@@ -310,32 +336,22 @@ describe('Transaction Format Utilities', () => {
     });
 
     describe('deserializeToWeb3jsTransaction', () => {
-        it('should attempt to deserialize legacy transaction', async () => {
-            // Note: Our mock bytes are minimal and will fail deserialization
-            // We're testing that the function attempts the right path
-            await expect(deserializeToWeb3jsTransaction(mockLegacyTxBytes)).rejects.toThrow();
+        it('should surface web3.js errors for malformed legacy bytes', async () => {
+            const { Transaction } = await import('@solana/web3.js');
+            const original = Transaction.from(createWireTransactionBytes('legacy'));
+            expect(() => deserializeToWeb3jsTransaction(mockLegacyTxBytes, original)).toThrow();
         });
 
-        it('should attempt to deserialize versioned transaction', async () => {
-            // Note: Our mock bytes are minimal and will fail deserialization
-            // We're testing that the function attempts the right path
-            await expect(deserializeToWeb3jsTransaction(mockVersionedTxBytes)).rejects.toThrow();
-        });
-
-        it('should detect legacy vs versioned by first byte', async () => {
-            // We can't fully test deserialization with mock bytes, but we can verify
-            // the function attempts to deserialize (and fails predictably)
-
-            // Both should fail, but through different code paths
-            await expect(deserializeToWeb3jsTransaction(mockLegacyTxBytes)).rejects.toThrow();
-            await expect(deserializeToWeb3jsTransaction(mockVersionedTxBytes)).rejects.toThrow();
+        it('should surface web3.js errors for malformed versioned bytes', async () => {
+            const { VersionedTransaction } = await import('@solana/web3.js');
+            const original = VersionedTransaction.deserialize(createWireTransactionBytes(0));
+            expect(() => deserializeToWeb3jsTransaction(mockVersionedTxBytes, original)).toThrow();
         });
 
         it('should handle empty bytes', async () => {
-            const empty = new Uint8Array();
-
-            // Empty array is treated as legacy (high bit check returns false) and will fail
-            await expect(deserializeToWeb3jsTransaction(empty)).rejects.toThrow();
+            const { Transaction } = await import('@solana/web3.js');
+            const original = Transaction.from(createWireTransactionBytes('legacy'));
+            expect(() => deserializeToWeb3jsTransaction(new Uint8Array(), original)).toThrow();
         });
     });
 
@@ -380,31 +396,24 @@ describe('Transaction Format Utilities', () => {
     });
 
     describe('convertSignedTransaction', () => {
-        it('should attempt to convert to web3.js if wasWeb3js is true', async () => {
-            // Mock bytes will fail deserialization, but we're testing the path
-            await expect(convertSignedTransaction(mockLegacyTxBytes, true)).rejects.toThrow();
+        it('should rehydrate into the web3.js class of the original', async () => {
+            const { Transaction } = await import('@solana/web3.js');
+            const bytes = createWireTransactionBytes('legacy');
+            const result = convertSignedTransaction(bytes, Transaction.from(bytes));
+
+            expect(result).toBeInstanceOf(Transaction);
         });
 
-        it('should return Uint8Array if wasWeb3js is false', async () => {
-            const result = await convertSignedTransaction(mockLegacyTxBytes, false);
+        it('should return the bytes if the original was not web3.js', () => {
+            const result = convertSignedTransaction(mockLegacyTxBytes, mockLegacyTxBytes);
 
             expect(result).toBe(mockLegacyTxBytes);
             expect(result).toBeInstanceOf(Uint8Array);
         });
 
-        it('should attempt legacy transaction conversion', async () => {
-            // Mock bytes will fail, but testing the code path
-            await expect(convertSignedTransaction(mockLegacyTxBytes, true)).rejects.toThrow();
-        });
-
-        it('should attempt versioned transaction conversion', async () => {
-            // Mock bytes will fail, but testing the code path
-            await expect(convertSignedTransaction(mockVersionedTxBytes, true)).rejects.toThrow();
-        });
-
-        it('should preserve Uint8Array when not converting', async () => {
+        it('should preserve Uint8Array when the original was a TypedArray', () => {
             const originalBytes = new Uint8Array([1, 2, 3, 4, 5]);
-            const result = await convertSignedTransaction(originalBytes, false);
+            const result = convertSignedTransaction(originalBytes, new Int8Array([1, 2, 3, 4, 5]));
 
             expect(result).toBe(originalBytes);
         });
@@ -437,27 +446,22 @@ describe('Transaction Format Utilities', () => {
     });
 
     describe('format preservation', () => {
-        it('should track format through prepare and attempt convert', async () => {
-            const mockTx = {
-                serialize: vi.fn().mockReturnValue(mockLegacyTxBytes),
-            };
+        it('should round-trip a web3.js transaction through prepare and convert', async () => {
+            const { VersionedTransaction } = await import('@solana/web3.js');
+            const original = VersionedTransaction.deserialize(createWireTransactionBytes(0));
 
-            // Prepare for wallet
-            const { serialized, wasWeb3js } = await prepareTransactionForWallet(mockTx as unknown as Transaction);
+            const { serialized, wasWeb3js } = await prepareTransactionForWallet(original);
             expect(wasWeb3js).toBe(true);
-            expect(serialized).toBe(mockLegacyTxBytes);
 
-            // Attempt convert back (will fail with mock bytes, but tests the path)
-            await expect(convertSignedTransaction(serialized, wasWeb3js)).rejects.toThrow();
+            const result = convertSignedTransaction(serialized, original);
+            expect(result).toBeInstanceOf(VersionedTransaction);
+            expect(result).not.toBe(original);
         });
 
         it('should round-trip Uint8Array through prepare and convert', async () => {
-            // Prepare for wallet
-            const { serialized, wasWeb3js } = await prepareTransactionForWallet(mockLegacyTxBytes);
-            expect(wasWeb3js).toBe(false);
+            const { serialized } = await prepareTransactionForWallet(mockLegacyTxBytes);
 
-            // Convert back
-            const result = await convertSignedTransaction(serialized, wasWeb3js);
+            const result = convertSignedTransaction(serialized, mockLegacyTxBytes);
             expect(result).toBeInstanceOf(Uint8Array);
             expect(result).toBe(serialized);
         });
