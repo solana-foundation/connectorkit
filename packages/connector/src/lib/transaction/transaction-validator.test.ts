@@ -39,6 +39,31 @@ describe('TransactionValidator', () => {
             }
         });
 
+        it('should validate only the view region, not the whole backing buffer', () => {
+            // A valid transaction sits inside a larger buffer with padding on both
+            // sides; the padding pushes the full buffer past the size limit. The
+            // validator must honour byteOffset/byteLength and look only at the view.
+            const tx = createWireTransactionBytes('legacy', { instructionDataBytes: 100 });
+            const before = 500;
+            const after = 1000;
+            const backing = new Uint8Array(before + tx.byteLength + after).fill(0xee);
+            backing.set(tx, before);
+            expect(backing.byteLength).toBeGreaterThan(MAX_TRANSACTION_SIZE);
+
+            const asInt8 = new Int8Array(backing.buffer, before, tx.byteLength);
+            const asDataView = new DataView(backing.buffer, before, tx.byteLength);
+
+            for (const view of [asInt8, asDataView]) {
+                const result = TransactionValidator.validate(view);
+                expect(result.valid).toBe(true);
+                expect(result.errors).toEqual([]);
+                expect(result.size).toBe(tx.byteLength);
+            }
+
+            // Sanity: the full backing buffer itself is rejected as too large
+            expect(TransactionValidator.validate(backing).valid).toBe(false);
+        });
+
         it('should apply the size limit to non-Uint8Array views', () => {
             const bytes = createWireTransactionBytes('legacy', { instructionDataBytes: 1300 });
             const result = TransactionValidator.validate(

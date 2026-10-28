@@ -66,7 +66,13 @@ export interface SigningFeatures {
  * Validate a transaction and serialize it for the wallet. The only producer
  * of {@link ValidatedWireTransaction}.
  *
- * @throws ValidationError (INVALID_TRANSACTION) when validation fails
+ * Serialization failures are reported the same way as validation failures:
+ * `TransactionValidator.validate` tolerates an object whose `serialize()`
+ * throws (it may simply be unsigned), so an incomplete web3.js transaction
+ * (e.g. one without a blockhash) surfaces here instead, and must still carry
+ * the `INVALID_TRANSACTION` code rather than escape as a plain `Error`.
+ *
+ * @throws ValidationError (INVALID_TRANSACTION) when validation or serialization fails
  */
 function validateForWallet(
     transaction: SolanaTransaction,
@@ -82,7 +88,15 @@ function validateForWallet(
         logger.warn('Transaction validation warnings', { warnings: validation.warnings, ...position });
     }
 
-    const { serialized, wasWeb3js } = prepareTransactionForWallet(transaction);
+    let serialized: Uint8Array;
+    let wasWeb3js: boolean;
+    try {
+        ({ serialized, wasWeb3js } = prepareTransactionForWallet(transaction));
+    } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        logger.error('Transaction serialization failed', { error: message, ...position });
+        throw Errors.invalidTransaction(`Transaction could not be serialized: ${message}`, position);
+    }
     return { serialized: serialized as ValidatedWireTransaction, wasWeb3js };
 }
 
