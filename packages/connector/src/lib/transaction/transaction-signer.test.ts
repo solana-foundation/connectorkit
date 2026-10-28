@@ -7,11 +7,18 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createTransactionSigner, isTransactionSignerError, TransactionSignerError } from './transaction-signer';
 import type { TransactionSignerConfig } from '../../types/transactions';
-import type { WalletStandardAccount, WalletStandardWallet } from '../adapters/wallet-standard-shim';
+import type { WalletStandardAccount, WalletStandardWallet } from '../wallet/standard-shim';
+import { isValidationError } from '../errors';
+import { createWireTransactionBytes } from '../../__tests__/fixtures/transactions';
 import type { SolanaCluster } from '@wallet-ui/core';
 import type { SignatureBytes } from '@solana/keys';
 import { signatureBytesToBase58 } from '../kit/signer-utils';
 import { createWireTransactionBytes } from '../../__tests__/fixtures/transactions';
+
+/** A structurally valid legacy transaction that exceeds the 1232-byte wire limit. */
+function oversizedTransaction(): Uint8Array {
+    return createWireTransactionBytes('legacy', { instructionDataBytes: 1300 });
+}
 
 describe('Transaction Signer', () => {
     let mockWallet: WalletStandardWallet;
@@ -286,19 +293,29 @@ describe('Transaction Signer', () => {
             await expect(signer.signTransaction(mockTransaction)).rejects.toThrow();
         });
 
-        it('should validate transaction before signing', async () => {
-            const config: TransactionSignerConfig = {
-                wallet: mockWallet,
-                account: mockAccount,
-            };
+        it('should reject an invalid transaction before calling the wallet', async () => {
+            const signer = createTransactionSigner({ wallet: mockWallet, account: mockAccount })!;
 
-            const signer = createTransactionSigner(config)!;
+            await expect(signer.signTransaction(oversizedTransaction())).rejects.toSatisfy(
+                (error: unknown) => isValidationError(error) && error.code === 'INVALID_TRANSACTION',
+            );
+            expect(mockWallet.features['solana:signTransaction'].signTransaction).not.toHaveBeenCalled();
+        });
 
-            // Transaction validator should be called internally
-            await signer.signTransaction(mockTransaction);
+        it('should report a transaction that cannot be serialized as INVALID_TRANSACTION', async () => {
+            // An incomplete web3.js Transaction (no blockhash) throws from serialize().
+            // The validator tolerates that (the object may just be unsigned), so the
+            // failure surfaces during preparation and must keep its error code.
+            const { Transaction } = await import('@solana/web3.js');
+            const signer = createTransactionSigner({ wallet: mockWallet, account: mockAccount })!;
 
-            // Verify the feature was called (which means validation passed)
-            expect(mockWallet.features['solana:signTransaction'].signTransaction).toHaveBeenCalled();
+            await expect(signer.signTransaction(new Transaction())).rejects.toSatisfy(
+                (error: unknown) =>
+                    isValidationError(error) &&
+                    error.code === 'INVALID_TRANSACTION' &&
+                    error.message.includes('could not be serialized'),
+            );
+            expect(mockWallet.features['solana:signTransaction'].signTransaction).not.toHaveBeenCalled();
         });
     });
 
@@ -377,6 +394,50 @@ describe('Transaction Signer', () => {
 
             expect(signedTxs).toEqual([]);
         });
+
+        it('should report an unserializable transaction in the batch with its position', async () => {
+            const { Transaction } = await import('@solana/web3.js');
+            const signer = createTransactionSigner({ wallet: mockWallet, account: mockAccount })!;
+
+            await expect(
+                signer.signAllTransactions([mockTransaction, new Transaction(), mockTransaction]),
+            ).rejects.toSatisfy(
+                (error: unknown) =>
+                    isValidationError(error) &&
+                    error.code === 'INVALID_TRANSACTION' &&
+                    error.context?.index === 1 &&
+                    error.context?.total === 3,
+            );
+            expect(mockWallet.features['solana:signAllTransactions'].signAllTransactions).not.toHaveBeenCalled();
+        });
+
+        it('should validate every transaction in the batch path before calling the wallet', async () => {
+            const signer = createTransactionSigner({ wallet: mockWallet, account: mockAccount })!;
+
+            await expect(
+                signer.signAllTransactions([mockTransaction, oversizedTransaction(), mockTransaction]),
+            ).rejects.toSatisfy(
+                (error: unknown) =>
+                    isValidationError(error) &&
+                    error.code === 'INVALID_TRANSACTION' &&
+                    error.context?.index === 1 &&
+                    error.context?.total === 3,
+            );
+            expect(mockWallet.features['solana:signAllTransactions'].signAllTransactions).not.toHaveBeenCalled();
+            expect(mockWallet.features['solana:signTransaction'].signTransaction).not.toHaveBeenCalled();
+        });
+
+        it('should pass validated bytes for every transaction to the batch feature', async () => {
+            const signer = createTransactionSigner({ wallet: mockWallet, account: mockAccount })!;
+            const second = new Uint8Array([2, 3, 4, 5, 6]);
+
+            await signer.signAllTransactions([mockTransaction, second]);
+
+            const call = (
+                mockWallet.features['solana:signAllTransactions'].signAllTransactions as ReturnType<typeof vi.fn>
+            ).mock.calls[0][0] as { transactions: Uint8Array[] };
+            expect(call.transactions).toEqual([mockTransaction, second]);
+        });
     });
 
     describe('signAndSendTransaction', () => {
@@ -391,6 +452,37 @@ describe('Transaction Signer', () => {
 
             expect(signature).toBe('mockSignature123');
             expect(mockWallet.features['solana:signAndSendTransaction'].signAndSendTransaction).toHaveBeenCalled();
+        });
+
+        it('should reject an invalid transaction before signing or sending', async () => {
+            const emit = vi.fn();
+            const signer = createTransactionSigner({
+                wallet: mockWallet,
+                account: mockAccount,
+                eventEmitter: { emit },
+            })!;
+
+            await expect(signer.signAndSendTransaction(oversizedTransaction())).rejects.toSatisfy(
+                (error: unknown) => isValidationError(error) && error.code === 'INVALID_TRANSACTION',
+            );
+            expect(mockWallet.features['solana:signAndSendTransaction'].signAndSendTransaction).not.toHaveBeenCalled();
+            expect(emit).not.toHaveBeenCalled();
+        });
+
+        it('should report a transaction that cannot be serialized as INVALID_TRANSACTION, not SEND_FAILED', async () => {
+            const { Transaction } = await import('@solana/web3.js');
+            const emit = vi.fn();
+            const signer = createTransactionSigner({
+                wallet: mockWallet,
+                account: mockAccount,
+                eventEmitter: { emit },
+            })!;
+
+            await expect(signer.signAndSendTransaction(new Transaction())).rejects.toSatisfy(
+                (error: unknown) => isValidationError(error) && error.code === 'INVALID_TRANSACTION',
+            );
+            expect(mockWallet.features['solana:signAndSendTransaction'].signAndSendTransaction).not.toHaveBeenCalled();
+            expect(emit).not.toHaveBeenCalled();
         });
 
         it('should return a base58 signature when wallet returns Wallet Standard output array', async () => {
@@ -471,6 +563,20 @@ describe('Transaction Signer', () => {
             expect(signatures).toBeDefined();
             expect(Array.isArray(signatures)).toBe(true);
             expect(signatures.length).toBe(2);
+        });
+
+        it('should stop at the first invalid transaction', async () => {
+            const signer = createTransactionSigner({ wallet: mockWallet, account: mockAccount })!;
+
+            await expect(
+                signer.signAndSendTransactions([mockTransaction, oversizedTransaction(), mockTransaction]),
+            ).rejects.toSatisfy((error: unknown) => {
+                const cause = (error as { originalError?: unknown }).originalError;
+                return isValidationError(cause) && cause.code === 'INVALID_TRANSACTION';
+            });
+            expect(mockWallet.features['solana:signAndSendTransaction'].signAndSendTransaction).toHaveBeenCalledTimes(
+                1,
+            );
         });
 
         it('should handle empty array', async () => {
