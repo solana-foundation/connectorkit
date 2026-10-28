@@ -99,12 +99,12 @@ describe('Transaction Format Utilities', () => {
     });
 
     describe('serializeTransaction', () => {
-        it('should serialize web3.js transaction object', () => {
+        it('should serialize web3.js transaction object', async () => {
             const mockTx = {
                 serialize: vi.fn().mockReturnValue(mockLegacyTxBytes),
             };
 
-            const result = serializeTransaction(mockTx as unknown as Transaction);
+            const result = await serializeTransaction(mockTx as unknown as Transaction);
 
             expect(result).toBe(mockLegacyTxBytes);
             expect(mockTx.serialize).toHaveBeenCalledWith({
@@ -113,48 +113,48 @@ describe('Transaction Format Utilities', () => {
             });
         });
 
-        it('should return Uint8Array as-is', () => {
-            const result = serializeTransaction(mockLegacyTxBytes);
+        it('should return Uint8Array as-is', async () => {
+            const result = await serializeTransaction(mockLegacyTxBytes);
             expect(result).toBe(mockLegacyTxBytes);
         });
 
-        it('should convert other TypedArray to Uint8Array', () => {
+        it('should convert other TypedArray to Uint8Array', async () => {
             const int8Array = new Int8Array([1, 2, 3, 4, 5]);
-            const result = serializeTransaction(int8Array);
+            const result = await serializeTransaction(int8Array);
 
             expect(result).toBeInstanceOf(Uint8Array);
             expect(result.length).toBe(5);
             expect(Array.from(result)).toEqual([1, 2, 3, 4, 5]);
         });
 
-        it('should convert Uint16Array to Uint8Array', () => {
+        it('should convert Uint16Array to Uint8Array', async () => {
             const uint16Array = new Uint16Array([256, 512]);
-            const result = serializeTransaction(uint16Array);
+            const result = await serializeTransaction(uint16Array);
 
             expect(result).toBeInstanceOf(Uint8Array);
         });
 
-        it('should throw error for unsupported formats', () => {
+        it('should throw error for unsupported formats', async () => {
             const invalidInputs: unknown[] = [{}, 'string', 123, null];
             for (const input of invalidInputs) {
-                expect(() =>
+                await expect(
                     serializeTransaction(input as unknown as Parameters<typeof serializeTransaction>[0]),
-                ).toThrow('Unsupported transaction format');
+                ).rejects.toThrow('Unsupported transaction format');
             }
         });
 
-        it('should handle empty Uint8Array', () => {
+        it('should handle empty Uint8Array', async () => {
             const empty = new Uint8Array();
-            const result = serializeTransaction(empty);
+            const result = await serializeTransaction(empty);
             expect(result).toBe(empty);
         });
 
-        it('should preserve buffer offset for TypedArray', () => {
+        it('should preserve buffer offset for TypedArray', async () => {
             const buffer = new ArrayBuffer(10);
             const view = new Uint8Array(buffer, 2, 5); // offset=2, length=5
             view.fill(42);
 
-            const result = serializeTransaction(view);
+            const result = await serializeTransaction(view);
 
             expect(result).toBeInstanceOf(Uint8Array);
             expect(result.length).toBe(5);
@@ -218,10 +218,79 @@ describe('Transaction Format Utilities', () => {
             expect((result as VersionedTransaction).version).toBe(0);
         });
 
-        it('should reject v1 bytes with a descriptive error', async () => {
-            await expect(deserializeToWeb3jsTransaction(createWireTransactionBytes(1))).rejects.toThrow(
-                /Transaction v1 .*cannot be represented as a web3\.js transaction object/,
+        it('should deserialize v1 bytes on web3.js 3.x and reject them on 1.x', async () => {
+            const web3 = await import('@solana/web3.js');
+            const supportsV1 = typeof (web3 as { MessageV1?: unknown }).MessageV1 !== 'undefined';
+            const v1Bytes = createWireTransactionBytes(1);
+
+            if (supportsV1) {
+                const result = await deserializeToWeb3jsTransaction(v1Bytes);
+                expect(result).toBeInstanceOf(web3.VersionedTransaction);
+                expect((result as VersionedTransaction).version).toBe(1);
+                expect((result as VersionedTransaction).serialize()).toEqual(v1Bytes);
+            } else {
+                await expect(deserializeToWeb3jsTransaction(v1Bytes)).rejects.toThrow(
+                    /Transaction v1 .*cannot be represented as a web3\.js transaction object/,
+                );
+            }
+        });
+    });
+
+    describe('web3.js major interop', () => {
+        it('should await an async serialize() (web3.js 3.x shape)', async () => {
+            const mockTx = {
+                serialize: vi.fn().mockResolvedValue(mockLegacyTxBytes),
+            };
+
+            const result = await serializeTransaction(mockTx as unknown as Transaction);
+
+            expect(result).toBe(mockLegacyTxBytes);
+            expect(mockTx.serialize).toHaveBeenCalledWith({
+                requireAllSignatures: false,
+                verifySignatures: false,
+            });
+        });
+
+        it('should reject when serialize() resolves to something other than bytes', async () => {
+            const mockTx = { serialize: vi.fn().mockResolvedValue('nope') };
+
+            await expect(serializeTransaction(mockTx as unknown as Transaction)).rejects.toThrow(
+                'did not produce a Uint8Array',
             );
+        });
+
+        it('should round-trip a real legacy Transaction through prepare and convert', async () => {
+            const { Transaction } = await import('@solana/web3.js');
+            const wireBytes = createWireTransactionBytes('legacy');
+            const original = Transaction.from(wireBytes);
+
+            const { serialized, wasWeb3js } = await prepareTransactionForWallet(original);
+            expect(wasWeb3js).toBe(true);
+            // web3.js 1.x serializes to a Buffer (a Uint8Array subclass); compare contents only.
+            expect(serialized).toBeInstanceOf(Uint8Array);
+            expect(Array.from(serialized)).toEqual(Array.from(wireBytes));
+
+            const restored = await convertSignedTransaction(serialized, wasWeb3js);
+            expect(restored).toBeInstanceOf(Transaction);
+            const reserialized = await (restored as Transaction).serialize({
+                requireAllSignatures: false,
+                verifySignatures: false,
+            });
+            expect(Array.from(reserialized)).toEqual(Array.from(serialized));
+        });
+
+        it('should round-trip a real v0 VersionedTransaction through prepare and convert', async () => {
+            const { VersionedTransaction } = await import('@solana/web3.js');
+            const bytes = createWireTransactionBytes(0);
+            const original = VersionedTransaction.deserialize(bytes);
+
+            const { serialized, wasWeb3js } = await prepareTransactionForWallet(original);
+            expect(wasWeb3js).toBe(true);
+            expect(serialized).toEqual(bytes);
+
+            const restored = await convertSignedTransaction(serialized, wasWeb3js);
+            expect(restored).toBeInstanceOf(VersionedTransaction);
+            expect((restored as VersionedTransaction).serialize()).toEqual(bytes);
         });
     });
 
@@ -232,9 +301,9 @@ describe('Transaction Format Utilities', () => {
             expect(result).toBe(v1Bytes);
         });
 
-        it('should prepare v1 bytes for the wallet without conversion', () => {
+        it('should prepare v1 bytes for the wallet without conversion', async () => {
             const v1Bytes = createWireTransactionBytes(1);
-            const { serialized, wasWeb3js } = prepareTransactionForWallet(v1Bytes);
+            const { serialized, wasWeb3js } = await prepareTransactionForWallet(v1Bytes);
             expect(serialized).toBe(v1Bytes);
             expect(wasWeb3js).toBe(false);
         });
@@ -271,41 +340,41 @@ describe('Transaction Format Utilities', () => {
     });
 
     describe('prepareTransactionForWallet', () => {
-        it('should prepare web3.js transaction', () => {
+        it('should prepare web3.js transaction', async () => {
             const mockTx = {
                 serialize: vi.fn().mockReturnValue(mockLegacyTxBytes),
             };
 
-            const result = prepareTransactionForWallet(mockTx as unknown as Transaction);
+            const result = await prepareTransactionForWallet(mockTx as unknown as Transaction);
 
             expect(result.serialized).toBe(mockLegacyTxBytes);
             expect(result.wasWeb3js).toBe(true);
         });
 
-        it('should prepare Uint8Array transaction', () => {
-            const result = prepareTransactionForWallet(mockLegacyTxBytes);
+        it('should prepare Uint8Array transaction', async () => {
+            const result = await prepareTransactionForWallet(mockLegacyTxBytes);
 
             expect(result.serialized).toBe(mockLegacyTxBytes);
             expect(result.wasWeb3js).toBe(false);
         });
 
-        it('should prepare TypedArray transaction', () => {
+        it('should prepare TypedArray transaction', async () => {
             const int8Array = new Int8Array([1, 2, 3, 4, 5]);
-            const result = prepareTransactionForWallet(int8Array);
+            const result = await prepareTransactionForWallet(int8Array);
 
             expect(result.serialized).toBeInstanceOf(Uint8Array);
             expect(result.wasWeb3js).toBe(false);
         });
 
-        it('should track original format correctly', () => {
+        it('should track original format correctly', async () => {
             // Web3.js object
-            const web3jsResult = prepareTransactionForWallet({
+            const web3jsResult = await prepareTransactionForWallet({
                 serialize: vi.fn().mockReturnValue(mockLegacyTxBytes),
             } as unknown as Transaction);
             expect(web3jsResult.wasWeb3js).toBe(true);
 
             // Uint8Array
-            const bytesResult = prepareTransactionForWallet(mockLegacyTxBytes);
+            const bytesResult = await prepareTransactionForWallet(mockLegacyTxBytes);
             expect(bytesResult.wasWeb3js).toBe(false);
         });
     });
@@ -342,27 +411,27 @@ describe('Transaction Format Utilities', () => {
     });
 
     describe('edge cases', () => {
-        it('should handle transactions with all zeros', () => {
+        it('should handle transactions with all zeros', async () => {
             const zeros = new Uint8Array(32).fill(0);
-            const result = serializeTransaction(zeros);
+            const result = await serializeTransaction(zeros);
             expect(result).toBe(zeros);
         });
 
-        it('should handle transactions with all ones', () => {
+        it('should handle transactions with all ones', async () => {
             const ones = new Uint8Array(32).fill(0xff);
-            const result = serializeTransaction(ones);
+            const result = await serializeTransaction(ones);
             expect(result).toBe(ones);
         });
 
-        it('should handle very large transaction bytes', () => {
+        it('should handle very large transaction bytes', async () => {
             const large = new Uint8Array(1024 * 10); // 10KB
-            const result = serializeTransaction(large);
+            const result = await serializeTransaction(large);
             expect(result).toBe(large);
         });
 
-        it('should handle single byte transaction', () => {
+        it('should handle single byte transaction', async () => {
             const single = new Uint8Array([0x42]);
-            const result = serializeTransaction(single);
+            const result = await serializeTransaction(single);
             expect(result).toBe(single);
         });
     });
@@ -374,7 +443,7 @@ describe('Transaction Format Utilities', () => {
             };
 
             // Prepare for wallet
-            const { serialized, wasWeb3js } = prepareTransactionForWallet(mockTx as unknown as Transaction);
+            const { serialized, wasWeb3js } = await prepareTransactionForWallet(mockTx as unknown as Transaction);
             expect(wasWeb3js).toBe(true);
             expect(serialized).toBe(mockLegacyTxBytes);
 
@@ -384,7 +453,7 @@ describe('Transaction Format Utilities', () => {
 
         it('should round-trip Uint8Array through prepare and convert', async () => {
             // Prepare for wallet
-            const { serialized, wasWeb3js } = prepareTransactionForWallet(mockLegacyTxBytes);
+            const { serialized, wasWeb3js } = await prepareTransactionForWallet(mockLegacyTxBytes);
             expect(wasWeb3js).toBe(false);
 
             // Convert back
@@ -393,45 +462,45 @@ describe('Transaction Format Utilities', () => {
             expect(result).toBe(serialized);
         });
 
-        it('should preserve original format flag correctly', () => {
+        it('should preserve original format flag correctly', async () => {
             // Web3.js format
-            const { wasWeb3js: web3jsFlag } = prepareTransactionForWallet({
+            const { wasWeb3js: web3jsFlag } = await prepareTransactionForWallet({
                 serialize: vi.fn().mockReturnValue(mockLegacyTxBytes),
             } as unknown as Transaction);
             expect(web3jsFlag).toBe(true);
 
             // Byte array format
-            const { wasWeb3js: bytesFlag } = prepareTransactionForWallet(mockLegacyTxBytes);
+            const { wasWeb3js: bytesFlag } = await prepareTransactionForWallet(mockLegacyTxBytes);
             expect(bytesFlag).toBe(false);
         });
     });
 
     describe('TypedArray variants', () => {
-        it('should handle Int8Array', () => {
+        it('should handle Int8Array', async () => {
             const arr = new Int8Array([1, -1, 2, -2]);
-            const result = serializeTransaction(arr);
+            const result = await serializeTransaction(arr);
             expect(result).toBeInstanceOf(Uint8Array);
             expect(result.length).toBe(4);
         });
 
-        it('should handle Uint32Array', () => {
+        it('should handle Uint32Array', async () => {
             const arr = new Uint32Array([1, 2, 3]);
-            const result = serializeTransaction(arr);
+            const result = await serializeTransaction(arr);
             expect(result).toBeInstanceOf(Uint8Array);
         });
 
-        it('should handle Float32Array', () => {
+        it('should handle Float32Array', async () => {
             const arr = new Float32Array([1.5, 2.5, 3.5]);
-            const result = serializeTransaction(arr);
+            const result = await serializeTransaction(arr);
             expect(result).toBeInstanceOf(Uint8Array);
         });
 
-        it('should handle DataView', () => {
+        it('should handle DataView', async () => {
             const buffer = new ArrayBuffer(8);
             const view = new DataView(buffer);
             view.setUint8(0, 42);
 
-            const result = serializeTransaction(view);
+            const result = await serializeTransaction(view);
             expect(result).toBeInstanceOf(Uint8Array);
             expect(result[0]).toBe(42);
         });

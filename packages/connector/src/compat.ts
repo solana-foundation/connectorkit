@@ -1,12 +1,17 @@
 /**
  * Wallet Adapter Compatibility Bridge
  *
- * This surface is inherently legacy/v0-only: it round-trips transactions
- * through web3.js 1.x objects, which cannot represent version 1 (SIMD-0296)
- * transactions (read-only v1 support only lands in web3.js 1.99.0-beta.0,
- * and only for RPC responses). v1 bytes are rejected with a descriptive
- * error instead of being misparsed; use the kit-native surface
- * (`@solana/connector/kit`) for v1 transactions.
+ * Works with both `@solana/web3.js` 1.x and 3.x. The surface round-trips
+ * transactions through web3.js objects, so the installed major decides what
+ * it can represent: 1.x cannot represent version 1 (SIMD-0296) transactions
+ * (read-only v1 support only lands in 1.99.0-beta.0, and only for RPC
+ * responses), so on 1.x v1 bytes are rejected with a descriptive error
+ * instead of being misparsed. 3.x deserializes v1 into `VersionedTransaction`.
+ * Use the kit-native surface (`@solana/connector/kit`) for v1 transactions
+ * on 1.x.
+ *
+ * `Transaction.serialize()` is synchronous on 1.x and asynchronous on 3.x;
+ * every call site awaits it so both majors behave identically.
  */
 
 import { useMemo } from 'react';
@@ -133,7 +138,8 @@ export function createWalletAdapterCompat(
             // Serialize the signed transaction
             let rawTransaction: Uint8Array;
             if (isWeb3jsTransaction(signedTx)) {
-                rawTransaction = signedTx.serialize();
+                // web3.js 3.x returns a promise here; 1.x returns bytes. Await both.
+                rawTransaction = await signedTx.serialize();
             } else if (signedTx instanceof Uint8Array) {
                 rawTransaction = signedTx;
             } else {

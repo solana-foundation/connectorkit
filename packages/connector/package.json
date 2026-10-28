@@ -51,12 +51,14 @@
         "build:analyze": "npm run build && node scripts/analyze-bundle.js",
         "dev": "tsup --watch",
         "type-check": "tsc --noEmit",
+        "type-check:web3v3": "tsc --noEmit -p tsconfig.web3v3.json",
         "lint": "prettier --check src/",
         "clean": "rm -rf dist",
         "size": "size-limit",
         "size:why": "size-limit --why",
         "perf": "npm run build:analyze && npm run size",
         "test": "vitest run",
+        "test:web3v3": "WEB3JS_MAJOR=3 vitest run",
         "test:watch": "vitest",
         "test:ui": "vitest --ui",
         "test:coverage": "vitest run --coverage"
@@ -68,7 +70,7 @@
         "@solana/keychain-privy": "^1.2.0",
         "@solana/keychain-turnkey": "^1.2.0",
         "@solana/keychain-vault": "^1.2.0",
-        "@solana/web3.js": "^1.0.0",
+        "@solana/web3.js": "^1.0.0 || ^3.0.0",
         "@walletconnect/universal-provider": "^2.23.9",
         "react": ">=18.0.0"
     },
@@ -139,7 +141,8 @@
         "react-dom": "^19.2.8",
         "tsup": "^8.5.0",
         "typescript": "^6.0.3",
-        "vitest": "^4.1.9"
+        "vitest": "^4.1.9",
+        "web3js-v3": "npm:@solana/web3.js@^3.1.1"
     },
     "license": "MIT",
     "repository": {

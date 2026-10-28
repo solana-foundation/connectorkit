@@ -108,7 +108,7 @@ export function TitanSwap() {
 
                 // Pre-send devtools preview: emit wire bytes so the debugger can simulate before sending.
                 const previewBytes = new Uint8Array(getBase64Encoder().encode(exportedTransaction.data));
-                client.previewTransaction(previewBytes);
+                await client.previewTransaction(previewBytes);
 
                 const sentSignature = await rpc
                     .sendTransaction(exportedTransaction.data, { encoding: 'base64' })

@@ -1,0 +1,9 @@
+{
+    "extends": "./tsconfig.json",
+    "compilerOptions": {
+        "baseUrl": ".",
+        "paths": {
+            "@solana/web3.js": ["./node_modules/web3js-v3/lib/index.d.ts"]
+        }
+    }
+}

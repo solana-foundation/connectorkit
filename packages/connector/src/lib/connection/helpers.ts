@@ -2,7 +2,7 @@
  * @solana/connector - Connection Helpers
  *
  * Abstraction layer for working with both legacy @solana/web3.js Connection
- * and modern Kit/gill Rpc objects.
+ * (1.x or 3.x) and modern Kit/gill Rpc objects.
  */
 
 import type { SendOptions } from '@solana/web3.js';
@@ -29,8 +29,10 @@ export async function getLatestBlockhash(
     commitment: Commitment = 'confirmed',
 ): Promise<{ blockhash: string; lastValidBlockHeight: number }> {
     if (isLegacyConnection(connection)) {
-        // Legacy Connection API
-        return await connection.getLatestBlockhash(commitment);
+        // Legacy Connection API. web3.js 3.x reports lastValidBlockHeight as a
+        // bigint; normalize so callers see one shape across majors.
+        const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash(commitment);
+        return { blockhash, lastValidBlockHeight: Number(lastValidBlockHeight) };
     }
 
     if (isKitConnection(connection)) {
@@ -68,8 +70,14 @@ export async function sendRawTransaction(
     options?: SendOptions & { commitment?: Commitment },
 ): Promise<string> {
     if (isLegacyConnection(connection)) {
-        // Legacy Connection API
-        return await connection.sendRawTransaction(bytes, options);
+        // Legacy Connection API. `commitment` is a connector-only key for the
+        // Kit path; web3.js 3.x forwards unknown config straight to the RPC,
+        // so strip it before handing the options over.
+        if (!options) {
+            return await connection.sendRawTransaction(bytes);
+        }
+        const { commitment: _commitment, ...sendOptions } = options;
+        return await connection.sendRawTransaction(bytes, sendOptions);
     }
 
     if (isKitConnection(connection)) {
@@ -82,7 +90,8 @@ export async function sendRawTransaction(
             .sendTransaction(base64String as Uint8Array | string, {
                 ...(options?.commitment ? { commitment: options.commitment } : {}),
                 ...(options?.skipPreflight !== undefined ? { skipPreflight: options.skipPreflight } : {}),
-                ...(options?.maxRetries !== undefined ? { maxRetries: options.maxRetries } : {}),
+                // web3.js 3.x types maxRetries as bigint; the Kit shim takes a number.
+                ...(options?.maxRetries !== undefined ? { maxRetries: Number(options.maxRetries) } : {}),
             })
             .send();
 

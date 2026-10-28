@@ -12,7 +12,7 @@ description: Production-ready wallet connector for Solana applications
 ### Why ConnectorKit?
 
 - **Wallet Standard First**: Built on the official Wallet Standard protocol for universal wallet compatibility
-- **Modern & Legacy Support**: Works with both `@solana/kit` (web3.js 2.0) and `@solana/web3.js` (legacy)
+- **Modern & Legacy Support**: Works with `@solana/kit` and with `@solana/web3.js` 1.x or 3.x (legacy API)
 - **Framework Agnostic**: React hooks + headless core for Vue, Svelte, or vanilla JavaScript
 - **Production Ready**: Event system for analytics, health checks for diagnostics, error boundaries for React apps
 - **Enhanced Storage**: Automatic validation, SSR fallback, and error handling out of the box
@@ -564,7 +564,7 @@ await disconnect();
 
 ## Transaction Signing
 
-ConnectorKit provides powerful transaction signing capabilities with support for both legacy `@solana/web3.js` and modern `@solana/kit` APIs.
+ConnectorKit provides powerful transaction signing capabilities with support for both the legacy `@solana/web3.js` API (1.x or 3.x) and the modern `@solana/kit` API.
 
 ### Modern API (`@solana/kit`)
 
@@ -609,7 +609,7 @@ export function ModernSolTransfer() {
             throw new Error('No RPC endpoint configured');
         }
 
-        // Create RPC client using web3.js 2.0
+        // Create RPC client using @solana/kit
         const rpc = createSolanaRpc(rpcUrl);
         const rpcSubscriptions = createSolanaRpcSubscriptions(rpcUrl.replace('http', 'ws'));
 
@@ -659,7 +659,7 @@ export function ModernSolTransfer() {
 }
 ```
 
-### Legacy API (`@solana/web3.js`)
+### Legacy API (`@solana/web3.js` 1.x or 3.x)
 
 Use `useTransactionSigner()` for legacy web3.js compatibility:
 
@@ -688,6 +688,17 @@ function SendTransaction() {
     return <button onClick={handleSend} disabled={!ready}>Send</button>;
 }
 ```
+
+#### web3.js 3.x notes
+
+`@solana/web3.js` 3.x is a Kit-based rebuild of the 1.x API. The connector works with either major (peer range `^1.0.0 || ^3.0.0`); keep these differences in mind in your own code:
+
+- `Transaction.serialize()` returns a `Promise<Uint8Array>` on 3.x (`VersionedTransaction.serialize()` stays synchronous). The connector awaits it internally; `await` it in your own code too.
+- `SendOptions.maxRetries` is a `bigint` on 3.x. `sendRawTransaction` from `@solana/connector/headless` accepts either and converts for the Kit path.
+- `Connection.getLatestBlockhash()` returns a `bigint` `lastValidBlockHeight` on 3.x; the connector's `getLatestBlockhash` helper normalizes it to a `number`.
+- `client.previewTransaction(tx)` returns a promise; `await` it so the `transaction:preparing` event has fired before you continue.
+- Version 1 (SIMD-0296) transactions round-trip through `signTransaction` as `VersionedTransaction` objects on 3.x. On 1.x they are rejected with a descriptive error; keep them as bytes or use the Kit surface there.
+- `@solana/connector-debugger` still requires web3.js 1.x because it depends on Anchor 0.32.
 
 ---
 
@@ -1540,7 +1551,7 @@ The wallet store's `useSignIn`/`useSignMessage` are not re-exported (they collid
 | `useAccount()`              | Account management hook                      | `{ address, formatted, copy, copied, accounts, selectAccount }`  |
 | `useCluster()`              | Network/cluster management hook              | `{ cluster, clusters, setCluster, isMainnet, isDevnet, rpcUrl }` |
 | `useWalletInfo()`           | Wallet metadata hook                         | `{ name, icon, wallet, connecting }`                             |
-| `useTransactionSigner()`    | Legacy transaction signer (web3.js)          | `{ signer, ready, address, capabilities }`                       |
+| `useTransactionSigner()`    | Legacy transaction signer (web3.js 1.x/3.x)  | `{ signer, ready, address, capabilities }`                       |
 | `useKitTransactionSigner()` | Modern transaction signer (@solana/kit)      | `{ signer, ready }`                                              |
 | `useBalance()`              | SOL balance hook                             | `{ solBalance, isLoading, refetch }`                             |
 | `useTokens()`               | SPL tokens hook                              | `{ tokens, isLoading, refetch }`                                 |

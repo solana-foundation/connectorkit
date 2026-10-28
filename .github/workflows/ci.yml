@@ -47,6 +47,17 @@ jobs:
       - name: Type check
         run: pnpm type-check
 
+      - name: Type check connector against @solana/web3.js 3.x
+        run: pnpm --filter @solana/connector type-check:web3v3
+
+      - name: Test web3.js interop paths against @solana/web3.js 1.x
+        run: pnpm --filter @solana/connector exec vitest run src/utils src/lib/transaction src/lib/connection src/compat.test.ts
+
+      - name: Test web3.js interop paths against @solana/web3.js 3.x
+        run: pnpm --filter @solana/connector exec vitest run src/utils src/lib/transaction src/lib/connection src/compat.test.ts
+        env:
+          WEB3JS_MAJOR: '3'
+
       - name: Lint (skip for now)
         run: echo "Skipping lint - will fix in separate PR"
 

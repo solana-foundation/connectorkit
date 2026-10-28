@@ -339,9 +339,13 @@ export class ConnectorClient {
      * This does not sign or send the transaction. It exists so apps that do not
      * use the connector transaction signer can still surface wire bytes in the
      * debugger (e.g. to simulate before sending).
+     *
+     * Asynchronous because web3.js 3.x serializes legacy transactions
+     * asynchronously; the `transaction:preparing` event fires once the bytes
+     * are available.
      */
-    previewTransaction(transaction: SolanaTransaction): void {
-        const { serialized } = prepareTransactionForWallet(transaction);
+    async previewTransaction(transaction: SolanaTransaction): Promise<void> {
+        const { serialized } = await prepareTransactionForWallet(transaction);
         this.eventEmitter.emit({
             type: 'transaction:preparing',
             transaction: serialized,
