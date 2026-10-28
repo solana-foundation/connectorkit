@@ -58,8 +58,9 @@ const { GET, POST } = createRemoteSignerRouteHandlers({
     },
     policy: {
         validateTransaction: async (bytes, request, context) => {
-            // Inspect transaction before signing; context.principal is `user` above
-            return context.principal.canSign;
+            // Inspect transaction before signing; context.principal is `user` above.
+            // It is typed `User | undefined` (authorize may return `true`), so narrow first.
+            return context.principal?.canSign === true;
         },
         validateMessage: async (bytes, request, context) => true,
     },
@@ -79,7 +80,7 @@ export { GET, POST };
 ### Authorization and policy
 
 - `authorize(request)` may return `true` (allow, no identity), `{ principal }` (allow and identify the caller), or `false` / `null` / `undefined` (reject with 401). Omit it to use the default: the `Authorization` header (`Bearer <token>` or raw) is compared against `CONNECTOR_SIGNER_TOKEN` in constant time; an unset token rejects everything.
-- Policy hooks receive `(bytes, request, context)`. `context` is a `PolicyContext<P>` with `principal` (whatever `authorize` returned, `undefined` for boolean results), `request`, `operation` (`'signTransaction' | 'signAllTransactions' | 'signAndSendTransaction' | 'signMessage'`), and for batches `index` / `total`. Two-argument hooks still work.
+- Policy hooks receive `(bytes, request, context)`. `context` is a `PolicyContext<P>` with `principal` (typed `P | undefined`: the value `authorize` returned, or `undefined` when it returned `true` or the default token check ran), `request`, `operation` (`'signTransaction' | 'signAllTransactions' | 'signAndSendTransaction' | 'signMessage'`), and for batches `index` / `total`. Narrow `context.principal` before reading it. Two-argument hooks still work.
 - The principal type is inferred from `authorize`, so put `authorize` before `policy` in the config literal (or pass the type explicitly: `createRemoteSignerRouteHandlers<User>({...})`).
 - Internally, signing requires evidence that both steps ran: the handlers hold a signer that only accepts policy-approved values, and approval requires the authorization result. A code path that skips either step does not type-check.
 - Each `createRemoteSignerRouteHandlers` call owns its own signer instance; concurrent first requests share a single provider initialisation and a failed initialisation is retried on the next request.

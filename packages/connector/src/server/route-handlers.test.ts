@@ -473,23 +473,56 @@ describe('createRemoteSignerRouteHandlers', () => {
             expect(signerB.signMessage).toHaveBeenCalledTimes(1);
         });
 
-        it('loads an unknown provider type only once across concurrent requests and retries after failure', async () => {
-            // An unknown provider type makes loadSigner throw, which exercises the
-            // cleared-on-failure path without needing the optional keychain packages.
+        it('shares one load across concurrent requests and retries after a failed load', async () => {
+            // A getter on the custom provider counts loads: the first attempt
+            // throws, the next succeeds. Concurrent first requests must share the
+            // single failing load, and a later request must load again and succeed.
+            let loads = 0;
+            const signer = createMockSigner();
             const { GET } = createRemoteSignerRouteHandlers({
-                provider: { type: 'nope' } as never,
+                provider: {
+                    type: 'custom',
+                    get signer() {
+                        loads++;
+                        if (loads === 1) {
+                            throw new Error('provider warming up');
+                        }
+                        return signer;
+                    },
+                },
                 authorize: () => true,
             });
 
             const [first, second] = await Promise.all([GET(get()), GET(get())]);
             expect(first.status).toBe(500);
             expect(second.status).toBe(500);
+            expect((await json<RemoteSignerErrorResponse>(first)).error.message).toContain('provider warming up');
+            expect(loads).toBe(1);
 
-            // The failed load is not cached: the next request tries again and fails the same way
+            // The failed load was not cached: the next request loads again and succeeds
             const third = await GET(get());
-            expect(third.status).toBe(500);
-            const body = await json<RemoteSignerErrorResponse>(third);
-            expect(body.error.message).toContain('Unknown provider type');
+            expect(third.status).toBe(200);
+            expect((await json<RemoteSignerMetadata>(third)).address).toBe(signer.address);
+            expect(loads).toBe(2);
+
+            // ...and the successful load is cached from then on
+            expect((await GET(get())).status).toBe(200);
+            expect(loads).toBe(2);
+        });
+
+        it('reports an unknown provider type as a 500 without caching the failure', async () => {
+            const { GET } = createRemoteSignerRouteHandlers({
+                provider: { type: 'nope' } as never,
+                authorize: () => true,
+            });
+
+            for (let i = 0; i < 2; i++) {
+                const response = await GET(get());
+                expect(response.status).toBe(500);
+                expect((await json<RemoteSignerErrorResponse>(response)).error.message).toContain(
+                    'Unknown provider type',
+                );
+            }
         });
 
         it('dedupes concurrent first requests to a single signer load', async () => {

@@ -84,11 +84,34 @@ void (async () => {
 // Principal inference through the factory
 // ---------------------------------------------------------------------------
 
-// Positive: principal inferred from authorize, 3-arg hook sees it
+// Positive: principal inferred from authorize; the hook narrows before use
 createRemoteSignerRouteHandlers({
     provider: { type: 'custom', signer: raw },
     authorize: async req => (req.headers.get('x-user') ? { principal: { userId: 'u' } } : false),
-    policy: { validateTransaction: (_bytes, _request, context) => context.principal.userId.length > 0 },
+    policy: {
+        validateTransaction: (_bytes, _request, context) =>
+            context.principal !== undefined && context.principal.userId.length > 0,
+    },
+});
+
+// Negative: the principal may be undefined (authorize can return `true`, and the
+// default token check does), so it cannot be dereferenced without narrowing
+createRemoteSignerRouteHandlers<{ userId: string }>({
+    provider: { type: 'custom', signer: raw },
+    authorize: () => true,
+    policy: {
+        // @ts-expect-error principal is possibly undefined
+        validateTransaction: (_bytes, _request, context) => context.principal.userId.length > 0,
+    },
+});
+
+// Negative: same with the default token check and an explicit principal type
+createRemoteSignerRouteHandlers<{ userId: string }>({
+    provider: { type: 'custom', signer: raw },
+    policy: {
+        // @ts-expect-error principal is possibly undefined
+        validateMessage: (_bytes, _request, context) => context.principal.userId.length > 0,
+    },
 });
 
 // Positive: legacy shapes still compile (boolean authorize, 2-arg hooks)
@@ -111,6 +134,6 @@ createRemoteSignerRouteHandlers({
     policy: {
         // @ts-expect-error principal is unknown when authorize returns a boolean
         validateTransaction: (_bytes: Uint8Array, _request: Request, context: PolicyContext<{ userId: string }>) =>
-            context.principal.userId.length > 0,
+            context.principal?.userId !== undefined,
     },
 });

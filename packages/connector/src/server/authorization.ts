@@ -43,8 +43,14 @@ export type SigningOperation = 'signTransaction' | 'signAllTransactions' | 'sign
  * Context passed to policy hooks as the third argument
  */
 export interface PolicyContext<P = unknown> {
-    /** Principal returned by `authorize`, or `undefined` when it returned a boolean */
-    readonly principal: P;
+    /**
+     * Principal returned by `authorize`, or `undefined` when it returned `true`
+     * (including the default `CONNECTOR_SIGNER_TOKEN` check). The type is
+     * honest about this: a hook that needs a principal must narrow first, so a
+     * boolean `authorize` cannot make a hook throw on a value the types
+     * promised would exist.
+     */
+    readonly principal: P | undefined;
     /** The incoming request */
     readonly request: Request;
     /** Operation being evaluated */
@@ -88,7 +94,8 @@ declare const APPROVED: unique symbol;
  */
 export interface Authorized<P> {
     readonly [AUTHORIZED]: true;
-    readonly principal: P;
+    /** `undefined` when `authorize` returned `true` rather than `{ principal }` */
+    readonly principal: P | undefined;
     readonly request: Request;
 }
 
@@ -130,7 +137,7 @@ export async function authenticate<P>(
     const result = await authorize(request);
 
     if (result === true) {
-        return { principal: undefined as P, request } as Authorized<P>;
+        return { principal: undefined, request } as Authorized<P>;
     }
 
     if (typeof result === 'object' && result !== null && 'principal' in result) {

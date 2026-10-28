@@ -274,7 +274,7 @@ const { GET, POST } = createRemoteSignerRouteHandlers({
     // default CONNECTOR_SIGNER_TOKEN bearer check. Keep `authorize` above `policy`.
     authorize: async request => ({ principal: { userId: 'u1' } }),
     policy: {
-        validateTransaction: async (bytes, request, context) => context.principal.userId === 'u1',
+        validateTransaction: async (bytes, request, context) => context.principal?.userId === 'u1',
         validateMessage: async (bytes, request, context) => true,
     },
     rpc: { url: process.env.RPC_URL },

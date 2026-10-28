@@ -319,6 +319,7 @@ const { GET, POST } = createRemoteSignerRouteHandlers({
             // context.principal is the value returned by `authorize` above
             // (typed from it, so keep `authorize` above `policy` in this literal).
             // context.operation / context.index / context.total describe the call.
+            if (!context.principal) return false; // typed `P | undefined`: authorize may return `true`
             return isAllowedFor(context.principal.userId, txBytes);
         },
     },
