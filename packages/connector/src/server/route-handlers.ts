@@ -17,6 +17,10 @@ import type {
     RemoteSignerErrorResponse,
 } from '../remote/protocol';
 import { decodeBase64, encodeBase64 } from '../remote/protocol';
+import type { AuthorizeCallback, PolicyHooks, GuardedSigner } from './authorization';
+import { authenticate, defaultAuthorize, guardSigner, runPolicy } from './authorization';
+
+export type { AuthorizeCallback, AuthorizeResult, PolicyContext, PolicyHooks, SigningOperation } from './authorization';
 
 // ============================================================================
 // Types
@@ -82,21 +86,6 @@ export interface CustomProviderConfig {
 export type ProviderConfig = FireblocksProviderConfig | PrivyProviderConfig | CustomProviderConfig;
 
 /**
- * Authorization callback
- */
-export type AuthorizeCallback = (request: Request) => Promise<boolean> | boolean;
-
-/**
- * Policy validation callback
- */
-export interface PolicyHooks {
-    /** Validate a transaction before signing (return false to reject) */
-    validateTransaction?: (transactionBytes: Uint8Array, request: Request) => Promise<boolean> | boolean;
-    /** Validate a message before signing (return false to reject) */
-    validateMessage?: (messageBytes: Uint8Array, request: Request) => Promise<boolean> | boolean;
-}
-
-/**
  * RPC configuration for sign+send operations
  */
 export interface RpcConfig {
@@ -108,17 +97,22 @@ export interface RpcConfig {
 
 /**
  * Route handler configuration
+ *
+ * @typeParam P - Principal type returned by `authorize` (inferred). Put
+ * `authorize` before `policy` in the config literal so the principal type is
+ * known by the time the policy hooks are checked.
  */
-export interface RemoteSignerRouteHandlersConfig {
+export interface RemoteSignerRouteHandlersConfig<P = unknown> {
     /** Provider configuration */
     provider: ProviderConfig;
     /**
      * Authorization callback. Default: checks for Authorization header matching CONNECTOR_SIGNER_TOKEN env var.
-     * Return true to allow, false to reject.
+     * Return `true` to allow, `false`/`null`/`undefined` to reject, or `{ principal }` to allow and
+     * identify the caller to policy hooks.
      */
-    authorize?: AuthorizeCallback;
-    /** Policy hooks for transaction/message validation */
-    policy?: PolicyHooks;
+    authorize?: AuthorizeCallback<P>;
+    /** Policy hooks for transaction/message validation. Hooks receive the principal via their third argument. */
+    policy?: PolicyHooks<NoInfer<P>>;
     /** RPC configuration (required for signAndSendTransaction) */
     rpc?: RpcConfig;
     /** Supported chains (default: ['solana:mainnet', 'solana:devnet']) */
@@ -164,33 +158,6 @@ function errorResponse(code: RemoteSignerErrorCode, message: string, status = 40
     return jsonResponse(body, status);
 }
 
-function getEnv(name: string): string | undefined {
-    return (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.[name];
-}
-
-/**
- * Default authorization: check Authorization header against CONNECTOR_SIGNER_TOKEN env var
- */
-function defaultAuthorize(request: Request): boolean {
-    const token = getEnv('CONNECTOR_SIGNER_TOKEN');
-    if (!token) {
-        // No token configured = reject all (safe default)
-        console.warn('[connector/server] CONNECTOR_SIGNER_TOKEN not set - rejecting all requests');
-        return false;
-    }
-
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader) {
-        return false;
-    }
-
-    // Support "Bearer <token>" format
-    const parts = authHeader.split(' ');
-    const providedToken = parts.length === 2 && parts[0].toLowerCase() === 'bearer' ? parts[1] : authHeader;
-
-    return providedToken === token;
-}
-
 /**
  * Send a signed transaction to Solana RPC
  */
@@ -228,28 +195,19 @@ async function sendTransaction(rpc: RpcConfig, signedTxBytes: Uint8Array): Promi
 // Provider loader
 // ============================================================================
 
-let cachedSigner: RemoteSigner | null = null;
-
 async function loadSigner(config: ProviderConfig): Promise<RemoteSigner> {
-    if (cachedSigner) {
-        return cachedSigner;
-    }
-
     if (config.type === 'custom') {
-        cachedSigner = config.signer;
-        return cachedSigner;
+        return config.signer;
     }
 
     if (config.type === 'fireblocks') {
         const { loadFireblocksSigner } = await import('./providers/fireblocks');
-        cachedSigner = await loadFireblocksSigner(config);
-        return cachedSigner;
+        return loadFireblocksSigner(config);
     }
 
     if (config.type === 'privy') {
         const { loadPrivySigner } = await import('./providers/privy');
-        cachedSigner = await loadPrivySigner(config);
-        return cachedSigner;
+        return loadPrivySigner(config);
     }
 
     throw new Error(`Unknown provider type: ${(config as ProviderConfig).type}`);
@@ -283,10 +241,12 @@ async function loadSigner(config: ProviderConfig): Promise<RemoteSigner> {
  * export const runtime = 'nodejs';
  * ```
  */
-export function createRemoteSignerRouteHandlers(config: RemoteSignerRouteHandlersConfig): RouteHandlers {
+export function createRemoteSignerRouteHandlers<P = unknown>(
+    config: RemoteSignerRouteHandlersConfig<P>,
+): RouteHandlers {
     const {
         provider,
-        authorize = defaultAuthorize,
+        authorize = defaultAuthorize as AuthorizeCallback<P>,
         policy,
         rpc,
         chains = ['solana:mainnet', 'solana:devnet'],
@@ -294,17 +254,28 @@ export function createRemoteSignerRouteHandlers(config: RemoteSignerRouteHandler
         icon,
     } = config;
 
+    // Per-instance signer cache. Memoising the promise dedupes concurrent
+    // first requests; a failed load is cleared so the next request retries.
+    let signerPromise: Promise<GuardedSigner> | undefined;
+    const getSigner = (): Promise<GuardedSigner> =>
+        (signerPromise ??= loadSigner(provider)
+            .then(guardSigner)
+            .catch((error: unknown) => {
+                signerPromise = undefined;
+                throw error;
+            }));
+
     // GET handler: return signer metadata
     async function GET(request: NextRequest): Promise<NextResponse> {
         try {
             // Check authorization
-            const authorized = await authorize(request);
-            if (!authorized) {
+            const auth = await authenticate(authorize, request);
+            if (!auth) {
                 return errorResponse('UNAUTHORIZED', 'Unauthorized', 401);
             }
 
             // Load signer
-            const signer = await loadSigner(provider);
+            const signer = await getSigner();
 
             // Check availability
             const available = await signer.isAvailable();
@@ -344,8 +315,8 @@ export function createRemoteSignerRouteHandlers(config: RemoteSignerRouteHandler
     async function POST(request: NextRequest): Promise<NextResponse> {
         try {
             // Check authorization
-            const authorized = await authorize(request);
-            if (!authorized) {
+            const auth = await authenticate(authorize, request);
+            if (!auth) {
                 return errorResponse('UNAUTHORIZED', 'Unauthorized', 401);
             }
 
@@ -361,8 +332,8 @@ export function createRemoteSignerRouteHandlers(config: RemoteSignerRouteHandler
                 return errorResponse('INVALID_REQUEST', 'Missing operation field', 400);
             }
 
-            // Load signer
-            const signer = await loadSigner(provider);
+            // Load signer (guarded: only accepts policy-approved evidence)
+            const signer = await getSigner();
 
             // Handle operations
             switch (body.operation) {
@@ -371,17 +342,15 @@ export function createRemoteSignerRouteHandlers(config: RemoteSignerRouteHandler
                         return errorResponse('INVALID_REQUEST', 'Missing transaction field', 400);
                     }
 
-                    const txBytes = decodeBase64(body.transaction);
-
-                    // Policy check
-                    if (policy?.validateTransaction) {
-                        const allowed = await policy.validateTransaction(txBytes, request);
-                        if (!allowed) {
-                            return errorResponse('POLICY_VIOLATION', 'Transaction rejected by policy', 403);
-                        }
+                    const outcome = await runPolicy(auth, policy, {
+                        operation: 'signTransaction',
+                        bytes: decodeBase64(body.transaction),
+                    });
+                    if (!outcome.ok) {
+                        return errorResponse('POLICY_VIOLATION', outcome.reason, 403);
                     }
 
-                    const signedTx = await signer.signTransaction(txBytes);
+                    const signedTx = await signer.signTransaction(outcome.approved);
                     const response: SignTransactionResponse = {
                         signedTransaction: encodeBase64(signedTx),
                     };
@@ -393,19 +362,15 @@ export function createRemoteSignerRouteHandlers(config: RemoteSignerRouteHandler
                         return errorResponse('INVALID_REQUEST', 'Missing transactions array', 400);
                     }
 
-                    const txBytesArray = body.transactions.map(tx => decodeBase64(tx));
-
-                    // Policy check for each transaction
-                    if (policy?.validateTransaction) {
-                        for (const txBytes of txBytesArray) {
-                            const allowed = await policy.validateTransaction(txBytes, request);
-                            if (!allowed) {
-                                return errorResponse('POLICY_VIOLATION', 'Transaction rejected by policy', 403);
-                            }
-                        }
+                    const outcome = await runPolicy(auth, policy, {
+                        operation: 'signAllTransactions',
+                        bytes: body.transactions.map(tx => decodeBase64(tx)),
+                    });
+                    if (!outcome.ok) {
+                        return errorResponse('POLICY_VIOLATION', outcome.reason, 403);
                     }
 
-                    const signedTxs = await signer.signAllTransactions(txBytesArray);
+                    const signedTxs = await signer.signAllTransactions(outcome.approved);
                     const response: SignAllTransactionsResponse = {
                         signedTransactions: signedTxs.map(tx => encodeBase64(tx)),
                     };
@@ -417,17 +382,15 @@ export function createRemoteSignerRouteHandlers(config: RemoteSignerRouteHandler
                         return errorResponse('INVALID_REQUEST', 'Missing message field', 400);
                     }
 
-                    const messageBytes = decodeBase64(body.message);
-
-                    // Policy check
-                    if (policy?.validateMessage) {
-                        const allowed = await policy.validateMessage(messageBytes, request);
-                        if (!allowed) {
-                            return errorResponse('POLICY_VIOLATION', 'Message rejected by policy', 403);
-                        }
+                    const outcome = await runPolicy(auth, policy, {
+                        operation: 'signMessage',
+                        bytes: decodeBase64(body.message),
+                    });
+                    if (!outcome.ok) {
+                        return errorResponse('POLICY_VIOLATION', outcome.reason, 403);
                     }
 
-                    const signature = await signer.signMessage(messageBytes);
+                    const signature = await signer.signMessage(outcome.approved);
                     const response: SignMessageResponse = {
                         signature: encodeBase64(signature),
                     };
@@ -443,18 +406,16 @@ export function createRemoteSignerRouteHandlers(config: RemoteSignerRouteHandler
                         return errorResponse('INVALID_REQUEST', 'Missing transaction field', 400);
                     }
 
-                    const txBytes = decodeBase64(body.transaction);
-
-                    // Policy check
-                    if (policy?.validateTransaction) {
-                        const allowed = await policy.validateTransaction(txBytes, request);
-                        if (!allowed) {
-                            return errorResponse('POLICY_VIOLATION', 'Transaction rejected by policy', 403);
-                        }
+                    const outcome = await runPolicy(auth, policy, {
+                        operation: 'signAndSendTransaction',
+                        bytes: decodeBase64(body.transaction),
+                    });
+                    if (!outcome.ok) {
+                        return errorResponse('POLICY_VIOLATION', outcome.reason, 403);
                     }
 
                     // Sign
-                    const signedTx = await signer.signTransaction(txBytes);
+                    const signedTx = await signer.signTransaction(outcome.approved);
 
                     // Send
                     try {
