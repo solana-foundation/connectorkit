@@ -63,7 +63,57 @@ describe('Wallet Standard Shim', () => {
         }
     });
 
-    it('unsubscribe before the registry is ready does not reattach later', () => {
+    it('unsubscribe before the registry exists does not attach later', () => {
+        __resetWalletRegistryForTesting();
+
+        const originalWallets = (window.navigator as Navigator & { wallets?: unknown }).wallets;
+        const registerCallback = vi.fn();
+
+        try {
+            Object.defineProperty(window.navigator, 'wallets', {
+                value: undefined,
+                configurable: true,
+                writable: true,
+            });
+
+            const api = getWalletsRegistry();
+            const unsubscribe = api.on('register', registerCallback);
+            // Cancel while the listener is still queued, before any registry exists.
+            unsubscribe();
+
+            const attached: Array<(wallet: unknown) => void> = [];
+            const lateRegistry = {
+                get: () => [],
+                on: (event: string, callback: (wallet: unknown) => void) => {
+                    if (event === 'register') attached.push(callback);
+                    return () => {};
+                },
+            };
+
+            Object.defineProperty(window.navigator, 'wallets', {
+                value: lateRegistry,
+                configurable: true,
+                writable: true,
+            });
+
+            getWalletsRegistry().get();
+
+            const wallet = { name: 'Phantom' };
+            attached.forEach(callback => callback(wallet));
+
+            expect(attached).toHaveLength(0);
+            expect(registerCallback).not.toHaveBeenCalled();
+        } finally {
+            Object.defineProperty(window.navigator, 'wallets', {
+                value: originalWallets,
+                configurable: true,
+                writable: true,
+            });
+            __resetWalletRegistryForTesting();
+        }
+    });
+
+    it('unsubscribe after attachment does not reattach on a later registry read', () => {
         __resetWalletRegistryForTesting();
 
         const originalWallets = (window.navigator as Navigator & { wallets?: unknown }).wallets;
