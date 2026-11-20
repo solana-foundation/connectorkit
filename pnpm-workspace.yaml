@@ -18,3 +18,15 @@ peerDependencyRules:
     eslint: 10.4.0
     typescript: 6.0.3
     utf-8-validate: 6.0.6
+# Security floors for transitive deps whose parents have no release that
+# accepts a patched version. Drop each entry once its parent catches up.
+overrides:
+  # tsup@8 pins esbuild ^0.27; GHSA-g7r4-m6w7-qqqr is only fixed in 0.28.1+.
+  esbuild: ^0.28.1
+  # @solana/web3.js@1 pins jayson ^4, which pulls stream-json@1 (GHSA-528h-pc64-c93x)
+  # and uuid@8 (GHSA-w5hq-g745-h8pq). jayson@5 drops both dependencies.
+  # This is also the jayson client that gets bundled into @solana/connector-debugger.
+  jayson: ^5.0.0
+  # @coral-xyz/anchor pins toml ^3; every release before 5.0.1 is affected
+  # (GHSA-h895-cgqg-jf52 and four others).
+  toml: ^5.0.1
