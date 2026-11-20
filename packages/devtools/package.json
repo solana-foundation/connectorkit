@@ -17,7 +17,7 @@
         "dist/**"
     ],
     "scripts": {
-        "build": "tsup",
+        "build": "tsup && node scripts/third-party-licenses.mjs",
         "dev": "tsup --watch",
         "type-check": "tsc --noEmit",
         "lint": "prettier --check src/",
@@ -32,7 +32,11 @@
         }
     },
     "devDependencies": {
+        "@coral-xyz/anchor": "^0.32.1",
         "@solana/connector": "workspace:*",
+        "@solana/web3.js": "^1.98.4",
+        "bn.js": "^5.2.4",
+        "buffer": "^6.0.3",
         "tsup": "^8.5.0",
         "typescript": "^6.0.3"
     },
@@ -50,7 +54,6 @@
         "connector"
     ],
     "dependencies": {
-        "@coral-xyz/anchor": "^0.32.1",
         "@solana-program/compute-budget": "^0.18.0",
         "@solana-program/program-metadata": "^0.9.0",
         "@solana-program/system": "^0.14.0",
@@ -60,7 +63,6 @@
         "@solana/kit": "^8.2.0",
         "@solana/transaction-messages": "^8.2.0",
         "@solana/transactions": "^8.2.0",
-        "@solana/web3.js": "^1.98.4",
-        "bn.js": "^5.2.4"
+        "rpc-websockets": "^9.3.5"
     }
 }

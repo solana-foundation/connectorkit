@@ -27,10 +27,13 @@ export type WalletConnectorId = string & { readonly __brand: 'WalletConnectorId'
  * Create a connector ID from a wallet name
  */
 export function createConnectorId(walletName: string): WalletConnectorId {
-    const kebab = walletName
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-+|-+$/g, '');
+    // Runs of non-alphanumerics collapse to a single '-', so at most one can
+    // remain at each end. Trim those without a regex: `/-+$/` backtracks
+    // quadratically on attacker-controlled wallet names.
+    const collapsed = walletName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    const start = collapsed.startsWith('-') ? 1 : 0;
+    const end = collapsed.endsWith('-') ? collapsed.length - 1 : collapsed.length;
+    const kebab = collapsed.slice(start, end);
     return `wallet-standard:${kebab}` as WalletConnectorId;
 }
 
