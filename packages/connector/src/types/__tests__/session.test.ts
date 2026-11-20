@@ -48,6 +48,18 @@ describe('createConnectorId', () => {
         const id = createConnectorId('PHANTOM');
         expect(id).toBe('wallet-standard:phantom');
     });
+
+    it('should trim leading and trailing separators', () => {
+        expect(createConnectorId('  --Phantom!! ')).toBe('wallet-standard:phantom');
+        expect(createConnectorId('---')).toBe('wallet-standard:');
+        expect(createConnectorId('')).toBe('wallet-standard:');
+    });
+
+    it('should stay linear on long separator runs', () => {
+        const start = performance.now();
+        expect(createConnectorId(`${'-'.repeat(200_000)}a${'-'.repeat(200_000)}b`)).toBe('wallet-standard:a-b');
+        expect(performance.now() - start).toBeLessThan(1000);
+    });
 });
 
 describe('isWalletConnectorId', () => {
