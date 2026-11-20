@@ -63,7 +63,8 @@ export async function buildAnchorInstruction({
 
     const connection = new Connection(rpcUrl, 'confirmed');
     const provider = new AnchorProvider(connection, walletForAnchor, {});
-    const program = new Program(idl as any, programId, provider);
+    // Anchor >= 0.30 reads the program id from `idl.address`; the second argument is the provider.
+    const program = new Program({ ...(idl as any), address: programId.toBase58() }, provider);
 
     function parseArrayInput(value: unknown): unknown[] {
         if (Array.isArray(value)) return value;
